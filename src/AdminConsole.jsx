@@ -4,11 +4,12 @@ import {
   Bell, Link2, ArrowUpDown, FlaskConical,
 } from "lucide-react";
 import {
-  BD, CARD, PANEL, IN, BTN, PRI, M, F, W, TD, P, c, ST, sm, SEED, DEF, KEY, HOUR, DAY,
-  uid, paidOk, brief, dk, dl, sod, cash, freq, L, Field, Confirm, grab, dump,
+  BD, CARD, PANEL, IN, BTN, PRI, M, F, W, TD, P, c, ST, sm, DEF, DAY,
+  uid, paidOk, brief, dk, dl, sod, cash, freq, L, Field, Confirm, grab, grabTrouble, dump,
 } from "./lib/shared";
 import { useBoard, appendOrders } from "./lib/useBoard";
 import { pullStripe } from "./lib/sync";
+import { buildSamples } from "./lib/samples";
 
 /* Admin Console — products, reports, and the Stripe connection.
    Shares one database with the Fulfillment Desk via the same storage key. */
@@ -66,8 +67,11 @@ export default function AdminConsole() {
                 <RefreshCw className={`h-4 w-4 ${sync.busy ? "animate-spin" : ""}`} />{sync.busy ? "Syncing" : "Sync Stripe"}
               </button>
               <button onClick={() => load(false)} className={BTN} title="Refresh"><RefreshCw className="h-4 w-4" /></button>
-              <button onClick={() => { grab(`backup-${dk(n)}.json`, new Blob([JSON.stringify({ ...st, settings: { ...cfg, syncToken: "" } })], { type: "application/json" })); flash("Backup downloaded"); }}
-                className={BTN} title="Backup"><Download className="h-4 w-4" /></button>
+              <button onClick={async () => {
+                const r = await grab(`backup-${dk(n)}.json`, new Blob([JSON.stringify({ ...st, settings: { ...cfg, syncToken: "" } })], { type: "application/json" }));
+                const bad = grabTrouble(r);
+                if (bad) flash(bad); else if (r.ok) flash("Backup downloaded");
+              }} className={BTN} title="Backup"><Download className="h-4 w-4" /></button>
             </div>
           </div>
           <nav className="mt-3 flex gap-1">
@@ -84,7 +88,7 @@ export default function AdminConsole() {
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-5">
-        {tab === "reports" && <Reports orders={orders} products={products} n={n} />}
+        {tab === "reports" && <Reports orders={orders} products={products} n={n} flash={flash} />}
         {tab === "catalog" && <Catalog products={products} orders={orders} commit={commit} />}
         {tab === "settings" && <Setup cfg={cfg} products={products} orders={orders} saveCfg={saveCfg} commit={commit}
           sync={sync} onSync={runSync} addOrders={addOrders} flash={flash} />}
@@ -98,7 +102,8 @@ export default function AdminConsole() {
 /* ═════ REPORTS ═════ */
 const RANGES = [["today", "Today"], ["7", "Last 7 days"], ["30", "Last 30 days"], ["90", "Last 90 days"], ["all", "All time"], ["custom", "Custom"]];
 
-function Reports({ orders, products, n }) {
+function Reports({ orders, products, n, flash }) {
+  const save = async (kind) => { const bad = grabTrouble(await dump(scoped, kind)); if (bad) flash(bad); };
   const [range, setRange] = useState("30"), [a, setA] = useState(dk(n - 14 * DAY)), [b, setB] = useState(dk(n));
   const [ds, setDs] = useState({ k: "day", d: "desc" }), [ps, setPs] = useState({ k: "count", d: "desc" });
 
@@ -175,8 +180,8 @@ function Reports({ orders, products, n }) {
           <div className="w-40"><input type="date" value={b} onChange={(e) => setB(e.target.value)} className={IN} /></div>
         </div>}
         <div className="ml-auto flex gap-2">
-          <button onClick={() => dump(scoped, "csv")} className={`inline-flex items-center gap-1.5 ${BTN}`}><Download className="h-4 w-4" /> Orders CSV</button>
-          <button onClick={() => dump(scoped, "json")} className={`inline-flex items-center gap-1.5 ${BTN}`}><Download className="h-4 w-4" /> JSON</button>
+          <button onClick={() => save("csv")} className={`inline-flex items-center gap-1.5 ${BTN}`}><Download className="h-4 w-4" /> Orders CSV</button>
+          <button onClick={() => save("json")} className={`inline-flex items-center gap-1.5 ${BTN}`}><Download className="h-4 w-4" /> JSON</button>
         </div>
       </div>
 
@@ -382,9 +387,6 @@ function Editor({ draft, onCancel, onSave }) {
 }
 
 /* ═════ SETTINGS ═════ */
-const NAMES = ["Marcus Webb", "Tanya Alvarez", "Derrick Poole", "Simone Carter", "Ray Whitfield", "Nina Okafor", "Chad Brenner", "Lucia Marín", "Owen Hartley", "Priya Raman", "Gus Delgado", "Halle Byrne"];
-const STAFF = ["Alex Reyna", "Jordan Six", "Kim Petrov"];
-
 function Setup({ cfg, products, orders, saveCfg, commit, sync, onSync, addOrders, flash }) {
   const [l, setL] = useState(cfg);
   useEffect(() => setL(cfg), [cfg.syncUrl, cfg.autoSyncMinutes, cfg.archiveAfterDays]);
@@ -395,39 +397,9 @@ function Setup({ cfg, products, orders, saveCfg, commit, sync, onSync, addOrders
     </span><span className="text-sm text-slate-300">{label}</span>
   </button>;
 
-  /* Fake orders that actually exercise the whole app: a week of delivered
-     history so every report has numbers in it, plus a few live orders — one
-     deliberately past its target — so the board shows both states. */
   const samples = () => {
     if (!products.length) { flash("Add a product first"); return; }
-    const br = ["visa", "mastercard", "amex", "discover"];
-    const now = Date.now();
-    addOrders(NAMES.map((nm, i) => {
-      const p = products[i % products.length], bad = i % 7 === 3, sub = p.kind === "subscription", id = uid();
-      const amt = [29700, 49700, 99700, 19700][i % 4], mail = nm.toLowerCase().replace(/[^a-z]/g, ".") + "@example.com";
-      const sla = (p.slaHours || 24) * HOUR;
-      const shipped = i < 8 && !bad;
-      // Two of the delivered ones ran long, so "on target" isn't a flat 100%.
-      const took = sla * (i % 4 === 2 ? 1.4 : 0.3 + (i % 3) * 0.2);
-      const age = shipped ? (6 - i * 0.7) * DAY : sla * (i === 9 ? 1.6 : 0.2 + (i % 3) * 0.15);
-      const at = now - age;
-      return { source: "sample", externalId: `ch_s_${id}`, paymentId: `pi_s_${id}`, chargeId: `ch_s_${id}`,
-        paymentStatus: bad ? "failed" : "succeeded", declineCode: bad ? "insufficient_funds" : "",
-        declineReason: bad ? "Your card has insufficient funds." : "", amount: amt, currency: "USD",
-        status: shipped ? "done" : bad ? "new" : i % 2 ? "active" : "new",
-        completedAt: shipped ? at + took : null,
-        assignee: shipped || (!bad && i % 2) ? STAFF[i % STAFF.length] : "Unassigned",
-        checklist: shipped ? Object.fromEntries((p.steps || []).map((_, k) => [k, true])) : {},
-        overdueNotified: shipped,
-        receivedAt: at, customerId: `cus_s_${id.slice(-8)}`, customer: nm,
-        email: mail, phone: `+1727555${String(1e3 + i).slice(-4)}`, ownerName: nm, ownerEmail: mail,
-        paymentMethodId: `pm_s_${id.slice(-8)}`, paymentMethodType: "card", cardBrand: br[i % 4],
-        cardLast4: String(4e3 + i * 7).slice(-4), cardExp: "07/29",
-        subscriptionId: sub ? `sub_s_${id.slice(-8)}` : "", subscriptionStatus: sub ? "active" : "",
-        interval: sub ? "month" : "", intervalCount: 1, quantity: 1, invoiceId: sub ? `in_s_${id.slice(-8)}` : "",
-        productId: p.id, productName: p.name, stripePriceId: `price_s_${p.id}`,
-        items: [{ description: p.name, quantity: 1, amount: amt, priceId: `price_s_${p.id}`, interval: sub ? "month" : null, intervalCount: 1 }] };
-    }));
+    addOrders(buildSamples(products));
     flash("Sample orders loaded");
   };
 

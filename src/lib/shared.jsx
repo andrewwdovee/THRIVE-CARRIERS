@@ -143,15 +143,44 @@ export const COLS = [
   ["Minutes to fulfill", (o) => (o.completedAt ? Math.round((o.completedAt - o.receivedAt) / 6e4) : "")], ["Notes", (o) => o.notes],
 ];
 
-export function grab(name, blob) {
+/* Handing the viewer a file.
+
+   In a browser that's an anchor click. Inside the artifact viewer the frame
+   can't download on its own, so the save goes through the host, which asks
+   the viewer first. Resolve the namespace once at load so a click isn't
+   waiting on a handshake. */
+let dlPromise;
+const downloads = () => (dlPromise ||= (typeof window !== "undefined" && window.claude?.use
+  ? window.claude.use("downloads").catch(() => null)
+  : Promise.resolve(null)));
+if (typeof window !== "undefined") downloads();
+
+export async function grab(name, blob) {
+  const dl = await downloads();
+  if (dl) {
+    try { await dl.save({ filename: name, data: blob }); return { ok: true }; }
+    catch (e) { return { ok: false, code: e?.code || "unavailable" }; }
+  }
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url; a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1e4);
+  return { ok: true };
 }
+
+/* What to tell someone when a download doesn't happen. A decline is a
+   choice, not a failure, so it says nothing. */
+export function grabTrouble(r) {
+  if (!r || r.ok || r.code === "declined") return null;
+  if (r.code === "extension_not_enabled" || r.code === "rejected_extension") return "CSV isn't available here — try JSON.";
+  if (r.code === "too_large") return "That's too much data for one file. Narrow the date range.";
+  if (r.code === "rate_limited") return "One download at a time — try again in a moment.";
+  return "The download didn't go through.";
+}
+
 export function dump(rows, kind) {
   const s = new Date().toISOString().slice(0, 10);
   if (kind === "json") return grab(`orders-${s}.json`, new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" }));
   const e = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  grab(`orders-${s}.csv`, new Blob([[COLS.map(([h]) => e(h)).join(","), ...rows.map((o) => COLS.map(([, g]) => e(g(o))).join(","))].join("\n")], { type: "text/csv" }));
+  return grab(`orders-${s}.csv`, new Blob([[COLS.map(([h]) => e(h)).join(","), ...rows.map((o) => COLS.map(([, g]) => e(g(o))).join(","))].join("\n")], { type: "text/csv" }));
 }

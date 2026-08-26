@@ -8,3 +8,4 @@ dist
 relay/node_modules
 relay/.wrangler
 .shared.built.mjs
+artifact/

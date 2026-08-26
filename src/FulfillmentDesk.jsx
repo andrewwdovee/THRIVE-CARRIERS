@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   RefreshCw, Search, Inbox, LayoutGrid, Clock, AlertTriangle, X, Mail, Phone,
-  CreditCard, Receipt, CheckCircle2, Circle, Bell, BellOff, RotateCcw, User,
+  CreditCard, Receipt, CheckCircle2, Circle, Bell, BellOff, RotateCcw, User, PackageOpen,
 } from "lucide-react";
 import {
   BD, CARD, IN, BTN, PRI, M, F, W, c, ST, sm, DEF, DAY,
@@ -9,6 +9,7 @@ import {
 } from "./lib/shared";
 import { useBoard, appendOrders } from "./lib/useBoard";
 import { pullStripe } from "./lib/sync";
+import { buildSamples } from "./lib/samples";
 import { chime, desktop, askPermission, hook } from "./lib/notify";
 
 /* Fulfillment Desk — the working view.
@@ -120,6 +121,10 @@ export default function FulfillmentDesk() {
     return () => clearInterval(t);
   }, [cfg.syncUrl, cfg.autoSyncMinutes, runSync]);
 
+  const loadSamples = useCallback(() => {
+    commit((x) => appendOrders(x, buildSamples(x.products)).next, "Sample orders loaded");
+  }, [commit]);
+
   /* ── what each view shows ── */
   const hits = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -193,14 +198,33 @@ export default function FulfillmentDesk() {
       </header>
 
       <main className="mx-auto max-w-[1600px] px-4 py-5">
-        {tab === "board" && <Board lanes={lanes} products={products} now={now} onOpen={setOpen} onMove={move} />}
-        {tab === "inbox" && <InboxList rows={inbox} products={products} now={now} onOpen={setOpen} />}
+        {!orders.length ? <FirstRun hasSync={!!cfg.syncUrl} onSync={runSync} onSamples={loadSamples} />
+          : tab === "board" ? <Board lanes={lanes} products={products} now={now} onOpen={setOpen} onMove={move} />
+          : <InboxList rows={inbox} products={products} now={now} onOpen={setOpen} />}
       </main>
 
       {openOrder && <Drawer o={openOrder} products={products} now={now} me={mine} people={people}
         onClose={() => setOpen(null)} onPatch={patch} onMove={move} />}
 
       {toast && <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-slate-800 px-4 py-2 text-sm text-white shadow-xl">{toast}</div>}
+    </div>
+  );
+}
+
+/* Four empty columns tell a new user nothing. Say where orders come from. */
+function FirstRun({ hasSync, onSync, onSamples }) {
+  return (
+    <div className={`mx-auto max-w-lg ${CARD} px-6 py-10 text-center`}>
+      <PackageOpen className={`mx-auto h-8 w-8 ${F}`} />
+      <h2 className={`mt-3 text-base font-semibold ${W}`}>No orders yet</h2>
+      <p className={`mx-auto mt-2 max-w-sm text-sm ${M}`}>
+        Orders arrive on their own once Stripe is connected in the Admin Console.
+        Until then, load a dozen fake ones to see how the board works.
+      </p>
+      <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+        <button onClick={onSamples} className={PRI}>Load sample orders</button>
+        {hasSync && <button onClick={onSync} className={BTN}>Check Stripe now</button>}
+      </div>
     </div>
   );
 }
