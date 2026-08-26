@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root { height: 100%; }
+body { background: #020617; -webkit-font-smoothing: antialiased; }
+
+/* Dark scrollbars so the board doesn't get a bright gutter. */
+* { scrollbar-color: #334155 transparent; scrollbar-width: thin; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 999px; }
+*::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+/* Date inputs are unreadable on dark without this. */
+input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; }

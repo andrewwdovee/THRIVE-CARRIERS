@@ -1,0 +1,157 @@
+import React, { useState, useEffect } from "react";
+import { Trash2 } from "lucide-react";
+
+/* Everything the Admin Console and the Fulfillment Desk both need.
+   One storage key, one palette, one set of statuses — if these drift the
+   two windows stop agreeing about what an order is. */
+
+export const BD = "border-slate-800";
+export const CARD = "rounded-xl border border-slate-800 bg-slate-900";
+export const PANEL = "rounded-lg border border-slate-800 bg-slate-900/70";
+export const IN = "w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white placeholder-slate-600 focus:border-blue-500 focus:outline-none";
+export const BTN = "rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800";
+export const PRI = "rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500";
+export const M = "text-slate-400", F = "text-slate-500", W = "text-white", TD = "px-4 py-2.5 font-mono";
+
+export const P = {
+  blue: ["bg-blue-500", "bg-blue-500/15 text-blue-300", "border-blue-500"],
+  emerald: ["bg-emerald-500", "bg-emerald-500/15 text-emerald-300", "border-emerald-500"],
+  amber: ["bg-amber-500", "bg-amber-500/15 text-amber-300", "border-amber-500"],
+  violet: ["bg-violet-500", "bg-violet-500/15 text-violet-300", "border-violet-500"],
+  rose: ["bg-rose-500", "bg-rose-500/15 text-rose-300", "border-rose-500"],
+  cyan: ["bg-cyan-500", "bg-cyan-500/15 text-cyan-300", "border-cyan-500"],
+  orange: ["bg-orange-500", "bg-orange-500/15 text-orange-300", "border-orange-500"],
+  fuchsia: ["bg-fuchsia-500", "bg-fuchsia-500/15 text-fuchsia-300", "border-fuchsia-500"],
+  teal: ["bg-teal-500", "bg-teal-500/15 text-teal-300", "border-teal-500"],
+  slate: ["bg-slate-500", "bg-slate-500/20 text-slate-300", "border-slate-500"],
+};
+export const c = (k) => P[k] || P.slate;
+export const ST = [["new", "New"], ["active", "In progress"], ["blocked", "Waiting on client"], ["done", "Delivered"]];
+export const sm = (id) => ST.find((s) => s[0] === id) || ST[0];
+
+export const SEED = [
+  { id: "p_rec", name: "Recruiting Ad Campaign", kind: "one-time", slaHours: 48, color: "blue", stripeMatch: "recruit", stripeIds: [],
+    steps: ["Kickoff call / intake form", "Write ad copy", "Build creative", "Launch campaign", "Send client confirmation"] },
+  { id: "p_gc", name: "Google Calls Subscription", kind: "subscription", slaHours: 24, color: "emerald", stripeMatch: "google", stripeIds: [],
+    steps: ["Confirm coverage area", "Set call routing", "Connect billing cycle", "Send onboarding email"] },
+  { id: "p_fe", name: "Inbound Final Expense Transfers", kind: "subscription", slaHours: 12, color: "orange", stripeMatch: "final expense", stripeIds: [],
+    steps: ["Confirm licensed states", "Set daily transfer cap", "Add to dialer rotation", "Schedule first live day"] },
+  { id: "p_ig", name: "Instagram Software", kind: "subscription", slaHours: 24, color: "fuchsia", stripeMatch: "instagram", stripeIds: [],
+    steps: ["Create account", "Connect IG profile", "Load message templates", "Send login + walkthrough"] },
+];
+export const DEF = { syncUrl: "", syncToken: "", autoSyncMinutes: 5, notifyWebhook: "", notifyEmail: "", notifyPhone: "",
+  notifyBrowser: true, notifySound: true, notifyOverdue: true, archiveAfterDays: 14 };
+
+export const KEY = "fulfillment_board_v3", HOUR = 36e5, DAY = 864e5;
+export const uid = (p = "o") => `${p}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+export const paidOk = (o) => (o.paymentStatus || "succeeded") === "succeeded";
+export function brief(x) {
+  if (x == null || isNaN(x)) return "—";
+  const a = Math.abs(x), h = Math.floor(a / HOUR), m = Math.floor((a % HOUR) / 6e4);
+  return h >= 24 ? `${Math.floor(h / 24)}d ${h % 24}h` : h ? `${h}h ${m}m` : `${m}m`;
+}
+export const dk = (t) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+export const dl = (k) => new Date(k + "T12:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+export const sod = (t) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+export const cash = (x) => (x == null ? "—" : `$${(x / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
+export const freq = (o) => (!o.interval ? "" : `every ${o.intervalCount > 1 ? o.intervalCount + " " : ""}${o.interval}${o.intervalCount > 1 ? "s" : ""}`);
+
+export const L = ({ children, className = "" }) => <div className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${F} ${className}`}>{children}</div>;
+export const Field = ({ label, hint, children }) => <div><L className="mb-1">{label}</L>{children}{hint && <p className={`mt-1 text-xs ${F}`}>{hint}</p>}</div>;
+
+export function Confirm({ onConfirm, label = "Delete" }) {
+  const [a, setA] = useState(false);
+  useEffect(() => { if (a) { const t = setTimeout(() => setA(false), 4e3); return () => clearTimeout(t); } }, [a]);
+  return a ? <button onClick={() => { setA(false); onConfirm(); }} className="rounded-md bg-rose-600 px-2 py-1 text-xs font-semibold text-white">Confirm</button>
+    : <button onClick={() => setA(true)} title={label} className={`rounded-md p-1.5 ${F} hover:bg-slate-800 hover:text-rose-400`}><Trash2 className="h-4 w-4" /></button>;
+}
+
+/* Which product does this charge belong to? An exact Stripe ID wins; the
+   keyword on the product is the fallback for charges that carry only a name. */
+export function match(ps, ids, text) {
+  const set = ids.filter(Boolean).map(String);
+  const a = ps.find((p) => (p.stripeIds || []).some((s) => s && set.includes(String(s).trim())));
+  if (a) return a.id;
+  const t = String(text || "").toLowerCase();
+  if (!t) return null;
+  const b = ps.find((p) => [p.stripeMatch, p.name].filter(Boolean).some((k) => {
+    const y = String(k).toLowerCase(); return y && (t.includes(y) || y.includes(t));
+  }));
+  return b ? b.id : null;
+}
+export const msOf = (v) => (v == null ? null : v > 1e12 ? v : v * 1e3);
+
+/* Stripe hands back a dozen shapes depending on which object fired. Flatten
+   them all into one order draft the board can render. */
+export function normalize(payload, ps) {
+  const list = Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : [payload];
+  return list.map((ev) => {
+    const o = ev?.data?.object ? ev.data.object : ev;
+    if (!o || typeof o !== "object") return null;
+    let items = Array.isArray(o.items) && !o.items.data ? o.items : null;
+    if (!items) items = (o.lines?.data || o.line_items?.data || []).map((l) => ({
+      description: l.description || l.price?.nickname || "", quantity: l.quantity ?? 1,
+      amount: l.amount ?? l.amount_total ?? null, priceId: l.price?.id || "",
+      productId: typeof l.price?.product === "string" ? l.price.product : "",
+      interval: l.price?.recurring?.interval || null, intervalCount: l.price?.recurring?.interval_count || 1,
+    }));
+    const f = items[0] || {}, cd = o.payment_method_details?.card || {}, b = o.billing_details || {};
+    const cu = typeof o.customer === "object" && o.customer ? o.customer : {};
+    const pid = o.priceId || f.priceId || "", prid = o.stripeProductId || f.productId || "";
+    const text = o.productName || o.metadata?.product || f.description || o.description || "";
+    return {
+      source: "stripe", externalId: o.chargeId || o.id || o.paymentId || "",
+      paymentId: o.paymentId || o.payment_intent || o.id || "",
+      chargeId: o.chargeId || (String(o.id || "").startsWith("ch_") ? o.id : ""),
+      paymentStatus: o.status === "failed" || o.paymentStatus === "failed" ? "failed" : "succeeded",
+      declineCode: o.declineCode || o.failure_code || "",
+      declineReason: o.declineReason || o.failure_message || o.outcome?.seller_message || "",
+      refunded: !!o.refunded, amount: o.amount ?? o.amount_total ?? o.amount_paid ?? null,
+      currency: (o.currency || "usd").toUpperCase(), receiptUrl: o.receiptUrl || o.receipt_url || "",
+      receivedAt: msOf(o.created) || o.receivedAt || Date.now(),
+      paymentMethodId: o.paymentMethodId || (typeof o.payment_method === "string" ? o.payment_method : "") || "",
+      paymentMethodType: o.paymentMethodType || o.payment_method_details?.type || "",
+      cardBrand: o.cardBrand || cd.brand || "", cardLast4: o.cardLast4 || cd.last4 || "",
+      cardExp: o.cardExp || (cd.exp_month ? `${String(cd.exp_month).padStart(2, "0")}/${String(cd.exp_year || "").slice(-2)}` : ""),
+      ownerName: o.ownerName || b.name || "", ownerEmail: o.ownerEmail || b.email || "",
+      customerId: o.customerId || (typeof o.customer === "string" ? o.customer : cu.id) || "",
+      customer: o.customerName || o.customer_details?.name || cu.name || b.name || "Unnamed customer",
+      email: o.email || o.customer_details?.email || cu.email || b.email || "",
+      phone: o.phone || o.customer_details?.phone || cu.phone || b.phone || "",
+      invoiceId: o.invoiceId || (typeof o.invoice === "string" ? o.invoice : "") || "",
+      subscriptionId: o.subscriptionId || o.subscription || "", subscriptionStatus: o.subscriptionStatus || "",
+      interval: o.interval || f.interval || "", intervalCount: o.intervalCount || f.intervalCount || 1,
+      quantity: o.quantity ?? f.quantity ?? 1, items,
+      productName: text || "Needs triage", stripePriceId: pid || prid || "", productId: match(ps, [pid, prid], text),
+    };
+  }).filter(Boolean);
+}
+
+export const COLS = [
+  ["Payment ID", (o) => o.paymentId], ["Charge ID", (o) => o.chargeId], ["Date", (o) => new Date(o.receivedAt).toISOString()],
+  ["Payment status", (o) => o.paymentStatus], ["Decline code", (o) => o.declineCode], ["Decline reason", (o) => o.declineReason],
+  ["Amount", (o) => (o.amount == null ? "" : (o.amount / 100).toFixed(2))], ["Currency", (o) => o.currency],
+  ["Customer ID", (o) => o.customerId], ["Customer name", (o) => o.customer], ["Customer email", (o) => o.email],
+  ["Customer phone", (o) => o.phone], ["Cardholder name", (o) => o.ownerName], ["Cardholder email", (o) => o.ownerEmail],
+  ["Payment method ID", (o) => o.paymentMethodId], ["Payment method", (o) => [o.paymentMethodType, o.cardBrand, o.cardLast4].filter(Boolean).join(" ")],
+  ["Card expiry", (o) => o.cardExp], ["Subscription ID", (o) => o.subscriptionId], ["Subscription status", (o) => o.subscriptionStatus],
+  ["Frequency", freq], ["Quantity", (o) => o.quantity ?? 1], ["Product", (o) => o.productName], ["Price ID", (o) => o.stripePriceId],
+  ["Items", (o) => (o.items || []).map((i) => `${i.quantity || 1}x ${i.description}`).join(" | ")],
+  ["Invoice ID", (o) => o.invoiceId], ["Receipt URL", (o) => o.receiptUrl], ["Fulfillment status", (o) => sm(o.status)[1]],
+  ["Owner", (o) => o.assignee], ["Due", (o) => (o.dueAt ? new Date(o.dueAt).toISOString() : "")],
+  ["Delivered", (o) => (o.completedAt ? new Date(o.completedAt).toISOString() : "")],
+  ["Minutes to fulfill", (o) => (o.completedAt ? Math.round((o.completedAt - o.receivedAt) / 6e4) : "")], ["Notes", (o) => o.notes],
+];
+
+export function grab(name, blob) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1e4);
+}
+export function dump(rows, kind) {
+  const s = new Date().toISOString().slice(0, 10);
+  if (kind === "json") return grab(`orders-${s}.json`, new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" }));
+  const e = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  grab(`orders-${s}.csv`, new Blob([[COLS.map(([h]) => e(h)).join(","), ...rows.map((o) => COLS.map(([, g]) => e(g(o))).join(","))].join("\n")], { type: "text/csv" }));
+}
