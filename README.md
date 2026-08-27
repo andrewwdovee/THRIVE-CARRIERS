@@ -4,11 +4,15 @@ One dashboard over one order database, in six sections.
 
 The work:
 
-- **Board** — every order across four lanes, drag to move. Filter to one product
-  without leaving the view.
+- **New orders** — everything still to fulfill, worst overdue at the top, so the
+  order that needs picking up is the one you land on. Flip to *Latest in* to see
+  what just arrived. Declined payments stay in the list but sit below the work
+  that can actually be done.
+- **Completed** — every delivered order, newest first, each with the time it
+  took.
 - **By product** — the same orders cut by what was sold. Each product keeps its
-  own lanes, its turnaround target, what's past due, and what it has taken in.
-- **New orders** — every payment as it arrived, declines included.
+  own four lanes (drag a card between them), its turnaround target, what's past
+  due, and what it has taken in.
 
 The setup:
 
@@ -17,9 +21,9 @@ The setup:
   order to it.
 - **Reports** — what sold, how fast it shipped, who shipped it.
 - **Settings** — the Stripe connection, notifications, and how long delivered
-  orders stay on the board.
+  orders stay visible under By product.
 
-Each tab is its own URL (`#/?tab=board`), so you can keep two windows open on
+Each tab is its own URL (`#/?tab=inbox`), so you can keep two windows open on
 different sections. They share one record and pick up each other's changes
 within about twenty seconds.
 
@@ -65,14 +69,15 @@ test/                  node test suites
 
 An order's stopwatch starts at the moment Stripe took the money — not when
 someone noticed it — and runs until the order is marked delivered. It shows on
-the card, in the New orders list, and large at the top of the order drawer, next
+every row, on the product cards, and large at the top of the order drawer, next
 to the one button that stops it.
 
 Each product carries a turnaround target (its **Turnaround target (hours)** in
 Products). The clock is grey while an order is inside its target and red once it
 runs past, so a board of red cards is the thing you can see from across a room.
-Delivered orders freeze at their final time — green if they made the target,
-amber if they didn't — and those frozen numbers are what Reports averages.
+Stopping the clock moves the order out of New orders and into Completed, where
+it freezes at its final time — green if it made the target, amber if it didn't.
+Those frozen numbers are what Reports averages.
 
 Reopening a delivered order starts the clock again from the original payment
 time, so the total stays honest.
@@ -143,8 +148,8 @@ charge carries no ID you've mapped, the product's keyword is checked against the
 charge description. Anything still unmatched lands under **Needs triage** in the
 By product view, where you can see what to map.
 
-Adding a product gives it its own group in By product, its own chip in the
-board's filter, and its own row in Reports. Removing one leaves its past orders
+Adding a product gives it its own group in By product and its own row in
+Reports. Removing one leaves its past orders
 intact — they fall to Needs triage rather than disappearing.
 
 ## One database for the whole team

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
-  RefreshCw, Search, Inbox, LayoutGrid, Clock, AlertTriangle, X, Mail, Phone,
+  RefreshCw, Search, Inbox, AlertTriangle, X, Mail, Phone,
   CreditCard, Receipt, CheckCircle2, Circle, Bell, BellOff, RotateCcw, User, PackageOpen,
   Package, BarChart3, Settings as GearIcon, Layers, LogOut,
 } from "lucide-react";
@@ -18,20 +18,27 @@ import { Reports, Products, Settings as SettingsView } from "./views/admin";
 
 /* The dashboard.
 
-   Six sections over one record. The first three are the work — the board by
-   status, the same board cut by product, and every payment as it arrived. The
+   Six sections over one record. The first three are the work — what's still
+   outstanding, what's been delivered, and the same orders cut by product. The
    last three are the setup: what you sell, how it's selling, and how it's all
    wired to Stripe. */
 
 const TABS = [
-  ["board", "Board", LayoutGrid],
-  ["products-view", "By product", Layers],
   ["inbox", "New orders", Inbox],
+  ["completed", "Completed", CheckCircle2],
+  ["products-view", "By product", Layers],
   ["catalog", "Products", Package],
   ["reports", "Reports", BarChart3],
   ["settings", "Settings", GearIcon],
 ];
-const WORK = new Set(["board", "products-view", "inbox"]);
+const WORK = new Set(["inbox", "completed", "products-view"]);
+
+/* New orders leads with whatever is worst overdue, because that's the one
+   someone needs to pick up. Flip it to see what just landed. */
+const SORTS = [
+  ["urgent", "Most overdue"],
+  ["newest", "Latest in"],
+];
 
 const late = (o, now) => o.status !== "done" && o.dueAt && o.dueAt < now;
 const steps = (products, o) => products.find((p) => p.id === o.productId)?.steps?.filter(Boolean) || [];
@@ -45,9 +52,9 @@ export default function Dashboard({ me: account, onSignOut }) {
   const { st, loading, err, load, commit: rawCommit, R } = useBoard();
   const [tab, setTab] = useState(() => {
     const t = new URLSearchParams(window.location.hash.split("?")[1] || "").get("tab");
-    return TABS.some(([id]) => id === t) ? t : "board";
+    return TABS.some(([id]) => id === t) ? t : "inbox";
   });
-  const [productFilter, setProductFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("urgent");
   const [q, setQ] = useState("");
   const [mine, setMine] = useState("");
   const [open, setOpen] = useState(null);
@@ -173,20 +180,29 @@ export default function Dashboard({ me: account, onSignOut }) {
       .filter(Boolean).some((v) => String(v).toLowerCase().includes(t)));
   }, [orders, q]);
 
-  const board = useMemo(() => {
+  /* By product drops long-delivered orders so the groups stay readable;
+     Completed keeps every one of them. */
+  const grouped = useMemo(() => {
     const cut = now - Math.max(1, Number(cfg.archiveAfterDays) || 14) * DAY;
     return hits.filter((o) => paidOk(o) && !(o.status === "done" && (o.completedAt || 0) < cut));
   }, [hits, now, cfg.archiveAfterDays]);
 
-  const filtered = useMemo(() => productFilter === "all" ? board
-    : board.filter((o) => (productFilter === "_none" ? !o.productId : o.productId === productFilter)), [board, productFilter]);
+  /* New orders is everything still outstanding — a delivered order moves to
+     Completed and stops cluttering the list someone works from. A declined
+     payment stays put: it's unfinished business, not finished work. */
+  const inbox = useMemo(() => {
+    const rows = hits.filter((o) => o.status !== "done");
+    if (sortBy === "newest") return rows.sort((x, y) => y.receivedAt - x.receivedAt);
+    // Furthest past its target first; among orders still inside their target,
+    // the one closest to blowing it. Declined payments sink below the work
+    // that can actually be done — they're still here, just not in the way.
+    return rows.sort((x, y) =>
+      (paidOk(y) - paidOk(x)) || ((x.dueAt || Infinity) - (y.dueAt || Infinity)));
+  }, [hits, sortBy]);
 
-  const lanes = useMemo(() => ST.map(([id, label]) => [id, label, filtered
-    .filter((o) => (o.status || "new") === id)
-    .sort((x, y) => (x.dueAt || 0) - (y.dueAt || 0))]), [filtered]);
-
-  const inbox = useMemo(() => [...hits].sort((x, y) => y.receivedAt - x.receivedAt), [hits]);
-  const overdue = board.filter((o) => late(o, now)).length;
+  const completed = useMemo(() => hits.filter((o) => o.status === "done")
+    .sort((x, y) => (y.completedAt || 0) - (x.completedAt || 0)), [hits]);
+  const overdue = orders.filter((o) => paidOk(o) && late(o, now)).length;
   const openOrder = open ? orders.find((o) => o.id === open) : null;
   const people = useMemo(() => [...new Set(orders.map((o) => o.assignee).filter((a) => a && a !== "Unassigned"))], [orders]);
 
@@ -200,7 +216,7 @@ export default function Dashboard({ me: account, onSignOut }) {
           <div className="flex flex-wrap items-center gap-3">
             <div>
               <h1 className={`text-lg font-bold tracking-tight ${W}`}>Fulfillment Desk</h1>
-              <L>{board.filter((o) => o.status !== "done").length} open{overdue > 0 && <span className="text-rose-400"> · {overdue} past due</span>}</L>
+              <L>{orders.filter((o) => paidOk(o) && o.status !== "done").length} open{overdue > 0 && <span className="text-rose-400"> · {overdue} past due</span>}</L>
             </div>
 
             <div className="relative ml-auto w-full max-w-xs">
@@ -249,12 +265,16 @@ export default function Dashboard({ me: account, onSignOut }) {
       <main className="mx-auto max-w-[1600px] px-4 py-5">
         {WORK.has(tab) && !orders.length
           ? <FirstRun hasSync={!!cfg.syncUrl} onSync={runSync} onSamples={loadSamples} onAddProducts={() => setTab("catalog")} />
-          : tab === "board" ? <>
-              <ProductFilter products={products} orders={board} value={productFilter} onChange={setProductFilter} />
-              <Board lanes={lanes} products={products} now={now} onOpen={setOpen} onMove={move} />
-            </>
-          : tab === "products-view" ? <ByProduct products={products} orders={board} now={now} onOpen={setOpen} onMove={move} Card={Card} />
-          : tab === "inbox" ? <InboxList rows={inbox} products={products} now={now} onOpen={setOpen} />
+          : tab === "inbox"
+            ? <OrderList rows={inbox} products={products} now={now} onOpen={setOpen}
+                sortBy={sortBy} onSort={setSortBy}
+                title="Still to fulfill" note="Most overdue first. A delivered order moves to Completed."
+                empty="Nothing outstanding — everything that came in has been delivered." />
+          : tab === "completed"
+            ? <OrderList rows={completed} products={products} now={now} onOpen={setOpen} done
+                title="Delivered" note="Newest first, with the time each one took."
+                empty="Nothing delivered yet. Orders land here once someone stops the clock." />
+          : tab === "products-view" ? <ByProduct products={products} orders={grouped} now={now} onOpen={setOpen} onMove={move} Card={Card} />
           : tab === "catalog" ? <Products products={products} orders={orders} commit={commit} />
           : tab === "reports" ? <Reports orders={orders} products={products} n={now} flash={flash} />
           : <SettingsView cfg={cfg} products={products} orders={orders} saveCfg={saveCfg} commit={commit}
@@ -270,27 +290,6 @@ export default function Dashboard({ me: account, onSignOut }) {
   );
 }
 
-/* Narrow the lanes to one product without leaving the board. */
-function ProductFilter({ products, orders, value, onChange }) {
-  const count = (id) => orders.filter((o) => (id === "_none" ? !o.productId : o.productId === id)).length;
-  const loose = count("_none");
-  const chip = (id, label, dot) => (
-    <button key={id} onClick={() => onChange(id)}
-      className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium ${
-        value === id ? "bg-slate-800 text-white ring-1 ring-slate-600" : `${M} hover:bg-slate-800`}`}>
-      {dot && <span className={`h-2 w-2 rounded-full ${dot}`} />}{label}
-    </button>
-  );
-  return (
-    <div className={`mb-3 flex flex-wrap items-center gap-1 rounded-lg border ${BD} bg-slate-900/60 p-1.5`}>
-      <L className="px-1.5">Product</L>
-      {chip("all", `All (${orders.length})`)}
-      {products.map((p) => chip(p.id, `${p.name} (${count(p.id)})`, c(p.color)[0]))}
-      {loose > 0 && chip("_none", `Needs triage (${loose})`, c("slate")[0])}
-    </div>
-  );
-}
-
 /* Four empty columns tell a new user nothing. Say where orders come from. */
 function FirstRun({ hasSync, onSync, onSamples, onAddProducts }) {
   return (
@@ -299,7 +298,7 @@ function FirstRun({ hasSync, onSync, onSamples, onAddProducts }) {
       <h2 className={`mt-3 text-base font-semibold ${W}`}>No orders yet</h2>
       <p className={`mx-auto mt-2 max-w-sm text-sm ${M}`}>
         Orders arrive on their own once Stripe is connected in the Admin Console.
-        Until then, load a dozen fake ones to see how the board works.
+        Until then, load a dozen fake ones to see how it all works.
       </p>
       <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
         <button onClick={onSamples} className={PRI}>Load sample orders</button>
@@ -310,30 +309,7 @@ function FirstRun({ hasSync, onSync, onSamples, onAddProducts }) {
   );
 }
 
-/* ═════ BOARD ═════ */
-function Board({ lanes, products, now, onOpen, onMove }) {
-  const [over, setOver] = useState(null);
-  return (
-    <div className="grid gap-3 lg:grid-cols-4">
-      {lanes.map(([id, label, rows]) => (
-        <section key={id}
-          onDragOver={(e) => { e.preventDefault(); setOver(id); }}
-          onDragLeave={() => setOver((v) => (v === id ? null : v))}
-          onDrop={(e) => { e.preventDefault(); setOver(null); const oid = e.dataTransfer.getData("text/plain"); if (oid) onMove(oid, id); }}
-          className={`rounded-xl border ${over === id ? "border-blue-500 bg-slate-900" : `${BD} bg-slate-900/40`} p-2 transition-colors`}>
-          <div className="flex items-center justify-between px-2 py-1.5">
-            <L>{label}</L><span className={`font-mono text-xs ${F}`}>{rows.length}</span>
-          </div>
-          <div className="space-y-2">
-            {!rows.length && <p className={`px-2 py-6 text-center text-xs ${F}`}>Nothing here.</p>}
-            {rows.map((o) => <Card key={o.id} o={o} products={products} now={now} onOpen={onOpen} />)}
-          </div>
-        </section>
-      ))}
-    </div>
-  );
-}
-
+/* ═════ ONE ORDER ═════ */
 function Card({ o, products, now, onOpen, hideProduct }) {
   const p = products.find((x) => x.id === o.productId);
   const list = steps(products, o), did = doneCount(o, list);
@@ -367,33 +343,74 @@ function Card({ o, products, now, onOpen, hideProduct }) {
   );
 }
 
-/* ═════ NEW ORDERS ═════ */
-function InboxList({ rows, products, now, onOpen }) {
+/* ═════ THE ORDER LISTS ═════ */
+
+/* New orders and Completed are the same table with different contents, so
+   they're one component. The columns earn their place: who it's for, what
+   they bought, what it cost, who owns it, and the clock. */
+function OrderList({ rows, products, now, onOpen, sortBy, onSort, done, title, note, empty }) {
   return (
     <div className={`overflow-hidden rounded-xl border ${BD}`}>
-      <div className={`border-b ${BD} bg-slate-900 px-4 py-3`}>
-        <h3 className={`text-sm font-semibold ${W}`}>Every payment, newest first</h3>
-        <p className={`text-xs ${F}`}>Declined charges stay here so nobody works an order that never paid.</p>
+      <div className={`flex flex-wrap items-center gap-3 border-b ${BD} bg-slate-900 px-4 py-3`}>
+        <div>
+          <h3 className={`flex items-center gap-2 text-sm font-semibold ${W}`}>
+            {title}
+            <span className={`rounded bg-slate-800 px-1.5 py-0.5 font-mono text-xs ${M}`}>{rows.length}</span>
+          </h3>
+          <p className={`text-xs ${F}`}>{note}</p>
+        </div>
+        {onSort && (
+          <div className={`ml-auto flex shrink-0 gap-1 rounded-lg border ${BD} bg-slate-950 p-1`}>
+            {SORTS.map(([id, label]) => (
+              <button key={id} onClick={() => onSort(id)}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium ${sortBy === id ? "bg-blue-600 text-white" : `${M} hover:bg-slate-800`}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-      {!rows.length && <p className={`px-4 py-8 text-sm ${M}`}>No payments yet. Run a sync, or load samples from the Admin Console.</p>}
+
+      {!rows.length && <p className={`px-4 py-8 text-sm ${M}`}>{empty}</p>}
+
       <div className="divide-y divide-slate-800">
         {rows.map((o) => {
           const p = products.find((x) => x.id === o.productId);
+          const tgt = target(products, o);
+          const bad = late(o, now);
           return (
-            <button key={o.id} onClick={() => onOpen(o.id)} className="flex w-full flex-wrap items-center gap-3 px-4 py-3 text-left hover:bg-slate-900">
+            <button key={o.id} onClick={() => onOpen(o.id)}
+              className={`flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-left hover:bg-slate-900 ${bad ? "bg-rose-950/20" : ""}`}>
               <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${c(p?.color)[0]}`} />
-              <div className="min-w-[160px] flex-1">
+
+              <div className="min-w-[170px] flex-1">
                 <div className={`text-sm font-medium ${W}`}>{o.customer}</div>
-                <div className={`text-xs ${F}`}>{o.productName}{freq(o) ? ` · ${freq(o)}` : ""}</div>
+                <div className={`truncate text-xs ${F}`}>{o.productName}{freq(o) ? ` · ${freq(o)}` : ""}</div>
               </div>
-              <span className={`font-mono text-sm ${M}`}>{cash(o.amount)}</span>
-              {paidOk(o)
-                ? <span className={`rounded px-1.5 py-0.5 text-xs ${c(p?.color)[1]}`}>{sm(o.status)[1]}</span>
-                : <span className="rounded bg-rose-500/15 px-1.5 py-0.5 text-xs text-rose-300" title={o.declineReason}>Declined</span>}
-              <span className="w-28 text-right">
-                {paidOk(o) && <Stopwatch startedAt={o.receivedAt} stoppedAt={o.completedAt} target={target(products, o)} />}
+
+              <span className={`w-20 text-right font-mono text-sm ${M}`}>{cash(o.amount)}</span>
+
+              <span className={`hidden w-32 truncate text-xs sm:block ${o.assignee && o.assignee !== "Unassigned" ? M : F}`}>
+                {o.assignee && o.assignee !== "Unassigned" ? o.assignee : "Unassigned"}
               </span>
-              <span className={`w-40 truncate text-right text-xs ${F}`}>{new Date(o.receivedAt).toLocaleString()}</span>
+
+              {paidOk(o)
+                ? <span className={`w-28 shrink-0 rounded px-1.5 py-0.5 text-center text-xs ${done ? "bg-emerald-500/15 text-emerald-300" : c(p?.color)[1]}`}>{sm(o.status)[1]}</span>
+                : <span className="w-28 shrink-0 rounded bg-rose-500/15 px-1.5 py-0.5 text-center text-xs text-rose-300" title={o.declineReason}>Declined</span>}
+
+              <span className="flex w-40 shrink-0 items-center justify-end gap-1.5">
+                {paidOk(o) && <>
+                  {bad && <AlertTriangle className="h-3 w-3 shrink-0 text-rose-400" />}
+                  <Stopwatch startedAt={o.receivedAt} stoppedAt={o.completedAt} target={tgt} />
+                  {tgt && <span className={`text-xs ${F}`}>of {Math.round(tgt / HOUR)}h</span>}
+                </>}
+              </span>
+
+              <span className={`hidden w-36 shrink-0 text-right text-xs md:block ${F}`}>
+                {done && o.completedAt
+                  ? `done ${new Date(o.completedAt).toLocaleDateString()}`
+                  : new Date(o.receivedAt).toLocaleString()}
+              </span>
             </button>
           );
         })}

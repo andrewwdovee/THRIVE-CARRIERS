@@ -396,7 +396,7 @@ export function Settings({ cfg, products, orders, saveCfg, commit, sync, onSync,
       <aside className="space-y-4">
         <div className={`${CARD} p-4`}>
           <h3 className={`text-sm font-semibold ${W}`}>Board</h3>
-          <div className="mt-3"><Field label="Move delivered orders off the board after (days)" hint="They stay in New orders and Reports.">
+          <div className="mt-3"><Field label="Hide delivered orders from By product after (days)" hint="They stay in Completed orders and Reports for good.">
             <input type="number" min="1" value={l.archiveAfterDays} onChange={(e) => set({ archiveAfterDays: Number(e.target.value) || 14 })} onBlur={() => saveCfg({ archiveAfterDays: l.archiveAfterDays })} className={IN} />
           </Field></div>
         </div>
