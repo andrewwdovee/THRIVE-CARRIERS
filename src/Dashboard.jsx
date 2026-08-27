@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import {
   RefreshCw, Search, Inbox, Clock, AlertTriangle, X, Mail, Phone,
   CreditCard, Receipt, CheckCircle2, Circle, Bell, BellOff, RotateCcw, User, PackageOpen,
-  Package, BarChart3, Settings as GearIcon, Layers, LogOut,
+  Package, BarChart3, Settings as GearIcon, Layers, LogOut, Undo2,
 } from "lucide-react";
 import {
   BD, CARD, IN, BTN, PRI, M, F, W, c, ST, sm, MISS, mm, SETTLED, DEF, DAY,
@@ -15,6 +15,7 @@ import { chime, desktop, askPermission, hook } from "./lib/notify";
 import { Stopwatch } from "./components/Elapsed";
 import ByProduct from "./views/ByProduct";
 import { Reports, Products, Settings as SettingsView } from "./views/admin";
+import Refunds from "./views/Refunds";
 
 /* The dashboard.
 
@@ -28,6 +29,7 @@ const TABS = [
   ["missed", "Missed payments", CreditCard],
   ["products-view", "By product", Layers],
   ["completed", "Completed", CheckCircle2],
+  ["refunds", "Refunds", Undo2],
   ["catalog", "Products", Package],
   ["reports", "Reports", BarChart3],
   ["settings", "Settings", GearIcon],
@@ -263,16 +265,44 @@ export default function Dashboard({ me: account, onSignOut }) {
     return rows.sort((x, y) => (x.dueAt || Infinity) - (y.dueAt || Infinity));
   }, [hits, sortBy]);
 
-  /* Every payment that didn't go through. Unsettled ones first — those are
-     still costing money — then the ones already dealt with. */
-  const missed = useMemo(() => hits.filter((o) => !paidOk(o)).sort((x, y) => {
-    const a = SETTLED.has(x.recovery || "open"), b = SETTLED.has(y.recovery || "open");
-    return (a - b) || (y.receivedAt - x.receivedAt);
-  }), [hits]);
-  const bleeding = useMemo(() => missed.filter((o) => !SETTLED.has(o.recovery || "open")).length, [missed]);
+  /* Payments that failed and still have something running behind them. Once
+     the service is stopped — or the money turns up — there's nothing left to
+     do, so it files into Completed with everything else that's finished. */
+  const settledOf = (o) => !paidOk(o) && SETTLED.has(o.recovery || "open");
+  const missed = useMemo(() => hits.filter((o) => !paidOk(o) && !SETTLED.has(o.recovery || "open"))
+    .sort((x, y) => y.receivedAt - x.receivedAt), [hits]);
+  const bleeding = missed.length;
 
-  const completed = useMemo(() => hits.filter((o) => o.status === "done" && paidOk(o))
-    .sort((x, y) => (y.completedAt || 0) - (x.completedAt || 0)), [hits]);
+  /* Stripe-reported refunds are derived from the charge itself, so a re-sync
+     can't duplicate them; anything settled outside Stripe is a record of its
+     own. The reason for a Stripe one lives on the order it came from. */
+  const refunds = useMemo(() => {
+    const fromStripe = orders.filter((o) => o.refunded).map((o) => ({
+      id: `rf_${o.id}`, source: "stripe", orderId: o.id,
+      productId: o.productId, productName: o.productName,
+      customer: o.customer, email: o.email,
+      amount: o.amountRefunded ?? o.amount, currency: o.currency,
+      at: o.refundedAt || o.receivedAt,
+      reason: o.refundReason || "", note: o.refundNote || "", chargeId: o.chargeId,
+    }));
+    return [...fromStripe, ...(st.refunds || [])].sort((a, b) => b.at - a.at);
+  }, [orders, st.refunds]);
+
+  const recordRefund = useCallback((r) => {
+    commit((x) => ({ ...x, refunds: [{ ...r, source: "manual" }, ...(x.refunds || [])] }), "Refund recorded");
+  }, [commit]);
+  const removeRefund = useCallback((id) => {
+    commit((x) => ({ ...x, refunds: (x.refunds || []).filter((r) => r.id !== id) }), "Record removed");
+  }, [commit]);
+  /* A Stripe refund isn't ours to edit — only the reason we attach to it. */
+  const annotateRefund = useCallback((r, patchIn) => {
+    commit((x) => ({ ...x, orders: x.orders.map((o) => (o.id === r.orderId
+      ? { ...o, refundReason: patchIn.reason, refundNote: patchIn.note } : o)) }), "Reason saved");
+  }, [commit]);
+
+  const completed = useMemo(() => hits
+    .filter((o) => (paidOk(o) && o.status === "done") || (!paidOk(o) && SETTLED.has(o.recovery || "open")))
+    .sort((x, y) => ((y.completedAt || y.stoppedAt || 0) - (x.completedAt || x.stoppedAt || 0))), [hits]);
   const overdue = orders.filter((o) => paidOk(o) && late(o, now)).length;
   const openOrder = open ? orders.find((o) => o.id === open) : null;
   const people = useMemo(() => [...new Set(orders.map((o) => o.assignee).filter((a) => a && a !== "Unassigned"))], [orders]);
@@ -346,9 +376,12 @@ export default function Dashboard({ me: account, onSignOut }) {
                 empty="Nothing outstanding — everything that came in has been delivered." />
           : tab === "missed"
             ? <MissedList rows={missed} products={products} now={now} onOpen={setOpen} settings={cfg} />
+          : tab === "refunds"
+            ? <Refunds refunds={refunds} products={products} orders={orders}
+                onRecord={recordRefund} onRemove={removeRefund} onAnnotate={annotateRefund} />
           : tab === "completed"
             ? <OrderList rows={completed} products={products} now={now} onOpen={setOpen} done settings={cfg}
-                title="Delivered" note="Newest first, with the time each one took."
+                title="Delivered" note="Delivered orders and settled failed payments, newest first."
                 empty="Nothing delivered yet. Orders land here once someone stops the clock." />
           : tab === "products-view" ? <ByProduct products={products} orders={grouped} now={now} onOpen={setOpen} onMove={move} Card={Card} settings={cfg} />
           : tab === "catalog" ? <Products products={products} orders={orders} commit={commit} house={cfg.pastDueHours} />
@@ -476,19 +509,19 @@ function OrderList({ rows, products, now, onOpen, sortBy, onSort, done, title, n
 
               {paidOk(o)
                 ? <span className={`w-28 shrink-0 rounded px-1.5 py-0.5 text-center text-xs ${done ? "bg-emerald-500/15 text-emerald-300" : c(p?.color)[1]}`}>{sm(o.status)[1]}</span>
-                : <span className="w-28 shrink-0 rounded bg-rose-500/15 px-1.5 py-0.5 text-center text-xs text-rose-300" title={o.declineReason}>Declined</span>}
+                : <span className="w-28 shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 text-center text-xs text-amber-300" title={o.declineReason}>
+                    {mm(o.recovery || "open")[1]}
+                  </span>}
 
               <span className="flex w-40 shrink-0 items-center justify-end gap-1.5">
-                {paidOk(o) && <>
-                  {bad && <AlertTriangle className="h-3 w-3 shrink-0 text-rose-400" />}
-                  <Stopwatch startedAt={o.receivedAt} stoppedAt={o.completedAt} target={tgt} />
-                  {tgt && <span className={`text-xs ${F}`}>of {Math.round(tgt / HOUR)}h</span>}
-                </>}
+                {bad && <AlertTriangle className="h-3 w-3 shrink-0 text-rose-400" />}
+                <Stopwatch startedAt={o.receivedAt} stoppedAt={o.completedAt || o.stoppedAt} target={paidOk(o) ? tgt : null} />
+                {tgt && paidOk(o) && <span className={`text-xs ${F}`}>of {Math.round(tgt / HOUR)}h</span>}
               </span>
 
               <span className={`hidden w-36 shrink-0 text-right text-xs md:block ${F}`}>
-                {done && o.completedAt
-                  ? `done ${new Date(o.completedAt).toLocaleDateString()}`
+                {done && (o.completedAt || o.stoppedAt)
+                  ? `done ${new Date(o.completedAt || o.stoppedAt).toLocaleDateString()}`
                   : new Date(o.receivedAt).toLocaleString()}
               </span>
             </button>

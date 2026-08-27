@@ -29,6 +29,11 @@ export function buildSamples(products) {
       assignee: shipped || (!bad && i % 2) ? STAFF[i % STAFF.length] : "Unassigned",
       checklist: shipped ? Object.fromEntries((p.steps || []).map((_, k) => [k, true])) : {},
       overdueNotified: shipped,
+      // One delivered order came back as a refund, and the per-call product is
+      // the one that actually gets refunded, so the page has something to show.
+      refunded: shipped && i === 4,
+      refundedAt: shipped && i === 4 ? at + took + 2 * HOUR : undefined,
+      refundReason: shipped && i === 4 ? "Cancelled membership" : "",
       receivedAt: at, customerId: `cus_s_${id.slice(-8)}`, customer: nm,
       email: mail, phone: `+1727555${String(1e3 + i).slice(-4)}`, ownerName: nm, ownerEmail: mail,
       paymentMethodId: `pm_s_${id.slice(-8)}`, paymentMethodType: "card", cardBrand: CARDS[i % 4],

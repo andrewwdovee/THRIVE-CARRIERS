@@ -43,6 +43,19 @@ export const mm = (id) => MISS.find((m) => m[0] === id) || MISS[0];
    or the spending stopped. */
 export const SETTLED = new Set(["stopped", "recovered"]);
 
+/* Why money went back. Picked from a list rather than typed, so the Refunds
+   page can total them and show which reason is costing the most. */
+export const REFUND_REASONS = [
+  "Cancelled membership",
+  "Call quality",
+  "Didn't connect / no answer",
+  "Duplicate charge",
+  "Service not delivered",
+  "Client dispute",
+  "Goodwill",
+  "Other",
+];
+
 export const SEED = [
   { id: "p_rec", name: "Recruiting Ad Campaign", kind: "one-time", slaHours: 48, color: "blue", stripeMatch: "recruit", stripeIds: [],
     steps: ["Kickoff call / intake form", "Write ad copy", "Build creative", "Launch campaign", "Send client confirmation"],
@@ -53,6 +66,9 @@ export const SEED = [
   { id: "p_fe", name: "Inbound Final Expense Transfers", kind: "subscription", slaHours: 12, color: "orange", stripeMatch: "final expense", stripeIds: [],
     steps: ["Confirm licensed states", "Set daily transfer cap", "Add to dialer rotation", "Schedule first live day"],
     cancelSteps: ["Remove from the dialer rotation (stops the spend)", "Email the client about the failed payment", "Cancel the subscription in Stripe"] },
+  { id: "p_call", name: "Individual Call", kind: "one-time", slaHours: 4, color: "cyan", stripeMatch: "call", stripeIds: [],
+    steps: ["Confirm the transfer details", "Route the call", "Log the outcome"],
+    cancelSteps: ["Stop sending calls to this client", "Email the client about the failed payment"] },
   { id: "p_ig", name: "Instagram Software", kind: "subscription", slaHours: 24, color: "fuchsia", stripeMatch: "instagram", stripeIds: [],
     steps: ["Create account", "Connect IG profile", "Load message templates", "Send login + walkthrough"],
     cancelSteps: ["Disable the account", "Email the client about the failed payment", "Cancel the subscription in Stripe"] },

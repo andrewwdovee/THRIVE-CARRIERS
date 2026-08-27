@@ -9,8 +9,10 @@ The work, in the order you'd use them:
   what just arrived.
 - **Missed payments** — every payment that failed, and what has to be switched
   off because of it. See below.
-- **Completed** — every delivered order, newest first, each with the time it
-  took.
+- **Completed** — everything finished: delivered orders, and failed payments
+  whose service has been stopped or whose money turned up.
+- **Refunds** — what went back out, grouped by product, so you can see which
+  thing you sell costs the most in refunds.
 - **By product** — the same orders cut by what was sold. Each product keeps its
   own three working lanes (drag a card between them), its turnaround target,
   what's past due, and what it has taken in. Delivered orders collapse to one
@@ -94,6 +96,22 @@ switch off after all.
 
 A product with no shutdown steps says so on its card in Products, because the
 failure case is exactly when nobody wants to be guessing what's still running.
+
+## Refunds
+
+Grouped by product, because the question worth answering is which thing you sell
+is costing the most in refunds — usually the per-call product rather than a
+subscription.
+
+Two kinds land here. A charge you refund **in Stripe** appears on its own, since
+Stripe reports the refund on the charge; the reason is blank until someone adds
+one, which is what makes the totals mean anything. Anything settled **outside
+Stripe** — a call credited back, a partial — gets recorded with **Record a
+refund**; picking the original order fills in the rest.
+
+Reasons come from a fixed list rather than a free-text box, so *Why money went
+back* can total them. A Stripe refund's amount can't be edited here, only its
+reason: the number belongs to Stripe.
 
 ## The clock on every order
 
