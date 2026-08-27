@@ -127,8 +127,8 @@ export function Reports({ orders, products, n, flash, refunds, refundTypes }) {
         <div className={`flex items-center justify-between border-b ${BD} bg-slate-900 px-4 py-3`}>
           <h3 className={`text-sm font-semibold ${W}`}>Day by day</h3><span className={`text-xs ${F}`}>Click a column to sort</span>
         </div>
-        <div className="overflow-x-auto"><table className="w-full text-sm">
-          <thead><tr className={`border-b text-left ${BD}`}>
+        <div className="max-h-[26rem] overflow-auto"><table className="w-full text-sm">
+          <thead className="sticky top-0 z-10 bg-slate-900"><tr className={`border-b text-left ${BD}`}>
             <Th label="Date" k="day" s={ds} set={setDs} /><Th label="Placed" k="placed" s={ds} set={setDs} />
             <Th label="Delivered" k="delivered" s={ds} set={setDs} /><Th label="Avg fulfillment" k="avg" s={ds} set={setDs} />
             <Th label="Late" k="late" s={ds} set={setDs} /><Th label="Declined" k="dec" s={ds} set={setDs} />
@@ -150,8 +150,8 @@ export function Reports({ orders, products, n, flash, refunds, refundTypes }) {
 
       <div className={`overflow-hidden rounded-xl border ${BD}`}>
         <div className={`border-b ${BD} bg-slate-900 px-4 py-3`}><h3 className={`text-sm font-semibold ${W}`}>By product</h3></div>
-        <div className="overflow-x-auto"><table className="w-full text-sm">
-          <thead><tr className={`border-b text-left ${BD}`}>
+        <div className="max-h-[26rem] overflow-auto"><table className="w-full text-sm">
+          <thead className="sticky top-0 z-10 bg-slate-900"><tr className={`border-b text-left ${BD}`}>
             <Th label="Product" k="name" s={ps} set={setPs} /><Th label="Ordered" k="count" s={ps} set={setPs} />
             <Th label="Open" k="open" s={ps} set={setPs} /><Th label="Avg fulfillment" k="avg" s={ps} set={setPs} />
             <Th label="On target" k="pct" s={ps} set={setPs} /><Th label="Order value" k="revenue" s={ps} set={setPs} />
@@ -182,12 +182,12 @@ export function Reports({ orders, products, n, flash, refunds, refundTypes }) {
       <div className={`overflow-hidden rounded-xl border ${BD}`}>
         <div className={`border-b ${BD} bg-slate-900 px-4 py-3`}><h3 className={`text-sm font-semibold ${W}`}>Team performance</h3></div>
         {!people.length ? <p className={`px-4 py-6 text-sm ${M}`}>Numbers appear here once orders get marked delivered.</p>
-          : people.map((p) => <div key={p.name} className={`flex flex-wrap items-center gap-4 border-b px-4 py-3 last:border-0 ${BD}`}>
+          : <div className="max-h-[26rem] overflow-auto">{people.map((p) => <div key={p.name} className={`flex flex-wrap items-center gap-4 border-b px-4 py-3 last:border-0 ${BD}`}>
             <User className={`h-4 w-4 ${F}`} /><span className={`flex-1 text-sm ${W}`}>{p.name}</span>
             <span className="font-mono text-sm text-slate-300">{p.count} delivered</span>
             <span className={`font-mono text-sm ${M}`}>{brief(p.time / p.count)} avg</span>
             <span className={`font-mono text-sm ${p.late ? "text-rose-400" : "text-emerald-400"}`}>{Math.round(((p.count - p.late) / p.count) * 100)}% on target</span>
-          </div>)}
+          </div>)}</div>}
       </div>
     </div>
   );
@@ -244,7 +244,7 @@ function RefundReport({ refunds, products, types, n }) {
     <div className={`overflow-hidden rounded-xl border ${BD}`}>
       <div className={`border-b ${BD} bg-slate-900 px-4 py-3`}><h3 className={`text-sm font-semibold ${W}`}>{title}</h3></div>
       {!rows.length && <p className={`px-4 py-6 text-sm ${M}`}>{empty}</p>}
-      <div className="divide-y divide-slate-800">
+      <div className="max-h-[26rem] divide-y divide-slate-800 overflow-auto">
         {rows.map((r) => (
           <div key={r.key} className="flex items-center gap-3 px-4 py-2.5">
             <span className={`flex-1 truncate text-sm ${W}`}>{r.label}</span>

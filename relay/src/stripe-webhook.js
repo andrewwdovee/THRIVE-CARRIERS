@@ -68,22 +68,33 @@ export function fromEvent(event) {
   if (!o) return null;
   const type = event.type || "";
   const card = o.payment_method_details?.card || {};
-  const failed = type.endsWith(".failed") || o.status === "failed";
+  /* Stripe separates the last word with a dot on some events and an underscore
+     on others — charge.failed against invoice.payment_failed. Matching on
+     ".failed" quietly let every failed subscription renewal through as a
+     success, which is the one thing that must never happen here. */
+  const failed = /fail/.test(type) || o.status === "failed" || o.status === "uncollectible";
 
   const lines = o.lines?.data || o.line_items?.data || [];
   const first = lines[0] || {};
   const price = first.price || {};
+  const chargeId = String(o.id || "").startsWith("ch_") ? o.id : (typeof o.charge === "string" ? o.charge : "");
+  const paymentId = typeof o.payment_intent === "string" ? o.payment_intent : "";
 
   return {
-    id: o.id,
-    chargeId: String(o.id || "").startsWith("ch_") ? o.id : (o.charge || ""),
-    paymentId: typeof o.payment_intent === "string" ? o.payment_intent : o.id,
+    /* One payment, one id. Stripe fires several events for the same money —
+       charge.succeeded and invoice.payment_succeeded both land for every
+       subscription renewal — so they key on the payment itself, or the board
+       grows a duplicate order every month. */
+    id: paymentId || chargeId || o.id,
+    chargeId,
+    paymentId: paymentId || o.id,
     status: failed ? "failed" : "succeeded",
     paymentStatus: failed ? "failed" : "succeeded",
     declineCode: o.failure_code || o.outcome?.reason || "",
     declineReason: o.failure_message || o.outcome?.seller_message || o.last_payment_error?.message || "",
     refunded: !!o.refunded,
-    amount: o.amount ?? o.amount_total ?? o.amount_paid ?? null,
+    amount: o.amount ?? o.amount_total ?? o.amount_paid ?? o.amount_due ?? null,
+    amountRefunded: o.amount_refunded ?? null,
     currency: o.currency || "usd",
     created: o.created,
     receiptUrl: o.receipt_url || "",
@@ -91,6 +102,12 @@ export function fromEvent(event) {
     billing_details: o.billing_details,
     customer: o.customer,
     customer_details: o.customer_details,
+    /* An invoice carries the customer's name on itself rather than in
+       billing_details. Without these a failed renewal reads "Unnamed
+       customer", and nobody knows who to chase. */
+    customerName: o.customer_name || "",
+    customerEmail: o.customer_email || "",
+    customerPhone: o.customer_phone || "",
     invoice: typeof o.invoice === "string" ? o.invoice : "",
     subscriptionId: typeof o.subscription === "string" ? o.subscription : "",
     description: o.description || "",
@@ -113,4 +130,33 @@ export function fromEvent(event) {
       intervalCount: l.price?.recurring?.interval_count || 1,
     })),
   };
+}
+
+/* Combine two views of the same payment. A later event wins only where it
+   actually says something; a failure is sticky, because a charge.succeeded
+   arriving alongside a failed invoice must not quietly mark it paid. */
+export function mergeOrders(a, b) {
+  const out = { ...a };
+  for (const [k, v] of Object.entries(b)) {
+    const empty = v == null || v === "" || (Array.isArray(v) && !v.length)
+      || (typeof v === "object" && !Array.isArray(v) && !Object.keys(v).length);
+    if (!empty) out[k] = v;
+  }
+  /* Only the invoice knows what was actually sold. A charge for a subscription
+     carries the description "Subscription creation", which is true and
+     useless — and would replace the real product name depending on which
+     event happened to arrive second. */
+  const LINE_DERIVED = ["productName", "priceId", "stripeProductId", "interval", "intervalCount", "quantity", "items"];
+  if (!b.items?.length && a.items?.length) {
+    for (const k of LINE_DERIVED) if (a[k] != null && a[k] !== "") out[k] = a[k];
+  }
+
+  if (a.paymentStatus === "failed" || b.paymentStatus === "failed") {
+    out.paymentStatus = "failed";
+    out.status = "failed";
+    out.declineCode = b.declineCode || a.declineCode || "";
+    out.declineReason = b.declineReason || a.declineReason || "";
+  }
+  out.refunded = !!(a.refunded || b.refunded);
+  return out;
 }

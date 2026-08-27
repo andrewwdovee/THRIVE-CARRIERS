@@ -122,6 +122,26 @@ far through the steps you are: the number belongs to Stripe.
 average for the window, volume per week, and three rankings: which agents you
 refund most, which products cause it, and which type of refund it is.
 
+## What Stripe actually sends
+
+Worth knowing, because it explains a few things the board does:
+
+- **One payment fires several events.** A subscription charge sends both
+  `charge.succeeded` and `invoice.payment_succeeded`. They're keyed on the
+  payment, not the event, and merged — the charge knows the card, the invoice
+  knows the product — so one payment is one order, however many events arrive
+  and in whatever order.
+- **A renewal looks exactly like a new sale.** Every month a subscription
+  charges again and lands as a new order. One whose subscription is already on
+  the board is tagged **Renewal**, so nobody re-onboards a client from March.
+- **A refund arrives on the charge you already have.** Stripe reports it on the
+  original charge rather than as something new, so a repeat delivery updates
+  the payment side of the existing order — refunded, declined, card details —
+  and never touches who owns it, how far through it is, or the notes.
+- **A charge that matches no product** still lands on the board, tagged
+  **Unmapped**, with a banner on New orders pointing at Products. It has no
+  turnaround target and no fulfillment steps until you map its Stripe ID.
+
 ## The clock on every order
 
 An order's stopwatch starts at the moment Stripe took the money — not when

@@ -272,6 +272,9 @@ export default function Dashboard({ me: account, onSignOut }) {
   const missed = useMemo(() => hits.filter((o) => !paidOk(o) && !SETTLED.has(o.recovery || "open"))
     .sort((x, y) => y.receivedAt - x.receivedAt), [hits]);
   const bleeding = missed.length;
+  /* A charge whose product we don't recognise still has to be worked, but it
+     arrives with no target and no steps — worth saying out loud. */
+  const unmapped = useMemo(() => orders.filter((o) => paidOk(o) && !o.productId && o.status !== "done"), [orders]);
 
   /* Stripe-reported refunds are derived from the charge itself, so a re-sync
      can't duplicate them; anything settled outside Stripe is a record of its
@@ -372,6 +375,21 @@ export default function Dashboard({ me: account, onSignOut }) {
       </header>
 
       <main className="mx-auto max-w-[1600px] px-4 py-5">
+        {tab === "inbox" && !!unmapped.length && (
+          <div className={`mb-3 rounded-xl border-l-4 border-amber-500 border-y border-r ${BD} bg-slate-900 px-4 py-3`}>
+            <h3 className={`text-sm font-semibold ${W}`}>
+              {unmapped.length} order{unmapped.length === 1 ? "" : "s"} didn't match a product
+            </h3>
+            <p className={`mt-0.5 text-sm ${M}`}>
+              They're on the board with no turnaround target and no fulfillment steps.{" "}
+              <button onClick={() => setTab("catalog")} className="text-blue-400 hover:underline">
+                Add their Stripe price or product ID under Products
+              </button>{" "}
+              and they'll sort themselves out.
+            </p>
+          </div>
+        )}
+
         {WORK.has(tab) && !orders.length
           ? <FirstRun hasSync={!!syncEndpoint(cfg)} onSync={runSync} onSamples={loadSamples} onAddProducts={() => setTab("catalog")} />
           : tab === "inbox"
@@ -508,7 +526,11 @@ function OrderList({ rows, products, now, onOpen, sortBy, onSort, done, title, n
                 <div className={`truncate text-sm font-semibold ${W}`}>
                   {o.productName}{freq(o) ? <span className={`font-normal ${F}`}> · {freq(o)}</span> : null}
                 </div>
-                <div className={`truncate text-xs ${M}`}>{o.customer}</div>
+                <div className={`flex items-center gap-1.5 truncate text-xs ${M}`}>
+                  {o.renewal && <span className="rounded bg-slate-700/60 px-1 py-px text-[10px] uppercase tracking-wide text-slate-300">Renewal</span>}
+                  {!o.productId && <span className="rounded bg-amber-500/15 px-1 py-px text-[10px] uppercase tracking-wide text-amber-300">Unmapped</span>}
+                  <span className="truncate">{o.customer}</span>
+                </div>
               </div>
 
               <span className={`w-20 text-right font-mono text-sm ${M}`}>{cash(o.amount)}</span>

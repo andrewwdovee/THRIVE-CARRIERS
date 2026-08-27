@@ -28,7 +28,7 @@
    under Settings → Stripe connection, with the same SYNC_TOKEN. */
 
 import { createUser, deleteUser, listUsers, login, logout, session, bearer } from "./auth.js";
-import { verify, HANDLED, fromEvent } from "./stripe-webhook.js";
+import { verify, HANDLED, fromEvent, mergeOrders } from "./stripe-webhook.js";
 
 const STRIPE = "https://api.stripe.com/v1";
 
@@ -226,9 +226,15 @@ export default {
       if (!order?.id) return json({ ok: true, ignored: "no payment object" }, 200, origin);
 
       const at = Number(order.created) || Math.floor(Date.now() / 1000);
-      // Keyed on the payment, so Stripe's retries overwrite rather than duplicate.
-      await env.BOARD.put(`inbox:${String(at).padStart(12, "0")}:${order.id}`,
-        JSON.stringify(order), { expirationTtl: INBOX_TTL });
+      const key = `inbox:${String(at).padStart(12, "0")}:${order.id}`;
+
+      /* Each event knows part of the story: the charge has the card, the
+         invoice has the line items and the subscription. Merge rather than
+         overwrite, so whichever lands second doesn't erase the first and a
+         retry of either is harmless. */
+      const prior = await env.BOARD.get(key);
+      const merged = prior ? mergeOrders(JSON.parse(prior), order) : order;
+      await env.BOARD.put(key, JSON.stringify(merged), { expirationTtl: INBOX_TTL });
       return json({ ok: true, received: order.id }, 200, origin);
     }
 
