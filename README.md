@@ -213,6 +213,9 @@ exceed the CPU limit; the paid plan has room for it.
 npm run setup
 ```
 
+There's a follow-along version of all of this in `docs/connect-stripe.html` —
+open it in a browser and work down it, with a copy button on every command.
+
 It signs you in to Cloudflare, sets everything up, asks for your Stripe key,
 and tells you exactly what to paste into Stripe. Follow the steps it prints.
 

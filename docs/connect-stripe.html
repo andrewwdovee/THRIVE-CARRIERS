@@ -1,0 +1,476 @@
+<title>Connect Stripe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+
+<style>
+  :root {
+    --paper:        #f6f7f6;
+    --card:         #ffffff;
+    --ink:          #14181b;
+    --ink-soft:     #4c565b;
+    --ink-faint:    #79858a;
+    --rule:         #e0e4e1;
+    --go:           #17604b;
+    --go-soft:      #e6f0ea;
+    --click:        #8a4f10;
+    --click-soft:   #fbeedd;
+    --term-bg:      #191d21;
+    --term-ink:     #e8eceb;
+    --term-dim:     #8b9691;
+    --shadow:       0 1px 2px rgba(20,24,27,.05), 0 8px 24px -16px rgba(20,24,27,.28);
+  }
+  :root:not([data-theme="light"]) { }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:      #101315;
+      --card:       #171b1e;
+      --ink:        #e9edeb;
+      --ink-soft:   #a8b3b1;
+      --ink-faint:  #7b8785;
+      --rule:       #262c2f;
+      --go:         #6fd0ac;
+      --go-soft:    #13291f;
+      --click:      #e6b271;
+      --click-soft: #2a1f10;
+      --term-bg:    #0a0d0e;
+      --term-ink:   #e8eceb;
+      --term-dim:   #7f8b88;
+      --shadow:     0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:      #101315;
+    --card:       #171b1e;
+    --ink:        #e9edeb;
+    --ink-soft:   #a8b3b1;
+    --ink-faint:  #7b8785;
+    --rule:       #262c2f;
+    --go:         #6fd0ac;
+    --go-soft:    #13291f;
+    --click:      #e6b271;
+    --click-soft: #2a1f10;
+    --term-bg:    #0a0d0e;
+    --term-ink:   #e8eceb;
+    --term-dim:   #7f8b88;
+    --shadow:     0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 400 17px/1.65 "Source Sans 3", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 41rem; margin: 0 auto; padding: 3.5rem 1.25rem 6rem; }
+
+  h1 {
+    font-family: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 800; font-size: clamp(2.1rem, 6vw, 3rem); line-height: 1.05;
+    letter-spacing: -.02em; margin: 0; text-wrap: balance;
+  }
+  .lede { font-size: 1.18rem; color: var(--ink-soft); margin: .9rem 0 0; max-width: 34rem; }
+  .eyebrow {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: .72rem; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--go); margin: 0 0 .9rem;
+  }
+
+  h2 {
+    font-family: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 600; font-size: 1.3rem; line-height: 1.25; letter-spacing: -.01em;
+    margin: 0; text-wrap: balance;
+  }
+  p { margin: .75rem 0 0; }
+  a { color: var(--go); text-underline-offset: 2px; }
+
+  /* ── progress ── */
+  .progress {
+    position: sticky; top: 0; z-index: 20; margin: 2.5rem 0 0;
+    background: var(--paper); padding: .85rem 0; border-bottom: 1px solid var(--rule);
+    display: flex; align-items: center; gap: .8rem;
+  }
+  .bar { flex: 1; height: 5px; border-radius: 99px; background: var(--rule); overflow: hidden; }
+  .bar > i { display: block; height: 100%; width: 0; background: var(--go); transition: width .3s ease; }
+  .count {
+    font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .8rem;
+    color: var(--ink-faint); font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+
+  /* ── needs ── */
+  .needs { margin: 2rem 0 0; padding: 1.15rem 1.25rem; border: 1px solid var(--rule); border-radius: 12px; background: var(--card); box-shadow: var(--shadow); }
+  .needs h2 { font-size: 1.05rem; }
+  .needs ul { min-width: 0; margin: .7rem 0 0; padding: 0; list-style: none; display: grid; gap: .5rem; }
+  .needs li { display: flex; gap: .6rem; align-items: baseline; color: var(--ink-soft); }
+  .needs li b { color: var(--ink); font-weight: 600; }
+  .tick { color: var(--go); font-weight: 700; }
+
+  /* ── steps ── */
+  /* minmax(0,1fr) — without it a grid item refuses to shrink below the widest
+     unbreakable line inside it, and one long command drags the page sideways. */
+  ol.steps {
+    list-style: none; margin: 2.5rem 0 0; padding: 0;
+    display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.1rem;
+  }
+  .step {
+    min-width: 0;
+    position: relative; background: var(--card); border: 1px solid var(--rule);
+    border-radius: 14px; padding: 1.35rem 1.4rem 1.5rem 1.4rem; box-shadow: var(--shadow);
+    transition: opacity .2s ease;
+  }
+  .step.done { opacity: .55; }
+  .step-head { display: flex; gap: .85rem; align-items: flex-start; }
+  .num {
+    flex: none; width: 2rem; height: 2rem; border-radius: 50%;
+    display: grid; place-items: center;
+    font-family: "JetBrains Mono", ui-monospace, monospace; font-weight: 600; font-size: .9rem;
+    background: var(--go-soft); color: var(--go); font-variant-numeric: tabular-nums;
+  }
+  .step[data-kind="click"] .num { background: var(--click-soft); color: var(--click); }
+  .step-head > div { min-width: 0; flex: 1; }
+
+  .kind {
+    display: inline-block; margin: 0 0 .35rem;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: .66rem; letter-spacing: .12em; text-transform: uppercase;
+    padding: .18rem .5rem; border-radius: 5px;
+    background: var(--go-soft); color: var(--go);
+  }
+  .step[data-kind="click"] .kind { background: var(--click-soft); color: var(--click); }
+
+  .body { min-width: 0; margin-top: .85rem; }
+  .body p:first-child { margin-top: 0; }
+
+  /* ── terminal / copy ── */
+  .cmd { position: relative; margin: .9rem 0 0; border-radius: 10px; background: var(--term-bg); overflow: hidden; }
+  .cmd pre {
+    margin: 0; padding: .9rem 3.4rem .9rem 1rem; overflow-x: auto;
+    font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .85rem; line-height: 1.7;
+    color: var(--term-ink);
+  }
+  .cmd pre .c { color: var(--term-dim); }
+  .copy {
+    position: absolute; top: .55rem; right: .55rem;
+    font: 600 .7rem/1 "JetBrains Mono", ui-monospace, monospace; letter-spacing: .06em;
+    color: var(--term-dim); background: transparent; border: 1px solid #33393d;
+    border-radius: 6px; padding: .4rem .55rem; cursor: pointer; text-transform: uppercase;
+  }
+  .copy:hover { color: var(--term-ink); border-color: #4b5257; }
+  .copy.ok { color: #6fd0ac; border-color: #2c5a49; }
+  .copy:focus-visible, .check:focus-visible, a:focus-visible { outline: 2px solid var(--go); outline-offset: 2px; }
+
+  /* ── where to click ── */
+  .path {
+    margin: .9rem 0 0; padding: .8rem 1rem; border-radius: 10px;
+    background: var(--click-soft); border: 1px solid color-mix(in srgb, var(--click) 22%, transparent);
+  }
+  .path b { font-weight: 600; }
+  code {
+    font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .87em;
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+    padding: .12em .38em; border-radius: 4px;
+    /* A long filename must wrap, not shove the page sideways on a phone. */
+    overflow-wrap: anywhere;
+  }
+  .path code { background: color-mix(in srgb, var(--click) 14%, transparent); }
+
+  /* ── check off ── */
+  .check {
+    margin-top: 1.1rem; display: inline-flex; align-items: center; gap: .55rem;
+    font: 600 .82rem/1 "Source Sans 3", sans-serif; color: var(--ink-faint);
+    background: transparent; border: 1px solid var(--rule); border-radius: 99px;
+    padding: .5rem .85rem; cursor: pointer;
+  }
+  .check:hover { border-color: var(--go); color: var(--go); }
+  .check .box {
+    width: .95rem; height: .95rem; border-radius: 4px; border: 1.5px solid currentColor;
+    display: grid; place-items: center; font-size: .7rem;
+  }
+  .step.done .check { color: var(--go); border-color: var(--go); background: var(--go-soft); }
+
+  /* ── done ── */
+  .finish { margin: 2.5rem 0 0; padding: 1.4rem 1.5rem; border-radius: 14px; border: 1px solid var(--go); background: var(--go-soft); }
+  .finish h2 { color: var(--ink); }
+  .finish .quote {
+    margin-top: .9rem; padding: .7rem 1rem; border-radius: 8px; background: var(--card);
+    border: 1px solid var(--rule); font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .85rem;
+  }
+  .dot { display: inline-block; width: .55rem; height: .55rem; border-radius: 50%; background: #17a06f; margin-right: .5rem; }
+
+  .aside { margin: 2.5rem 0 0; padding-top: 1.6rem; border-top: 1px solid var(--rule); }
+  .aside h2 { font-size: 1.1rem; }
+  dl { margin: 1rem 0 0; display: grid; gap: 1rem; }
+  dt { font-weight: 600; }
+  dd { margin: .25rem 0 0; color: var(--ink-soft); }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">Lead Tech Fulfillment</p>
+  <h1>Connect Stripe</h1>
+  <p class="lede">
+    Seven steps. Four of them you paste into a terminal; three you click on Stripe's
+    website. At the end, every payment shows up on your board by itself.
+  </p>
+
+  <div class="progress">
+    <div class="bar"><i id="fill"></i></div>
+    <span class="count" id="count">0 of 7 done</span>
+  </div>
+
+  <section class="needs">
+    <h2>Two free things you need first</h2>
+    <ul>
+      <li><span class="tick">→</span><span><b><a href="https://nodejs.org" target="_blank" rel="noreferrer">Node.js</a></b> installed on your computer. Download it, click through, done.</span></li>
+      <li><span class="tick">→</span><span>A <b><a href="https://dash.cloudflare.com/sign-up" target="_blank" rel="noreferrer">Cloudflare account</a></b>. This is where your Stripe key will live, safely away from the website.</span></li>
+    </ul>
+    <p style="color:var(--ink-soft);font-size:.95rem">
+      Then open <b>Terminal</b> (Mac) or <b>PowerShell</b> (Windows). It's a window where you paste
+      the lines below and press Enter. That's all you'll do with it.
+    </p>
+  </section>
+
+  <ol class="steps" id="steps">
+
+    <li class="step" data-kind="type" data-id="s1">
+      <div class="step-head">
+        <span class="num">1</span>
+        <div>
+          <span class="kind">You paste this</span>
+          <h2>Put the code on your computer</h2>
+          <div class="body">
+            <p>Download the <code>lead-tech-fulfillment.bundle</code> file I sent you. Then paste
+              these three lines, one at a time, pressing Enter after each.</p>
+            <div class="cmd">
+              <button class="copy" type="button">Copy</button>
+<pre>cd Downloads
+git clone lead-tech-fulfillment.bundle lead-tech-fulfillment
+cd lead-tech-fulfillment
+npm install</pre>
+            </div>
+            <p><span class="c"></span>The last one takes a minute. Lots of text scrolls past — that's normal.</p>
+          </div>
+        </div>
+      </div>
+      <button class="check" type="button"><span class="box"></span>Mark done</button>
+    </li>
+
+    <li class="step" data-kind="type" data-id="s2">
+      <div class="step-head">
+        <span class="num">2</span>
+        <div>
+          <span class="kind">You paste this</span>
+          <h2>Start the setup</h2>
+          <div class="body">
+            <p>One line. It will do most of the work and stop twice to ask you something.</p>
+            <div class="cmd">
+              <button class="copy" type="button">Copy</button>
+<pre>npm run setup</pre>
+            </div>
+            <p>A browser window may pop open asking you to sign in to Cloudflare. Say yes.
+              Then come back to the terminal.</p>
+          </div>
+        </div>
+      </div>
+      <button class="check" type="button"><span class="box"></span>Mark done</button>
+    </li>
+
+    <li class="step" data-kind="click" data-id="s3">
+      <div class="step-head">
+        <span class="num">3</span>
+        <div>
+          <span class="kind">You click this in Stripe</span>
+          <h2>Fetch your Stripe key</h2>
+          <div class="body">
+            <p>The terminal is now waiting, asking you to paste a key. Go and get it:</p>
+            <div class="path">
+              In Stripe, click <b>Developers</b> → <b>API keys</b> → copy the <b>Secret key</b>.
+              It starts with <code>sk_</code>.
+            </div>
+            <p>Paste it into the terminal and press Enter. You'll see stars instead of letters —
+              that's on purpose, so nobody reading over your shoulder gets it.</p>
+          </div>
+        </div>
+      </div>
+      <button class="check" type="button"><span class="box"></span>Mark done</button>
+    </li>
+
+    <li class="step" data-kind="click" data-id="s4">
+      <div class="step-head">
+        <span class="num">4</span>
+        <div>
+          <span class="kind">You click this in Stripe</span>
+          <h2>Tell Stripe where to send payments</h2>
+          <div class="body">
+            <p>The terminal now prints a web address and a list of six events. Keep it visible —
+              you're about to copy from it.</p>
+            <div class="path">
+              In Stripe, click <b>Developers</b> → <b>Webhooks</b> → <b>Add endpoint</b>.<br>
+              Paste the address the terminal printed into <b>Endpoint URL</b>.<br>
+              Tick the six events it listed. Click <b>Add endpoint</b>.
+            </div>
+            <p>This is the part that makes payments arrive on their own. You're telling Stripe:
+              <em>when someone pays me, knock on this door.</em></p>
+          </div>
+        </div>
+      </div>
+      <button class="check" type="button"><span class="box"></span>Mark done</button>
+    </li>
+
+    <li class="step" data-kind="click" data-id="s5">
+      <div class="step-head">
+        <span class="num">5</span>
+        <div>
+          <span class="kind">You click this in Stripe</span>
+          <h2>Copy the secret Stripe just made</h2>
+          <div class="body">
+            <p>Right after you saved that, Stripe shows a code on the page.</p>
+            <div class="path">
+              Find <b>Signing secret</b> and click <b>Reveal</b>. Copy the code —
+              it starts with <code>whsec_</code>.
+            </div>
+            <p>Paste it into the terminal and press Enter. This is how your relay knows a knock
+              really came from Stripe and not from a stranger.</p>
+          </div>
+        </div>
+      </div>
+      <button class="check" type="button"><span class="box"></span>Mark done</button>
+    </li>
+
+    <li class="step" data-kind="type" data-id="s6">
+      <div class="step-head">
+        <span class="num">6</span>
+        <div>
+          <span class="kind">You paste this</span>
+          <h2>Make your login</h2>
+          <div class="body">
+            <p>The terminal has now printed a long line starting with <code>SYNC_TOKEN=</code>.
+              Copy <em>that exact line</em> and paste it back in. It will ask you to pick a
+              password — this is the password you'll use to sign in every day.</p>
+            <p>Do the same for anyone else who needs in, changing the email and name.</p>
+          </div>
+        </div>
+      </div>
+      <button class="check" type="button"><span class="box"></span>Mark done</button>
+    </li>
+
+    <li class="step" data-kind="type" data-id="s7">
+      <div class="step-head">
+        <span class="num">7</span>
+        <div>
+          <span class="kind">You paste this</span>
+          <h2>Put the dashboard online</h2>
+          <div class="body">
+            <p>Right now the dashboard only exists on your laptop. These two lines build it and
+              put it on the internet, so your assistant can open it too.</p>
+            <div class="cmd">
+              <button class="copy" type="button">Copy</button>
+<pre>npm run build
+npx wrangler pages deploy dist</pre>
+            </div>
+            <p>Cloudflare prints a link at the end. <b>That link is your dashboard.</b>
+              Save it, and send it to whoever works the orders.</p>
+          </div>
+        </div>
+      </div>
+      <button class="check" type="button"><span class="box"></span>Mark done</button>
+    </li>
+  </ol>
+
+  <section class="finish">
+    <h2>How to know it worked</h2>
+    <p>Open your dashboard link, sign in, and click <b>Settings</b>. You're looking for one line:</p>
+    <div class="quote"><span class="dot"></span>Stripe is pushing payments here</div>
+    <p style="margin-top:.9rem">Green means done. The next time someone pays you, their order lands
+      on the board in about fifteen seconds, with nobody pressing anything.</p>
+  </section>
+
+  <section class="aside">
+    <h2>Practise before real money moves</h2>
+    <p>In Stripe there's a <b>Test mode</b> toggle at the top right. Flip it on and do the whole
+      thing above with the test key — everything behaves normally, but no real money moves.
+      Once you're happy, run <code>npm run setup</code> again with the real key.</p>
+  </section>
+
+  <section class="aside">
+    <h2>If something goes wrong</h2>
+    <dl>
+      <dt>The terminal says "command not found: npm"</dt>
+      <dd>Node.js isn't installed yet, or the terminal was open before you installed it.
+        Install it, close the terminal, open a new one, try again.</dd>
+
+      <dt>Settings doesn't say "Stripe is pushing payments here"</dt>
+      <dd>The signing secret from step 5 didn't reach the relay. Run <code>npm run setup</code>
+        again — it skips what's already done and re-asks for that.</dd>
+
+      <dt>Nothing appears when a payment comes in</dt>
+      <dd>In Stripe, open <b>Developers → Webhooks</b> and click your endpoint. It lists every
+        attempt. A red <code>400</code> means the signing secret doesn't match — redo step 5.</dd>
+
+      <dt>Orders arrive but say "Unmapped"</dt>
+      <dd>Normal at first. Open <b>Products</b> and paste each product's Stripe ID in, so orders
+        know which lane they belong to.</dd>
+
+      <dt>Something else</dt>
+      <dd>Tell me what you typed and exactly what it said back. I'll work it out from there.</dd>
+    </dl>
+  </section>
+</div>
+
+<script>
+  (function () {
+    var KEY = "connect-stripe-progress";
+    var steps = Array.prototype.slice.call(document.querySelectorAll(".step"));
+    var fill = document.getElementById("fill");
+    var count = document.getElementById("count");
+
+    function read() {
+      try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; }
+    }
+    function write(state) {
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* private window */ }
+    }
+    function paint() {
+      var state = read(), done = 0;
+      steps.forEach(function (el) {
+        var on = !!state[el.dataset.id];
+        el.classList.toggle("done", on);
+        el.querySelector(".check .box").textContent = on ? "✓" : "";
+        el.querySelector(".check").lastChild.nodeValue = on ? "Done" : "Mark done";
+        if (on) done++;
+      });
+      fill.style.width = (done / steps.length * 100) + "%";
+      count.textContent = done + " of " + steps.length + " done";
+    }
+
+    steps.forEach(function (el) {
+      el.querySelector(".check").addEventListener("click", function () {
+        var state = read();
+        state[el.dataset.id] = !state[el.dataset.id];
+        write(state);
+        paint();
+      });
+    });
+
+    document.querySelectorAll(".copy").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var text = btn.parentNode.querySelector("pre").innerText;
+        var done = function () {
+          btn.textContent = "Copied";
+          btn.classList.add("ok");
+          setTimeout(function () { btn.textContent = "Copy"; btn.classList.remove("ok"); }, 1600);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done, function () { btn.textContent = "Select it"; });
+        } else {
+          btn.textContent = "Select it";
+        }
+      });
+    });
+
+    paint();
+  })();
+</script>
