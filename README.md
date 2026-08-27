@@ -130,12 +130,33 @@ exceed the CPU limit; the paid plan has room for it.
 
 ## Connecting Stripe
 
-Your Stripe secret key does not go in the app. Anything the browser holds is
-readable by anyone who opens the page, and Stripe won't accept a secret key from
-a browser anyway. The key lives in the relay — a small Worker you deploy once.
+### The short version
 
-There are two halves. The relay **receives** payments from Stripe; the app
-**reads** them from the relay. Do them in that order.
+```bash
+npm run setup
+```
+
+It signs you in to Cloudflare, sets everything up, asks for your Stripe key,
+and tells you exactly what to paste into Stripe. Follow the steps it prints.
+
+### What it's actually doing, and why
+
+Your Stripe secret key is like the key to your till. Anything the browser holds
+can be read by anyone who opens the page, so the key can't live in the
+dashboard — and Stripe won't accept it from a browser anyway.
+
+So there's a small program in between, called the **relay**. Think of it as a
+mailbox with your name on it that only you have the key to:
+
+1. The relay holds your Stripe key. It lives on Cloudflare, not in the app.
+2. Stripe posts each payment into the mailbox the moment it happens.
+3. The dashboard checks the mailbox every fifteen seconds and shows what's new.
+
+Nobody else can post into your mailbox, because Stripe seals every delivery with
+a secret only it and your relay know. Anything without that seal is thrown away
+unread.
+
+If you'd rather do it by hand, the same steps are below.
 
 ### 1. Deploy the relay
 

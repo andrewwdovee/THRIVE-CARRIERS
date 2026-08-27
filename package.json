@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "lint": "eslint src --ext .js,.jsx",
     "test": "node test/run.mjs",
-    "artifact": "vite build && node scripts/inline.mjs"
+    "artifact": "vite build && node scripts/inline.mjs",
+    "setup": "node scripts/setup-stripe.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.454.0",
