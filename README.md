@@ -2,7 +2,7 @@
 
 One dashboard over one order database, in six sections.
 
-The work, in the order you'd use them:
+Today's work first:
 
 - **New orders** — everything still to fulfill, worst overdue at the top, so the
   order that needs picking up is the one you land on. Flip to *Latest in* to see
@@ -13,13 +13,13 @@ The work, in the order you'd use them:
   whose service has been stopped or whose money turned up.
 - **Refunds** — what went back out, grouped by product, so you can see which
   thing you sell costs the most in refunds.
+Then the standing picture:
+
 - **By product** — the same orders cut by what was sold. Each product keeps its
   own three working lanes (drag a card between them), its turnaround target,
   what's past due, and what it has taken in. Delivered orders collapse to one
   line per product so a week of finished work can't push the live work off the
   screen — open it to see them, or drop a card on it to deliver.
-
-The setup:
 
 - **Products** — add and remove what you sell, set each one's fulfillment steps
   and turnaround target, and paste the Stripe price or product ID that routes an

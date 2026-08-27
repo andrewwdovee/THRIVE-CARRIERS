@@ -19,21 +19,25 @@ import Refunds from "./views/Refunds";
 
 /* The dashboard.
 
-   Six sections over one record. The first three are the work — what's still
-   outstanding, what's been delivered, and the same orders cut by product. The
-   last three are the setup: what you sell, how it's selling, and how it's all
-   wired to Stripe. */
+   Eight sections over one record, in two groups. The first four are today's
+   work — what's owed, what didn't pay, what went back out, what's finished.
+   The rest is the standing picture: each product's pipeline, what you sell,
+   how it's selling, and how it's all wired to Stripe.
 
+   The day's work first, then the things you set up and look back on. The
+   marker is a tab id rather than a position, so moving a tab can't leave the
+   divider stranded in the middle of a group. */
 const TABS = [
   ["inbox", "New orders", Inbox],
   ["missed", "Missed payments", CreditCard],
-  ["products-view", "By product", Layers],
-  ["completed", "Completed", CheckCircle2],
   ["refunds", "Refunds", Undo2],
+  ["completed", "Completed", CheckCircle2],
+  ["products-view", "By product", Layers],
   ["catalog", "Products", Package],
   ["reports", "Reports", BarChart3],
   ["settings", "Settings", GearIcon],
 ];
+const DIVIDE_BEFORE = "products-view";
 const WORK = new Set(["inbox", "missed", "completed", "products-view"]);
 
 /* New orders leads with whatever is worst overdue, because that's the one
@@ -361,7 +365,7 @@ export default function Dashboard({ me: account, onSignOut }) {
           <nav className="mt-3 flex flex-wrap items-center gap-1">
             {TABS.map(([id, label, Icon], i) => (
               <React.Fragment key={id}>
-                {i === 3 && <span className={`mx-2 hidden h-5 w-px bg-slate-800 sm:block`} aria-hidden />}
+                {id === DIVIDE_BEFORE && <span className="mx-2 hidden h-5 w-px bg-slate-800 sm:block" aria-hidden />}
                 <button onClick={() => setTab(id)}
                   className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium ${tab === id ? "bg-blue-600 text-white" : `${M} hover:bg-slate-800`}`}>
                   <Icon className="h-4 w-4" />{label}
