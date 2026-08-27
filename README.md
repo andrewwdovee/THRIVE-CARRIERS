@@ -72,9 +72,21 @@ someone noticed it — and runs until the order is marked delivered. It shows on
 every row, on the product cards, and large at the top of the order drawer, next
 to the one button that stops it.
 
-Each product carries a turnaround target (its **Turnaround target (hours)** in
-Products). The clock is grey while an order is inside its target and red once it
-runs past, so a board of red cards is the thing you can see from across a room.
+Two rules decide when an order is past due, and the tighter one wins:
+
+- the **house rule** — *Settings → Past due → Mark an order past due after
+  (hours)*, 12 by default, which applies to everything;
+- each product's own **Turnaround target (hours)**, in Products.
+
+So a product promised in 48 hours still goes past due at 12, while one promised
+in 6 is late at 6 rather than waiting for the house limit. Change the house rule
+and every order already on the board is re-dated, not just the ones that arrive
+next — deadlines are worked out from the rule in force, never frozen at the
+moment a payment landed.
+
+The clock is grey while an order is inside its deadline and red once it runs
+past, so a list of red rows is the thing you can see from across a room. A
+declined payment never turns red for age: it needs chasing, not fulfilling.
 Stopping the clock moves the order out of New orders and into Completed, where
 it freezes at its final time — green if it made the target, amber if it didn't.
 Those frozen numbers are what Reports averages.

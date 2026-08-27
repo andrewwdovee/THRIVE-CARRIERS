@@ -40,7 +40,7 @@ export const SEED = [
     steps: ["Create account", "Connect IG profile", "Load message templates", "Send login + walkthrough"] },
 ];
 export const DEF = { syncUrl: "", syncToken: "", autoSyncMinutes: 5, notifyWebhook: "", notifyEmail: "", notifyPhone: "",
-  notifyBrowser: true, notifySound: true, notifyOverdue: true, archiveAfterDays: 14 };
+  notifyBrowser: true, notifySound: true, notifyOverdue: true, archiveAfterDays: 14, pastDueHours: 12 };
 
 export const KEY = "fulfillment_board_v3", HOUR = 36e5, DAY = 864e5;
 export const uid = (p = "o") => `${p}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
@@ -55,6 +55,27 @@ export const dl = (k) => new Date(k + "T12:00:00").toLocaleDateString(undefined,
 export const sod = (t) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
 export const cash = (x) => (x == null ? "—" : `$${(x / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
 export const freq = (o) => (!o.interval ? "" : `every ${o.intervalCount > 1 ? o.intervalCount + " " : ""}${o.interval}${o.intervalCount > 1 ? "s" : ""}`);
+
+/* When is an order late?
+
+   Two rules, and the tighter one wins: the product's own turnaround target,
+   and a house rule that applies to everything. So a product promised in 48
+   hours still goes past due at the house limit — but a product promised in 6
+   is late at 6, not at the house limit. */
+export function effHours(product, settings) {
+  const sla = Number(product?.slaHours);
+  const own = Number.isFinite(sla) && sla > 0 ? sla : 24;
+  const cap = Number(settings?.pastDueHours);
+  return Number.isFinite(cap) && cap > 0 ? Math.min(own, cap) : own;
+}
+
+/* The deadline for one order. Derived rather than stored, so changing the
+   house rule re-dates every order already on the board instead of applying
+   only to whatever arrives next. */
+export function dueOf(order, products, settings) {
+  const p = (products || []).find((x) => x.id === order.productId);
+  return order.receivedAt + effHours(p, settings) * HOUR;
+}
 
 export const L = ({ children, className = "" }) => <div className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${F} ${className}`}>{children}</div>;
 export const Field = ({ label, hint, children }) => <div><L className="mb-1">{label}</L>{children}{hint && <p className={`mt-1 text-xs ${F}`}>{hint}</p>}</div>;

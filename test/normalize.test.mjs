@@ -9,7 +9,7 @@ const out = await build({
 });
 const tmp = new URL("../.shared.built.mjs", import.meta.url).pathname;
 writeFileSync(tmp, out.outputFiles[0].text);
-const { normalize, match, SEED, COLS } = await import(tmp);
+const { normalize, match, SEED, COLS, effHours, dueOf, DEF, HOUR } = await import(tmp);
 
 
 let pass = 0, fail = 0;
@@ -89,6 +89,26 @@ ok("csv has 32 columns", COLS.length === 32, COLS.length);
 const row = COLS.map(([, g]) => g({ ...n, status: "done", assignee: "Alex", notes: "", completedAt: n.receivedAt + 3600000, dueAt: n.receivedAt }));
 ok("csv row renders without throwing", row.length === 32);
 ok("csv minutes-to-fulfill", row[COLS.findIndex(c => c[0] === "Minutes to fulfill")] === 60, row);
+
+
+// 9. The past-due rule: whichever is tighter, the product or the house
+console.log("\npast due:");
+const S = { pastDueHours: 12 };
+ok("48h product capped to the 12h house rule", effHours({ slaHours: 48 }, S) === 12, effHours({ slaHours: 48 }, S));
+ok("12h product unchanged", effHours({ slaHours: 12 }, S) === 12);
+ok("6h product keeps its tighter promise", effHours({ slaHours: 6 }, S) === 6, effHours({ slaHours: 6 }, S));
+ok("no product falls back to 24h, then capped", effHours(undefined, S) === 12);
+ok("no house rule leaves the product target alone", effHours({ slaHours: 48 }, {}) === 48);
+ok("zero/blank house rule is ignored, not treated as instant", effHours({ slaHours: 48 }, { pastDueHours: 0 }) === 48);
+ok("default is 12 hours", DEF.pastDueHours === 12, DEF.pastDueHours);
+
+const at = 1756200000000;
+const dueProducts = [{ id: "p_a", slaHours: 48 }, { id: "p_b", slaHours: 6 }];
+ok("due date uses the cap", dueOf({ receivedAt: at, productId: "p_a" }, dueProducts, S) === at + 12 * HOUR);
+ok("due date respects a tighter product", dueOf({ receivedAt: at, productId: "p_b" }, dueProducts, S) === at + 6 * HOUR);
+ok("an unmatched order still gets a deadline", dueOf({ receivedAt: at, productId: null }, dueProducts, S) === at + 12 * HOUR);
+ok("changing the house rule re-dates an existing order",
+   dueOf({ receivedAt: at, productId: "p_a" }, dueProducts, { pastDueHours: 4 }) === at + 4 * HOUR);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

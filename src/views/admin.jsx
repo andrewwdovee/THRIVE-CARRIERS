@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Plus, RefreshCw, Download, X, Package, User, Bell, Link2,
-  ArrowUpDown, FlaskConical, Settings as GearIcon,
+  ArrowUpDown, FlaskConical, Settings as GearIcon, AlarmClock,
 } from "lucide-react";
 import {
   BD, CARD, PANEL, IN, BTN, PRI, M, F, W, TD, P, c, sm, DEF, DAY,
@@ -192,7 +192,7 @@ const Metric = ({ t, v, k, small }) => <div className={`${CARD} p-4`}>
 </div>;
 
 /* ═════ PRODUCTS ═════ */
-export function Products({ products, orders, commit }) {
+export function Products({ products, orders, commit, house }) {
   const [ed, setEd] = useState(null);
   return (
     <div className="space-y-3">
@@ -213,6 +213,7 @@ export function Products({ products, orders, commit }) {
                 <div className={`mt-1 flex flex-wrap items-center gap-2 text-xs ${M}`}>
                   <span className={`rounded px-1.5 py-0.5 uppercase ${c(p.color)[1]}`}>{p.kind}</span>
                   <span>{p.slaHours}h turnaround</span>
+                  {Number(p.slaHours) > Number(house) && <span className="text-amber-300/80">· past due at {house}h</span>}
                   <span>· {orders.filter((o) => o.productId === p.id && o.status !== "done" && paidOk(o)).length} open</span>
                 </div>
               </div>
@@ -318,7 +319,7 @@ function Editor({ draft, onCancel, onSave }) {
 /* ═════ SETTINGS ═════ */
 export function Settings({ cfg, products, orders, saveCfg, commit, sync, onSync, addOrders, flash }) {
   const [l, setL] = useState(cfg);
-  useEffect(() => setL(cfg), [cfg.syncUrl, cfg.autoSyncMinutes, cfg.archiveAfterDays]);
+  useEffect(() => setL(cfg), [cfg.syncUrl, cfg.autoSyncMinutes, cfg.archiveAfterDays, cfg.pastDueHours]);
   const set = (p) => setL((x) => ({ ...x, ...p }));
   const T = ({ label, k }) => <button onClick={() => { set({ [k]: !l[k] }); saveCfg({ [k]: !l[k] }); }} className="flex w-full items-center gap-3 text-left">
     <span className={`relative h-5 w-9 shrink-0 rounded-full ${l[k] ? "bg-blue-600" : "bg-slate-700"}`}>
@@ -394,6 +395,26 @@ export function Settings({ cfg, products, orders, saveCfg, commit, sync, onSync,
       </div>
 
       <aside className="space-y-4">
+        <div className={`${CARD} p-4`}>
+          <h3 className={`flex items-center gap-2 text-sm font-semibold ${W}`}><AlarmClock className="h-4 w-4 text-blue-400" /> Past due</h3>
+          <div className="mt-3">
+            <Field label="Mark an order past due after (hours)"
+              hint="Applies to every order. A product promised faster than this goes past due at its own target instead.">
+              <input type="number" min="1" value={l.pastDueHours}
+                onChange={(e) => set({ pastDueHours: Number(e.target.value) || 12 })}
+                onBlur={() => saveCfg({ pastDueHours: Math.max(1, Number(l.pastDueHours) || 12) })} className={IN} />
+            </Field>
+          </div>
+          {(() => {
+            const capped = products.filter((p) => Number(p.slaHours) > Number(l.pastDueHours));
+            return capped.length ? (
+              <p className={`mt-3 text-xs ${F}`}>
+                Tighter than the turnaround target on {capped.map((p) => p.name).join(", ")} — {capped.length === 1 ? "it goes" : "they go"} past due at {l.pastDueHours}h.
+              </p>
+            ) : null;
+          })()}
+        </div>
+
         <div className={`${CARD} p-4`}>
           <h3 className={`text-sm font-semibold ${W}`}>Board</h3>
           <div className="mt-3"><Field label="Hide delivered orders from By product after (days)" hint="They stay in Completed orders and Reports for good.">

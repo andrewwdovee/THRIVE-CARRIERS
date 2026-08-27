@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
-  RefreshCw, Search, Inbox, AlertTriangle, X, Mail, Phone,
+  RefreshCw, Search, Inbox, Clock, AlertTriangle, X, Mail, Phone,
   CreditCard, Receipt, CheckCircle2, Circle, Bell, BellOff, RotateCcw, User, PackageOpen,
   Package, BarChart3, Settings as GearIcon, Layers, LogOut,
 } from "lucide-react";
 import {
   BD, CARD, IN, BTN, PRI, M, F, W, c, ST, sm, DEF, DAY,
-  paidOk, cash, freq, L, Field, HOUR, dk, grab,
+  paidOk, cash, freq, L, Field, HOUR, dk, grab, dueOf, effHours,
 } from "./lib/shared";
 import { useBoard, appendOrders } from "./lib/useBoard";
 import { pullStripe } from "./lib/sync";
@@ -40,13 +40,14 @@ const SORTS = [
   ["newest", "Latest in"],
 ];
 
-const late = (o, now) => o.status !== "done" && o.dueAt && o.dueAt < now;
+/* Past due means "someone owes this customer work and the clock ran out".
+   A declined payment is neither — it's chased, not fulfilled — so it never
+   turns red on the strength of its age. */
+const late = (o, now) => paidOk(o) && o.status !== "done" && o.dueAt && o.dueAt < now;
 const steps = (products, o) => products.find((p) => p.id === o.productId)?.steps?.filter(Boolean) || [];
 const doneCount = (o, list) => list.filter((_, i) => o.checklist?.[i]).length;
-const target = (products, o) => {
-  const p = products.find((x) => x.id === o.productId);
-  return p?.slaHours ? p.slaHours * HOUR : null;
-};
+const target = (products, o, settings) =>
+  effHours(products.find((x) => x.id === o.productId), settings) * HOUR;
 
 export default function Dashboard({ me: account, onSignOut }) {
   const { st, loading, err, load, commit: rawCommit, R } = useBoard();
@@ -64,7 +65,15 @@ export default function Dashboard({ me: account, onSignOut }) {
   const [perm, setPerm] = useState(typeof Notification !== "undefined" ? Notification.permission : "unsupported");
 
   const cfg = { ...DEF, ...(st.settings || {}) };
-  const { orders, products } = st;
+  const { products } = st;
+
+  /* Deadlines are computed here, not read off the record, so changing the
+     past-due rule re-dates every order already on the board. Everything
+     downstream — the lists, By product, Reports, the CSV — reads this. */
+  const orders = useMemo(
+    () => st.orders.map((o) => ({ ...o, dueAt: dueOf(o, products, cfg) })),
+    [st.orders, products, cfg.pastDueHours],
+  );
 
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 3e4); return () => clearInterval(t); }, []);
   /* Keep the tab in the URL so a second window can open straight to one,
@@ -267,15 +276,15 @@ export default function Dashboard({ me: account, onSignOut }) {
           ? <FirstRun hasSync={!!cfg.syncUrl} onSync={runSync} onSamples={loadSamples} onAddProducts={() => setTab("catalog")} />
           : tab === "inbox"
             ? <OrderList rows={inbox} products={products} now={now} onOpen={setOpen}
-                sortBy={sortBy} onSort={setSortBy}
+                sortBy={sortBy} onSort={setSortBy} settings={cfg}
                 title="Still to fulfill" note="Most overdue first. A delivered order moves to Completed."
                 empty="Nothing outstanding — everything that came in has been delivered." />
           : tab === "completed"
-            ? <OrderList rows={completed} products={products} now={now} onOpen={setOpen} done
+            ? <OrderList rows={completed} products={products} now={now} onOpen={setOpen} done settings={cfg}
                 title="Delivered" note="Newest first, with the time each one took."
                 empty="Nothing delivered yet. Orders land here once someone stops the clock." />
-          : tab === "products-view" ? <ByProduct products={products} orders={grouped} now={now} onOpen={setOpen} onMove={move} Card={Card} />
-          : tab === "catalog" ? <Products products={products} orders={orders} commit={commit} />
+          : tab === "products-view" ? <ByProduct products={products} orders={grouped} now={now} onOpen={setOpen} onMove={move} Card={Card} settings={cfg} />
+          : tab === "catalog" ? <Products products={products} orders={orders} commit={commit} house={cfg.pastDueHours} />
           : tab === "reports" ? <Reports orders={orders} products={products} n={now} flash={flash} />
           : <SettingsView cfg={cfg} products={products} orders={orders} saveCfg={saveCfg} commit={commit}
               sync={{ busy: sync.busy, at: sync.at, error: sync.error, added: sync.added }}
@@ -283,7 +292,7 @@ export default function Dashboard({ me: account, onSignOut }) {
       </main>
 
       {openOrder && <Drawer o={openOrder} products={products} now={now} me={mine} people={people}
-        onClose={() => setOpen(null)} onPatch={patch} onMove={move} />}
+        onClose={() => setOpen(null)} onPatch={patch} onMove={move} settings={cfg} />}
 
       {toast && <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-slate-800 px-4 py-2 text-sm text-white shadow-xl">{toast}</div>}
     </div>
@@ -310,10 +319,10 @@ function FirstRun({ hasSync, onSync, onSamples, onAddProducts }) {
 }
 
 /* ═════ ONE ORDER ═════ */
-function Card({ o, products, now, onOpen, hideProduct }) {
+function Card({ o, products, now, onOpen, hideProduct, settings }) {
   const p = products.find((x) => x.id === o.productId);
   const list = steps(products, o), did = doneCount(o, list);
-  const bad = late(o, now), tgt = target(products, o);
+  const bad = late(o, now), tgt = target(products, o, settings);
   return (
     <article draggable onDragStart={(e) => e.dataTransfer.setData("text/plain", o.id)}
       onClick={() => onOpen(o.id)}
@@ -348,7 +357,7 @@ function Card({ o, products, now, onOpen, hideProduct }) {
 /* New orders and Completed are the same table with different contents, so
    they're one component. The columns earn their place: who it's for, what
    they bought, what it cost, who owns it, and the clock. */
-function OrderList({ rows, products, now, onOpen, sortBy, onSort, done, title, note, empty }) {
+function OrderList({ rows, products, now, onOpen, sortBy, onSort, done, title, note, empty, settings }) {
   return (
     <div className={`overflow-hidden rounded-xl border ${BD}`}>
       <div className={`flex flex-wrap items-center gap-3 border-b ${BD} bg-slate-900 px-4 py-3`}>
@@ -376,7 +385,7 @@ function OrderList({ rows, products, now, onOpen, sortBy, onSort, done, title, n
       <div className="divide-y divide-slate-800">
         {rows.map((o) => {
           const p = products.find((x) => x.id === o.productId);
-          const tgt = target(products, o);
+          const tgt = target(products, o, settings);
           const bad = late(o, now);
           return (
             <button key={o.id} onClick={() => onOpen(o.id)}
@@ -420,9 +429,9 @@ function OrderList({ rows, products, now, onOpen, sortBy, onSort, done, title, n
 }
 
 /* ═════ ORDER DETAIL ═════ */
-function Drawer({ o, products, now, me, people, onClose, onPatch, onMove }) {
+function Drawer({ o, products, now, me, people, onClose, onPatch, onMove, settings }) {
   const p = products.find((x) => x.id === o.productId);
-  const list = steps(products, o), did = doneCount(o, list), tgt = target(products, o);
+  const list = steps(products, o), did = doneCount(o, list), tgt = target(products, o, settings);
   const [notes, setNotes] = useState(o.notes || "");
   useEffect(() => setNotes(o.notes || ""), [o.id]);
 

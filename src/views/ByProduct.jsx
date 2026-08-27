@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { ChevronDown, ChevronRight, Package, AlertTriangle } from "lucide-react";
-import { BD, CARD, M, F, W, c, ST, cash, L, HOUR } from "../lib/shared";
+import { BD, CARD, M, F, W, c, ST, cash, L, HOUR, effHours, paidOk } from "../lib/shared";
 
 /* The board, cut by product instead of by status.
 
@@ -9,7 +9,7 @@ import { BD, CARD, M, F, W, c, ST, cash, L, HOUR } from "../lib/shared";
    one is blowing its turnaround, where the money is. Each product keeps its
    own set of lanes, so a card can still be dragged between them. */
 
-export default function ByProduct({ products, orders, now, onOpen, onMove, Card }) {
+export default function ByProduct({ products, orders, now, onOpen, onMove, Card, settings }) {
   const [shut, setShut] = useState(() => new Set());
   const toggle = (id) => setShut((s) => {
     const n = new Set(s);
@@ -41,10 +41,10 @@ export default function ByProduct({ products, orders, now, onOpen, onMove, Card 
     <div className="space-y-3">
       {groups.map((g) => {
         const open = g.orders.filter((o) => o.status !== "done");
-        const overdue = open.filter((o) => o.dueAt && o.dueAt < now).length;
+        const overdue = open.filter((o) => paidOk(o) && o.dueAt && o.dueAt < now).length;
         const money = g.orders.reduce((s, o) => s + (o.amount || 0), 0);
         const closed = shut.has(g.id);
-        const tgt = g.sla ? g.sla * HOUR : null;
+        const eff = effHours({ slaHours: g.sla }, settings);
 
         return (
           <section key={g.id} className={`overflow-hidden rounded-xl border-l-4 ${c(g.color)[2]} border-y border-r ${BD} bg-slate-900/40`}>
@@ -54,7 +54,7 @@ export default function ByProduct({ products, orders, now, onOpen, onMove, Card 
               <span className={`font-semibold ${W}`}>{g.name}</span>
               {g.id !== "_none" && <>
                 <span className={`rounded px-1.5 py-0.5 text-[10px] uppercase ${c(g.color)[1]}`}>{g.kind}</span>
-                {g.sla && <span className={`text-xs ${F}`}>{g.sla}h target</span>}
+                <span className={`text-xs ${F}`}>{eff}h target{g.sla && eff !== g.sla ? ` (house limit)` : ""}</span>
                 <span className={`text-xs ${F}`}>{g.ids} Stripe ID{g.ids === 1 ? "" : "s"}</span>
               </>}
               {g.id === "_none" && <span className={`text-xs ${F}`}>no Stripe ID matched — map these under Products</span>}
@@ -84,7 +84,7 @@ export default function ByProduct({ products, orders, now, onOpen, onMove, Card 
                       </div>
                       <div className="space-y-2">
                         {!rows.length && <p className={`px-1 py-3 text-center text-xs ${F}`}>—</p>}
-                        {rows.map((o) => <Card key={o.id} o={o} products={products} now={now} onOpen={onOpen} hideProduct />)}
+                        {rows.map((o) => <Card key={o.id} o={o} products={products} now={now} onOpen={onOpen} hideProduct settings={settings} />)}
                       </div>
                     </div>
                   );
