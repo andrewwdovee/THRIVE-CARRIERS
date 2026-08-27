@@ -33,7 +33,7 @@ export function buildSamples(products) {
       // the one that actually gets refunded, so the page has something to show.
       refunded: shipped && i === 4,
       refundedAt: shipped && i === 4 ? at + took + 2 * HOUR : undefined,
-      refundReason: shipped && i === 4 ? "Cancelled membership" : "",
+      refundTypeId: shipped && i === 4 ? "rt_membership" : "",
       receivedAt: at, customerId: `cus_s_${id.slice(-8)}`, customer: nm,
       email: mail, phone: `+1727555${String(1e3 + i).slice(-4)}`, ownerName: nm, ownerEmail: mail,
       paymentMethodId: `pm_s_${id.slice(-8)}`, paymentMethodType: "card", cardBrand: CARDS[i % 4],

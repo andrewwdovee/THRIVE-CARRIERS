@@ -283,7 +283,8 @@ export default function Dashboard({ me: account, onSignOut }) {
       customer: o.customer, email: o.email,
       amount: o.amountRefunded ?? o.amount, currency: o.currency,
       at: o.refundedAt || o.receivedAt,
-      reason: o.refundReason || "", note: o.refundNote || "", chargeId: o.chargeId,
+      typeId: o.refundTypeId || "", note: o.refundNote || "",
+      steps: o.refundSteps || {}, chargeId: o.chargeId,
     }));
     return [...fromStripe, ...(st.refunds || [])].sort((a, b) => b.at - a.at);
   }, [orders, st.refunds]);
@@ -294,10 +295,14 @@ export default function Dashboard({ me: account, onSignOut }) {
   const removeRefund = useCallback((id) => {
     commit((x) => ({ ...x, refunds: (x.refunds || []).filter((r) => r.id !== id) }), "Record removed");
   }, [commit]);
-  /* A Stripe refund isn't ours to edit — only the reason we attach to it. */
+  /* A Stripe refund's amount isn't ours to change — only what we file it as
+     and how far through the steps we are. Those live on the order it came from. */
   const annotateRefund = useCallback((r, patchIn) => {
     commit((x) => ({ ...x, orders: x.orders.map((o) => (o.id === r.orderId
-      ? { ...o, refundReason: patchIn.reason, refundNote: patchIn.note } : o)) }), "Reason saved");
+      ? { ...o, refundTypeId: patchIn.typeId, refundNote: patchIn.note, refundSteps: patchIn.steps } : o)) }), "Refund saved");
+  }, [commit]);
+  const updateRefund = useCallback((r) => {
+    commit((x) => ({ ...x, refunds: (x.refunds || []).map((y) => (y.id === r.id ? { ...y, ...r } : y)) }), "Refund saved");
   }, [commit]);
 
   const completed = useMemo(() => hits
@@ -378,14 +383,18 @@ export default function Dashboard({ me: account, onSignOut }) {
             ? <MissedList rows={missed} products={products} now={now} onOpen={setOpen} settings={cfg} />
           : tab === "refunds"
             ? <Refunds refunds={refunds} products={products} orders={orders}
-                onRecord={recordRefund} onRemove={removeRefund} onAnnotate={annotateRefund} />
+                refundTypes={st.refundTypes}
+                onRecord={recordRefund} onRemove={removeRefund}
+                onAnnotate={annotateRefund} onUpdate={updateRefund} />
           : tab === "completed"
             ? <OrderList rows={completed} products={products} now={now} onOpen={setOpen} done settings={cfg}
                 title="Delivered" note="Delivered orders and settled failed payments, newest first."
                 empty="Nothing delivered yet. Orders land here once someone stops the clock." />
           : tab === "products-view" ? <ByProduct products={products} orders={grouped} now={now} onOpen={setOpen} onMove={move} Card={Card} settings={cfg} />
-          : tab === "catalog" ? <Products products={products} orders={orders} commit={commit} house={cfg.pastDueHours} />
-          : tab === "reports" ? <Reports orders={orders} products={products} n={now} flash={flash} />
+          : tab === "catalog" ? <Products products={products} orders={orders} commit={commit} house={cfg.pastDueHours}
+                refundTypes={st.refundTypes} refunds={refunds} />
+          : tab === "reports" ? <Reports orders={orders} products={products} n={now} flash={flash}
+                refunds={refunds} refundTypes={st.refundTypes} />
           : <SettingsView cfg={cfg} products={products} orders={orders} saveCfg={saveCfg} commit={commit}
               sync={{ busy: sync.busy, at: sync.at, error: sync.error, added: sync.added }}
               onSync={() => runSync({ backfill: true })} addOrders={addOrders} flash={flash} live={syncEndpoint(cfg) ? live : null} />}

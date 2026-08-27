@@ -43,17 +43,21 @@ export const mm = (id) => MISS.find((m) => m[0] === id) || MISS[0];
    or the spending stopped. */
 export const SETTLED = new Set(["stopped", "recovered"]);
 
-/* Why money went back. Picked from a list rather than typed, so the Refunds
-   page can total them and show which reason is costing the most. */
-export const REFUND_REASONS = [
-  "Cancelled membership",
-  "Call quality",
-  "Didn't connect / no answer",
-  "Duplicate charge",
-  "Service not delivered",
-  "Client dispute",
-  "Goodwill",
-  "Other",
+/* The kinds of refund you give out, each with the steps to work through when
+   you do. Same shape as a product: a name, a colour, and a checklist — because
+   issuing a refund is a job with a procedure, not just a number to type in.
+   Editable under Products, so the list matches what you actually refund. */
+export const SEED_REFUND_TYPES = [
+  { id: "rt_call", name: "Individual call", color: "cyan",
+    steps: ["Listen back to the call recording", "Confirm the credit with the agent", "Refund the charge in Stripe", "Note it on the agent's account"] },
+  { id: "rt_membership", name: "Cancelled membership", color: "violet",
+    steps: ["Confirm the cancellation date", "Work out the pro-rata amount", "Refund in Stripe", "Cancel the subscription", "Switch off anything still running"] },
+  { id: "rt_quality", name: "Service quality", color: "amber",
+    steps: ["Get the specifics from the agent", "Agree what's being credited", "Refund in Stripe", "Log what went wrong"] },
+  { id: "rt_duplicate", name: "Duplicate charge", color: "slate",
+    steps: ["Find both charges in Stripe", "Refund the later one", "Email the agent confirming"] },
+  { id: "rt_goodwill", name: "Goodwill", color: "emerald",
+    steps: ["Get sign-off on the amount", "Refund in Stripe", "Note why, for next time"] },
 ];
 
 export const SEED = [

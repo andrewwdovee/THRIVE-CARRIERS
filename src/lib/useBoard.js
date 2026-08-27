@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { KEY, SEED, DEF, HOUR, uid } from "./shared";
+import { KEY, SEED, SEED_REFUND_TYPES, DEF, HOUR, uid } from "./shared";
 import { storage } from "./storage";
 
 /* The shared record, and the rules for reading and writing it.
@@ -10,7 +10,7 @@ import { storage } from "./storage";
    it just read is newer than what we already have. */
 
 export function useBoard() {
-  const [st, setSt] = useState({ orders: [], products: SEED, settings: DEF, updatedAt: 0 });
+  const [st, setSt] = useState({ orders: [], products: SEED, refundTypes: SEED_REFUND_TYPES, refunds: [], settings: DEF, updatedAt: 0 });
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
   const dirty = useRef(false), lu = useRef(0), R = useRef(st);
@@ -22,7 +22,7 @@ export function useBoard() {
       if (r?.value) {
         const p = JSON.parse(r.value);
         if (!silent || (p.updatedAt || 0) > lu.current) {
-          setSt({ products: SEED, settings: DEF, orders: [], ...p });
+          setSt({ products: SEED, refundTypes: SEED_REFUND_TYPES, refunds: [], settings: DEF, orders: [], ...p });
           lu.current = p.updatedAt || 0;
         }
       }

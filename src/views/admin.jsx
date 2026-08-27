@@ -14,16 +14,19 @@ import { buildSamples } from "../lib/samples";
 /* ═════ REPORTS ═════ */
 const RANGES = [["today", "Today"], ["7", "Last 7 days"], ["30", "Last 30 days"], ["90", "Last 90 days"], ["all", "All time"], ["custom", "Custom"]];
 
-export function Reports({ orders, products, n, flash }) {
+export function Reports({ orders, products, n, flash, refunds, refundTypes }) {
   const save = async (kind) => { const bad = grabTrouble(await dump(scoped, kind)); if (bad) flash(bad); };
   const [range, setRange] = useState("30"), [a, setA] = useState(dk(n - 14 * DAY)), [b, setB] = useState(dk(n));
   const [ds, setDs] = useState({ k: "day", d: "desc" }), [ps, setPs] = useState({ k: "count", d: "desc" });
 
+  /* Every range except a custom one runs up to the present, so the upper bound
+     is open. Pinning it to `n` — which only ticks every thirty seconds — would
+     drop anything recorded since the last tick straight out of the report. */
   const [from, to] = useMemo(() => {
-    if (range === "today") return [sod(n), n];
-    if (range === "all") return [0, n];
-    if (range === "custom") { const f = Date.parse(a + "T00:00:00"), t = Date.parse(b + "T23:59:59"); return [isNaN(f) ? 0 : f, isNaN(t) ? n : t]; }
-    return [n - Number(range) * DAY, n];
+    if (range === "today") return [sod(n), Infinity];
+    if (range === "all") return [0, Infinity];
+    if (range === "custom") { const f = Date.parse(a + "T00:00:00"), t = Date.parse(b + "T23:59:59"); return [isNaN(f) ? 0 : f, isNaN(t) ? Infinity : t]; }
+    return [n - Number(range) * DAY, Infinity];
   }, [range, a, b, n]);
 
   const scoped = useMemo(() => orders.filter((o) => o.receivedAt >= from && o.receivedAt <= to), [orders, from, to]);
@@ -173,6 +176,9 @@ export function Reports({ orders, products, n, flash }) {
         </table></div>
       </div>
 
+      <RefundReport refunds={(refunds || []).filter((r) => r.at >= from && r.at <= to)}
+        products={products} types={refundTypes || []} n={n} />
+
       <div className={`overflow-hidden rounded-xl border ${BD}`}>
         <div className={`border-b ${BD} bg-slate-900 px-4 py-3`}><h3 className={`text-sm font-semibold ${W}`}>Team performance</h3></div>
         {!people.length ? <p className={`px-4 py-6 text-sm ${M}`}>Numbers appear here once orders get marked delivered.</p>
@@ -191,9 +197,109 @@ const Metric = ({ t, v, k, small }) => <div className={`${CARD} p-4`}>
   <L>{t}</L><div className={`mt-2 font-bold tabular-nums ${small ? "text-base leading-tight" : "font-mono text-2xl"} ${k || W}`}>{v}</div>
 </div>;
 
+/* How much is going back out, and where from. A refund total on its own says
+   little; what's useful is the trend week to week, which agent keeps asking,
+   and which of your products keeps causing it. */
+function RefundReport({ refunds, products, types, n }) {
+  const total = refunds.reduce((s, r) => s + (r.amount || 0), 0);
+
+  /* Weeks starting Monday, most recent last. */
+  const weekly = useMemo(() => {
+    const key = (t) => {
+      const d = new Date(t);
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+      return d.getTime();
+    };
+    const m = new Map();
+    refunds.forEach((r) => {
+      const k = key(r.at);
+      const e = m.get(k) || { at: k, n: 0, amount: 0 };
+      e.n++; e.amount += r.amount || 0;
+      m.set(k, e);
+    });
+    return [...m.values()].sort((a, b) => a.at - b.at).slice(-12);
+  }, [refunds]);
+  const peak = Math.max(1, ...weekly.map((w) => w.amount));
+
+  const rank = (getKey, getLabel) => {
+    const m = new Map();
+    refunds.forEach((r) => {
+      const k = getKey(r);
+      if (!k) return;
+      const e = m.get(k) || { key: k, label: getLabel(r, k), n: 0, amount: 0 };
+      e.n++; e.amount += r.amount || 0;
+      m.set(k, e);
+    });
+    return [...m.values()].sort((a, b) => b.amount - a.amount).slice(0, 8);
+  };
+
+  const agents = useMemo(() => rank((r) => (r.customer || "").trim(), (r) => r.customer), [refunds]);
+  const byProduct = useMemo(() => rank((r) => r.productId,
+    (r, k) => products.find((p) => p.id === k)?.name || "Not linked"), [refunds, products]);
+  const byType = useMemo(() => rank((r) => r.typeId || "_none",
+    (r, k) => types.find((t) => t.id === k)?.name || "Not categorised"), [refunds, types]);
+
+  const Rank = ({ title, rows, empty }) => (
+    <div className={`overflow-hidden rounded-xl border ${BD}`}>
+      <div className={`border-b ${BD} bg-slate-900 px-4 py-3`}><h3 className={`text-sm font-semibold ${W}`}>{title}</h3></div>
+      {!rows.length && <p className={`px-4 py-6 text-sm ${M}`}>{empty}</p>}
+      <div className="divide-y divide-slate-800">
+        {rows.map((r) => (
+          <div key={r.key} className="flex items-center gap-3 px-4 py-2.5">
+            <span className={`flex-1 truncate text-sm ${W}`}>{r.label}</span>
+            <span className={`font-mono text-xs ${F}`}>{r.n}</span>
+            <span className="w-24 text-right font-mono text-sm text-rose-400">{cash(r.amount)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Metric t="Refunded in this window" v={cash(total)} k={total ? "text-rose-400" : W} />
+        <Metric t="Refunds issued" v={refunds.length} />
+        <Metric t="Average refund" v={refunds.length ? cash(Math.round(total / refunds.length)) : "—"} />
+      </div>
+
+      <div className={`${CARD} p-4`}>
+        <h3 className={`text-sm font-semibold ${W}`}>Refunds per week</h3>
+        {/* Capped width so one lonely week reads as a bar, not a filled panel. */}
+        <div className="mt-4 flex h-24 items-end gap-1.5">
+          {!weekly.length && <p className={`text-sm ${M}`}>No refunds in this window.</p>}
+          {weekly.map((w) => (
+            <div key={w.at} className="group flex max-w-[56px] flex-1 flex-col justify-end"
+              title={`Week of ${dl(dk(w.at))} — ${w.n} refund${w.n === 1 ? "" : "s"}, ${cash(w.amount)}`}>
+              <div className="w-full rounded-t bg-rose-500/70 group-hover:bg-rose-400"
+                style={{ height: `${Math.max(3, (w.amount / peak) * 96)}px` }} />
+            </div>
+          ))}
+        </div>
+        {weekly.length > 0 && (
+          <div className={`mt-2 flex items-center justify-between text-xs ${F}`}>
+            <span>week of {dl(dk(weekly[0].at))}</span>
+            <span>{weekly[weekly.length - 1].n} this week · {cash(weekly[weekly.length - 1].amount)}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-3">
+        <Rank title="Agents refunded most" rows={agents} empty="No refunds in this window." />
+        <Rank title="Products refunded most" rows={byProduct} empty="Nothing to show yet." />
+        <Rank title="By refund type" rows={byType} empty="Nothing to show yet." />
+      </div>
+    </div>
+  );
+}
+
 /* ═════ PRODUCTS ═════ */
-export function Products({ products, orders, commit, house }) {
+export function Products({ products, orders, commit, house, refundTypes, refunds }) {
   const [ed, setEd] = useState(null);
+  const [edT, setEdT] = useState(null);
+  const types = refundTypes || [];
+  const refundCount = (id) => (refunds || []).filter((r) => r.typeId === id).length;
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -256,6 +362,54 @@ export function Products({ products, orders, commit, house }) {
           </div>
         ))}
       </div>
+      <div className={`mt-8 border-t ${BD} pt-6`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className={`text-sm font-semibold ${W}`}>Refunds and refund steps</h2>
+            <p className={`text-xs ${F}`}>The kinds of refund you give out, and what to do when you give one.</p>
+          </div>
+          <button onClick={() => setEdT({ id: uid("rt"), name: "", color: "cyan", steps: [""] })}
+            className={`inline-flex items-center gap-1.5 ${PRI}`}><Plus className="h-4 w-4" /> New refund type</button>
+        </div>
+
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          {!types.length && <p className={`text-sm ${M}`}>No refund types yet. Add the things you actually give money back for.</p>}
+          {types.map((t) => (
+            <div key={t.id} className={`rounded-xl border-l-4 ${c(t.color)[2]} border-y border-r ${BD} bg-slate-900 p-4`}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className={`font-semibold ${W}`}>{t.name}</h3>
+                  <div className={`mt-1 text-xs ${M}`}>
+                    {refundCount(t.id)} issued · {(t.steps || []).filter(Boolean).length} step{(t.steps || []).filter(Boolean).length === 1 ? "" : "s"}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setEdT({ ...t, steps: t.steps?.length ? t.steps : [""] })}
+                    className={`rounded-md p-1.5 ${F} hover:bg-slate-800 hover:text-white`}><GearIcon className="h-4 w-4" /></button>
+                  <Confirm label="Delete refund type"
+                    onConfirm={() => commit((x) => ({ ...x, refundTypes: (x.refundTypes || []).filter((y) => y.id !== t.id) }), "Refund type deleted")} />
+                </div>
+              </div>
+              <ul className="mt-3 space-y-1">
+                {(t.steps || []).filter(Boolean).map((st, i) => (
+                  <li key={i} className={`flex items-start gap-2 text-sm ${M}`}>
+                    <span className={`mt-1.5 h-1 w-1 shrink-0 rounded-full ${c(t.color)[0]}`} />{st}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {edT && <TypeEditor draft={edT} onCancel={() => setEdT(null)} onSave={(t) => {
+        commit((x) => {
+          const list = x.refundTypes || [];
+          return { ...x, refundTypes: list.some((y) => y.id === t.id) ? list.map((y) => (y.id === t.id ? t : y)) : [...list, t] };
+        }, "Refund type saved");
+        setEdT(null);
+      }} />}
+
       {ed && <Editor draft={ed} onCancel={() => setEd(null)} onSave={(p) => {
         commit((s) => ({ ...s, products: s.products.some((x) => x.id === p.id) ? s.products.map((x) => (x.id === p.id ? p : x)) : [...s.products, p] }), "Product saved");
         setEd(null);
@@ -450,6 +604,36 @@ export function Settings({ cfg, products, orders, saveCfg, commit, sync, onSync,
           <p className={`mt-2 text-sm ${M}`}>This console and the Fulfillment Desk read and write the same records. Changes here show up there within about twenty seconds.</p>
         </div>
       </aside>
+    </div>
+  );
+}
+
+function TypeEditor({ draft, onCancel, onSave }) {
+  const [t, setT] = useState({ color: "cyan", steps: [""], ...draft });
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4" onClick={onCancel}>
+      <div className={`max-h-[86vh] w-full max-w-lg overflow-y-auto ${CARD} p-5 shadow-2xl`} onClick={(e) => e.stopPropagation()}>
+        <h3 className={`text-base font-semibold ${W}`}>{draft.name ? "Edit refund type" : "New refund type"}</h3>
+        <div className="mt-4 space-y-3">
+          <Field label="What is it?" hint="What you'd call this kind of refund — an individual call, a cancelled membership.">
+            <input value={t.name} onChange={(e) => setT({ ...t, name: e.target.value })} placeholder="Individual call" className={IN} />
+          </Field>
+          <Field label="Colour">
+            <div className="flex flex-wrap gap-2">{Object.keys(P).map((k) => (
+              <button key={k} onClick={() => setT({ ...t, color: k })}
+                className={`h-7 w-7 rounded-full ${P[k][0]} ${t.color === k ? "ring-2 ring-white ring-offset-2 ring-offset-slate-900" : "opacity-60"}`} />
+            ))}</div>
+          </Field>
+          <StepList label="Refund steps" hint="What to do when you give this refund. Ticked off on the record."
+            items={t.steps} onChange={(steps) => setT({ ...t, steps })} />
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <button onClick={onCancel} className={`rounded-md px-3 py-2 text-sm ${M}`}>Cancel</button>
+          <button disabled={!t.name.trim()} title={t.name.trim() ? "" : "Give it a name first"}
+            onClick={() => t.name.trim() && onSave({ ...t, steps: (t.steps || []).filter((x) => x.trim()) })}
+            className={`${PRI} disabled:opacity-40`}>Save refund type</button>
+        </div>
+      </div>
     </div>
   );
 }

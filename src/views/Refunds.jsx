@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from "react";
 import { Plus, X, Undo2, TrendingDown } from "lucide-react";
 import {
-  BD, CARD, IN, BTN, PRI, M, F, W, c, cash, uid, L, Field, Confirm, REFUND_REASONS,
+  BD, CARD, IN, BTN, PRI, M, F, W, c, cash, uid, L, Field, Confirm,
 } from "../lib/shared";
+import { CheckCircle2, Circle } from "lucide-react";
 
 /* Money that went back out.
 
@@ -14,7 +15,7 @@ import {
 
 const money = (rows) => rows.reduce((s, r) => s + (r.amount || 0), 0);
 
-export default function Refunds({ refunds, products, orders, onRecord, onRemove, onAnnotate }) {
+export default function Refunds({ refunds, products, orders, refundTypes, onRecord, onRemove, onAnnotate, onUpdate }) {
   const [adding, setAdding] = useState(null);
   const [openGroup, setOpenGroup] = useState(null);
 
@@ -30,14 +31,16 @@ export default function Refunds({ refunds, products, orders, onRecord, onRemove,
 
   const total = money(refunds);
   const worst = groups[0];
+  const types = refundTypes || [];
+  const typeOf = (r) => types.find((t) => t.id === r.typeId);
   const byReason = useMemo(() => {
     const m = new Map();
     refunds.forEach((r) => {
-      const k = r.reason || "Not given";
+      const k = types.find((t) => t.id === r.typeId)?.name || r.reason || "Not categorised";
       m.set(k, { reason: k, n: (m.get(k)?.n || 0) + 1, amount: (m.get(k)?.amount || 0) + (r.amount || 0) });
     });
     return [...m.values()].sort((a, b) => b.amount - a.amount);
-  }, [refunds]);
+  }, [refunds, types]);
 
   return (
     <div className="space-y-4">
@@ -89,21 +92,7 @@ export default function Refunds({ refunds, products, orders, onRecord, onRemove,
 
             <div className="divide-y divide-slate-800 border-t border-slate-800">
               {(open ? g.rows : g.rows.slice(0, 3)).map((r) => (
-                <div key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5">
-                  <div className="min-w-[150px] flex-1">
-                    <div className={`text-sm ${W}`}>{r.customer || "—"}</div>
-                    {r.note && <div className={`truncate text-xs ${F}`}>{r.note}</div>}
-                  </div>
-                  <span className={`w-20 text-right font-mono text-sm text-rose-400`}>−{cash(r.amount).slice(1)}</span>
-                  <span className={`w-44 shrink-0 truncate text-xs ${M}`}>{r.reason || "No reason given"}</span>
-                  <span className={`w-24 shrink-0 text-xs ${F}`}>{r.source === "stripe" ? "from Stripe" : r.by || "recorded"}</span>
-                  <span className={`w-28 shrink-0 text-right text-xs ${F}`}>{new Date(r.at).toLocaleDateString()}</span>
-                  {r.source === "stripe"
-                    ? <button onClick={() => setAdding({ ...r, editing: true })} className={`rounded-md px-2 py-1 text-xs ${M} hover:bg-slate-800`}>
-                        {r.reason ? "Edit" : "Add reason"}
-                      </button>
-                    : <Confirm label="Delete this record" onConfirm={() => onRemove(r.id)} />}
-                </div>
+                <RefundRow key={r.id} r={r} type={typeOf(r)} onOpen={() => setAdding({ ...r, editing: true })} onRemove={onRemove} />
               ))}
               {!open && g.rows.length > 3 && (
                 <button onClick={() => setOpenGroup(g.id)} className={`w-full px-4 py-2 text-left text-xs ${F} hover:bg-slate-900`}>
@@ -132,22 +121,50 @@ export default function Refunds({ refunds, products, orders, onRecord, onRemove,
         </div>
       )}
 
-      {adding && <RefundForm draft={adding} products={products} orders={orders}
+      {adding && <RefundForm draft={adding} products={products} orders={orders} types={types}
         onCancel={() => setAdding(null)}
         onSave={(r) => {
-          if (r.editing) onAnnotate(r, { reason: r.reason, note: r.note });
-          else onRecord(r);
+          if (!r.editing) onRecord(r);
+          else if (r.source === "stripe") onAnnotate(r, { typeId: r.typeId, note: r.note, steps: r.steps });
+          else onUpdate(r);
           setAdding(null);
         }} />}
     </div>
   );
 }
 
-function RefundForm({ draft, products, orders, onCancel, onSave }) {
-  const [r, setR] = useState({ reason: REFUND_REASONS[0], ...draft });
+function RefundRow({ r, type, onOpen, onRemove }) {
+  const list = (type?.steps || []).filter(Boolean);
+  const did = list.filter((_, i) => r.steps?.[i]).length;
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 hover:bg-slate-900/60">
+      <button onClick={onOpen} className="min-w-[150px] flex-1 text-left">
+        <div className={`text-sm ${W}`}>{r.customer || "—"}</div>
+        {r.note && <div className={`truncate text-xs ${F}`}>{r.note}</div>}
+      </button>
+      <span className="w-20 text-right font-mono text-sm text-rose-400">−{cash(r.amount).slice(1)}</span>
+      <button onClick={onOpen} className={`w-44 shrink-0 truncate text-left text-xs ${type ? M : "text-amber-300/80"}`}>
+        {type?.name || "Not categorised — set one"}
+      </button>
+      <span className={`w-14 shrink-0 text-right font-mono text-xs ${!list.length ? F : did === list.length ? "text-emerald-400" : "text-amber-400"}`}>
+        {list.length ? `${did}/${list.length}` : "—"}
+      </span>
+      <span className={`w-24 shrink-0 text-xs ${F}`}>{r.source === "stripe" ? "from Stripe" : r.by || "recorded"}</span>
+      <span className={`w-28 shrink-0 text-right text-xs ${F}`}>{new Date(r.at).toLocaleDateString()}</span>
+      {r.source === "stripe"
+        ? <button onClick={onOpen} className={`rounded-md px-2 py-1 text-xs ${M} hover:bg-slate-800`}>Open</button>
+        : <Confirm label="Delete this record" onConfirm={() => onRemove(r.id)} />}
+    </div>
+  );
+}
+
+function RefundForm({ draft, products, orders, types, onCancel, onSave }) {
+  const [r, setR] = useState({ typeId: types[0]?.id || "", ...draft });
   const [dollars, setDollars] = useState(draft.amount != null ? (draft.amount / 100).toFixed(2) : "");
   const cents = Math.round(Number(dollars) * 100);
-  const ok = r.productId && Number.isFinite(cents) && cents > 0;
+  const ok = r.productId && r.typeId && Number.isFinite(cents) && cents > 0;
+  const type = types.find((t) => t.id === r.typeId);
+  const stepList = (type?.steps || []).filter(Boolean);
 
   /* Picking a past order fills the rest in, which is most refunds. */
   const recent = useMemo(() => orders.slice(0, 60), [orders]);
@@ -155,10 +172,10 @@ function RefundForm({ draft, products, orders, onCancel, onSave }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4" onClick={onCancel}>
       <div className={`max-h-[86vh] w-full max-w-lg overflow-y-auto ${CARD} p-5 shadow-2xl`} onClick={(e) => e.stopPropagation()}>
-        <h3 className={`text-base font-semibold ${W}`}>{draft.editing ? "Refund details" : "Record a refund"}</h3>
+        <h3 className={`text-base font-semibold ${W}`}>{draft.editing ? "Refund" : "Record a refund"}</h3>
         <p className={`mt-1 text-sm ${M}`}>
           {draft.editing
-            ? "Stripe told us about this one. Say why, so the totals mean something."
+            ? "Say what kind it is, and work the steps for it."
             : "For a refund you settled outside Stripe. Ones you issue in Stripe appear here on their own."}
         </p>
 
@@ -196,11 +213,37 @@ function RefundForm({ draft, products, orders, onCancel, onSave }) {
             </Field>
           </div>
 
-          <Field label="Reason">
-            <select className={IN} value={r.reason || ""} onChange={(e) => setR({ ...r, reason: e.target.value })}>
-              {REFUND_REASONS.map((x) => <option key={x} value={x}>{x}</option>)}
+          <Field label="What kind of refund?" hint="Set these up under Products.">
+            <select className={IN} value={r.typeId || ""} onChange={(e) => setR({ ...r, typeId: e.target.value, steps: {} })}>
+              <option value="">Choose one…</option>
+              {types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           </Field>
+
+          {!!stepList.length && (
+            <div>
+              <div className="mb-1 flex items-center justify-between">
+                <L>Refund steps</L>
+                <span className={`font-mono text-xs ${F}`}>
+                  {stepList.filter((_, i) => r.steps?.[i]).length}/{stepList.length}
+                </span>
+              </div>
+              <ul className="space-y-1">
+                {stepList.map((st, i) => {
+                  const on = !!r.steps?.[i];
+                  return (
+                    <li key={i}>
+                      <button onClick={() => setR({ ...r, steps: { ...r.steps, [i]: !on } })}
+                        className={`flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-slate-800 ${on ? F : "text-slate-300"}`}>
+                        {on ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" /> : <Circle className={`mt-0.5 h-4 w-4 shrink-0 ${F}`} />}
+                        <span className={on ? "line-through" : ""}>{st}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
 
           {!draft.editing && (
             <div className="grid gap-3 sm:grid-cols-2">

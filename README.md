@@ -109,9 +109,18 @@ one, which is what makes the totals mean anything. Anything settled **outside
 Stripe** — a call credited back, a partial — gets recorded with **Record a
 refund**; picking the original order fills in the rest.
 
-Reasons come from a fixed list rather than a free-text box, so *Why money went
-back* can total them. A Stripe refund's amount can't be edited here, only its
-reason: the number belongs to Stripe.
+The kinds of refund you give — and the steps for each — are set up under
+**Products**, below the product list. A refund type has a name and a checklist,
+same as a product does: issuing a refund is a job with a procedure, not just a
+number to type in. Recording a refund picks a type and gives you its steps to
+work through.
+
+A Stripe refund's amount can't be edited here, only what you file it as and how
+far through the steps you are: the number belongs to Stripe.
+
+**Reports** carries the refund side at the bottom — refunded total, count and
+average for the window, volume per week, and three rankings: which agents you
+refund most, which products cause it, and which type of refund it is.
 
 ## The clock on every order
 
