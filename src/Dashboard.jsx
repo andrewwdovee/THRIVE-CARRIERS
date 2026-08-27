@@ -407,9 +407,13 @@ function OrderList({ rows, products, now, onOpen, sortBy, onSort, done, title, n
               className={`flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-left hover:bg-slate-900 ${bad ? "bg-rose-950/20" : ""}`}>
               <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${c(p?.color)[0]}`} />
 
+              {/* What was bought leads; who bought it is the second line.
+                  Someone scanning this list is deciding what work to pick up. */}
               <div className="min-w-[170px] flex-1">
-                <div className={`text-sm font-medium ${W}`}>{o.customer}</div>
-                <div className={`truncate text-xs ${F}`}>{o.productName}{freq(o) ? ` · ${freq(o)}` : ""}</div>
+                <div className={`truncate text-sm font-semibold ${W}`}>
+                  {o.productName}{freq(o) ? <span className={`font-normal ${F}`}> · {freq(o)}</span> : null}
+                </div>
+                <div className={`truncate text-xs ${M}`}>{o.customer}</div>
               </div>
 
               <span className={`w-20 text-right font-mono text-sm ${M}`}>{cash(o.amount)}</span>
