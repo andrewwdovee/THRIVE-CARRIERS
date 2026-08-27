@@ -201,7 +201,7 @@ export function Products({ products, orders, commit, house }) {
           <h2 className={`text-sm font-semibold ${W}`}>Products and fulfillment steps</h2>
           <p className={`text-xs ${F}`}>Each product's color follows its orders everywhere.</p>
         </div>
-        <button onClick={() => setEd({ id: uid("p"), name: "", kind: "one-time", slaHours: 24, color: "blue", stripeMatch: "", stripeIds: [], steps: [""] })}
+        <button onClick={() => setEd({ id: uid("p"), name: "", kind: "one-time", slaHours: 24, color: "blue", stripeMatch: "", stripeIds: [], steps: [""], cancelSteps: [""] })}
           className={`inline-flex items-center gap-1.5 ${PRI}`}><Plus className="h-4 w-4" /> New product</button>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
@@ -218,7 +218,7 @@ export function Products({ products, orders, commit, house }) {
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                <button onClick={() => setEd({ ...p, steps: p.steps?.length ? p.steps : [""] })} className={`rounded-md p-1.5 ${F} hover:bg-slate-800 hover:text-white`}><GearIcon className="h-4 w-4" /></button>
+                <button onClick={() => setEd({ ...p, steps: p.steps?.length ? p.steps : [""], cancelSteps: p.cancelSteps?.length ? p.cancelSteps : [""] })} className={`rounded-md p-1.5 ${F} hover:bg-slate-800 hover:text-white`}><GearIcon className="h-4 w-4" /></button>
                 <Confirm label="Delete product" onConfirm={() => commit((s) => ({ ...s, products: s.products.filter((x) => x.id !== p.id) }), "Product deleted")} />
               </div>
             </div>
@@ -231,7 +231,7 @@ export function Products({ products, orders, commit, house }) {
                   ))}
                 </div>
               ) : (
-                <button onClick={() => setEd({ ...p, steps: p.steps?.length ? p.steps : [""] })}
+                <button onClick={() => setEd({ ...p, steps: p.steps?.length ? p.steps : [""], cancelSteps: p.cancelSteps?.length ? p.cancelSteps : [""] })}
                   className="text-left text-xs text-amber-300/90 hover:underline">
                   No Stripe ID yet — matching on the name “{p.stripeMatch || p.name}”. Add the price or product ID.
                 </button>
@@ -243,6 +243,16 @@ export function Products({ products, orders, commit, house }) {
                 <li key={i} className={`flex items-start gap-2 text-sm ${M}`}><span className={`mt-1.5 h-1 w-1 shrink-0 rounded-full ${c(p.color)[0]}`} />{s}</li>
               ))}
             </ul>
+            {(p.cancelSteps || []).filter(Boolean).length
+              ? <div className="mt-3">
+                  <L className="mb-1">If a payment fails</L>
+                  <ul className="space-y-1">
+                    {p.cancelSteps.filter(Boolean).map((s, i) => (
+                      <li key={i} className={`flex items-start gap-2 text-sm ${M}`}><span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-amber-500" />{s}</li>
+                    ))}
+                  </ul>
+                </div>
+              : <p className={`mt-3 text-xs text-amber-300/80`}>No shutdown steps — nobody will know what to switch off if a payment fails.</p>}
           </div>
         ))}
       </div>
@@ -255,7 +265,7 @@ export function Products({ products, orders, commit, house }) {
 }
 
 function Editor({ draft, onCancel, onSave }) {
-  const [p, setP] = useState({ stripeIds: [], color: "blue", steps: [""], ...draft });
+  const [p, setP] = useState({ stripeIds: [], color: "blue", steps: [""], cancelSteps: [""], ...draft });
   const [v, setV] = useState("");
   const add = () => { if (v.trim()) { setP({ ...p, stripeIds: [...(p.stripeIds || []), v.trim()] }); setV(""); } };
   return (
@@ -294,21 +304,20 @@ function Editor({ draft, onCancel, onSave }) {
           <Field label="Keyword fallback" hint="Checked against the product name on the charge when no ID matches.">
             <input value={p.stripeMatch || ""} onChange={(e) => setP({ ...p, stripeMatch: e.target.value })} placeholder="instagram" className={IN} />
           </Field>
-          <div>
-            <L className="mb-1">Fulfillment steps</L>
-            {(p.steps || []).map((s, i) => (
-              <div key={i} className="mb-2 flex gap-2">
-                <input value={s} onChange={(e) => setP({ ...p, steps: p.steps.map((x, j) => (j === i ? e.target.value : x)) })} className={IN} />
-                <button onClick={() => setP({ ...p, steps: p.steps.filter((_, j) => j !== i) })} className={`rounded-md p-2 ${F} hover:text-rose-400`}><X className="h-4 w-4" /></button>
-              </div>
-            ))}
-            <button onClick={() => setP({ ...p, steps: [...(p.steps || []), ""] })} className={`text-sm ${M} hover:underline`}>+ Add step</button>
-          </div>
+          <StepList label="Fulfillment steps" hint="Ticked off as the order gets delivered."
+            items={p.steps} onChange={(steps) => setP({ ...p, steps })} />
+
+          <StepList label="When a payment fails" hint="What has to be switched off so this stops costing you money."
+            items={p.cancelSteps} onChange={(cancelSteps) => setP({ ...p, cancelSteps })} />
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button onClick={onCancel} className={`rounded-md px-3 py-2 text-sm ${M}`}>Cancel</button>
           <button disabled={!p.name.trim()} title={p.name.trim() ? "" : "Give the product a name first"}
-            onClick={() => p.name.trim() && onSave({ ...p, steps: (p.steps || []).filter((s) => s.trim()) })}
+            onClick={() => p.name.trim() && onSave({
+              ...p,
+              steps: (p.steps || []).filter((s) => s.trim()),
+              cancelSteps: (p.cancelSteps || []).filter((s) => s.trim()),
+            })}
             className={`${PRI} disabled:opacity-40`}>Save product</button>
         </div>
       </div>
@@ -441,6 +450,25 @@ export function Settings({ cfg, products, orders, saveCfg, commit, sync, onSync,
           <p className={`mt-2 text-sm ${M}`}>This console and the Fulfillment Desk read and write the same records. Changes here show up there within about twenty seconds.</p>
         </div>
       </aside>
+    </div>
+  );
+}
+
+/* Two lists, same shape: what to do to deliver it, and what to undo when the
+   money stops. */
+function StepList({ label, hint, items, onChange }) {
+  const rows = items || [];
+  return (
+    <div>
+      <L className="mb-1">{label}</L>
+      {hint && <p className={`mb-2 text-xs ${F}`}>{hint}</p>}
+      {rows.map((s, i) => (
+        <div key={i} className="mb-2 flex gap-2">
+          <input value={s} onChange={(e) => onChange(rows.map((x, j) => (j === i ? e.target.value : x)))} className={IN} />
+          <button onClick={() => onChange(rows.filter((_, j) => j !== i))} className={`rounded-md p-2 ${F} hover:text-rose-400`}><X className="h-4 w-4" /></button>
+        </div>
+      ))}
+      <button onClick={() => onChange([...rows, ""])} className={`text-sm ${M} hover:underline`}>+ Add step</button>
     </div>
   );
 }

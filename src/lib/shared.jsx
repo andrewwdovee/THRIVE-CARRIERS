@@ -29,15 +29,33 @@ export const c = (k) => P[k] || P.slate;
 export const ST = [["new", "New"], ["active", "In progress"], ["blocked", "Waiting on client"], ["done", "Delivered"]];
 export const sm = (id) => ST.find((s) => s[0] === id) || ST[0];
 
+/* A failed payment isn't fulfillment work — it's the opposite. Nothing gets
+   built; something already running has to be switched off before it costs
+   more money. So it carries its own set of states. */
+export const MISS = [
+  ["open", "Needs action"],
+  ["contacted", "Client contacted"],
+  ["stopped", "Service stopped"],
+  ["recovered", "Payment recovered"],
+];
+export const mm = (id) => MISS.find((m) => m[0] === id) || MISS[0];
+/* Both endings mean nobody has to do anything more: either the money came in,
+   or the spending stopped. */
+export const SETTLED = new Set(["stopped", "recovered"]);
+
 export const SEED = [
   { id: "p_rec", name: "Recruiting Ad Campaign", kind: "one-time", slaHours: 48, color: "blue", stripeMatch: "recruit", stripeIds: [],
-    steps: ["Kickoff call / intake form", "Write ad copy", "Build creative", "Launch campaign", "Send client confirmation"] },
+    steps: ["Kickoff call / intake form", "Write ad copy", "Build creative", "Launch campaign", "Send client confirmation"],
+    cancelSteps: ["Pause the ad campaign (stops the spend)", "Email the client about the failed payment", "Cancel the subscription in Stripe"] },
   { id: "p_gc", name: "Google Calls Subscription", kind: "subscription", slaHours: 24, color: "emerald", stripeMatch: "google", stripeIds: [],
-    steps: ["Confirm coverage area", "Set call routing", "Connect billing cycle", "Send onboarding email"] },
+    steps: ["Confirm coverage area", "Set call routing", "Connect billing cycle", "Send onboarding email"],
+    cancelSteps: ["Turn off call routing", "Email the client about the failed payment", "Cancel the subscription in Stripe"] },
   { id: "p_fe", name: "Inbound Final Expense Transfers", kind: "subscription", slaHours: 12, color: "orange", stripeMatch: "final expense", stripeIds: [],
-    steps: ["Confirm licensed states", "Set daily transfer cap", "Add to dialer rotation", "Schedule first live day"] },
+    steps: ["Confirm licensed states", "Set daily transfer cap", "Add to dialer rotation", "Schedule first live day"],
+    cancelSteps: ["Remove from the dialer rotation (stops the spend)", "Email the client about the failed payment", "Cancel the subscription in Stripe"] },
   { id: "p_ig", name: "Instagram Software", kind: "subscription", slaHours: 24, color: "fuchsia", stripeMatch: "instagram", stripeIds: [],
-    steps: ["Create account", "Connect IG profile", "Load message templates", "Send login + walkthrough"] },
+    steps: ["Create account", "Connect IG profile", "Load message templates", "Send login + walkthrough"],
+    cancelSteps: ["Disable the account", "Email the client about the failed payment", "Cancel the subscription in Stripe"] },
 ];
 export const DEF = { syncUrl: "", syncToken: "", autoSyncMinutes: 5, notifyWebhook: "", notifyEmail: "", notifyPhone: "",
   notifyBrowser: true, notifySound: true, notifyOverdue: true, archiveAfterDays: 14, pastDueHours: 12 };

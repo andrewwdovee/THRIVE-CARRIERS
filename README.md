@@ -6,8 +6,9 @@ The work, in the order you'd use them:
 
 - **New orders** — everything still to fulfill, worst overdue at the top, so the
   order that needs picking up is the one you land on. Flip to *Latest in* to see
-  what just arrived. Declined payments stay in the list but sit below the work
-  that can actually be done.
+  what just arrived.
+- **Missed payments** — every payment that failed, and what has to be switched
+  off because of it. See below.
 - **Completed** — every delivered order, newest first, each with the time it
   took.
 - **By product** — the same orders cut by what was sold. Each product keeps its
@@ -66,6 +67,33 @@ src/
 relay/                 Cloudflare Worker: accounts, sessions, Stripe, shared KV
 test/                  node test suites
 ```
+
+## When a payment fails
+
+A failed payment is not a lost sale you can shrug at — it's a service still
+running on your spend with nothing coming in. So it gets its own queue rather
+than sitting among the fulfillment work, and its own alert, separate from the
+new-order chime so it can't be mistaken for good news.
+
+Each product carries a second list, **When a payment fails**, set in Products
+beside its fulfillment steps: the things to switch off, in order, most expensive
+first.
+
+```
+Pause the ad campaign (stops the spend)
+Email the client about the failed payment
+Cancel the subscription in Stripe
+```
+
+Whoever is on the desk opens the failed payment, works down that list, and marks
+it **Service stopped**. Until they do, a clock counts how long it has been
+running unpaid, and the header carries an amber count of how many are still
+live. The states are *Needs action → Client contacted → Service stopped*, plus
+*Payment recovered* for when Stripe's retry succeeds and there's nothing to
+switch off after all.
+
+A product with no shutdown steps says so on its card in Products, because the
+failure case is exactly when nobody wants to be guessing what's still running.
 
 ## The clock on every order
 

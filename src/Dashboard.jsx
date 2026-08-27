@@ -5,7 +5,7 @@ import {
   Package, BarChart3, Settings as GearIcon, Layers, LogOut,
 } from "lucide-react";
 import {
-  BD, CARD, IN, BTN, PRI, M, F, W, c, ST, sm, DEF, DAY,
+  BD, CARD, IN, BTN, PRI, M, F, W, c, ST, sm, MISS, mm, SETTLED, DEF, DAY,
   paidOk, cash, freq, L, Field, HOUR, dk, grab, dueOf, effHours,
 } from "./lib/shared";
 import { useBoard, appendOrders } from "./lib/useBoard";
@@ -25,13 +25,14 @@ import { Reports, Products, Settings as SettingsView } from "./views/admin";
 
 const TABS = [
   ["inbox", "New orders", Inbox],
+  ["missed", "Missed payments", CreditCard],
   ["products-view", "By product", Layers],
   ["completed", "Completed", CheckCircle2],
   ["catalog", "Products", Package],
   ["reports", "Reports", BarChart3],
   ["settings", "Settings", GearIcon],
 ];
-const WORK = new Set(["inbox", "completed", "products-view"]);
+const WORK = new Set(["inbox", "missed", "completed", "products-view"]);
 
 /* New orders leads with whatever is worst overdue, because that's the one
    someone needs to pick up. Flip it to see what just landed. */
@@ -123,6 +124,38 @@ export default function Dashboard({ me: account, onSignOut }) {
     });
   }, [orders, loading, cfg.notifySound, cfg.notifyBrowser, cfg.notifyWebhook, cfg.notifyEmail, cfg.notifyPhone]);
 
+  /* A failed payment is the alert that actually saves money: until someone
+     switches the service off, it keeps running on your spend. Separate from
+     the new-order chime so it can't be mistaken for good news. */
+  const seenMissed = useRef(null);
+  useEffect(() => {
+    if (loading) return;
+    const failed = orders.filter((o) => !paidOk(o));
+    const ids = new Set(failed.map((o) => o.id));
+    if (seenMissed.current === null) { seenMissed.current = ids; return; }
+    const fresh = failed.filter((o) => !seenMissed.current.has(o.id));
+    seenMissed.current = ids;
+    if (!fresh.length) return;
+    const one = fresh[0];
+    const title = fresh.length === 1
+      ? `Payment failed — ${one.productName}`
+      : `${fresh.length} payments failed`;
+    const body = fresh.length === 1
+      ? `${one.customer} · ${cash(one.amount)}${one.declineReason ? ` · ${one.declineReason}` : ""} — stop the service`
+      : fresh.map((o) => o.customer).join(", ");
+    if (cfg.notifySound) chime();
+    if (cfg.notifyBrowser) desktop(title, body);
+    hook(cfg.notifyWebhook, {
+      event: "payment.failed", title, body, email: cfg.notifyEmail, phone: cfg.notifyPhone,
+      orders: fresh.map((o) => ({
+        id: o.id, customer: o.customer, email: o.email, phone: o.phone,
+        product: o.productName, amount: o.amount, currency: o.currency,
+        declineCode: o.declineCode, declineReason: o.declineReason,
+        subscriptionId: o.subscriptionId,
+      })),
+    });
+  }, [orders, loading, cfg.notifySound, cfg.notifyBrowser, cfg.notifyWebhook, cfg.notifyEmail, cfg.notifyPhone]);
+
   /* One alert per order the moment it slips past its target, then never again. */
   useEffect(() => {
     if (loading || !cfg.notifyOverdue) return;
@@ -157,6 +190,14 @@ export default function Dashboard({ me: account, onSignOut }) {
       assignee: o.assignee === "Unassigned" && mine ? mine : o.assignee,
     }), `Moved to ${sm(status)[1]}`);
   }, [patch, mine]);
+
+  const settle = useCallback((id, recovery) => {
+    patch(id, () => ({
+      recovery,
+      // Stop the clock once there's nothing left to do about it.
+      stoppedAt: SETTLED.has(recovery) ? Date.now() : null,
+    }), `Marked ${mm(recovery)[1].toLowerCase()}`);
+  }, [patch]);
 
   const runSync = useCallback(async (opts) => {
     const s = { ...DEF, ...(R.current.settings || {}) };
@@ -215,16 +256,22 @@ export default function Dashboard({ me: account, onSignOut }) {
      Completed and stops cluttering the list someone works from. A declined
      payment stays put: it's unfinished business, not finished work. */
   const inbox = useMemo(() => {
-    const rows = hits.filter((o) => o.status !== "done");
+    const rows = hits.filter((o) => o.status !== "done" && paidOk(o));
     if (sortBy === "newest") return rows.sort((x, y) => y.receivedAt - x.receivedAt);
     // Furthest past its target first; among orders still inside their target,
-    // the one closest to blowing it. Declined payments sink below the work
-    // that can actually be done — they're still here, just not in the way.
-    return rows.sort((x, y) =>
-      (paidOk(y) - paidOk(x)) || ((x.dueAt || Infinity) - (y.dueAt || Infinity)));
+    // the one closest to blowing it.
+    return rows.sort((x, y) => (x.dueAt || Infinity) - (y.dueAt || Infinity));
   }, [hits, sortBy]);
 
-  const completed = useMemo(() => hits.filter((o) => o.status === "done")
+  /* Every payment that didn't go through. Unsettled ones first — those are
+     still costing money — then the ones already dealt with. */
+  const missed = useMemo(() => hits.filter((o) => !paidOk(o)).sort((x, y) => {
+    const a = SETTLED.has(x.recovery || "open"), b = SETTLED.has(y.recovery || "open");
+    return (a - b) || (y.receivedAt - x.receivedAt);
+  }), [hits]);
+  const bleeding = useMemo(() => missed.filter((o) => !SETTLED.has(o.recovery || "open")).length, [missed]);
+
+  const completed = useMemo(() => hits.filter((o) => o.status === "done" && paidOk(o))
     .sort((x, y) => (y.completedAt || 0) - (x.completedAt || 0)), [hits]);
   const overdue = orders.filter((o) => paidOk(o) && late(o, now)).length;
   const openOrder = open ? orders.find((o) => o.id === open) : null;
@@ -240,7 +287,10 @@ export default function Dashboard({ me: account, onSignOut }) {
           <div className="flex flex-wrap items-center gap-3">
             <div>
               <h1 className={`text-lg font-bold tracking-tight ${W}`}>Fulfillment Desk</h1>
-              <L>{orders.filter((o) => paidOk(o) && o.status !== "done").length} open{overdue > 0 && <span className="text-rose-400"> · {overdue} past due</span>}</L>
+              <L>{orders.filter((o) => paidOk(o) && o.status !== "done").length} open
+                {overdue > 0 && <span className="text-rose-400"> · {overdue} past due</span>}
+                {bleeding > 0 && <span className="text-amber-400"> · {bleeding} unpaid</span>}
+              </L>
             </div>
 
             <div className="relative ml-auto w-full max-w-xs">
@@ -294,6 +344,8 @@ export default function Dashboard({ me: account, onSignOut }) {
                 sortBy={sortBy} onSort={setSortBy} settings={cfg}
                 title="Still to fulfill" note="Most overdue first. A delivered order moves to Completed."
                 empty="Nothing outstanding — everything that came in has been delivered." />
+          : tab === "missed"
+            ? <MissedList rows={missed} products={products} now={now} onOpen={setOpen} settings={cfg} />
           : tab === "completed"
             ? <OrderList rows={completed} products={products} now={now} onOpen={setOpen} done settings={cfg}
                 title="Delivered" note="Newest first, with the time each one took."
@@ -307,7 +359,7 @@ export default function Dashboard({ me: account, onSignOut }) {
       </main>
 
       {openOrder && <Drawer o={openOrder} products={products} now={now} me={mine} people={people}
-        onClose={() => setOpen(null)} onPatch={patch} onMove={move} settings={cfg} />}
+        onClose={() => setOpen(null)} onPatch={patch} onMove={move} onSettle={settle} settings={cfg} />}
 
       {toast && <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-slate-800 px-4 py-2 text-sm text-white shadow-xl">{toast}</div>}
     </div>
@@ -447,8 +499,82 @@ function OrderList({ rows, products, now, onOpen, sortBy, onSort, done, title, n
   );
 }
 
+/* ═════ MISSED PAYMENTS ═════ */
+
+/* Money going out with none coming in. The job here is the opposite of
+   fulfillment: find what's still running on this customer's behalf and switch
+   it off. The clock counts how long that's been true. */
+function MissedList({ rows, products, now, onOpen, settings }) {
+  const live = rows.filter((o) => !SETTLED.has(o.recovery || "open"));
+  return (
+    <div className="space-y-3">
+      <div className={`rounded-xl border-l-4 ${live.length ? "border-amber-500" : "border-slate-700"} border-y border-r ${BD} bg-slate-900 px-4 py-3`}>
+        <h3 className={`text-sm font-semibold ${W}`}>
+          {live.length
+            ? `${live.length} service${live.length === 1 ? "" : "s"} still running on a failed payment`
+            : "Nothing running unpaid"}
+        </h3>
+        <p className={`mt-0.5 text-sm ${M}`}>
+          {live.length
+            ? "Open each one and work the shutdown steps — every hour these stay on is spend you don't get back."
+            : "Every failed payment here has been dealt with."}
+        </p>
+      </div>
+
+      <div className={`overflow-hidden rounded-xl border ${BD}`}>
+        {!rows.length && <p className={`px-4 py-8 text-sm ${M}`}>No failed payments. Stripe tells us the moment one bounces.</p>}
+        <div className="divide-y divide-slate-800">
+          {rows.map((o) => {
+            const p = products.find((x) => x.id === o.productId);
+            const settled = SETTLED.has(o.recovery || "open");
+            const list = (p?.cancelSteps || []).filter(Boolean);
+            const did = list.filter((_, i) => o.cancelChecklist?.[i]).length;
+            return (
+              <button key={o.id} onClick={() => onOpen(o.id)}
+                className={`flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-left hover:bg-slate-900 ${settled ? "opacity-60" : "bg-amber-950/15"}`}>
+                <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${c(p?.color)[0]}`} />
+                <div className="min-w-[170px] flex-1">
+                  <div className={`truncate text-sm font-semibold ${W}`}>
+                    {o.productName}{freq(o) ? <span className={`font-normal ${F}`}> · {freq(o)}</span> : null}
+                  </div>
+                  <div className={`truncate text-xs ${M}`}>{o.customer}</div>
+                </div>
+
+                <span className={`w-20 text-right font-mono text-sm ${M}`}>{cash(o.amount)}</span>
+
+                <span className={`hidden min-w-[150px] flex-1 truncate text-xs md:block ${F}`}
+                  title={o.declineReason || o.declineCode}>
+                  {o.declineReason || o.declineCode || "Payment declined"}
+                </span>
+
+                <span className={`w-36 shrink-0 rounded px-1.5 py-0.5 text-center text-xs ${
+                  settled ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/15 text-amber-300"}`}>
+                  {mm(o.recovery || "open")[1]}
+                </span>
+
+                {!!list.length && <span className={`w-10 text-right font-mono text-xs ${did === list.length ? "text-emerald-400" : F}`}>{did}/{list.length}</span>}
+
+                <span className="flex w-32 shrink-0 items-center justify-end gap-1.5">
+                  {!settled && <AlertTriangle className="h-3 w-3 shrink-0 text-amber-400" />}
+                  <Stopwatch startedAt={o.receivedAt} stoppedAt={o.stoppedAt}
+                    target={settled ? null : target(products, o, settings)} />
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ═════ ORDER DETAIL ═════ */
-function Drawer({ o, products, now, me, people, onClose, onPatch, onMove, settings }) {
+function Drawer({ o, products, now, me, people, onClose, onPatch, onMove, onSettle, settings }) {
+  /* A failed payment gets a different job: shut things down, not build them. */
+  const unpaid = !paidOk(o);
+  const cancelList = (products.find((x) => x.id === o.productId)?.cancelSteps || []).filter(Boolean);
+  const cancelDone = cancelList.filter((_, i) => o.cancelChecklist?.[i]).length;
+  const settled = SETTLED.has(o.recovery || "open");
   const p = products.find((x) => x.id === o.productId);
   const list = steps(products, o), did = doneCount(o, list), tgt = target(products, o, settings);
   const [notes, setNotes] = useState(o.notes || "");
@@ -477,12 +603,71 @@ function Drawer({ o, products, now, me, people, onClose, onPatch, onMove, settin
         </div>
 
         <div className="space-y-5 px-5 py-5">
-          {!paidOk(o) && <div className="rounded-lg border-l-4 border-rose-500 bg-rose-950/40 px-3 py-2 text-sm text-rose-200">
-            <strong>This payment was declined.</strong>{o.declineReason ? ` ${o.declineReason}` : ""}
+          {unpaid && <div className="rounded-lg border-l-4 border-rose-500 bg-rose-950/40 px-3 py-2 text-sm text-rose-200">
+            <strong>This payment failed.</strong>{o.declineReason ? ` ${o.declineReason}` : ""}
             {o.declineCode && <span className={`ml-1 font-mono text-xs ${F}`}>({o.declineCode})</span>}
-            <p className="mt-1 text-rose-300/80">Don't fulfill until the customer pays.</p>
+            <p className="mt-1 text-rose-300/80">
+              {settled ? "Already dealt with." : "Switch the service off before it costs more, and don't fulfill anything new."}
+            </p>
           </div>}
 
+          {unpaid ? (
+            <>
+              <div className={`${CARD} p-4`}>
+                <div className="flex items-baseline justify-between gap-3">
+                  <L>{settled ? "Ran unpaid for" : "Running unpaid for"}</L>
+                  {tgt && !settled && <span className={`text-xs ${F}`}>flagged at {Math.round(tgt / HOUR)}h</span>}
+                </div>
+                <div className="mt-1">
+                  <Stopwatch startedAt={o.receivedAt} stoppedAt={o.stoppedAt} target={settled ? null : tgt} size="lg" />
+                </div>
+                <p className={`mt-1 text-xs ${F}`}>
+                  Failed {new Date(o.receivedAt).toLocaleString()}
+                  {o.stoppedAt ? ` · settled ${new Date(o.stoppedAt).toLocaleString()}` : ""}
+                </p>
+                {!settled && <button onClick={() => onSettle(o.id, "stopped")} className={`mt-3 w-full ${PRI}`}>
+                  Service stopped — stop the clock
+                </button>}
+              </div>
+
+              <div>
+                <L className="mb-2">Where this is at</L>
+                <div className="flex flex-wrap gap-1.5">
+                  {MISS.map(([id, label]) => (
+                    <button key={id} onClick={() => onSettle(o.id, id)}
+                      className={`rounded-md px-3 py-1.5 text-sm font-medium ${(o.recovery || "open") === id ? "bg-blue-600 text-white" : `border border-slate-700 bg-slate-900 ${M} hover:bg-slate-800`}`}>{label}</button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <L>What to switch off</L>
+                  {!!cancelList.length && <span className={`font-mono text-xs ${cancelDone === cancelList.length ? "text-emerald-400" : F}`}>{cancelDone}/{cancelList.length}</span>}
+                </div>
+                {!cancelList.length && <p className={`text-sm ${F}`}>
+                  No shutdown steps set for this product yet — add them under Products so nobody has to guess what's still running.
+                </p>}
+                <ul className="space-y-1">
+                  {cancelList.map((st, i) => {
+                    const on = !!o.cancelChecklist?.[i];
+                    return (
+                      <li key={i}>
+                        <button onClick={() => onPatch(o.id, (x) => ({ cancelChecklist: { ...x.cancelChecklist, [i]: !on } }))}
+                          className={`flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-slate-900 ${on ? F : "text-slate-300"}`}>
+                          {on ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" /> : <Circle className={`mt-0.5 h-4 w-4 shrink-0 ${F}`} />}
+                          <span className={on ? "line-through" : ""}>{st}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {!!cancelList.length && cancelDone === cancelList.length && !settled &&
+                  <p className="mt-3 text-sm text-emerald-400">Everything is switched off — mark it stopped above.</p>}
+              </div>
+            </>
+          ) : (
+            <>
           <div className={`${CARD} p-4`}>
             <div className="flex items-baseline justify-between gap-3">
               <L>{o.status === "done" ? "Time to fulfill" : "Running since payment"}</L>
@@ -533,6 +718,8 @@ function Drawer({ o, products, now, me, people, onClose, onPatch, onMove, settin
             {!!list.length && did === list.length && o.status !== "done" &&
               <p className="mt-3 text-sm text-emerald-400">Every step is done — stop the clock above.</p>}
           </div>
+            </>
+          )}
 
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Owner">
