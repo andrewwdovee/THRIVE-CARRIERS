@@ -1,15 +1,26 @@
 # Fulfillment Desk
 
-Two screens over one order database.
+One dashboard over one order database, in six sections.
 
-- **Fulfillment Desk** (`#/desk`) — the working board. Orders arrive from Stripe,
-  move across four lanes, carry a per-product checklist, and alert whoever has
-  the window open. Every order runs a stopwatch from the moment it was paid
-  for until someone marks it delivered.
-- **Admin Console** (`#/admin`) — the owner view. Products and their fulfillment
-  steps, reports, and the Stripe connection.
+The work:
 
-Both read and write the same record, so a change on one shows up on the other
+- **Board** — every order across four lanes, drag to move. Filter to one product
+  without leaving the view.
+- **By product** — the same orders cut by what was sold. Each product keeps its
+  own lanes, its turnaround target, what's past due, and what it has taken in.
+- **New orders** — every payment as it arrived, declines included.
+
+The setup:
+
+- **Products** — add and remove what you sell, set each one's fulfillment steps
+  and turnaround target, and paste the Stripe price or product ID that routes an
+  order to it.
+- **Reports** — what sold, how fast it shipped, who shipped it.
+- **Settings** — the Stripe connection, notifications, and how long delivered
+  orders stay on the board.
+
+Each tab is its own URL (`#/?tab=board`), so you can keep two windows open on
+different sections. They share one record and pick up each other's changes
 within about twenty seconds.
 
 ## Run it
@@ -31,9 +42,11 @@ npm test             # relay + Stripe normalization suites
 
 ```
 src/
-  App.jsx              hash router + the switcher between the two screens
-  FulfillmentDesk.jsx  board, order drawer, alerts
-  AdminConsole.jsx     reports, products, settings
+  App.jsx              the sign-in gate
+  Dashboard.jsx        the shell: tabs, board, order drawer, alerts
+  views/
+    ByProduct.jsx      the board grouped by what was sold
+    admin.jsx          reports, products, settings
   lib/
     shared.jsx         palette, statuses, Stripe normalization, CSV columns
     useBoard.js        the shared record: load, commit, poll
@@ -119,12 +132,20 @@ Then in the Admin Console under **Settings → Stripe connection**:
 
 Hit **Test connection**. Once it's green, orders flow in on their own.
 
-### Getting orders into the right lane
+### Telling the board which product is which
 
-Under **Settings → Stripe product mapping**, paste each product's Stripe price or
-product ID (`price_1Ab…`, `prod_Xyz…`). An exact ID match always wins. If a
-charge carries no matching ID, the product's keyword is checked against the
-charge description; anything still unmatched lands as **Needs triage**.
+Open **Products**, click the gear on a product, and paste its Stripe price or
+product ID (`price_1Ab…`, `prod_Xyz…`) — a product can carry several. The card
+then shows what it matches on, and a product with no ID yet says so.
+
+Matching runs in that order: an exact price or product ID always wins. If the
+charge carries no ID you've mapped, the product's keyword is checked against the
+charge description. Anything still unmatched lands under **Needs triage** in the
+By product view, where you can see what to map.
+
+Adding a product gives it its own group in By product, its own chip in the
+board's filter, and its own row in Reports. Removing one leaves its past orders
+intact — they fall to Needs triage rather than disappearing.
 
 ## One database for the whole team
 

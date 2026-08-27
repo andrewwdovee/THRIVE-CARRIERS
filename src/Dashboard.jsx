@@ -2,19 +2,36 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import {
   RefreshCw, Search, Inbox, LayoutGrid, Clock, AlertTriangle, X, Mail, Phone,
   CreditCard, Receipt, CheckCircle2, Circle, Bell, BellOff, RotateCcw, User, PackageOpen,
+  Package, BarChart3, Settings as GearIcon, Layers, LogOut,
 } from "lucide-react";
 import {
   BD, CARD, IN, BTN, PRI, M, F, W, c, ST, sm, DEF, DAY,
-  paidOk, cash, freq, L, Field, HOUR,
+  paidOk, cash, freq, L, Field, HOUR, dk, grab,
 } from "./lib/shared";
 import { useBoard, appendOrders } from "./lib/useBoard";
 import { pullStripe } from "./lib/sync";
 import { buildSamples } from "./lib/samples";
 import { chime, desktop, askPermission, hook } from "./lib/notify";
-import { Stopwatch, clock } from "./components/Elapsed";
+import { Stopwatch } from "./components/Elapsed";
+import ByProduct from "./views/ByProduct";
+import { Reports, Products, Settings as SettingsView } from "./views/admin";
 
-/* Fulfillment Desk — the working view.
-   Same record as the Admin Console; this window is where orders actually move. */
+/* The dashboard.
+
+   Six sections over one record. The first three are the work — the board by
+   status, the same board cut by product, and every payment as it arrived. The
+   last three are the setup: what you sell, how it's selling, and how it's all
+   wired to Stripe. */
+
+const TABS = [
+  ["board", "Board", LayoutGrid],
+  ["products-view", "By product", Layers],
+  ["inbox", "New orders", Inbox],
+  ["catalog", "Products", Package],
+  ["reports", "Reports", BarChart3],
+  ["settings", "Settings", GearIcon],
+];
+const WORK = new Set(["board", "products-view", "inbox"]);
 
 const late = (o, now) => o.status !== "done" && o.dueAt && o.dueAt < now;
 const steps = (products, o) => products.find((p) => p.id === o.productId)?.steps?.filter(Boolean) || [];
@@ -24,21 +41,39 @@ const target = (products, o) => {
   return p?.slaHours ? p.slaHours * HOUR : null;
 };
 
-export default function FulfillmentDesk({ me: account }) {
+export default function Dashboard({ me: account, onSignOut }) {
   const { st, loading, err, load, commit: rawCommit, R } = useBoard();
-  const [tab, setTab] = useState("board");
+  const [tab, setTab] = useState(() => {
+    const t = new URLSearchParams(window.location.hash.split("?")[1] || "").get("tab");
+    return TABS.some(([id]) => id === t) ? t : "board";
+  });
+  const [productFilter, setProductFilter] = useState("all");
   const [q, setQ] = useState("");
   const [mine, setMine] = useState("");
   const [open, setOpen] = useState(null);
   const [now, setNow] = useState(Date.now());
   const [toast, setToast] = useState(null);
-  const [sync, setSync] = useState({ busy: false, error: null });
+  const [sync, setSync] = useState({ busy: false, error: null, at: null, added: 0 });
   const [perm, setPerm] = useState(typeof Notification !== "undefined" ? Notification.permission : "unsupported");
 
   const cfg = { ...DEF, ...(st.settings || {}) };
   const { orders, products } = st;
 
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 3e4); return () => clearInterval(t); }, []);
+  /* Keep the tab in the URL so a second window can open straight to one,
+     and follow the URL when it changes underneath us. */
+  useEffect(() => {
+    const next = `#/?tab=${tab}`;
+    if (window.location.hash !== next) window.history.replaceState(null, "", next);
+  }, [tab]);
+  useEffect(() => {
+    const on = () => {
+      const t = new URLSearchParams(window.location.hash.split("?")[1] || "").get("tab");
+      if (t && TABS.some(([id]) => id === t)) setTab(t);
+    };
+    window.addEventListener("hashchange", on);
+    return () => window.removeEventListener("hashchange", on);
+  }, []);
   const flash = useCallback((m) => { setToast(m); setTimeout(() => setToast(null), 2600); }, []);
   const commit = useCallback((fn, note) => rawCommit(fn, note, flash), [rawCommit, flash]);
 
@@ -88,6 +123,9 @@ export default function FulfillmentDesk({ me: account }) {
     commit((s) => ({ ...s, orders: s.orders.map((o) => (ids.has(o.id) ? { ...o, overdueNotified: true } : o)) }));
   }, [orders, now, loading, cfg.notifyOverdue, cfg.notifyBrowser, cfg.notifySound, cfg.notifyWebhook, cfg.notifyEmail, cfg.notifyPhone, commit]);
 
+  const saveCfg = (patch) => commit((x) => ({ ...x, settings: { ...DEF, ...(x.settings || {}), ...patch } }));
+  const addOrders = useCallback((drafts) => { commit((x) => appendOrders(x, drafts).next); }, [commit]);
+
   /* ── order edits ── */
   const patch = useCallback((id, p, note) => {
     commit((s) => ({ ...s, orders: s.orders.map((o) => (o.id === id ? { ...o, ...(typeof p === "function" ? p(o) : p) } : o)) }), note);
@@ -105,15 +143,15 @@ export default function FulfillmentDesk({ me: account }) {
 
   const runSync = useCallback(async () => {
     const s = { ...DEF, ...(R.current.settings || {}) };
-    if (!s.syncUrl) { setSync({ busy: false, error: "No sync endpoint set — add one in the Admin Console." }); return; }
-    setSync({ busy: true, error: null });
+    if (!s.syncUrl) { setSync((p) => ({ ...p, busy: false, error: "No sync endpoint set — add one under Settings." })); return; }
+    setSync((p) => ({ ...p, busy: true, error: null }));
     try {
       const drafts = await pullStripe(s, R.current.orders, R.current.products);
       let n = 0;
       await rawCommit((x) => { const r = appendOrders(x, drafts); n = r.added.length; return r.next; });
-      setSync({ busy: false, error: null });
+      setSync({ busy: false, error: null, at: Date.now(), added: n });
       flash(n ? `${n} new order${n === 1 ? "" : "s"}` : "Up to date");
-    } catch (e) { setSync({ busy: false, error: `Couldn't reach the sync endpoint. ${e.message}` }); }
+    } catch (e) { setSync({ busy: false, at: Date.now(), added: 0, error: `Couldn't reach the sync endpoint. ${e.message}` }); }
   }, [rawCommit, R, flash]);
 
   useEffect(() => {
@@ -140,9 +178,12 @@ export default function FulfillmentDesk({ me: account }) {
     return hits.filter((o) => paidOk(o) && !(o.status === "done" && (o.completedAt || 0) < cut));
   }, [hits, now, cfg.archiveAfterDays]);
 
-  const lanes = useMemo(() => ST.map(([id, label]) => [id, label, board
+  const filtered = useMemo(() => productFilter === "all" ? board
+    : board.filter((o) => (productFilter === "_none" ? !o.productId : o.productId === productFilter)), [board, productFilter]);
+
+  const lanes = useMemo(() => ST.map(([id, label]) => [id, label, filtered
     .filter((o) => (o.status || "new") === id)
-    .sort((x, y) => (x.dueAt || 0) - (y.dueAt || 0))]), [board]);
+    .sort((x, y) => (x.dueAt || 0) - (y.dueAt || 0))]), [filtered]);
 
   const inbox = useMemo(() => [...hits].sort((x, y) => y.receivedAt - x.receivedAt), [hits]);
   const overdue = board.filter((o) => late(o, now)).length;
@@ -184,14 +225,20 @@ export default function FulfillmentDesk({ me: account }) {
               <RefreshCw className={`h-4 w-4 ${sync.busy ? "animate-spin" : ""}`} />{sync.busy ? "Syncing" : "Sync"}
             </button>
             <button onClick={() => load(false)} className={BTN} title="Refresh"><RotateCcw className="h-4 w-4" /></button>
+            {onSignOut && <button onClick={onSignOut} className={BTN} title={account ? `Sign out ${account.name || account.email}` : "Sign out"}>
+              <LogOut className="h-4 w-4" />
+            </button>}
           </div>
 
-          <nav className="mt-3 flex gap-1">
-            {[["board", "Board", LayoutGrid], ["inbox", "New orders", Inbox]].map(([id, label, Icon]) => (
-              <button key={id} onClick={() => setTab(id)}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium ${tab === id ? "bg-blue-600 text-white" : `${M} hover:bg-slate-800`}`}>
-                <Icon className="h-4 w-4" />{label}
-              </button>
+          <nav className="mt-3 flex flex-wrap items-center gap-1">
+            {TABS.map(([id, label, Icon], i) => (
+              <React.Fragment key={id}>
+                {i === 3 && <span className={`mx-2 hidden h-5 w-px bg-slate-800 sm:block`} aria-hidden />}
+                <button onClick={() => setTab(id)}
+                  className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium ${tab === id ? "bg-blue-600 text-white" : `${M} hover:bg-slate-800`}`}>
+                  <Icon className="h-4 w-4" />{label}
+                </button>
+              </React.Fragment>
             ))}
           </nav>
         </div>
@@ -200,9 +247,19 @@ export default function FulfillmentDesk({ me: account }) {
       </header>
 
       <main className="mx-auto max-w-[1600px] px-4 py-5">
-        {!orders.length ? <FirstRun hasSync={!!cfg.syncUrl} onSync={runSync} onSamples={loadSamples} />
-          : tab === "board" ? <Board lanes={lanes} products={products} now={now} onOpen={setOpen} onMove={move} />
-          : <InboxList rows={inbox} products={products} now={now} onOpen={setOpen} />}
+        {WORK.has(tab) && !orders.length
+          ? <FirstRun hasSync={!!cfg.syncUrl} onSync={runSync} onSamples={loadSamples} onAddProducts={() => setTab("catalog")} />
+          : tab === "board" ? <>
+              <ProductFilter products={products} orders={board} value={productFilter} onChange={setProductFilter} />
+              <Board lanes={lanes} products={products} now={now} onOpen={setOpen} onMove={move} />
+            </>
+          : tab === "products-view" ? <ByProduct products={products} orders={board} now={now} onOpen={setOpen} onMove={move} Card={Card} />
+          : tab === "inbox" ? <InboxList rows={inbox} products={products} now={now} onOpen={setOpen} />
+          : tab === "catalog" ? <Products products={products} orders={orders} commit={commit} />
+          : tab === "reports" ? <Reports orders={orders} products={products} n={now} flash={flash} />
+          : <SettingsView cfg={cfg} products={products} orders={orders} saveCfg={saveCfg} commit={commit}
+              sync={{ busy: sync.busy, at: sync.at, error: sync.error, added: sync.added }}
+              onSync={runSync} addOrders={addOrders} flash={flash} />}
       </main>
 
       {openOrder && <Drawer o={openOrder} products={products} now={now} me={mine} people={people}
@@ -213,8 +270,29 @@ export default function FulfillmentDesk({ me: account }) {
   );
 }
 
+/* Narrow the lanes to one product without leaving the board. */
+function ProductFilter({ products, orders, value, onChange }) {
+  const count = (id) => orders.filter((o) => (id === "_none" ? !o.productId : o.productId === id)).length;
+  const loose = count("_none");
+  const chip = (id, label, dot) => (
+    <button key={id} onClick={() => onChange(id)}
+      className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium ${
+        value === id ? "bg-slate-800 text-white ring-1 ring-slate-600" : `${M} hover:bg-slate-800`}`}>
+      {dot && <span className={`h-2 w-2 rounded-full ${dot}`} />}{label}
+    </button>
+  );
+  return (
+    <div className={`mb-3 flex flex-wrap items-center gap-1 rounded-lg border ${BD} bg-slate-900/60 p-1.5`}>
+      <L className="px-1.5">Product</L>
+      {chip("all", `All (${orders.length})`)}
+      {products.map((p) => chip(p.id, `${p.name} (${count(p.id)})`, c(p.color)[0]))}
+      {loose > 0 && chip("_none", `Needs triage (${loose})`, c("slate")[0])}
+    </div>
+  );
+}
+
 /* Four empty columns tell a new user nothing. Say where orders come from. */
-function FirstRun({ hasSync, onSync, onSamples }) {
+function FirstRun({ hasSync, onSync, onSamples, onAddProducts }) {
   return (
     <div className={`mx-auto max-w-lg ${CARD} px-6 py-10 text-center`}>
       <PackageOpen className={`mx-auto h-8 w-8 ${F}`} />
@@ -226,6 +304,7 @@ function FirstRun({ hasSync, onSync, onSamples }) {
       <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
         <button onClick={onSamples} className={PRI}>Load sample orders</button>
         {hasSync && <button onClick={onSync} className={BTN}>Check Stripe now</button>}
+        <button onClick={onAddProducts} className={BTN}>Set up products</button>
       </div>
     </div>
   );
@@ -255,7 +334,7 @@ function Board({ lanes, products, now, onOpen, onMove }) {
   );
 }
 
-function Card({ o, products, now, onOpen }) {
+function Card({ o, products, now, onOpen, hideProduct }) {
   const p = products.find((x) => x.id === o.productId);
   const list = steps(products, o), did = doneCount(o, list);
   const bad = late(o, now), tgt = target(products, o);
@@ -267,7 +346,7 @@ function Card({ o, products, now, onOpen }) {
         <h4 className={`text-sm font-semibold leading-tight ${W}`}>{o.customer}</h4>
         <span className={`shrink-0 font-mono text-xs ${M}`}>{cash(o.amount)}</span>
       </div>
-      <p className={`mt-0.5 truncate text-xs ${M}`}>{o.productName}</p>
+      {!hideProduct && <p className={`mt-0.5 truncate text-xs ${M}`}>{o.productName}</p>}
 
       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
         {o.status === "done"

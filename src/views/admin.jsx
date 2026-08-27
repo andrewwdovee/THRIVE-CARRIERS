@@ -1,108 +1,20 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
-  Plus, Trash2, RefreshCw, Download, X, Package, BarChart3, Settings, User,
-  Bell, Link2, ArrowUpDown, FlaskConical,
+  Plus, RefreshCw, Download, X, Package, User, Bell, Link2,
+  ArrowUpDown, FlaskConical, Settings as GearIcon,
 } from "lucide-react";
 import {
-  BD, CARD, PANEL, IN, BTN, PRI, M, F, W, TD, P, c, ST, sm, DEF, DAY,
-  uid, paidOk, brief, dk, dl, sod, cash, freq, L, Field, Confirm, grab, grabTrouble, dump,
-} from "./lib/shared";
-import { useBoard, appendOrders } from "./lib/useBoard";
-import { pullStripe } from "./lib/sync";
-import { buildSamples } from "./lib/samples";
+  BD, CARD, PANEL, IN, BTN, PRI, M, F, W, TD, P, c, sm, DEF, DAY,
+  uid, paidOk, brief, dk, dl, sod, cash, L, Field, Confirm, grab, grabTrouble, dump,
+} from "../lib/shared";
+import { buildSamples } from "../lib/samples";
 
-/* Admin Console — products, reports, and the Stripe connection.
-   Shares one database with the Fulfillment Desk via the same storage key. */
-
-/* ═════ APP ═════ */
-export default function AdminConsole({ me: account }) {
-  const { st, loading, err, load, commit: rawCommit, R } = useBoard();
-  const [tab, setTab] = useState("reports");
-  const [n, setN] = useState(Date.now());
-  const [toast, setToast] = useState(null);
-  const [sync, setSync] = useState({ busy: false, at: null, error: null, added: 0 });
-  const cfg = { ...DEF, ...(st.settings || {}) };
-
-  useEffect(() => { const t = setInterval(() => setN(Date.now()), 3e4); return () => clearInterval(t); }, []);
-  const flash = useCallback((m) => { setToast(m); setTimeout(() => setToast(null), 2600); }, []);
-  const commit = useCallback((fn, note) => rawCommit(fn, note, flash), [rawCommit, flash]);
-
-  const { orders, products } = st;
-  const saveCfg = (p) => commit((s) => ({ ...s, settings: { ...DEF, ...(s.settings || {}), ...p } }));
-
-  const addOrders = useCallback((drafts) => {
-    commit((x) => appendOrders(x, drafts).next);
-  }, [commit]);
-
-  const runSync = useCallback(async () => {
-    const s = { ...DEF, ...(R.current.settings || {}) };
-    if (!s.syncUrl) { setSync({ busy: false, at: Date.now(), added: 0, error: "Add your sync endpoint below first." }); return; }
-    setSync((p) => ({ ...p, busy: true, error: null }));
-    try {
-      const drafts = await pullStripe(s, R.current.orders, R.current.products);
-      addOrders(drafts);
-      setSync({ busy: false, at: Date.now(), error: null, added: drafts.length });
-    } catch (e) { setSync({ busy: false, at: Date.now(), added: 0, error: `Couldn't reach the sync endpoint. ${e.message}` }); }
-  }, [addOrders, R]);
-
-  /* Auto-pull on the interval set in Settings. */
-  useEffect(() => {
-    const mins = Math.max(1, Number(cfg.autoSyncMinutes) || 5);
-    if (!cfg.syncUrl) return;
-    const t = setInterval(() => { if (!document.hidden) runSync(); }, mins * 6e4);
-    return () => clearInterval(t);
-  }, [cfg.syncUrl, cfg.autoSyncMinutes, runSync]);
-
-  if (loading) return <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-400">
-    <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Loading…</div>;
-
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-200">
-      <header className={`sticky top-0 z-20 border-b ${BD} bg-slate-950/95 backdrop-blur`}>
-        <div className="mx-auto max-w-7xl px-4 py-3">
-          <div className="flex flex-wrap items-center gap-4">
-            <div><h1 className={`text-lg font-bold tracking-tight ${W}`}>Admin Console</h1><L>Fulfillment Desk · owner view</L></div>
-            <div className="ml-auto flex items-center gap-2">
-              <button onClick={runSync} disabled={sync.busy} className={`inline-flex items-center gap-1.5 ${PRI} disabled:opacity-60`}>
-                <RefreshCw className={`h-4 w-4 ${sync.busy ? "animate-spin" : ""}`} />{sync.busy ? "Syncing" : "Sync Stripe"}
-              </button>
-              <button onClick={() => load(false)} className={BTN} title="Refresh"><RefreshCw className="h-4 w-4" /></button>
-              <button onClick={async () => {
-                const r = await grab(`backup-${dk(n)}.json`, new Blob([JSON.stringify({ ...st, settings: { ...cfg, syncToken: "" } })], { type: "application/json" }));
-                const bad = grabTrouble(r);
-                if (bad) flash(bad); else if (r.ok) flash("Backup downloaded");
-              }} className={BTN} title="Backup"><Download className="h-4 w-4" /></button>
-            </div>
-          </div>
-          <nav className="mt-3 flex gap-1">
-            {[["reports", "Reports", BarChart3], ["catalog", "Products", Package], ["settings", "Settings", Settings]].map(([id, label, Icon]) => (
-              <button key={id} onClick={() => setTab(id)}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium ${tab === id ? "bg-blue-600 text-white" : `${M} hover:bg-slate-800`}`}>
-                <Icon className="h-4 w-4" />{label}
-              </button>
-            ))}
-          </nav>
-        </div>
-        {err && <div className="border-t border-rose-900 bg-rose-950/50 px-4 py-2 text-sm text-rose-200">{err}</div>}
-        {sync.error && <div className="border-t border-amber-900 bg-amber-950/40 px-4 py-2 text-sm text-amber-200">{sync.error}</div>}
-      </header>
-
-      <main className="mx-auto max-w-7xl px-4 py-5">
-        {tab === "reports" && <Reports orders={orders} products={products} n={n} flash={flash} />}
-        {tab === "catalog" && <Catalog products={products} orders={orders} commit={commit} />}
-        {tab === "settings" && <Setup cfg={cfg} products={products} orders={orders} saveCfg={saveCfg} commit={commit}
-          sync={sync} onSync={runSync} addOrders={addOrders} flash={flash} />}
-      </main>
-
-      {toast && <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-slate-800 px-4 py-2 text-sm text-white shadow-xl">{toast}</div>}
-    </div>
-  );
-}
+/* The owner's screens: what sold, what you sell, and how it's all wired up. */
 
 /* ═════ REPORTS ═════ */
 const RANGES = [["today", "Today"], ["7", "Last 7 days"], ["30", "Last 30 days"], ["90", "Last 90 days"], ["all", "All time"], ["custom", "Custom"]];
 
-function Reports({ orders, products, n, flash }) {
+export function Reports({ orders, products, n, flash }) {
   const save = async (kind) => { const bad = grabTrouble(await dump(scoped, kind)); if (bad) flash(bad); };
   const [range, setRange] = useState("30"), [a, setA] = useState(dk(n - 14 * DAY)), [b, setB] = useState(dk(n));
   const [ds, setDs] = useState({ k: "day", d: "desc" }), [ps, setPs] = useState({ k: "count", d: "desc" });
@@ -280,7 +192,7 @@ const Metric = ({ t, v, k, small }) => <div className={`${CARD} p-4`}>
 </div>;
 
 /* ═════ PRODUCTS ═════ */
-function Catalog({ products, orders, commit }) {
+export function Products({ products, orders, commit }) {
   const [ed, setEd] = useState(null);
   return (
     <div className="space-y-3">
@@ -302,14 +214,29 @@ function Catalog({ products, orders, commit }) {
                   <span className={`rounded px-1.5 py-0.5 uppercase ${c(p.color)[1]}`}>{p.kind}</span>
                   <span>{p.slaHours}h turnaround</span>
                   <span>· {orders.filter((o) => o.productId === p.id && o.status !== "done" && paidOk(o)).length} open</span>
-                  <span>· {(p.stripeIds || []).length} Stripe ID{(p.stripeIds || []).length === 1 ? "" : "s"}</span>
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                <button onClick={() => setEd({ ...p, steps: p.steps?.length ? p.steps : [""] })} className={`rounded-md p-1.5 ${F} hover:bg-slate-800 hover:text-white`}><Settings className="h-4 w-4" /></button>
+                <button onClick={() => setEd({ ...p, steps: p.steps?.length ? p.steps : [""] })} className={`rounded-md p-1.5 ${F} hover:bg-slate-800 hover:text-white`}><GearIcon className="h-4 w-4" /></button>
                 <Confirm label="Delete product" onConfirm={() => commit((s) => ({ ...s, products: s.products.filter((x) => x.id !== p.id) }), "Product deleted")} />
               </div>
             </div>
+            <div className={`mt-3 rounded-lg border ${BD} bg-slate-950/60 p-2.5`}>
+              <L className="mb-1.5">Matches Stripe on</L>
+              {(p.stripeIds || []).length ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {p.stripeIds.map((id) => (
+                    <span key={id} className={`rounded border ${BD} bg-slate-900 px-1.5 py-0.5 font-mono text-[11px] text-slate-300`}>{id}</span>
+                  ))}
+                </div>
+              ) : (
+                <button onClick={() => setEd({ ...p, steps: p.steps?.length ? p.steps : [""] })}
+                  className="text-left text-xs text-amber-300/90 hover:underline">
+                  No Stripe ID yet — matching on the name “{p.stripeMatch || p.name}”. Add the price or product ID.
+                </button>
+              )}
+            </div>
+
             <ul className="mt-3 space-y-1">
               {(p.steps || []).filter(Boolean).map((s, i) => (
                 <li key={i} className={`flex items-start gap-2 text-sm ${M}`}><span className={`mt-1.5 h-1 w-1 shrink-0 rounded-full ${c(p.color)[0]}`} />{s}</li>
@@ -379,7 +306,9 @@ function Editor({ draft, onCancel, onSave }) {
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button onClick={onCancel} className={`rounded-md px-3 py-2 text-sm ${M}`}>Cancel</button>
-          <button onClick={() => p.name.trim() && onSave({ ...p, steps: (p.steps || []).filter((s) => s.trim()) })} className={PRI}>Save product</button>
+          <button disabled={!p.name.trim()} title={p.name.trim() ? "" : "Give the product a name first"}
+            onClick={() => p.name.trim() && onSave({ ...p, steps: (p.steps || []).filter((s) => s.trim()) })}
+            className={`${PRI} disabled:opacity-40`}>Save product</button>
         </div>
       </div>
     </div>
@@ -387,7 +316,7 @@ function Editor({ draft, onCancel, onSave }) {
 }
 
 /* ═════ SETTINGS ═════ */
-function Setup({ cfg, products, orders, saveCfg, commit, sync, onSync, addOrders, flash }) {
+export function Settings({ cfg, products, orders, saveCfg, commit, sync, onSync, addOrders, flash }) {
   const [l, setL] = useState(cfg);
   useEffect(() => setL(cfg), [cfg.syncUrl, cfg.autoSyncMinutes, cfg.archiveAfterDays]);
   const set = (p) => setL((x) => ({ ...x, ...p }));
