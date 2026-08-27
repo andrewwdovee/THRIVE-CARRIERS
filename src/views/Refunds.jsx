@@ -15,7 +15,7 @@ import { CheckCircle2, Circle } from "lucide-react";
 
 const money = (rows) => rows.reduce((s, r) => s + (r.amount || 0), 0);
 
-export default function Refunds({ refunds, products, orders, refundTypes, onRecord, onRemove, onAnnotate, onUpdate }) {
+export default function Refunds({ refunds, products, orders, refundTypes, onRecord, onRemove, onAnnotate, onUpdate, onSetUp }) {
   const [adding, setAdding] = useState(null);
   const [openGroup, setOpenGroup] = useState(null);
 
@@ -121,7 +121,7 @@ export default function Refunds({ refunds, products, orders, refundTypes, onReco
         </div>
       )}
 
-      {adding && <RefundForm draft={adding} products={products} orders={orders} types={types}
+      {adding && <RefundForm draft={adding} products={products} orders={orders} types={types} onSetUp={onSetUp}
         onCancel={() => setAdding(null)}
         onSave={(r) => {
           if (!r.editing) onRecord(r);
@@ -158,7 +158,30 @@ function RefundRow({ r, type, onOpen, onRemove }) {
   );
 }
 
-function RefundForm({ draft, products, orders, types, onCancel, onSave }) {
+/* One picker, used for both. Sorted by name rather than by when it was added,
+   because a list you scan is a list you sort — a product added five minutes
+   ago should not be hiding at the bottom. */
+function Picker({ label, hint, value, rows, onChange, onSetUp, addLabel }) {
+  const sorted = useMemo(() => [...rows].sort((a, b) => (a.name || "").localeCompare(b.name || "")), [rows]);
+  return (
+    <div>
+      <div className="mb-1 flex items-baseline justify-between gap-2">
+        <L>{label}</L>
+        <span className={`text-[10px] ${F}`}>{sorted.length} to choose from</span>
+      </div>
+      <select className={IN} value={value || ""} onChange={(e) => onChange(e.target.value)}>
+        <option value="">Choose one…</option>
+        {sorted.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+      </select>
+      <p className={`mt-1 text-xs ${F}`}>
+        {hint}{" "}
+        {onSetUp && <button type="button" onClick={onSetUp} className="text-blue-400 hover:underline">{addLabel}</button>}
+      </p>
+    </div>
+  );
+}
+
+function RefundForm({ draft, products, orders, types, onCancel, onSave, onSetUp }) {
   const [r, setR] = useState({ typeId: types[0]?.id || "", ...draft });
   const [dollars, setDollars] = useState(draft.amount != null ? (draft.amount / 100).toFixed(2) : "");
   const cents = Math.round(Number(dollars) * 100);
@@ -199,25 +222,18 @@ function RefundForm({ draft, products, orders, types, onCancel, onSave }) {
             </Field>
           )}
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Product">
-              <select className={IN} value={r.productId || ""} onChange={(e) => setR({ ...r, productId: e.target.value })}>
-                <option value="">Choose one…</option>
-                {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-            </Field>
-            <Field label="Amount refunded" hint="In dollars, e.g. 35.00">
-              <input className={IN} inputMode="decimal" value={dollars} placeholder="35.00"
-                onChange={(e) => setDollars(e.target.value.replace(/[^0-9.]/g, ""))}
-                disabled={!!draft.editing} />
-            </Field>
-          </div>
+          <Picker label="Which product was refunded?" hint="Not listed?" addLabel="Add a product"
+            value={r.productId} rows={products} onSetUp={onSetUp}
+            onChange={(v) => setR({ ...r, productId: v })} />
 
-          <Field label="What kind of refund?" hint="Set these up under Products.">
-            <select className={IN} value={r.typeId || ""} onChange={(e) => setR({ ...r, typeId: e.target.value, steps: {} })}>
-              <option value="">Choose one…</option>
-              {types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
+          <Picker label="What kind of refund is it?" hint="Not listed?" addLabel="Add a refund type"
+            value={r.typeId} rows={types} onSetUp={onSetUp}
+            onChange={(v) => setR({ ...r, typeId: v, steps: {} })} />
+
+          <Field label="Amount refunded" hint="In dollars, e.g. 35.00">
+            <input className={IN} inputMode="decimal" value={dollars} placeholder="35.00"
+              onChange={(e) => setDollars(e.target.value.replace(/[^0-9.]/g, ""))}
+              disabled={!!draft.editing} />
           </Field>
 
           {!!stepList.length && (

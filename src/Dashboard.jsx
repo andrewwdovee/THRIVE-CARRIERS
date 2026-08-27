@@ -385,7 +385,8 @@ export default function Dashboard({ me: account, onSignOut }) {
             ? <Refunds refunds={refunds} products={products} orders={orders}
                 refundTypes={st.refundTypes}
                 onRecord={recordRefund} onRemove={removeRefund}
-                onAnnotate={annotateRefund} onUpdate={updateRefund} />
+                onAnnotate={annotateRefund} onUpdate={updateRefund}
+                onSetUp={() => setTab("catalog")} />
           : tab === "completed"
             ? <OrderList rows={completed} products={products} now={now} onOpen={setOpen} done settings={cfg}
                 title="Delivered" note="Delivered orders and settled failed payments, newest first."
