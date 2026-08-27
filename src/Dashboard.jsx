@@ -110,7 +110,7 @@ export default function Dashboard({ me: account, onSignOut }) {
   const setMe = (v) => { setMine(v); try { localStorage.setItem("fulfillment_me", v); } catch { /* private mode */ } };
 
   /* ── alerts ──
-     `seen` is primed on the first load so opening the Desk doesn't fire a
+     `seen` is primed on the first load so opening the dashboard doesn't fire a
      dozen notifications for orders that have been sitting there all week. */
   const seen = useRef(null);
   useEffect(() => {
@@ -328,7 +328,7 @@ export default function Dashboard({ me: account, onSignOut }) {
         <div className="mx-auto max-w-[1600px] px-4 py-3">
           <div className="flex flex-wrap items-center gap-3">
             <div>
-              <h1 className={`text-lg font-bold tracking-tight ${W}`}>Fulfillment Desk</h1>
+              <h1 className={`text-lg font-bold tracking-tight ${W}`}>Lead Tech Fulfillment</h1>
               <L>{orders.filter((o) => paidOk(o) && o.status !== "done").length} open
                 {overdue > 0 && <span className="text-rose-400"> · {overdue} past due</span>}
                 {bleeding > 0 && <span className="text-amber-400"> · {bleeding} unpaid</span>}
@@ -438,7 +438,7 @@ function FirstRun({ hasSync, onSync, onSamples, onAddProducts }) {
       <PackageOpen className={`mx-auto h-8 w-8 ${F}`} />
       <h2 className={`mt-3 text-base font-semibold ${W}`}>No orders yet</h2>
       <p className={`mx-auto mt-2 max-w-sm text-sm ${M}`}>
-        Orders arrive on their own once Stripe is connected in the Admin Console.
+        Orders arrive on their own once Stripe is connected under Settings.
         Until then, load a dozen fake ones to see how it all works.
       </p>
       <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
@@ -769,7 +769,7 @@ function Drawer({ o, products, now, me, people, onClose, onPatch, onMove, onSett
               <L>Fulfillment steps</L>
               {!!list.length && <span className={`font-mono text-xs ${did === list.length ? "text-emerald-400" : F}`}>{did}/{list.length}</span>}
             </div>
-            {!list.length && <p className={`text-sm ${F}`}>No steps set for this product yet — add them in the Admin Console.</p>}
+            {!list.length && <p className={`text-sm ${F}`}>No steps set for this product yet — add them under Products.</p>}
             <ul className="space-y-1">
               {list.map((s, i) => {
                 const on = !!o.checklist?.[i];

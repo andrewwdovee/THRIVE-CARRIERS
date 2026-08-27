@@ -1,4 +1,4 @@
-/* Alerts for whoever is watching the Desk.
+/* Alerts for whoever has the dashboard open.
 
    Desktop notification and chime are local to that browser. Email and text go
    out through the webhook you point at Zapier or Make — this app never holds

@@ -37,7 +37,7 @@ export default function Login({ onSignedIn }) {
           <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600">
             <LogIn className="h-5 w-5 text-white" />
           </div>
-          <h1 className={`mt-3 text-lg font-bold tracking-tight ${W}`}>Fulfillment Desk</h1>
+          <h1 className={`mt-3 text-lg font-bold tracking-tight ${W}`}>Lead Tech Fulfillment</h1>
           <L className="mt-1">Sign in to see today's orders</L>
         </div>
 

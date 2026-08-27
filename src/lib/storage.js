@@ -1,5 +1,5 @@
 /* window.storage — the tiny key/value layer both windows talk to.
-   The Admin Console and the Fulfillment Desk share one record, so whatever
+   Every window shares one record, so whatever
    backs this has to be visible to every browser that opens the app.
 
    Two modes:

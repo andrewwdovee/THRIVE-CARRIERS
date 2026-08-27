@@ -11,7 +11,7 @@ installStorage();
 class Boundary extends React.Component {
   constructor(p) { super(p); this.state = { e: null }; }
   static getDerivedStateFromError(e) { return { e }; }
-  componentDidCatch(e, info) { console.error("Fulfillment Desk crashed:", e, info); }
+  componentDidCatch(e, info) { console.error("Lead Tech Fulfillment crashed:", e, info); }
   render() {
     if (!this.state.e) return this.props.children;
     return (

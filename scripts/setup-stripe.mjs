@@ -60,7 +60,7 @@ function setSecret(name, value) {
   if (r.status !== 0) throw new Error(`Couldn't save ${name}. ${r.stderr || ""}`);
 }
 
-console.log(b("\nFulfillment Desk - Stripe setup\n"));
+console.log(b("\nLead Tech Fulfillment - Stripe setup\n"));
 console.log("This sets up the small program that catches your Stripe payments.");
 console.log(dim("Your keys go straight to Cloudflare. They are never shown back to you,"));
 console.log(dim("and never written into this project.\n"));

@@ -1,4 +1,4 @@
-# Fulfillment Desk
+# Lead Tech Fulfillment
 
 One dashboard over one order database, in six sections.
 
@@ -197,7 +197,7 @@ and never travel to the browser. Signing in returns a session token that expires
 in 14 days; signing out revokes it server-side, so a stolen token stops working
 the moment someone signs out.
 
-Whoever is signed in is who claims an order — the Desk stamps their name rather
+Whoever is signed in is who claims an order — the board stamps their name rather
 than asking them to type it.
 
 Two things worth knowing. The `SYNC_TOKEN` you set on the relay is the **owner**
@@ -350,12 +350,12 @@ Worker only answers your own page.
 
 ## Notifications
 
-The desktop alert and chime fire in whichever browser has the Desk open — click
+The desktop alert and chime fire in whichever browser has the dashboard open — click
 **Alerts off** in the header once to grant permission.
 
 Email and text go through a webhook, so no mail credentials live in the app.
 Point **Settings → Notifications → Webhook URL** at a Zapier "Catch Hook" or a
-Make custom webhook; the Desk posts JSON and your Zap sends the message:
+Make custom webhook; the dashboard posts JSON and your Zap sends the message:
 
 ```json
 {
@@ -376,9 +376,8 @@ and then stops.
 `npm run build` emits a static `dist/` — any static host works (Cloudflare Pages,
 Netlify, Vercel, S3).
 
-Both screens are the same bundle at different hashes. Signing in controls
-whether someone sees **any** orders, but it does not currently separate the two
-screens — anyone who can reach the Desk can reach `#/admin` and your Stripe
-settings too. If the Console needs to be off limits to staff, that needs a role
+Signing in controls whether someone sees **any** orders, but it does not yet
+separate the tabs — anyone who can sign in can reach Products, Reports and your
+Stripe settings. If Settings needs to be off limits to staff, that needs a role
 check on the relay's endpoints; the accounts already carry `owner` and `staff`
-roles for it, but the board itself does not yet distinguish them.
+roles for it, but the dashboard does not yet distinguish them.

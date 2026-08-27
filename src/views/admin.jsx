@@ -541,7 +541,7 @@ export function Settings({ cfg, products, orders, saveCfg, commit, sync, onSync,
 
         <div className={`${CARD} p-4`}>
           <h3 className={`flex items-center gap-2 text-sm font-semibold ${W}`}><Bell className="h-4 w-4 text-blue-400" /> Notifications</h3>
-          <p className={`mt-1 text-sm ${M}`}>A desktop alert and chime fire in the Fulfillment Desk while your assistant has it open. For email or text, point this at a Zapier or Make webhook — the Desk posts the order details and Zapier sends the message.</p>
+          <p className={`mt-1 text-sm ${M}`}>A desktop alert and chime fire in whichever browser has the dashboard open. For email or text, point this at a Zapier or Make webhook — the dashboard posts the order details and Zapier sends the message.</p>
           <div className="mt-3 grid gap-3">
             <Field label="Webhook URL" hint="Zapier 'Catch Hook', Make custom webhook, or your own endpoint.">
               <input value={l.notifyWebhook} onChange={(e) => set({ notifyWebhook: e.target.value })} onBlur={() => saveCfg({ notifyWebhook: l.notifyWebhook })} placeholder="https://hooks.zapier.com/…" className={`${IN} font-mono text-xs`} />
@@ -557,7 +557,7 @@ export function Settings({ cfg, products, orders, saveCfg, commit, sync, onSync,
             </div>
             <button onClick={async () => {
               if (l.notifyWebhook) try { await fetch(l.notifyWebhook, { method: "POST", mode: "no-cors", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ title: "Test from Fulfillment Desk", body: "Notifications are wired up.", email: l.notifyEmail, phone: l.notifyPhone }) }); } catch (e) { }
+                body: JSON.stringify({ title: "Test from Lead Tech Fulfillment", body: "Notifications are wired up.", email: l.notifyEmail, phone: l.notifyPhone }) }); } catch (e) { }
               flash("Test sent");
             }} className={`w-fit ${BTN}`}>Send a test</button>
           </div>
@@ -600,8 +600,8 @@ export function Settings({ cfg, products, orders, saveCfg, commit, sync, onSync,
           </div>
         </div>
         <div className={`${CARD} p-4`}>
-          <h3 className={`text-sm font-semibold ${W}`}>Two windows, one database</h3>
-          <p className={`mt-2 text-sm ${M}`}>This console and the Fulfillment Desk read and write the same records. Changes here show up there within about twenty seconds.</p>
+          <h3 className={`text-sm font-semibold ${W}`}>One database, any number of screens</h3>
+          <p className={`mt-2 text-sm ${M}`}>Every window reads and writes the same records, so a second screen — or your assistant's laptop — picks up a change within about twenty seconds.</p>
         </div>
       </aside>
     </div>

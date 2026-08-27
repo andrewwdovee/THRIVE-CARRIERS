@@ -21,7 +21,7 @@ const style = readFileSync(join(dist, "assets", css), "utf8");
 const safe = code.replace(/<\/script/gi, "<\\/script");
 
 mkdirSync("artifact", { recursive: true });
-writeFileSync(out, `<title>Fulfillment Desk</title>
+writeFileSync(out, `<title>Lead Tech Fulfillment</title>
 <style>
 ${style}
 </style>

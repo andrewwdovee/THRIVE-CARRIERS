@@ -24,7 +24,7 @@
      npx wrangler secret put SYNC_TOKEN          # any long random string
      npx wrangler deploy
 
-   Then paste https://<your-worker>.workers.dev/orders into the Admin Console
+   Then paste https://<your-worker>.workers.dev/orders into the dashboard
    under Settings → Stripe connection, with the same SYNC_TOKEN. */
 
 import { createUser, deleteUser, listUsers, login, logout, session, bearer } from "./auth.js";
@@ -95,7 +95,7 @@ async function stripe(env, path, params) {
 
 /* Charges carry the money and the card; the price/product ids that tell the
    board which lane an order belongs to live on the invoice. Pull both, then
-   hand the Desk one flat object per payment. */
+   hand the board one flat object per payment. */
 const INBOX_TTL = 7 * 24 * 3600;
 const OVERLAP = 600;
 

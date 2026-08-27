@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Trash2 } from "lucide-react";
 
-/* Everything the Admin Console and the Fulfillment Desk both need.
+/* Everything every screen needs.
    One storage key, one palette, one set of statuses — if these drift the
    two windows stop agreeing about what an order is. */
 
