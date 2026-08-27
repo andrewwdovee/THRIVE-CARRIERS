@@ -134,35 +134,99 @@ Your Stripe secret key does not go in the app. Anything the browser holds is
 readable by anyone who opens the page, and Stripe won't accept a secret key from
 a browser anyway. The key lives in the relay — a small Worker you deploy once.
 
+There are two halves. The relay **receives** payments from Stripe; the app
+**reads** them from the relay. Do them in that order.
+
+### 1. Deploy the relay
+
 ```bash
 cd relay
-npx wrangler secret put STRIPE_SECRET_KEY   # sk_live_… or sk_test_…
-npx wrangler secret put SYNC_TOKEN          # any long random string you invent
+npx wrangler kv namespace create BOARD    # paste the id into wrangler.toml under [[kv_namespaces]]
+npx wrangler secret put STRIPE_SECRET_KEY # sk_live_… or sk_test_…
+npx wrangler secret put SYNC_TOKEN        # any long random string you invent
 npx wrangler deploy
 ```
 
-Then in the Admin Console under **Settings → Stripe connection**:
+Note the URL it prints — `https://stripe-sync.<you>.workers.dev`. Open
+`https://…/health`; it should answer `{"ok":true, …}`.
 
-- **Sync endpoint URL** — `https://<your-worker>.workers.dev/orders`
-- **Access token** — the same `SYNC_TOKEN`
-- **Check every (minutes)** — how often both windows pull
+Set `ALLOWED_ORIGINS` in `wrangler.toml` to the address you'll serve the app
+from, so only your own page can call the relay.
 
-Hit **Test connection**. Once it's green, orders flow in on their own.
+### 2. Point Stripe at it
 
-### Telling the board which product is which
+In the Stripe Dashboard: **Developers → Webhooks → Add endpoint**.
 
-Open **Products**, click the gear on a product, and paste its Stripe price or
-product ID (`price_1Ab…`, `prod_Xyz…`) — a product can carry several. The card
-then shows what it matches on, and a product with no ID yet says so.
+- **Endpoint URL** — `https://<your-relay>.workers.dev/stripe/webhook`
+- **Events to send** — `charge.succeeded`, `charge.failed`, `charge.refunded`,
+  `checkout.session.completed`, `invoice.payment_succeeded`,
+  `invoice.payment_failed`
 
-Matching runs in that order: an exact price or product ID always wins. If the
-charge carries no ID you've mapped, the product's keyword is checked against the
-charge description. Anything still unmatched lands under **Needs triage** in the
-By product view, where you can see what to map.
+Stripe then shows a **signing secret** starting `whsec_`. Give it to the relay
+and redeploy:
 
-Adding a product gives it its own group in By product and its own row in
-Reports. Removing one leaves its past orders
-intact — they fall to Needs triage rather than disappearing.
+```bash
+npx wrangler secret put STRIPE_WEBHOOK_SECRET   # the whsec_… value
+npx wrangler deploy
+```
+
+That secret is what makes the webhook safe. The URL is public — anyone can POST
+to it — so every delivery is checked against the signature Stripe computes with
+this secret, and anything that doesn't verify is dropped before it is read. A
+delivery more than five minutes old is refused too, so a captured one can't be
+replayed. Without the secret set, the relay refuses every delivery rather than
+trusting it.
+
+Check `https://…/health` again — it should now say `"webhook": true`.
+
+### 3. Point the app at the relay
+
+```bash
+cp .env.example .env      # set VITE_RELAY_URL=https://<your-relay>.workers.dev
+npm run build             # deploy dist/ wherever you host it
+```
+
+Create a login for yourself and anyone else who works orders:
+
+```bash
+node relay/adduser.mjs https://<your-relay>.workers.dev you@yourcompany.com "Your Name"
+```
+
+Sign in, open **Settings**, and you should see *Stripe is pushing payments here*
+in green. Then map each product's Stripe ID under **Products** so orders land in
+the right group.
+
+### How fast "real time" actually is
+
+With the webhook set up, a payment reaches the relay in about a second, and an
+open browser picks it up within fifteen. Settings shows which mode you're in:
+
+| | Where orders come from | Delay before you see one |
+|---|---|---|
+| Webhook configured | Stripe pushes as it happens | **~15 seconds** |
+| No webhook | The app asks Stripe on a timer | up to your *Check every* interval |
+
+The relay keeps pushed payments for seven days and hands out anything newer than
+what the board already has, so closing the browser overnight loses nothing.
+
+Pressing **Sync** does something extra: it also queries the Stripe API directly
+and merges anything missing. That's the reconcile for a webhook outage — Stripe
+retries failed deliveries for up to three days, but if something is genuinely
+lost, this is what recovers it.
+
+### Trying it before real money moves
+
+Use Stripe's test mode (`sk_test_…`) and its CLI:
+
+```bash
+stripe listen --forward-to https://<your-relay>.workers.dev/stripe/webhook
+stripe trigger charge.succeeded
+```
+
+The order should appear on the board within about fifteen seconds. If it
+doesn't, check the webhook's delivery log in the Stripe Dashboard — a `400`
+there means the signing secret on the Worker doesn't match the one Stripe is
+signing with.
 
 ## One database for the whole team
 

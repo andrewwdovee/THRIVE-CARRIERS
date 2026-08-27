@@ -317,7 +317,7 @@ function Editor({ draft, onCancel, onSave }) {
 }
 
 /* ═════ SETTINGS ═════ */
-export function Settings({ cfg, products, orders, saveCfg, commit, sync, onSync, addOrders, flash }) {
+export function Settings({ cfg, products, orders, saveCfg, commit, sync, onSync, addOrders, flash, live }) {
   const [l, setL] = useState(cfg);
   useEffect(() => setL(cfg), [cfg.syncUrl, cfg.autoSyncMinutes, cfg.archiveAfterDays, cfg.pastDueHours]);
   const set = (p) => setL((x) => ({ ...x, ...p }));
@@ -340,7 +340,7 @@ export function Settings({ cfg, products, orders, saveCfg, commit, sync, onSync,
           <h3 className={`flex items-center gap-2 text-sm font-semibold ${W}`}><Link2 className="h-4 w-4 text-blue-400" /> Stripe connection</h3>
           <div className={`mt-3 rounded-lg border-l-4 border-amber-500 ${PANEL} py-2 pl-3 pr-2 text-sm`}>
             <p className="text-slate-300"><strong>Your secret key doesn't go in this portal.</strong> Anything typed here sits in shared storage the whole team can read, and browsers can't call Stripe with a secret key anyway.</p>
-            <p className={`mt-2 ${M}`}>The key goes in the relay you deploy once — code is in <span className="font-mono text-xs">relay/</span> in this repo. Paste its address below and orders flow in on their own.</p>
+            <p className={`mt-2 ${M}`}>The key goes in the relay you deploy once — code is in <span className="font-mono text-xs">relay/</span> in this repo. Paste its address below, point a Stripe webhook at it, and orders arrive as they're paid for.</p>
           </div>
           <div className="mt-4 grid gap-3">
             <Field label="Sync endpoint URL" hint="e.g. https://stripe-sync.yourname.workers.dev/orders">
@@ -354,8 +354,15 @@ export function Settings({ cfg, products, orders, saveCfg, commit, sync, onSync,
                 <input type="number" min="1" value={l.autoSyncMinutes} onChange={(e) => set({ autoSyncMinutes: Number(e.target.value) || 5 })} onBlur={() => saveCfg({ autoSyncMinutes: l.autoSyncMinutes })} className={IN} />
               </Field>
             </div>
+            {live !== null && (
+              <div className={`rounded-lg border-l-4 ${live ? "border-emerald-500" : "border-slate-600"} ${PANEL} py-2 pl-3 pr-2 text-sm`}>
+                {live
+                  ? <p className="text-slate-300"><strong className="text-emerald-400">Stripe is pushing payments here.</strong> New orders appear within about fifteen seconds of the charge, without anyone pressing anything.</p>
+                  : <p className="text-slate-300"><strong>Checking Stripe on a timer.</strong> Orders can take up to the interval above to appear. Add the webhook (see the README) and they arrive as they happen.</p>}
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-3">
-              <button onClick={onSync} disabled={sync.busy || !l.syncUrl} className={`inline-flex items-center gap-1.5 ${PRI} disabled:opacity-50`}>
+              <button onClick={onSync} disabled={sync.busy} className={`inline-flex items-center gap-1.5 ${PRI} disabled:opacity-50`}>
                 <RefreshCw className={`h-4 w-4 ${sync.busy ? "animate-spin" : ""}`} /> Test connection</button>
               {sync.at && !sync.error && <span className="text-sm text-emerald-400">Connected — pulled {sync.added} new.</span>}
               {sync.error && <span className="text-sm text-rose-400">{sync.error}</span>}

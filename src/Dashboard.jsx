@@ -9,7 +9,7 @@ import {
   paidOk, cash, freq, L, Field, HOUR, dk, grab, dueOf, effHours,
 } from "./lib/shared";
 import { useBoard, appendOrders } from "./lib/useBoard";
-import { pullStripe } from "./lib/sync";
+import { pullStripe, relayHealth, syncEndpoint } from "./lib/sync";
 import { buildSamples } from "./lib/samples";
 import { chime, desktop, askPermission, hook } from "./lib/notify";
 import { Stopwatch } from "./components/Elapsed";
@@ -56,6 +56,7 @@ export default function Dashboard({ me: account, onSignOut }) {
     return TABS.some(([id]) => id === t) ? t : "inbox";
   });
   const [sortBy, setSortBy] = useState("urgent");
+  const [live, setLive] = useState(false);
   const [q, setQ] = useState("");
   const [mine, setMine] = useState("");
   const [open, setOpen] = useState(null);
@@ -157,25 +158,39 @@ export default function Dashboard({ me: account, onSignOut }) {
     }), `Moved to ${sm(status)[1]}`);
   }, [patch, mine]);
 
-  const runSync = useCallback(async () => {
+  const runSync = useCallback(async (opts) => {
     const s = { ...DEF, ...(R.current.settings || {}) };
-    if (!s.syncUrl) { setSync((p) => ({ ...p, busy: false, error: "No sync endpoint set — add one under Settings." })); return; }
-    setSync((p) => ({ ...p, busy: true, error: null }));
+    if (!syncEndpoint(s)) { setSync((p) => ({ ...p, busy: false, error: "No sync endpoint set — add one under Settings." })); return; }
+    if (!opts?.quiet) setSync((p) => ({ ...p, busy: true, error: null }));
     try {
-      const drafts = await pullStripe(s, R.current.orders, R.current.products);
+      const drafts = await pullStripe(s, R.current.orders, R.current.products, { backfill: opts?.backfill });
       let n = 0;
       await rawCommit((x) => { const r = appendOrders(x, drafts); n = r.added.length; return r.next; });
       setSync({ busy: false, error: null, at: Date.now(), added: n });
-      flash(n ? `${n} new order${n === 1 ? "" : "s"}` : "Up to date");
-    } catch (e) { setSync({ busy: false, at: Date.now(), added: 0, error: `Couldn't reach the sync endpoint. ${e.message}` }); }
+      if (!opts?.quiet || n) flash(n ? `${n} new order${n === 1 ? "" : "s"}` : "Up to date");
+    } catch (e) {
+      // A background check that fails shouldn't paint a banner over the board.
+      if (opts?.quiet) return;
+      setSync({ busy: false, at: Date.now(), added: 0, error: `Couldn't reach the sync endpoint. ${e.message}` });
+    }
   }, [rawCommit, R, flash]);
 
+  /* Ask the relay whether Stripe is pushing to it. If it is, checking is a
+     cheap read and we can do it every few seconds; if we're still polling
+     Stripe ourselves, stick to the interval in Settings. */
   useEffect(() => {
-    const mins = Math.max(1, Number(cfg.autoSyncMinutes) || 5);
-    if (!cfg.syncUrl) return;
-    const t = setInterval(() => { if (!document.hidden) runSync(); }, mins * 6e4);
+    let gone = false;
+    if (!syncEndpoint(cfg)) { setLive(false); return; }
+    relayHealth({ ...DEF, ...(R.current.settings || {}) }).then((h) => { if (!gone) setLive(!!h?.webhook); });
+    return () => { gone = true; };
+  }, [cfg.syncUrl, R]);
+
+  useEffect(() => {
+    if (!syncEndpoint(cfg)) return;
+    const every = live ? 15e3 : Math.max(1, Number(cfg.autoSyncMinutes) || 5) * 6e4;
+    const t = setInterval(() => { if (!document.hidden) runSync({ quiet: true }); }, every);
     return () => clearInterval(t);
-  }, [cfg.syncUrl, cfg.autoSyncMinutes, runSync]);
+  }, [cfg.syncUrl, cfg.autoSyncMinutes, live, runSync]);
 
   const loadSamples = useCallback(() => {
     commit((x) => appendOrders(x, buildSamples(x.products)).next, "Sample orders loaded");
@@ -246,7 +261,7 @@ export default function Dashboard({ me: account, onSignOut }) {
             )}
             {perm === "granted" && <span className={`inline-flex items-center gap-1.5 text-xs ${F}`}><Bell className="h-4 w-4 text-emerald-400" /> Alerts on</span>}
 
-            <button onClick={runSync} disabled={sync.busy} className={`inline-flex items-center gap-1.5 ${PRI} disabled:opacity-60`}>
+            <button onClick={() => runSync({ backfill: true })} disabled={sync.busy} className={`inline-flex items-center gap-1.5 ${PRI} disabled:opacity-60`}>
               <RefreshCw className={`h-4 w-4 ${sync.busy ? "animate-spin" : ""}`} />{sync.busy ? "Syncing" : "Sync"}
             </button>
             <button onClick={() => load(false)} className={BTN} title="Refresh"><RotateCcw className="h-4 w-4" /></button>
@@ -273,7 +288,7 @@ export default function Dashboard({ me: account, onSignOut }) {
 
       <main className="mx-auto max-w-[1600px] px-4 py-5">
         {WORK.has(tab) && !orders.length
-          ? <FirstRun hasSync={!!cfg.syncUrl} onSync={runSync} onSamples={loadSamples} onAddProducts={() => setTab("catalog")} />
+          ? <FirstRun hasSync={!!syncEndpoint(cfg)} onSync={runSync} onSamples={loadSamples} onAddProducts={() => setTab("catalog")} />
           : tab === "inbox"
             ? <OrderList rows={inbox} products={products} now={now} onOpen={setOpen}
                 sortBy={sortBy} onSort={setSortBy} settings={cfg}
@@ -288,7 +303,7 @@ export default function Dashboard({ me: account, onSignOut }) {
           : tab === "reports" ? <Reports orders={orders} products={products} n={now} flash={flash} />
           : <SettingsView cfg={cfg} products={products} orders={orders} saveCfg={saveCfg} commit={commit}
               sync={{ busy: sync.busy, at: sync.at, error: sync.error, added: sync.added }}
-              onSync={runSync} addOrders={addOrders} flash={flash} />}
+              onSync={() => runSync({ backfill: true })} addOrders={addOrders} flash={flash} live={syncEndpoint(cfg) ? live : null} />}
       </main>
 
       {openOrder && <Drawer o={openOrder} products={products} now={now} me={mine} people={people}

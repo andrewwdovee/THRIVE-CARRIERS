@@ -5,6 +5,7 @@
    between. It holds the key as a Worker secret, exposes exactly two things,
    and refuses everything else.
 
+     POST /stripe/webhook                     Stripe pushes payments here
      POST /auth/login   {email, password}  ->  a session token
      GET  /auth/me                            who the token belongs to
      POST /auth/logout                        revoke this token
@@ -13,7 +14,8 @@
 
    Orders and the board need a signed-in session, or SYNC_TOKEN for
    machine-to-machine use. Managing accounts needs SYNC_TOKEN — a password
-   you invent, not your Stripe key.
+   you invent, not your Stripe key. The webhook is the exception: Stripe
+   can't carry a token, so its signature is what authenticates it.
 
    Deploy:
      cd relay
@@ -26,6 +28,7 @@
    under Settings → Stripe connection, with the same SYNC_TOKEN. */
 
 import { createUser, deleteUser, listUsers, login, logout, session, bearer } from "./auth.js";
+import { verify, HANDLED, fromEvent } from "./stripe-webhook.js";
 
 const STRIPE = "https://api.stripe.com/v1";
 
@@ -93,6 +96,29 @@ async function stripe(env, path, params) {
 /* Charges carry the money and the card; the price/product ids that tell the
    board which lane an order belongs to live on the invoice. Pull both, then
    hand the Desk one flat object per payment. */
+const INBOX_TTL = 7 * 24 * 3600;
+const OVERLAP = 600;
+
+/* Payments Stripe pushed to us, newest last. Read-only and idempotent —
+   entries expire on their own rather than being consumed, so two browsers
+   polling at once both see everything. */
+async function inboxSince(env, since) {
+  if (!env.BOARD) return [];
+  const out = [];
+  let cursor;
+  do {
+    const page = await env.BOARD.list({ prefix: "inbox:", cursor });
+    for (const k of page.keys) {
+      const at = Number(k.name.split(":")[1]);
+      if (Number.isFinite(at) && at < since - OVERLAP) continue;
+      const raw = await env.BOARD.get(k.name);
+      if (raw) out.push(JSON.parse(raw));
+    }
+    cursor = page.list_complete ? null : page.cursor;
+  } while (cursor);
+  return out;
+}
+
 async function recentOrders(env, since) {
   const page = await stripe(env, "charges", {
     limit: "100",
@@ -179,7 +205,31 @@ export default {
     if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors(origin) });
     if (path === "/" || path === "/health") {
       // Tells the app whether this relay can sign people in at all.
-      return json({ ok: true, service: "stripe-relay", auth: !!env.BOARD }, 200, origin);
+      return json({ ok: true, service: "stripe-relay", auth: !!env.BOARD, webhook: !!(env.STRIPE_WEBHOOK_SECRET && env.BOARD) }, 200, origin);
+    }
+
+    /* ── Stripe pushing a payment ──
+       No token here: Stripe can't send one. The signature is the check, and
+       nothing is stored until it passes. */
+    if (path === "/stripe/webhook" && req.method === "POST") {
+      const raw = await req.text();
+      const check = await verify(raw, req.headers.get("Stripe-Signature"), env.STRIPE_WEBHOOK_SECRET);
+      if (!check.ok) return json({ error: check.reason }, 400, origin);
+      if (!env.BOARD) return json({ error: "No KV namespace bound, so there is nowhere to put this." }, 501, origin);
+
+      let event;
+      try { event = JSON.parse(raw); } catch { return json({ error: "Body is not JSON." }, 400, origin); }
+      // Acknowledge anything we don't act on, or Stripe retries it forever.
+      if (!HANDLED.has(event.type)) return json({ ok: true, ignored: event.type }, 200, origin);
+
+      const order = fromEvent(event);
+      if (!order?.id) return json({ ok: true, ignored: "no payment object" }, 200, origin);
+
+      const at = Number(order.created) || Math.floor(Date.now() / 1000);
+      // Keyed on the payment, so Stripe's retries overwrite rather than duplicate.
+      await env.BOARD.put(`inbox:${String(at).padStart(12, "0")}:${order.id}`,
+        JSON.stringify(order), { expirationTtl: INBOX_TTL });
+      return json({ ok: true, received: order.id }, 200, origin);
     }
 
     /* ── signing in ── */
@@ -225,14 +275,30 @@ export default {
     if (!who) return json({ error: "Unauthorized" }, 401, origin);
 
     if (path === "/orders" && req.method === "GET") {
-      if (!env.STRIPE_SECRET_KEY) return json({ error: "STRIPE_SECRET_KEY is not set on this Worker." }, 500, origin);
       const raw = Number(url.searchParams.get("since"));
       // Default to 30 days back; ignore anything that isn't a sane timestamp.
       const floor = Math.floor(Date.now() / 1000) - 30 * 24 * 3600;
       const since = Number.isFinite(raw) && raw > 0 ? Math.max(Math.floor(raw), floor) : floor;
+
+      const pushed = await inboxSince(env, since);
+
+      /* With a webhook configured, the inbox is the live feed and calling
+         Stripe on every poll would be slow and pointless. Ask for a backfill
+         to reconcile anything a delivery outage lost. */
+      const live = !!(env.STRIPE_WEBHOOK_SECRET && env.BOARD);
+      const backfill = url.searchParams.get("backfill") === "1";
+      if (live && !backfill) return json(pushed, 200, origin);
+
+      if (!env.STRIPE_SECRET_KEY) {
+        if (live) return json(pushed, 200, origin);
+        return json({ error: "STRIPE_SECRET_KEY is not set on this Worker." }, 500, origin);
+      }
       try {
-        return json(await recentOrders(env, since), 200, origin);
+        const polled = await recentOrders(env, since);
+        const seen = new Set(pushed.map((o) => o.id));
+        return json([...pushed, ...polled.filter((o) => !seen.has(o.id))], 200, origin);
       } catch (e) {
+        if (pushed.length) return json(pushed, 200, origin); // partial beats nothing
         return json({ error: String(e.message || e) }, 502, origin);
       }
     }
