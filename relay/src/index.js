@@ -5,10 +5,15 @@
    between. It holds the key as a Worker secret, exposes exactly two things,
    and refuses everything else.
 
-     GET  /orders?since=<unix seconds>   recent charges, newest first
-     GET  /kv/:key   PUT /kv/:key        the shared board record (optional)
+     POST /auth/login   {email, password}  ->  a session token
+     GET  /auth/me                            who the token belongs to
+     POST /auth/logout                        revoke this token
+     GET  /orders?since=<unix seconds>        recent charges, newest first
+     GET  /kv/:key   PUT /kv/:key             the shared board record
 
-   Both are gated on SYNC_TOKEN — a password you invent, not your Stripe key.
+   Orders and the board need a signed-in session, or SYNC_TOKEN for
+   machine-to-machine use. Managing accounts needs SYNC_TOKEN — a password
+   you invent, not your Stripe key.
 
    Deploy:
      cd relay
@@ -19,6 +24,8 @@
 
    Then paste https://<your-worker>.workers.dev/orders into the Admin Console
    under Settings → Stripe connection, with the same SYNC_TOKEN. */
+
+import { createUser, deleteUser, listUsers, login, logout, session, bearer } from "./auth.js";
 
 const STRIPE = "https://api.stripe.com/v1";
 
@@ -44,11 +51,19 @@ function sameToken(a, b) {
   return diff === 0;
 }
 
-function authed(req, env) {
+/* The owner's shared secret. Machine-to-machine only — a browser should be
+   signing in instead, so no page ever has to hold this. */
+function ownerToken(req, env) {
   const want = env.SYNC_TOKEN;
   if (!want) return false; // unset means locked, never open
-  const got = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
-  return sameToken(got, want);
+  return sameToken(bearer(req), want);
+}
+
+/* Who is asking. A signed-in person, the owner's token, or nobody. */
+async function caller(req, env) {
+  if (ownerToken(req, env)) return { role: "owner", via: "token" };
+  const s = await session(env, bearer(req));
+  return s ? { ...s, via: "session" } : null;
 }
 
 /* Allowed browser origins. Set ALLOWED_ORIGINS in wrangler.toml to your app's
@@ -162,9 +177,52 @@ export default {
     const path = url.pathname.replace(/\/+$/, "") || "/";
 
     if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors(origin) });
-    if (path === "/" || path === "/health") return json({ ok: true, service: "stripe-relay" }, 200, origin);
+    if (path === "/" || path === "/health") {
+      // Tells the app whether this relay can sign people in at all.
+      return json({ ok: true, service: "stripe-relay", auth: !!env.BOARD }, 200, origin);
+    }
 
-    if (!authed(req, env)) return json({ error: "Unauthorized" }, 401, origin);
+    /* ── signing in ── */
+    if (path === "/auth/login" && req.method === "POST") {
+      if (!env.BOARD) return json({ error: "This relay has no KV namespace, so it can't hold accounts." }, 501, origin);
+      const body = await req.json().catch(() => ({}));
+      const out = await login(env, body.email, body.password);
+      // One message for both failures: saying which was wrong tells an
+      // attacker which addresses have accounts.
+      if (!out) return json({ error: "That email and password don't match." }, 401, origin);
+      return json(out, 200, origin);
+    }
+
+    const who = await caller(req, env);
+
+    if (path === "/auth/me") {
+      if (!who) return json({ error: "Unauthorized" }, 401, origin);
+      return json({ user: { email: who.email || null, name: who.name || "Owner token", role: who.role || "owner" } }, 200, origin);
+    }
+    if (path === "/auth/logout" && req.method === "POST") {
+      await logout(env, bearer(req));
+      return json({ ok: true }, 200, origin);
+    }
+
+    /* ── accounts: owner only ── */
+    if (path === "/auth/users") {
+      if (!ownerToken(req, env)) return json({ error: "Managing accounts needs the owner token." }, 403, origin);
+      if (!env.BOARD) return json({ error: "This relay has no KV namespace, so it can't hold accounts." }, 501, origin);
+      if (req.method === "GET") return json({ users: await listUsers(env) }, 200, origin);
+      if (req.method === "POST") {
+        const body = await req.json().catch(() => ({}));
+        try { return json({ user: await createUser(env, body) }, 200, origin); }
+        catch (e) { return json({ error: String(e.message || e) }, 400, origin); }
+      }
+      if (req.method === "DELETE") {
+        const body = await req.json().catch(() => ({}));
+        if (!body.email) return json({ error: "Which account? Pass {\"email\": \"…\"}." }, 400, origin);
+        await deleteUser(env, body.email);
+        return json({ ok: true }, 200, origin);
+      }
+    }
+
+    if (!who) return json({ error: "Unauthorized" }, 401, origin);
 
     if (path === "/orders" && req.method === "GET") {
       if (!env.STRIPE_SECRET_KEY) return json({ error: "STRIPE_SECRET_KEY is not set on this Worker." }, 500, origin);

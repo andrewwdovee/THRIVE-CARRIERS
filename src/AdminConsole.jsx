@@ -15,7 +15,7 @@ import { buildSamples } from "./lib/samples";
    Shares one database with the Fulfillment Desk via the same storage key. */
 
 /* ═════ APP ═════ */
-export default function AdminConsole() {
+export default function AdminConsole({ me: account }) {
   const { st, loading, err, load, commit: rawCommit, R } = useBoard();
   const [tab, setTab] = useState("reports");
   const [n, setN] = useState(Date.now());

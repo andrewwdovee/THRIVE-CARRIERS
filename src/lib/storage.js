@@ -4,8 +4,9 @@
 
    Two modes:
      local  — localStorage. Fine for one machine; each browser has its own copy.
-     remote — a shared KV endpoint (the relay in ./relay serves this). Set
-              VITE_STORAGE_URL to switch every window onto one database.
+     remote — the relay's KV (see ./relay). Set VITE_RELAY_URL to put every
+              window on one database; reads and writes carry the signed-in
+              session, so the page holds no shared secret.
 
    The shape is deliberately small because the app only ever asks for two
    things: read a JSON string, write a JSON string. */
@@ -13,8 +14,9 @@
 const MEM = new Map(); // last-resort store when localStorage is walled off
 const CHANNEL = "fulfillment_storage";
 
-const REMOTE = (import.meta.env?.VITE_STORAGE_URL || "").replace(/\/+$/, "");
-const TOKEN = import.meta.env?.VITE_STORAGE_TOKEN || "";
+import { relayUrl, authHeaders, expired } from "./auth";
+
+const REMOTE = relayUrl();
 
 let bc = null;
 try {
@@ -45,9 +47,8 @@ function localSet(key, value) {
 }
 
 async function remoteGet(key) {
-  const r = await fetch(`${REMOTE}/kv/${encodeURIComponent(key)}`, {
-    headers: TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {},
-  });
+  const r = await fetch(`${REMOTE}/kv/${encodeURIComponent(key)}`, { headers: authHeaders() });
+  if (r.status === 401) { expired(); throw new Error("Your session ended. Sign in again."); }
   if (r.status === 404) return null;
   if (!r.ok) throw new Error(`Storage read failed (${r.status})`);
   const j = await r.json();
@@ -57,12 +58,10 @@ async function remoteGet(key) {
 async function remoteSet(key, value) {
   const r = await fetch(`${REMOTE}/kv/${encodeURIComponent(key)}`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      ...(TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {}),
-    },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ value }),
   });
+  if (r.status === 401) { expired(); throw new Error("Your session ended. Sign in again."); }
   if (!r.ok) throw new Error(`Storage write failed (${r.status})`);
   return true;
 }
@@ -105,10 +104,7 @@ export const storage = {
       /* nothing to do */
     }
     if (REMOTE) {
-      await fetch(`${REMOTE}/kv/${encodeURIComponent(key)}`, {
-        method: "DELETE",
-        headers: TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {},
-      });
+      await fetch(`${REMOTE}/kv/${encodeURIComponent(key)}`, { method: "DELETE", headers: authHeaders() });
     }
     return { key };
   },

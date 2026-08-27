@@ -4,7 +4,8 @@ Two screens over one order database.
 
 - **Fulfillment Desk** (`#/desk`) — the working board. Orders arrive from Stripe,
   move across four lanes, carry a per-product checklist, and alert whoever has
-  the window open.
+  the window open. Every order runs a stopwatch from the moment it was paid
+  for until someone marks it delivered.
 - **Admin Console** (`#/admin`) — the owner view. Products and their fulfillment
   steps, reports, and the Stripe connection.
 
@@ -39,9 +40,63 @@ src/
     storage.js         window.storage — localStorage or the shared KV
     sync.js            pulling charges from the relay
     notify.js          chime, desktop alert, webhook
-relay/                 Cloudflare Worker: holds the Stripe key, serves /orders
+    auth.js            signing in; carries the session token
+  Login.jsx            the sign-in screen
+  components/
+    Elapsed.jsx        the per-order stopwatch
+relay/                 Cloudflare Worker: accounts, sessions, Stripe, shared KV
 test/                  node test suites
 ```
+
+## The clock on every order
+
+An order's stopwatch starts at the moment Stripe took the money — not when
+someone noticed it — and runs until the order is marked delivered. It shows on
+the card, in the New orders list, and large at the top of the order drawer, next
+to the one button that stops it.
+
+Each product carries a turnaround target (its **Turnaround target (hours)** in
+Products). The clock is grey while an order is inside its target and red once it
+runs past, so a board of red cards is the thing you can see from across a room.
+Delivered orders freeze at their final time — green if they made the target,
+amber if they didn't — and those frozen numbers are what Reports averages.
+
+Reopening a delivered order starts the clock again from the original payment
+time, so the total stays honest.
+
+## Who can sign in
+
+Whether the app asks for a login depends on whether there is a server to enforce
+one. A login screen on a static page is decoration — anyone can read the source
+and skip it — so the check lives in the relay, which refuses to hand over an
+order to a browser without a valid session.
+
+- **No relay configured** — no sign-in. The board is this browser's own copy.
+  Fine for one person on one machine; it is not private from anyone using that
+  machine.
+- **`VITE_RELAY_URL` set** — the app shows a sign-in screen and loads nothing
+  until the relay says who you are.
+
+Give the relay a KV namespace (see below), then create an account per person:
+
+```bash
+node relay/adduser.mjs https://your-relay.workers.dev someone@yourcompany.com "Their Name"
+node relay/adduser.mjs https://your-relay.workers.dev --list
+```
+
+It prompts for the password rather than taking it on the command line, so it
+stays out of your shell history. Passwords are stored as PBKDF2-SHA256 hashes
+and never travel to the browser. Signing in returns a session token that expires
+in 14 days; signing out revokes it server-side, so a stolen token stops working
+the moment someone signs out.
+
+Whoever is signed in is who claims an order — the Desk stamps their name rather
+than asking them to type it.
+
+Two things worth knowing. The `SYNC_TOKEN` you set on the relay is the **owner**
+credential: it manages accounts and works machine-to-machine, so keep it out of
+browsers. And PBKDF2 costs CPU — on Cloudflare's free Workers plan a sign-in can
+exceed the CPU limit; the paid plan has room for it.
 
 ## Connecting Stripe
 
@@ -74,7 +129,8 @@ charge description; anything still unmatched lands as **Needs triage**.
 ## One database for the whole team
 
 By default each browser keeps its own copy in `localStorage`. To put everyone on
-one record, give the relay a KV namespace and point the app at it:
+one record — and to turn on sign-in — give the relay a KV namespace and point
+the app at it:
 
 ```bash
 cd relay
@@ -83,8 +139,11 @@ npx wrangler deploy
 ```
 
 ```bash
-cp .env.example .env    # then fill in VITE_STORAGE_URL and VITE_STORAGE_TOKEN
+cp .env.example .env    # then set VITE_RELAY_URL
 ```
+
+The app holds no shared secret: each browser carries only the session token it
+got by signing in.
 
 Set `ALLOWED_ORIGINS` in `relay/wrangler.toml` to your deployed app's URL so the
 Worker only answers your own page.
@@ -117,8 +176,9 @@ and then stops.
 `npm run build` emits a static `dist/` — any static host works (Cloudflare Pages,
 Netlify, Vercel, S3).
 
-Both screens are the same bundle at different hashes, and there is no login: the
-`#/desk` URL is a starting point, not a permission boundary — anyone who has it
-can reach `#/admin` too. If the Console needs to be off limits, put the whole app
-behind your host's access control (Cloudflare Access, Netlify password
-protection, a VPN) rather than relying on the URL.
+Both screens are the same bundle at different hashes. Signing in controls
+whether someone sees **any** orders, but it does not currently separate the two
+screens — anyone who can reach the Desk can reach `#/admin` and your Stripe
+settings too. If the Console needs to be off limits to staff, that needs a role
+check on the relay's endpoints; the accounts already carry `owner` and `staff`
+roles for it, but the board itself does not yet distinguish them.

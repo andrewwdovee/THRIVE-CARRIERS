@@ -5,12 +5,13 @@ import {
 } from "lucide-react";
 import {
   BD, CARD, IN, BTN, PRI, M, F, W, c, ST, sm, DEF, DAY,
-  paidOk, brief, cash, freq, L, Field,
+  paidOk, cash, freq, L, Field, HOUR,
 } from "./lib/shared";
 import { useBoard, appendOrders } from "./lib/useBoard";
 import { pullStripe } from "./lib/sync";
 import { buildSamples } from "./lib/samples";
 import { chime, desktop, askPermission, hook } from "./lib/notify";
+import { Stopwatch, clock } from "./components/Elapsed";
 
 /* Fulfillment Desk — the working view.
    Same record as the Admin Console; this window is where orders actually move. */
@@ -18,15 +19,12 @@ import { chime, desktop, askPermission, hook } from "./lib/notify";
 const late = (o, now) => o.status !== "done" && o.dueAt && o.dueAt < now;
 const steps = (products, o) => products.find((p) => p.id === o.productId)?.steps?.filter(Boolean) || [];
 const doneCount = (o, list) => list.filter((_, i) => o.checklist?.[i]).length;
+const target = (products, o) => {
+  const p = products.find((x) => x.id === o.productId);
+  return p?.slaHours ? p.slaHours * HOUR : null;
+};
 
-function countdown(o, now) {
-  if (o.status === "done") return o.completedAt ? `delivered in ${brief(o.completedAt - o.receivedAt)}` : "delivered";
-  if (!o.dueAt) return "";
-  const d = o.dueAt - now;
-  return d < 0 ? `${brief(-d)} overdue` : `${brief(d)} left`;
-}
-
-export default function FulfillmentDesk() {
+export default function FulfillmentDesk({ me: account }) {
   const { st, loading, err, load, commit: rawCommit, R } = useBoard();
   const [tab, setTab] = useState("board");
   const [q, setQ] = useState("");
@@ -45,7 +43,11 @@ export default function FulfillmentDesk() {
   const commit = useCallback((fn, note) => rawCommit(fn, note, flash), [rawCommit, flash]);
 
   /* ── who is at this desk ── */
-  useEffect(() => { setMine(localStorage.getItem("fulfillment_me") || ""); }, []);
+  useEffect(() => {
+    // Signed in? That's who you are. Otherwise remember what was typed here.
+    const named = account?.name || account?.email;
+    setMine(named || localStorage.getItem("fulfillment_me") || "");
+  }, [account]);
   const setMe = (v) => { setMine(v); try { localStorage.setItem("fulfillment_me", v); } catch { /* private mode */ } };
 
   /* ── alerts ──
@@ -256,7 +258,7 @@ function Board({ lanes, products, now, onOpen, onMove }) {
 function Card({ o, products, now, onOpen }) {
   const p = products.find((x) => x.id === o.productId);
   const list = steps(products, o), did = doneCount(o, list);
-  const bad = late(o, now);
+  const bad = late(o, now), tgt = target(products, o);
   return (
     <article draggable onDragStart={(e) => e.dataTransfer.setData("text/plain", o.id)}
       onClick={() => onOpen(o.id)}
@@ -268,10 +270,12 @@ function Card({ o, products, now, onOpen }) {
       <p className={`mt-0.5 truncate text-xs ${M}`}>{o.productName}</p>
 
       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-        <span className={`inline-flex items-center gap-1 ${bad ? "text-rose-400" : F}`}>
-          {bad ? <AlertTriangle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}{countdown(o, now)}
-        </span>
-        {!!list.length && <span className={`font-mono ${did === list.length ? "text-emerald-400" : F}`}>{did}/{list.length}</span>}
+        {o.status === "done"
+          ? <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+          : bad ? <AlertTriangle className="h-3 w-3 text-rose-400" /> : <Clock className={`h-3 w-3 ${F}`} />}
+        <Stopwatch startedAt={o.receivedAt} stoppedAt={o.completedAt} target={tgt} />
+        {tgt && <span className={F}>of {Math.round(tgt / HOUR)}h</span>}
+        {!!list.length && <span className={`ml-auto font-mono ${did === list.length ? "text-emerald-400" : F}`}>{did}/{list.length}</span>}
       </div>
 
       {!!list.length && <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-slate-800">
@@ -307,7 +311,9 @@ function InboxList({ rows, products, now, onOpen }) {
               {paidOk(o)
                 ? <span className={`rounded px-1.5 py-0.5 text-xs ${c(p?.color)[1]}`}>{sm(o.status)[1]}</span>
                 : <span className="rounded bg-rose-500/15 px-1.5 py-0.5 text-xs text-rose-300" title={o.declineReason}>Declined</span>}
-              <span className={`w-28 text-right font-mono text-xs ${late(o, now) ? "text-rose-400" : F}`}>{countdown(o, now)}</span>
+              <span className="w-28 text-right">
+                {paidOk(o) && <Stopwatch startedAt={o.receivedAt} stoppedAt={o.completedAt} target={target(products, o)} />}
+              </span>
               <span className={`w-40 truncate text-right text-xs ${F}`}>{new Date(o.receivedAt).toLocaleString()}</span>
             </button>
           );
@@ -320,7 +326,7 @@ function InboxList({ rows, products, now, onOpen }) {
 /* ═════ ORDER DETAIL ═════ */
 function Drawer({ o, products, now, me, people, onClose, onPatch, onMove }) {
   const p = products.find((x) => x.id === o.productId);
-  const list = steps(products, o), did = doneCount(o, list);
+  const list = steps(products, o), did = doneCount(o, list), tgt = target(products, o);
   const [notes, setNotes] = useState(o.notes || "");
   useEffect(() => setNotes(o.notes || ""), [o.id]);
 
@@ -353,6 +359,23 @@ function Drawer({ o, products, now, me, people, onClose, onPatch, onMove }) {
             <p className="mt-1 text-rose-300/80">Don't fulfill until the customer pays.</p>
           </div>}
 
+          <div className={`${CARD} p-4`}>
+            <div className="flex items-baseline justify-between gap-3">
+              <L>{o.status === "done" ? "Time to fulfill" : "Running since payment"}</L>
+              {tgt && <span className={`text-xs ${F}`}>target {Math.round(tgt / HOUR)}h</span>}
+            </div>
+            <div className="mt-1">
+              <Stopwatch startedAt={o.receivedAt} stoppedAt={o.completedAt} target={tgt} size="lg" />
+            </div>
+            <p className={`mt-1 text-xs ${F}`}>
+              Started {new Date(o.receivedAt).toLocaleString()}
+              {o.completedAt ? ` · stopped ${new Date(o.completedAt).toLocaleString()}` : ""}
+            </p>
+            {o.status !== "done"
+              ? <button onClick={() => onMove(o.id, "done")} className={`mt-3 w-full ${PRI}`}>Mark delivered — stop the clock</button>
+              : <button onClick={() => onMove(o.id, "new")} className={`mt-3 w-full ${BTN}`}>Reopen and restart the clock</button>}
+          </div>
+
           <div>
             <L className="mb-2">Status</L>
             <div className="flex flex-wrap gap-1.5">
@@ -361,9 +384,6 @@ function Drawer({ o, products, now, me, people, onClose, onPatch, onMove }) {
                   className={`rounded-md px-3 py-1.5 text-sm font-medium ${(o.status || "new") === id ? "bg-blue-600 text-white" : `border border-slate-700 bg-slate-900 ${M} hover:bg-slate-800`}`}>{label}</button>
               ))}
             </div>
-            <p className={`mt-2 text-xs ${late(o, now) ? "text-rose-400" : F}`}>
-              {o.dueAt ? `Target ${new Date(o.dueAt).toLocaleString()} — ${countdown(o, now)}` : ""}
-            </p>
           </div>
 
           <div>
@@ -387,7 +407,7 @@ function Drawer({ o, products, now, me, people, onClose, onPatch, onMove }) {
               })}
             </ul>
             {!!list.length && did === list.length && o.status !== "done" &&
-              <button onClick={() => onMove(o.id, "done")} className={`mt-3 w-full ${PRI}`}>Every step done — mark delivered</button>}
+              <p className="mt-3 text-sm text-emerald-400">Every step is done — stop the clock above.</p>}
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
