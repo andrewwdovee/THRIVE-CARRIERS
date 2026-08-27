@@ -25,8 +25,8 @@ import { Reports, Products, Settings as SettingsView } from "./views/admin";
 
 const TABS = [
   ["inbox", "New orders", Inbox],
-  ["completed", "Completed", CheckCircle2],
   ["products-view", "By product", Layers],
+  ["completed", "Completed", CheckCircle2],
   ["catalog", "Products", Package],
   ["reports", "Reports", BarChart3],
   ["settings", "Settings", GearIcon],

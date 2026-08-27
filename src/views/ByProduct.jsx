@@ -1,16 +1,26 @@
 import React, { useState, useMemo } from "react";
-import { ChevronDown, ChevronRight, Package, AlertTriangle } from "lucide-react";
+import { ChevronDown, ChevronRight, Package, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { BD, CARD, M, F, W, c, ST, cash, L, HOUR, effHours, paidOk } from "../lib/shared";
 
 /* The board, cut by product instead of by status.
 
-   The lane view answers "what's the team working on"; this one answers "how
-   is each thing we sell actually doing" — which product is backing up, which
-   one is blowing its turnaround, where the money is. Each product keeps its
-   own set of lanes, so a card can still be dragged between them. */
+   This answers "how is each thing we sell actually doing" — which product is
+   backing up, which one is blowing its turnaround, where the money is.
+
+   Only the three working lanes get space. Delivered orders accumulate forever
+   and would push the live work off the screen within a week, so they collapse
+   into one line per product that opens when you want it. */
+
+const WORKING = ST.filter(([id]) => id !== "done");
 
 export default function ByProduct({ products, orders, now, onOpen, onMove, Card, settings }) {
   const [shut, setShut] = useState(() => new Set());
+  const [showDone, setShowDone] = useState(() => new Set());
+  const toggleDone = (id) => setShowDone((s) => {
+    const n = new Set(s);
+    n.has(id) ? n.delete(id) : n.add(id);
+    return n;
+  });
   const toggle = (id) => setShut((s) => {
     const n = new Set(s);
     n.has(id) ? n.delete(id) : n.add(id);
@@ -44,6 +54,10 @@ export default function ByProduct({ products, orders, now, onOpen, onMove, Card,
         const overdue = open.filter((o) => paidOk(o) && o.dueAt && o.dueAt < now).length;
         const money = g.orders.reduce((s, o) => s + (o.amount || 0), 0);
         const closed = shut.has(g.id);
+        const openDone = showDone.has(g.id);
+        const done = g.orders.filter((o) => o.status === "done")
+          .sort((x, y) => (y.completedAt || 0) - (x.completedAt || 0));
+        const last = done[0]?.completedAt;
         const eff = effHours({ slaHours: g.sla }, settings);
 
         return (
@@ -70,25 +84,49 @@ export default function ByProduct({ products, orders, now, onOpen, onMove, Card,
             </button>
 
             {!closed && (
-              <div className="grid gap-2 border-t border-slate-800 p-2 lg:grid-cols-4">
-                {ST.map(([id, label]) => {
-                  const rows = g.orders.filter((o) => (o.status || "new") === id)
-                    .sort((x, y) => (x.dueAt || 0) - (y.dueAt || 0));
-                  return (
-                    <div key={id}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => { e.preventDefault(); const oid = e.dataTransfer.getData("text/plain"); if (oid) onMove(oid, id); }}
-                      className="rounded-lg bg-slate-950/40 p-1.5">
-                      <div className="flex items-center justify-between px-1 py-1">
-                        <L>{label}</L><span className={`font-mono text-xs ${F}`}>{rows.length}</span>
+              <div className="border-t border-slate-800 p-2">
+                <div className="grid gap-2 lg:grid-cols-3">
+                  {WORKING.map(([id, label]) => {
+                    const rows = g.orders.filter((o) => (o.status || "new") === id)
+                      .sort((x, y) => (x.dueAt || 0) - (y.dueAt || 0));
+                    return (
+                      <div key={id}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => { e.preventDefault(); const oid = e.dataTransfer.getData("text/plain"); if (oid) onMove(oid, id); }}
+                        className="rounded-lg bg-slate-950/40 p-1.5">
+                        <div className="flex items-center justify-between px-1 py-1">
+                          <L>{label}</L><span className={`font-mono text-xs ${F}`}>{rows.length}</span>
+                        </div>
+                        <div className="space-y-2">
+                          {!rows.length && <p className={`px-1 py-3 text-center text-xs ${F}`}>—</p>}
+                          {rows.map((o) => <Card key={o.id} o={o} products={products} now={now} onOpen={onOpen} hideProduct settings={settings} />)}
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        {!rows.length && <p className={`px-1 py-3 text-center text-xs ${F}`}>—</p>}
-                        {rows.map((o) => <Card key={o.id} o={o} products={products} now={now} onOpen={onOpen} hideProduct settings={settings} />)}
+                    );
+                  })}
+                </div>
+
+                {/* One line, not a column. Dropping a card here still delivers it. */}
+                {!!done.length && (
+                  <div
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => { e.preventDefault(); const oid = e.dataTransfer.getData("text/plain"); if (oid) onMove(oid, "done"); }}
+                    className="mt-2 rounded-lg bg-slate-950/40">
+                    <button onClick={() => toggleDone(g.id)}
+                      className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left hover:bg-slate-900/60">
+                      {openDone ? <ChevronDown className={`h-3.5 w-3.5 ${F}`} /> : <ChevronRight className={`h-3.5 w-3.5 ${F}`} />}
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400/70" />
+                      <L>Delivered</L>
+                      <span className={`font-mono text-xs ${F}`}>{done.length}</span>
+                      {last && <span className={`ml-auto text-xs ${F}`}>last {new Date(last).toLocaleDateString()}</span>}
+                    </button>
+                    {openDone && (
+                      <div className="grid gap-2 px-1.5 pb-1.5 sm:grid-cols-2 lg:grid-cols-3">
+                        {done.map((o) => <Card key={o.id} o={o} products={products} now={now} onOpen={onOpen} hideProduct settings={settings} />)}
                       </div>
-                    </div>
-                  );
-                })}
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </section>

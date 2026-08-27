@@ -2,7 +2,7 @@
 
 One dashboard over one order database, in six sections.
 
-The work:
+The work, in the order you'd use them:
 
 - **New orders** — everything still to fulfill, worst overdue at the top, so the
   order that needs picking up is the one you land on. Flip to *Latest in* to see
@@ -11,8 +11,10 @@ The work:
 - **Completed** — every delivered order, newest first, each with the time it
   took.
 - **By product** — the same orders cut by what was sold. Each product keeps its
-  own four lanes (drag a card between them), its turnaround target, what's past
-  due, and what it has taken in.
+  own three working lanes (drag a card between them), its turnaround target,
+  what's past due, and what it has taken in. Delivered orders collapse to one
+  line per product so a week of finished work can't push the live work off the
+  screen — open it to see them, or drop a card on it to deliver.
 
 The setup:
 
