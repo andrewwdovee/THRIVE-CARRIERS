@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
-  RefreshCw, Search, Inbox, Clock, AlertTriangle, X, Mail, Phone,
-  CreditCard, Receipt, CheckCircle2, Circle, Bell, BellOff, RotateCcw, User, PackageOpen,
+  RefreshCw, Inbox, Clock, AlertTriangle, X, Mail, Phone,
+  CreditCard, Receipt, CheckCircle2, Bell, BellOff, RotateCcw, User, PackageOpen,
   Package, BarChart3, Settings as GearIcon, Layers, LogOut, Undo2,
 } from "lucide-react";
 import {
@@ -51,8 +51,6 @@ const SORTS = [
    A declined payment is neither — it's chased, not fulfilled — so it never
    turns red on the strength of its age. */
 const late = (o, now) => paidOk(o) && o.status !== "done" && o.dueAt && o.dueAt < now;
-const steps = (products, o) => products.find((p) => p.id === o.productId)?.steps?.filter(Boolean) || [];
-const doneCount = (o, list) => list.filter((_, i) => o.checklist?.[i]).length;
 const target = (products, o, settings) =>
   effHours(products.find((x) => x.id === o.productId), settings) * HOUR;
 
@@ -64,7 +62,6 @@ export default function Dashboard({ me: account, onSignOut }) {
   });
   const [sortBy, setSortBy] = useState("urgent");
   const [live, setLive] = useState(false);
-  const [q, setQ] = useState("");
   const [mine, setMine] = useState("");
   const [open, setOpen] = useState(null);
   const [now, setNow] = useState(Date.now());
@@ -112,13 +109,10 @@ export default function Dashboard({ me: account, onSignOut }) {
   const flash = useCallback((m) => { setToast(m); setTimeout(() => setToast(null), 2600); }, []);
   const commit = useCallback((fn, note) => rawCommit(fn, note, flash), [rawCommit, flash]);
 
-  /* ── who is at this desk ── */
-  useEffect(() => {
-    // Signed in? That's who you are. Otherwise remember what was typed here.
-    const named = account?.name || account?.email;
-    setMine(named || localStorage.getItem("fulfillment_me") || "");
-  }, [account]);
-  const setMe = (v) => { setMine(v); try { localStorage.setItem("fulfillment_me", v); } catch { /* private mode */ } };
+  /* ── who is at this desk ──
+     Whoever signed in. There is no second place to type a name: two answers
+     to "who are you" is one more than the question has. */
+  useEffect(() => setMine(account?.name || account?.email || ""), [account]);
 
   /* ── alerts ──
      `seen` is primed on the first load so opening the dashboard doesn't fire a
@@ -255,37 +249,30 @@ export default function Dashboard({ me: account, onSignOut }) {
   }, [commit]);
 
   /* ── what each view shows ── */
-  const hits = useMemo(() => {
-    const t = q.trim().toLowerCase();
-    if (!t) return orders;
-    return orders.filter((o) => [o.customer, o.email, o.phone, o.productName, o.paymentId, o.chargeId, o.subscriptionId, o.notes, o.assignee]
-      .filter(Boolean).some((v) => String(v).toLowerCase().includes(t)));
-  }, [orders, q]);
-
   /* By product drops long-delivered orders so the groups stay readable;
      Completed keeps every one of them. */
   const grouped = useMemo(() => {
     const cut = now - Math.max(1, Number(cfg.archiveAfterDays) || 14) * DAY;
-    return hits.filter((o) => paidOk(o) && !(o.status === "done" && (o.completedAt || 0) < cut));
-  }, [hits, now, cfg.archiveAfterDays]);
+    return orders.filter((o) => paidOk(o) && !(o.status === "done" && (o.completedAt || 0) < cut));
+  }, [orders, now, cfg.archiveAfterDays]);
 
   /* New orders is everything still outstanding — a delivered order moves to
      Completed and stops cluttering the list someone works from. A declined
      payment stays put: it's unfinished business, not finished work. */
   const inbox = useMemo(() => {
-    const rows = hits.filter((o) => o.status !== "done" && paidOk(o));
+    const rows = orders.filter((o) => o.status !== "done" && paidOk(o));
     if (sortBy === "newest") return rows.sort((x, y) => y.receivedAt - x.receivedAt);
     // Furthest past its target first; among orders still inside their target,
     // the one closest to blowing it.
     return rows.sort((x, y) => (x.dueAt || Infinity) - (y.dueAt || Infinity));
-  }, [hits, sortBy]);
+  }, [orders, sortBy]);
 
   /* Payments that failed and still have something running behind them. Once
      the service is stopped — or the money turns up — there's nothing left to
      do, so it files into Completed with everything else that's finished. */
   const settledOf = (o) => !paidOk(o) && SETTLED.has(o.recovery || "open");
-  const missed = useMemo(() => hits.filter((o) => !paidOk(o) && !SETTLED.has(o.recovery || "open"))
-    .sort((x, y) => y.receivedAt - x.receivedAt), [hits]);
+  const missed = useMemo(() => orders.filter((o) => !paidOk(o) && !SETTLED.has(o.recovery || "open"))
+    .sort((x, y) => y.receivedAt - x.receivedAt), [orders]);
   const bleeding = missed.length;
   /* A charge whose product we don't recognise still has to be worked, but it
      arrives with no target and no steps — worth saying out loud. */
@@ -326,9 +313,9 @@ export default function Dashboard({ me: account, onSignOut }) {
     commit((x) => ({ ...x, refunds: (x.refunds || []).map((y) => (y.id === r.id ? { ...y, ...r } : y)) }), "Refund saved");
   }, [commit]);
 
-  const completed = useMemo(() => hits
+  const completed = useMemo(() => orders
     .filter((o) => (paidOk(o) && o.status === "done") || (!paidOk(o) && SETTLED.has(o.recovery || "open")))
-    .sort((x, y) => ((y.completedAt || y.stoppedAt || 0) - (x.completedAt || x.stoppedAt || 0))), [hits]);
+    .sort((x, y) => ((y.completedAt || y.stoppedAt || 0) - (x.completedAt || x.stoppedAt || 0))), [orders]);
   const overdue = orders.filter((o) => paidOk(o) && late(o, now)).length;
   const openOrder = open ? orders.find((o) => o.id === open) : null;
   const people = useMemo(() => [...new Set(orders.map((o) => o.assignee).filter((a) => a && a !== "Unassigned"))], [orders]);
@@ -349,16 +336,8 @@ export default function Dashboard({ me: account, onSignOut }) {
               </L>
             </div>
 
-            <div className="relative ml-auto w-full max-w-xs">
-              <Search className={`pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 ${F}`} />
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, email, payment ID…" className={`${IN} pl-8`} />
-            </div>
-
-            <div className="w-40 shrink-0">
-              <input value={mine} onChange={(e) => setMe(e.target.value)} placeholder="Your name" list="desk-people"
-                className={IN} title="Claiming an order stamps this name on it" />
-            </div>
             <datalist id="desk-people">{people.map((p) => <option key={p} value={p} />)}</datalist>
+            <div className="ml-auto" />
 
             {perm !== "granted" && perm !== "unsupported" && (
               <button onClick={async () => setPerm(await askPermission())} className={`inline-flex items-center gap-1.5 ${BTN}`} title="Allow desktop alerts">
@@ -467,7 +446,6 @@ function FirstRun({ hasSync, onSync, onSamples, onAddProducts }) {
 /* ═════ ONE ORDER ═════ */
 function Card({ o, products, now, onOpen, hideProduct, settings }) {
   const p = products.find((x) => x.id === o.productId);
-  const list = steps(products, o), did = doneCount(o, list);
   const bad = late(o, now), tgt = target(products, o, settings);
   return (
     <article draggable onDragStart={(e) => e.dataTransfer.setData("text/plain", o.id)}
@@ -485,12 +463,8 @@ function Card({ o, products, now, onOpen, hideProduct, settings }) {
           : bad ? <AlertTriangle className="h-3 w-3 text-rose-600 dark:text-rose-400" /> : <Clock className={`h-3 w-3 ${F}`} />}
         <Stopwatch startedAt={o.receivedAt} stoppedAt={o.completedAt} target={tgt} />
         {tgt && <span className={F}>of {Math.round(tgt / HOUR)}h</span>}
-        {!!list.length && <span className={`ml-auto font-mono ${did === list.length ? "text-emerald-600 dark:text-emerald-400" : F}`}>{did}/{list.length}</span>}
       </div>
 
-      {!!list.length && <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-        <div className={`h-full ${did === list.length ? "bg-emerald-500" : c(p?.color)[0]}`} style={{ width: `${(did / list.length) * 100}%` }} />
-      </div>}
 
       {o.assignee && o.assignee !== "Unassigned" &&
         <div className={`mt-2 inline-flex items-center gap-1 text-xs ${F}`}><User className="h-3 w-3" />{o.assignee}</div>}
@@ -617,8 +591,6 @@ function MissedList({ rows, products, now, onOpen, settings }) {
           {rows.map((o) => {
             const p = products.find((x) => x.id === o.productId);
             const settled = SETTLED.has(o.recovery || "open");
-            const list = (p?.cancelSteps || []).filter(Boolean);
-            const did = list.filter((_, i) => o.cancelChecklist?.[i]).length;
             return (
               <button key={o.id} onClick={() => onOpen(o.id)}
                 className={`flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-900 ${settled ? "opacity-60" : "bg-amber-50 dark:bg-amber-950/15"}`}>
@@ -644,7 +616,6 @@ function MissedList({ rows, products, now, onOpen, settings }) {
                   {mm(o.recovery || "open")[1]}
                 </span>
 
-                {!!list.length && <span className={`w-10 text-right font-mono text-xs ${did === list.length ? "text-emerald-600 dark:text-emerald-400" : F}`}>{did}/{list.length}</span>}
 
                 <span className="flex w-32 shrink-0 items-center justify-end gap-1.5">
                   {!settled && <AlertTriangle className="h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />}
@@ -664,11 +635,9 @@ function MissedList({ rows, products, now, onOpen, settings }) {
 function Drawer({ o, products, now, me, people, onClose, onPatch, onMove, onSettle, settings }) {
   /* A failed payment gets a different job: shut things down, not build them. */
   const unpaid = !paidOk(o);
-  const cancelList = (products.find((x) => x.id === o.productId)?.cancelSteps || []).filter(Boolean);
-  const cancelDone = cancelList.filter((_, i) => o.cancelChecklist?.[i]).length;
   const settled = SETTLED.has(o.recovery || "open");
   const p = products.find((x) => x.id === o.productId);
-  const list = steps(products, o), did = doneCount(o, list), tgt = target(products, o, settings);
+  const tgt = target(products, o, settings);
   const [notes, setNotes] = useState(o.notes || "");
   useEffect(() => setNotes(o.notes || ""), [o.id]);
 
@@ -732,31 +701,6 @@ function Drawer({ o, products, now, me, people, onClose, onPatch, onMove, onSett
                 </div>
               </div>
 
-              <div>
-                <div className="mb-2 flex items-center justify-between">
-                  <L>What to switch off</L>
-                  {!!cancelList.length && <span className={`font-mono text-xs ${cancelDone === cancelList.length ? "text-emerald-600 dark:text-emerald-400" : F}`}>{cancelDone}/{cancelList.length}</span>}
-                </div>
-                {!cancelList.length && <p className={`text-sm ${F}`}>
-                  No shutdown steps set for this product yet — add them under Products so nobody has to guess what's still running.
-                </p>}
-                <ul className="space-y-1">
-                  {cancelList.map((st, i) => {
-                    const on = !!o.cancelChecklist?.[i];
-                    return (
-                      <li key={i}>
-                        <button onClick={() => onPatch(o.id, (x) => ({ cancelChecklist: { ...x.cancelChecklist, [i]: !on } }))}
-                          className={`flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-900 ${on ? F : "text-slate-700 dark:text-slate-300"}`}>
-                          {on ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" /> : <Circle className={`mt-0.5 h-4 w-4 shrink-0 ${F}`} />}
-                          <span className={on ? "line-through" : ""}>{st}</span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-                {!!cancelList.length && cancelDone === cancelList.length && !settled &&
-                  <p className="mt-3 text-sm text-emerald-600 dark:text-emerald-400">Everything is switched off — mark it stopped above.</p>}
-              </div>
             </>
           ) : (
             <>
@@ -787,29 +731,6 @@ function Drawer({ o, products, now, me, people, onClose, onPatch, onMove, onSett
             </div>
           </div>
 
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <L>Fulfillment steps</L>
-              {!!list.length && <span className={`font-mono text-xs ${did === list.length ? "text-emerald-600 dark:text-emerald-400" : F}`}>{did}/{list.length}</span>}
-            </div>
-            {!list.length && <p className={`text-sm ${F}`}>No steps set for this product yet — add them under Products.</p>}
-            <ul className="space-y-1">
-              {list.map((s, i) => {
-                const on = !!o.checklist?.[i];
-                return (
-                  <li key={i}>
-                    <button onClick={() => onPatch(o.id, (x) => ({ checklist: { ...x.checklist, [i]: !on } }))}
-                      className={`flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-900 ${on ? F : "text-slate-700 dark:text-slate-300"}`}>
-                      {on ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" /> : <Circle className={`mt-0.5 h-4 w-4 shrink-0 ${F}`} />}
-                      <span className={on ? "line-through" : ""}>{s}</span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-            {!!list.length && did === list.length && o.status !== "done" &&
-              <p className="mt-3 text-sm text-emerald-600 dark:text-emerald-400">Every step is done — stop the clock above.</p>}
-          </div>
             </>
           )}
 

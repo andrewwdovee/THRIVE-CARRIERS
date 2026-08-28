@@ -21,9 +21,8 @@ Then the standing picture:
   line per product so a week of finished work can't push the live work off the
   screen — open it to see them, or drop a card on it to deliver.
 
-- **Products** — add and remove what you sell, set each one's fulfillment steps
-  and turnaround target, and paste the Stripe price or product ID that routes an
-  order to it.
+- **Products** — add and remove what you sell, set each one's turnaround target,
+  and paste the Stripe price or product ID that routes an order to it.
 - **Reports** — what sold, how fast it shipped, who shipped it.
 - **Settings** — the Stripe connection, notifications, and how long delivered
   orders stay visible under By product.
@@ -77,25 +76,12 @@ running on your spend with nothing coming in. So it gets its own queue rather
 than sitting among the fulfillment work, and its own alert, separate from the
 new-order chime so it can't be mistaken for good news.
 
-Each product carries a second list, **When a payment fails**, set in Products
-beside its fulfillment steps: the things to switch off, in order, most expensive
-first.
-
-```
-Pause the ad campaign (stops the spend)
-Email the client about the failed payment
-Cancel the subscription in Stripe
-```
-
-Whoever is on the desk opens the failed payment, works down that list, and marks
-it **Service stopped**. Until they do, a clock counts how long it has been
-running unpaid, and the header carries an amber count of how many are still
-live. The states are *Needs action → Client contacted → Service stopped*, plus
+Whoever is on the desk opens the failed payment, switches off whatever it was
+paying for, and marks it **Service stopped**. Until they do, a clock counts how
+long it has been running unpaid, and the header carries an amber count of how
+many are still live. The states are *Needs action → Client contacted → Service stopped*, plus
 *Payment recovered* for when Stripe's retry succeeds and there's nothing to
 switch off after all.
-
-A product with no shutdown steps says so on its card in Products, because the
-failure case is exactly when nobody wants to be guessing what's still running.
 
 ## Refunds
 
@@ -140,7 +126,7 @@ Worth knowing, because it explains a few things the board does:
   and never touches who owns it, how far through it is, or the notes.
 - **A charge that matches no product** still lands on the board, tagged
   **Unmapped**, with a banner on New orders pointing at Products. It has no
-  turnaround target and no fulfillment steps until you map its Stripe ID.
+  turnaround target until you map its Stripe ID.
 
 ## The clock on every order
 
