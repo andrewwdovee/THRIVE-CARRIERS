@@ -573,6 +573,13 @@ function OrderList({ rows, products, now, onOpen, sortBy, onSort, done, title, n
 /* Money going out with none coming in. The job here is the opposite of
    fulfillment: find what's still running on this customer's behalf and switch
    it off. The clock counts how long that's been true. */
+/* Why the money stopped changes what she does about it: a decline can be
+   retried, a cancellation cannot, and a dispute has a deadline attached. */
+const why = (o) =>
+  o.disputed ? ["Disputed", "bg-rose-500/15 text-rose-300"]
+    : o.subscriptionStatus === "canceled" && !o.chargeId ? ["Cancelled", "bg-slate-500/20 text-slate-300"]
+      : null;
+
 function MissedList({ rows, products, now, onOpen, settings }) {
   const live = rows.filter((o) => !SETTLED.has(o.recovery || "open"));
   return (
@@ -580,18 +587,18 @@ function MissedList({ rows, products, now, onOpen, settings }) {
       <div className={`rounded-xl border-l-4 ${live.length ? "border-amber-500" : "border-slate-700"} border-y border-r ${BD} bg-slate-900 px-4 py-3`}>
         <h3 className={`text-sm font-semibold ${W}`}>
           {live.length
-            ? `${live.length} service${live.length === 1 ? "" : "s"} still running on a failed payment`
+            ? `${live.length} service${live.length === 1 ? "" : "s"} still running with nothing coming in`
             : "Nothing running unpaid"}
         </h3>
         <p className={`mt-0.5 text-sm ${M}`}>
           {live.length
             ? "Open each one and work the shutdown steps — every hour these stay on is spend you don't get back."
-            : "Every failed payment here has been dealt with."}
+            : "Every stopped payment here has been dealt with."}
         </p>
       </div>
 
       <div className={`overflow-hidden rounded-xl border ${BD}`}>
-        {!rows.length && <p className={`px-4 py-8 text-sm ${M}`}>No failed payments. Stripe tells us the moment one bounces.</p>}
+        {!rows.length && <p className={`px-4 py-8 text-sm ${M}`}>Nothing to shut down. Stripe tells us the moment a payment bounces, a subscription is cancelled, or a charge is disputed.</p>}
         <div className="divide-y divide-slate-800">
           {rows.map((o) => {
             const p = products.find((x) => x.id === o.productId);
@@ -603,8 +610,10 @@ function MissedList({ rows, products, now, onOpen, settings }) {
                 className={`flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-left hover:bg-slate-900 ${settled ? "opacity-60" : "bg-amber-950/15"}`}>
                 <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${c(p?.color)[0]}`} />
                 <div className="min-w-[170px] flex-1">
-                  <div className={`truncate text-sm font-semibold ${W}`}>
-                    {o.productName}{freq(o) ? <span className={`font-normal ${F}`}> · {freq(o)}</span> : null}
+                  <div className={`flex items-center gap-1.5 text-sm font-semibold ${W}`}>
+                    <span className="truncate">{o.productName}</span>
+                    {freq(o) ? <span className={`shrink-0 font-normal ${F}`}>· {freq(o)}</span> : null}
+                    {why(o) && <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${why(o)[1]}`}>{why(o)[0]}</span>}
                   </div>
                   <div className={`truncate text-xs ${M}`}>{o.customer}</div>
                 </div>

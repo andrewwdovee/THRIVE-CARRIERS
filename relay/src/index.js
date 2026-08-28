@@ -226,7 +226,15 @@ export default {
       if (!order?.id) return json({ ok: true, ignored: "no payment object" }, 200, origin);
 
       const at = Number(order.created) || Math.floor(Date.now() / 1000);
-      const key = `inbox:${String(at).padStart(12, "0")}:${order.id}`;
+
+      /* Events about one payment don't agree on when it happened — a renewal's
+         invoice is drafted up to an hour before its charge, and a dispute
+         arrives days later. The timestamp is in the key so a poll can skip old
+         entries cheaply, which means the same payment would otherwise land
+         under two keys and show up twice. A pointer from the payment id to
+         whichever key it first claimed keeps it to one record. */
+      const ptr = `idx:${order.id}`;
+      const key = (await env.BOARD.get(ptr)) || `inbox:${String(at).padStart(12, "0")}:${order.id}`;
 
       /* Each event knows part of the story: the charge has the card, the
          invoice has the line items and the subscription. Merge rather than
@@ -235,6 +243,9 @@ export default {
       const prior = await env.BOARD.get(key);
       const merged = prior ? mergeOrders(JSON.parse(prior), order) : order;
       await env.BOARD.put(key, JSON.stringify(merged), { expirationTtl: INBOX_TTL });
+      /* Outlives the record it points at, so a dispute weeks later still finds
+         its charge instead of starting a second one. */
+      if (!prior) await env.BOARD.put(ptr, key, { expirationTtl: INBOX_TTL * 4 });
       return json({ ok: true, received: order.id }, 200, origin);
     }
 

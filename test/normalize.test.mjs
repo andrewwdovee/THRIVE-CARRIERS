@@ -85,9 +85,9 @@ ok("nulls dropped", normalize([null, undefined, 5, { id: "ch_z", created: 175630
 ok("empty payload", normalize([], SEED).length === 0);
 
 // 8. CSV covers what the board holds
-ok("csv has 32 columns", COLS.length === 32, COLS.length);
+ok("csv has 33 columns", COLS.length === 33, COLS.length);
 const row = COLS.map(([, g]) => g({ ...n, status: "done", assignee: "Alex", notes: "", completedAt: n.receivedAt + 3600000, dueAt: n.receivedAt }));
-ok("csv row renders without throwing", row.length === 32);
+ok("csv row renders without throwing", row.length === 33);
 ok("csv minutes-to-fulfill", row[COLS.findIndex(c => c[0] === "Minutes to fulfill")] === 60, row);
 
 

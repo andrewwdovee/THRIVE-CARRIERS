@@ -29,7 +29,10 @@ const SECRET = "whsec_x";
 function kv() {
   const m = new Map();
   return { get: async (k) => m.get(k) ?? null, put: async (k, v) => m.set(k, v), delete: async (k) => m.delete(k),
-    list: async ({ prefix }) => ({ keys: [...m.keys()].filter((k) => k.startsWith(prefix)).sort().map((name) => ({ name })), list_complete: true }), _m: m };
+    list: async ({ prefix }) => ({ keys: [...m.keys()].filter((k) => k.startsWith(prefix)).sort().map((name) => ({ name })), list_complete: true }),
+    _m: m,
+    /* Orders only — the id -> key pointers beside them are bookkeeping. */
+    _rows: () => [...m.keys()].filter((k) => k.startsWith("inbox:")) };
 }
 globalThis.fetch = async () => new Response(JSON.stringify({ data: [] }), { status: 200 });
 
@@ -65,14 +68,16 @@ const CHARGE = { id: "evt_a", type: "charge.succeeded", data: { object: {
   customer: "cus_1", metadata: {}, outcome: {} } } };
 const INVOICE = { id: "evt_b", type: "invoice.payment_succeeded", data: { object: {
   id: "in_A", charge: "ch_A", payment_intent: "pi_A", subscription: "sub_1", status: "paid",
-  amount_paid: 49700, currency: "usd", created: now,
+  /* Stripe drafts a renewal's invoice up to an hour before it charges the
+     card, so the two events disagree about when the payment happened. */
+  amount_paid: 49700, currency: "usd", created: now - 3400,
   customer: "cus_1", customer_name: "Tanya Alvarez", customer_email: "t@x.co",
   lines: { data: [{ description: "Google Calls Subscription", quantity: 1, amount: 49700,
     price: { id: "price_gc", product: "prod_gc", recurring: { interval: "month", interval_count: 1 } } }] } } } };
 
 await deliver(env, CHARGE);
 await deliver(env, INVOICE);
-ok("charge + invoice for one payment make one row", BOARD._m.size === 1, BOARD._m.size);
+ok("charge + invoice for one payment make one row", BOARD._rows().length === 1, BOARD._rows());
 let rows = await ordersOf(env);
 ok("the merged row keeps the card (from the charge)", rows[0].payment_method_details?.card?.last4 === "4242");
 ok("and the product (from the invoice)", rows[0].productName === "Google Calls Subscription", rows[0].productName);
@@ -84,7 +89,7 @@ const env2 = { ...env, BOARD: BOARD2 };
 await deliver(env2, INVOICE);
 await deliver(env2, CHARGE);
 const rows2 = await ordersOf(env2);
-ok("reversed arrival still merges to one", BOARD2._m.size === 1 && rows2[0].productName === "Google Calls Subscription", BOARD2._m.size);
+ok("reversed arrival still merges to one", BOARD2._rows().length === 1 && rows2[0].productName === "Google Calls Subscription", BOARD2._rows());
 ok("reversed arrival keeps the card too", rows2[0].payment_method_details?.card?.last4 === "4242");
 
 console.log("\nfailed renewals name the customer:");
@@ -130,5 +135,71 @@ ok("a new subscription is not", r4.added[0].renewal === false);
 const r5 = appendOrders(board, [{ externalId: "pi_NEW3", productId: "p_gc", receivedAt: Date.now() }]);
 ok("a one-off is not", r5.added[0].renewal === false);
 
+/* ── money that stops without a payment ──
+   The two cases nothing else reports. A client cancels, or charges back; no
+   charge arrives, so without these the campaign keeps running on our spend. */
+console.log("\ncancellations and disputes reach the board:");
+const BOARD3 = kv();
+const env3 = { ...env, BOARD: BOARD3 };
+
+/* Month one: they paid. This is what the board already knows about them. */
+await deliver(env3, CHARGE);
+await deliver(env3, INVOICE);
+let x3 = { orders: [], products: SEED, settings: {} };
+x3 = appendOrders(x3, normalize(await ordersOf(env3), SEED)).next;
+ok("the paid month is on the board", x3.orders.length === 1, x3.orders.length);
+
+/* Month two: they cancel. No charge, no invoice, no name on the event. */
+await deliver(env3, { id: "evt_c", type: "customer.subscription.deleted", data: { object: {
+  id: "sub_1", object: "subscription", customer: "cus_1", status: "canceled",
+  canceled_at: now + 60, cancellation_details: { reason: "cancellation_requested" },
+  items: { data: [{ quantity: 1, price: { id: "price_gc", product: "prod_gc", unit_amount: 49700,
+    currency: "usd", nickname: "Google Calls", recurring: { interval: "month", interval_count: 1 } } }] } } } });
+
+const drafts3 = normalize(await ordersOf(env3), SEED);
+ok("the cancellation is its own row", drafts3.length === 2, drafts3.length);
+const gone = drafts3.find((o) => o.subscriptionId === "sub_1" && !o.chargeId);
+ok("a cancellation counts as unpaid", gone.paymentStatus === "failed", gone?.paymentStatus);
+ok("and says why", /cancel/i.test(gone.declineReason), gone?.declineReason);
+ok("and carries the subscription", gone.subscriptionStatus === "canceled");
+
+const after = appendOrders(x3, drafts3);
+x3 = after.next;
+ok("it lands as a new row, not a patch", x3.orders.length === 2, x3.orders.length);
+const row = x3.orders.find((o) => o.subscriptionId === "sub_1" && !o.chargeId);
+ok("named from the months they did pay", row.customer === "Tanya Alvarez", row.customer);
+ok("and filed under the same product", row.productId === x3.orders.find((o) => o.chargeId).productId, row.productId);
+
+/* A chargeback on the payment we already have. */
+const BOARD4 = kv();
+const env4 = { ...env, BOARD: BOARD4 };
+await deliver(env4, CHARGE);
+await deliver(env4, INVOICE);
+let x4 = appendOrders({ orders: [], products: SEED, settings: {} }, normalize(await ordersOf(env4), SEED)).next;
+x4 = { ...x4, orders: x4.orders.map((o) => ({ ...o, status: "done", notes: "delivered" })) };
+
+await deliver(env4, { id: "evt_d", type: "charge.dispute.created", data: { object: {
+  id: "dp_1", object: "dispute", charge: "ch_A", payment_intent: "pi_A", amount: 49700,
+  currency: "usd", reason: "fraudulent", status: "needs_response",
+  created: now + 86400 * 3, evidence_details: { due_by: now + 86400 * 10 } } } });
+
+ok("a dispute doesn't start a second order", BOARD4._rows().length === 1, BOARD4._rows());
+const out4 = appendOrders(x4, normalize(await ordersOf(env4), SEED));
+ok("it patches the payment we already had", out4.next.orders.length === 1, out4.next.orders.length);
+const d4 = out4.next.orders[0];
+ok("the order is now unpaid", d4.paymentStatus === "failed", d4.paymentStatus);
+ok("flagged as disputed", d4.disputed === true);
+ok("with the cardholder's reason", /fraudulent/i.test(d4.declineReason), d4.declineReason);
+ok("the work already done is left alone", d4.status === "done" && d4.notes === "delivered");
+
+/* Both halves of one payment in a single poll, before anything is on the
+   board — the case that used to add the same money twice. */
+const folded = appendOrders({ orders: [], products: SEED, settings: {} },
+  normalize([fromEvent(CHARGE), fromEvent(INVOICE)], SEED));
+ok("two events in one poll make one order", folded.next.orders.length === 1, folded.next.orders.length);
+ok("and the folded row keeps the product", folded.next.orders[0].productName === "Google Calls Subscription",
+   folded.next.orders[0].productName);
+
 console.log(`\n${pass} passed, ${fail} failed`);
+
 process.exit(fail ? 1 : 0);

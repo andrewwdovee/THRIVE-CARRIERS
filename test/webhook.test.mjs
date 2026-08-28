@@ -21,6 +21,9 @@ function kv() {
     delete: async (k) => m.delete(k),
     list: async ({ prefix }) => ({ keys: [...m.keys()].filter((k) => k.startsWith(prefix)).sort().map((name) => ({ name })), list_complete: true }),
     _map: m,
+    /* Orders only. The id -> key pointers stored alongside them are
+       bookkeeping, and counting them as records hides real duplicates. */
+    _orders: () => [...m.keys()].filter((k) => k.startsWith("inbox:")),
   };
 }
 
@@ -76,32 +79,34 @@ ok("nothing stored from a forgery", BOARD._map.size === 0, BOARD._map.size);
 
 res = await post(body, await sign(body));
 ok("genuine delivery -> 200", res.status === 200, res.status);
-ok("payment stored", BOARD._map.size === 1, [...BOARD._map.keys()]);
+ok("payment stored", BOARD._orders().length === 1, BOARD._orders());
 
 res = await post(body, await sign(body));
-ok("Stripe's retry overwrites, doesn't duplicate", BOARD._map.size === 1, BOARD._map.size);
+ok("Stripe's retry overwrites, doesn't duplicate", BOARD._orders().length === 1, BOARD._orders());
 
 const other = JSON.stringify({ id: "evt_2", type: "customer.updated", data: { object: { id: "cus_x" } } });
 res = await post(other, await sign(other));
 ok("an event we don't act on is acknowledged, not errored", res.status === 200, res.status);
-ok("and not stored", BOARD._map.size === 1, BOARD._map.size);
+ok("and not stored", BOARD._orders().length === 1, BOARD._orders());
 
-const failed = CHARGE({ id: "ch_live_2", status: "failed", failure_code: "card_declined", failure_message: "Your card was declined." });
+/* Its own payment_intent. Two charges never share one in Stripe, and giving
+   them the same id here would be asking the relay to keep a duplicate. */
+const failed = CHARGE({ id: "ch_live_2", payment_intent: "pi_live_2", status: "failed", failure_code: "card_declined", failure_message: "Your card was declined." });
 const failedEvt = failed.replace('"charge.succeeded"', '"charge.failed"');
 res = await post(failedEvt, await sign(failedEvt));
-ok("a declined charge is stored too", BOARD._map.size === 2, BOARD._map.size);
+ok("a declined charge is stored too", BOARD._orders().length === 2, BOARD._orders());
 
 console.log("\nfeeding the board:");
 const asOwner = { Authorization: "Bearer owner-token" };
 res = await worker.fetch(new Request("https://relay.test/orders?since=1", { headers: asOwner }), env);
 const rows = await res.json();
 ok("orders returns what Stripe pushed", rows.length === 2, rows.length);
-const one = rows.find((o) => o.id === "ch_live_1");
+const one = rows.find((o) => o.chargeId === "ch_live_1");
 ok("amount carried", one.amount === 49700);
 ok("customer carried", one.billing_details.name === "Real Customer");
 ok("card carried", one.payment_method_details.card.last4 === "4242");
 ok("product name carried", one.productName === "Google Calls Subscription");
-const bad = rows.find((o) => o.id === "ch_live_2");
+const bad = rows.find((o) => o.chargeId === "ch_live_2");
 ok("decline reason carried", bad.paymentStatus === "failed" && /declined/i.test(bad.declineReason), bad);
 
 let calls = 0;

@@ -78,7 +78,32 @@ export function useBoard() {
    Everything else on an order — who owns it, how far through it is, the notes
    — belongs to whoever is working it and is never touched from here. */
 const PAYMENT_FACTS = ["paymentStatus", "declineCode", "declineReason", "refunded",
-  "amountRefunded", "refundedAt", "receiptUrl", "subscriptionStatus", "cardBrand", "cardLast4", "cardExp"];
+  "amountRefunded", "refundedAt", "receiptUrl", "subscriptionStatus", "cardBrand", "cardLast4", "cardExp",
+  "disputed", "disputeStatus"];
+
+/* Two events about one payment can arrive in the same poll — a charge and its
+   invoice, or a charge and the dispute that later reverses it. Left alone,
+   each becomes its own order and the same money is worked twice. Folded here
+   on the Stripe id, with a failure winning: a chargeback must never be filed
+   under a payment the board still shows as collected. */
+function fold(drafts) {
+  const out = [];
+  const at = new Map();
+  for (const d of drafts) {
+    const key = d.externalId;
+    if (!key || !at.has(key)) { if (key) at.set(key, out.length); out.push(d); continue; }
+    const i = at.get(key), prev = out[i], next = { ...prev };
+    for (const [k, v] of Object.entries(d)) {
+      const empty = v == null || v === "" || (Array.isArray(v) && !v.length);
+      if (!empty) next[k] = v;
+    }
+    if (prev.paymentStatus === "failed" || d.paymentStatus === "failed") next.paymentStatus = "failed";
+    next.refunded = !!(prev.refunded || d.refunded);
+    next.disputed = !!(prev.disputed || d.disputed);
+    out[i] = next;
+  }
+  return out;
+}
 
 /* Turning payment drafts into board orders.
 
@@ -86,7 +111,8 @@ const PAYMENT_FACTS = ["paymentStatus", "declineCode", "declineReason", "refunde
    failure reaches us on the same payment we already have, so the payment side
    of an existing order is updated in place. Without that, a refund issued in
    Stripe would never appear on the board at all. */
-export function appendOrders(x, drafts) {
+export function appendOrders(x, all) {
+  const drafts = fold(all);
   const byExternal = new Map(x.orders.map((o) => [o.externalId, o]).filter(([k]) => k));
   const updates = new Map();
   for (const d of drafts) {
@@ -102,15 +128,30 @@ export function appendOrders(x, drafts) {
 
   const seen = new Set(byExternal.keys());
   const added = drafts.filter((d) => !d.externalId || !seen.has(d.externalId)).map((d) => {
-    const p = x.products.find((y) => y.id === d.productId), at = d.receivedAt || Date.now();
+    const at = d.receivedAt || Date.now();
     /* A renewal of a subscription already on the board is not a new signup.
        Marked so the board can say so, rather than sending someone off to
        onboard a client who was onboarded months ago. */
-    const renewal = !!(d.subscriptionId && x.orders.some((o) => o.subscriptionId === d.subscriptionId));
+    const sib = d.subscriptionId ? x.orders.find((o) => o.subscriptionId === d.subscriptionId) : null;
+    const renewal = !!sib;
+
+    /* A subscription ending carries only the Stripe customer id and the price
+       it billed — Stripe puts the name on the payment, and a cancellation has
+       no payment. The board already knows this client from the months they
+       did pay, so the row says who it is and sits with the right product
+       rather than reading "Unnamed customer / Needs triage". */
+    const known = sib
+      ? {
+        ...(d.customer === "Unnamed customer" ? { customer: sib.customer } : null),
+        email: d.email || sib.email, phone: d.phone || sib.phone,
+        productId: d.productId || sib.productId,
+      }
+      : null;
+    const p = x.products.find((y) => y.id === (known?.productId || d.productId));
 
     /* A draft may carry its own fulfillment state — the sample loader builds
        delivered history that way. Stripe drafts never do, so they land as new. */
-    return { id: uid(), ...d, paymentStatus: d.paymentStatus || "succeeded", productName: p ? p.name : d.productName,
+    return { id: uid(), ...d, ...known, paymentStatus: d.paymentStatus || "succeeded", productName: p ? p.name : d.productName,
       receivedAt: at, dueAt: at + (p ? p.slaHours : 24) * HOUR, status: d.status || "new",
       assignee: d.assignee || "Unassigned", notes: d.notes || "", checklist: d.checklist || {},
       completedAt: d.completedAt ?? null, overdueNotified: d.overdueNotified ?? false,

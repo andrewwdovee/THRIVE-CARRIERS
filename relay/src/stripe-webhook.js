@@ -51,7 +51,10 @@ export async function verify(rawBody, header, secret, nowSeconds) {
     : { ok: false, reason: "Signature does not match." };
 }
 
-/* Which events carry a payment worth putting on the board. */
+/* Which events are worth putting on the board. The first six are money
+   moving. The last two are money that stops moving without anyone being
+   charged — the cases that cost the most, because nothing arrives to tell
+   you and the ad spend keeps running until somebody notices. */
 export const HANDLED = new Set([
   "charge.succeeded",
   "charge.failed",
@@ -59,7 +62,90 @@ export const HANDLED = new Set([
   "checkout.session.completed",
   "invoice.payment_succeeded",
   "invoice.payment_failed",
+  "customer.subscription.deleted",
+  "charge.dispute.created",
 ]);
+
+/* A subscription ending fires no charge at all, so it arrives in a shape with
+   no payment in it. It lands in Missed payments rather than as an order:
+   there is nothing to fulfil, but there is a campaign to switch off. */
+function fromSubscription(event) {
+  const s = event.data.object;
+  const first = s.items?.data?.[0] || {};
+  const price = first.price || {};
+  const at = s.canceled_at || s.ended_at || event.created || Math.floor(Date.now() / 1000);
+  const qty = first.quantity ?? 1;
+  const amount = Number.isFinite(price.unit_amount) ? price.unit_amount * qty : null;
+  return {
+    id: s.id,
+    chargeId: "",
+    paymentId: s.id,
+    status: "failed",
+    paymentStatus: "failed",
+    declineCode: s.cancellation_details?.reason || "subscription_canceled",
+    declineReason: s.cancellation_details?.comment
+      || (s.cancellation_details?.reason === "payment_failed"
+        ? "Subscription ended after failed payments"
+        : "Subscription canceled"),
+    refunded: false,
+    amount,
+    amountRefunded: null,
+    currency: price.currency || s.currency || "usd",
+    created: at,
+    receiptUrl: "",
+    customer: s.customer,
+    customerName: "", customerEmail: "", customerPhone: "",
+    invoice: typeof s.latest_invoice === "string" ? s.latest_invoice : "",
+    subscriptionId: s.id,
+    subscriptionStatus: s.status || "canceled",
+    description: "",
+    metadata: s.metadata || {},
+    priceId: price.id || "",
+    stripeProductId: typeof price.product === "string" ? price.product : "",
+    productName: price.nickname || "",
+    interval: price.recurring?.interval || "",
+    intervalCount: price.recurring?.interval_count || 1,
+    quantity: qty,
+    cardBrand: "", cardLast4: "",
+    items: (s.items?.data || []).map((l) => ({
+      description: l.price?.nickname || "",
+      quantity: l.quantity ?? 1,
+      amount: Number.isFinite(l.price?.unit_amount) ? l.price.unit_amount * (l.quantity ?? 1) : null,
+      priceId: l.price?.id || "",
+      productId: typeof l.price?.product === "string" ? l.price.product : "",
+      interval: l.price?.recurring?.interval || null,
+      intervalCount: l.price?.recurring?.interval_count || 1,
+    })),
+  };
+}
+
+/* A chargeback. Keyed on the payment it disputes, so it merges into that
+   order rather than appearing as a stranger — the customer, product and card
+   are already there, and the failure is sticky, so it moves to Missed
+   payments carrying its history with it. */
+function fromDispute(event) {
+  const d = event.data.object;
+  const chargeId = typeof d.charge === "string" ? d.charge : "";
+  const paymentId = typeof d.payment_intent === "string" ? d.payment_intent : "";
+  return {
+    id: paymentId || chargeId || d.id,
+    chargeId,
+    paymentId: paymentId || chargeId || d.id,
+    status: "failed",
+    paymentStatus: "failed",
+    declineCode: d.reason || "disputed",
+    declineReason: `Disputed by the cardholder (${d.reason || "reason not given"})`,
+    disputed: true,
+    disputeId: d.id,
+    disputeStatus: d.status || "",
+    disputeDueBy: d.evidence_details?.due_by || null,
+    refunded: false,
+    amount: d.amount ?? null,
+    currency: d.currency || "usd",
+    created: d.created || event.created,
+    metadata: d.metadata || {},
+  };
+}
 
 /* Flatten an event into the same shape GET /orders returns, so the app's
    normalizer doesn't need to know which of the two paths it came from. */
@@ -67,6 +153,8 @@ export function fromEvent(event) {
   const o = event?.data?.object;
   if (!o) return null;
   const type = event.type || "";
+  if (type === "customer.subscription.deleted") return fromSubscription(event);
+  if (type === "charge.dispute.created") return fromDispute(event);
   const card = o.payment_method_details?.card || {};
   /* Stripe separates the last word with a dot on some events and an underscore
      on others — charge.failed against invoice.payment_failed. Matching on
@@ -158,5 +246,8 @@ export function mergeOrders(a, b) {
     out.declineReason = b.declineReason || a.declineReason || "";
   }
   out.refunded = !!(a.refunded || b.refunded);
+  /* Booleans are never "empty", so a plain false from the other side would
+     overwrite a dispute we already knew about. */
+  if (a.disputed || b.disputed) out.disputed = true;
   return out;
 }

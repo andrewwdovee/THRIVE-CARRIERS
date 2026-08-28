@@ -324,12 +324,12 @@ npm install</pre>
           <span class="kind">You click this in Stripe</span>
           <h2>Tell Stripe where to send payments</h2>
           <div class="body">
-            <p>The terminal now prints a web address and a list of six events. Keep it visible —
+            <p>The terminal now prints a web address and a list of eight events. Keep it visible —
               you're about to copy from it.</p>
             <div class="path">
               In Stripe, click <b>Developers</b> → <b>Webhooks</b> → <b>Add endpoint</b>.<br>
               Paste the address the terminal printed into <b>Endpoint URL</b>.<br>
-              Tick the six events it listed. Click <b>Add endpoint</b>.
+              Tick all eight events it listed. If Stripe asks about payload style, choose <b>snapshot</b>. Click <b>Add endpoint</b>.
             </div>
             <p>This is the part that makes payments arrive on their own. You're telling Stripe:
               <em>when someone pays me, knock on this door.</em></p>

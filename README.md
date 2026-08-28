@@ -260,8 +260,16 @@ In the Stripe Dashboard: **Developers → Webhooks → Add endpoint**.
 
 - **Endpoint URL** — `https://<your-relay>.workers.dev/stripe/webhook`
 - **Events to send** — `charge.succeeded`, `charge.failed`, `charge.refunded`,
-  `checkout.session.completed`, `invoice.payment_succeeded`,
+  `charge.dispute.created`, `checkout.session.completed`,
+  `customer.subscription.deleted`, `invoice.payment_succeeded`,
   `invoice.payment_failed`
+
+  Pick the **snapshot** payload style when Stripe offers a choice; the relay
+  reads `data.object`, which only snapshot deliveries carry.
+
+  The last two of the eight are the ones that are easy to skip and expensive to
+  miss: a client cancelling, and a chargeback. Neither produces a payment, so
+  nothing else would ever tell you the campaign is still running.
 
 Stripe then shows a **signing secret** starting `whsec_`. Give it to the relay
 and redeploy:

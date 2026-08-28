@@ -199,7 +199,9 @@ In Stripe, go to ${b("Developers -> Webhooks -> Add endpoint")} and fill in:
   Events         charge.succeeded
                  charge.failed
                  charge.refunded
+                 charge.dispute.created
                  checkout.session.completed
+                 customer.subscription.deleted
                  invoice.payment_succeeded
                  invoice.payment_failed
 
