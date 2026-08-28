@@ -231,6 +231,12 @@
       Then open <b>Terminal</b> (Mac) or <b>PowerShell</b> (Windows). It's a window where you paste
       the lines below and press Enter. That's all you'll do with it.
     </p>
+    <p style="color:var(--ink-soft);font-size:.95rem;margin-top:.6rem">
+      One thing that trips everyone up: the terminal is always "standing" in some folder, and
+      <code>cd</code> means <em>walk into</em>. So <code>cd Downloads</code> only works if you're
+      one step above it. Writing <code>cd ~/Downloads</code> instead — with the squiggle —
+      always works, wherever you are. Every command here uses the squiggle.
+    </p>
   </section>
 
   <ol class="steps" id="steps">
@@ -242,16 +248,26 @@
           <span class="kind">You paste this</span>
           <h2>Put the code on your computer</h2>
           <div class="body">
-            <p>Download the <code>lead-tech-fulfillment.bundle</code> file I sent you. Then paste
-              these three lines, one at a time, pressing Enter after each.</p>
+            <p><b>First, actually download it.</b> Find the <code>lead-tech-fulfillment.bundle</code>
+              file in our chat and click it, so it lands in your Downloads folder. Nothing below
+              works until it's there.</p>
+            <p>Then check it arrived — paste this and press Enter:</p>
             <div class="cmd">
               <button class="copy" type="button">Copy</button>
-<pre>cd Downloads
-git clone lead-tech-fulfillment.bundle lead-tech-fulfillment
+<pre>ls ~/Downloads/*.bundle</pre>
+            </div>
+            <p>You should see a filename. If it says <code>no matches found</code>, it hasn't
+              downloaded yet — go back and click the file first.</p>
+            <p>Now paste this. It finds the file whatever it ended up being called, even if your
+              Mac added a <code>(1)</code>:</p>
+            <div class="cmd">
+              <button class="copy" type="button">Copy</button>
+<pre>cd ~/Downloads
+git clone "$(ls -t *.bundle | head -1)" lead-tech-fulfillment
 cd lead-tech-fulfillment
 npm install</pre>
             </div>
-            <p><span class="c"></span>The last one takes a minute. Lots of text scrolls past — that's normal.</p>
+            <p>The last line takes a minute. Lots of text scrolls past — that's normal.</p>
           </div>
         </div>
       </div>
@@ -398,6 +414,15 @@ npx wrangler pages deploy dist</pre>
   <section class="aside">
     <h2>If something goes wrong</h2>
     <dl>
+      <dt>"repository 'lead-tech-fulfillment.bundle' does not exist"</dt>
+      <dd>The file isn't in your Downloads folder. Either it never downloaded — go back to the
+        chat and click it — or it landed somewhere else. <code>ls ~/Downloads/*.bundle</code>
+        tells you which.</dd>
+
+      <dt>"cd: no such file or directory: Downloads"</dt>
+      <dd>You're already inside Downloads, so there's no Downloads <em>within</em> it to walk
+        into. Use <code>cd ~/Downloads</code> — that works from anywhere.</dd>
+
       <dt>The terminal says "command not found: npm"</dt>
       <dd>Node.js isn't installed yet, or the terminal was open before you installed it.
         Install it, close the terminal, open a new one, try again.</dd>
