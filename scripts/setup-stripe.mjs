@@ -50,14 +50,29 @@ const askHidden = (q) => new Promise((res) => {
 });
 
 const WRANGLER = "npx --yes wrangler@3";
+/* Wrangler prompts on first run to ask about usage metrics. With piped output
+   it can't ask, and hangs or fails instead — so answer it up front. */
+const ENV = { ...process.env, WRANGLER_SEND_METRICS: "false" };
 const run = (cmd, opts = {}) =>
-  execSync(cmd, { cwd: "relay", encoding: "utf8", stdio: opts.quiet ? "pipe" : "inherit", ...opts });
+  execSync(cmd, { cwd: "relay", encoding: "utf8", env: ENV, stdio: opts.quiet ? "pipe" : "inherit", ...opts });
 
 function setSecret(name, value) {
   const r = spawnSync("npx", ["--yes", "wrangler@3", "secret", "put", name], {
-    cwd: "relay", input: value + "\n", encoding: "utf8",
+    cwd: "relay", input: value + "\n", encoding: "utf8", env: ENV,
   });
   if (r.status !== 0) throw new Error(`Couldn't save ${name}. ${r.stderr || ""}`);
+}
+
+/* `wrangler whoami` exits 0 whether or not you're logged in — it just prints
+   "You are not authenticated". Treating a clean exit as proof of a login sends
+   the next command into an OAuth prompt it has no terminal to show. */
+function signedIn() {
+  let out = "";
+  try { out = run(`${WRANGLER} whoami`, { quiet: true }); }
+  catch (e) { out = String(e.stdout || "") + String(e.stderr || ""); }
+  if (/not\s+authenticated/i.test(out)) return null;
+  if (!/logged in|Account ID|associated with the email/i.test(out)) return null;
+  return (out.split("\n").find((l) => l.includes("@")) || "").trim();
 }
 
 console.log(b("\nLead Tech Fulfillment - Stripe setup\n"));
@@ -72,16 +87,22 @@ if (!existsSync("relay/wrangler.toml")) {
 
 /* 1. Cloudflare account */
 step(1, "Signing in to Cloudflare");
-console.log(dim("A browser window may open. Cloudflare is free for this.\n"));
-try {
-  const who = run(`${WRANGLER} whoami`, { quiet: true });
-  console.log(green("Already signed in."), dim((who.split("\n").find((l) => l.includes("@")) || "").trim()));
-} catch {
-  try { run(`${WRANGLER} login`); }
-  catch {
-    console.log(red("\nCouldn't sign in. Run `npx wrangler login` yourself, then try again."));
+let who = signedIn();
+if (who) {
+  console.log(green("Already signed in."), dim(who));
+} else {
+  console.log("A browser window will open. Sign in, then come back here.");
+  console.log(dim("Cloudflare is free for this.\n"));
+  /* Inherited stdio, so the browser handoff and any prompt actually work. */
+  try { run(`${WRANGLER} login`); } catch { /* checked below */ }
+  who = signedIn();
+  if (!who) {
+    console.log(red("\nStill not signed in to Cloudflare."));
+    console.log("Run this yourself, finish it in the browser, then run `npm run setup` again:\n");
+    console.log("  " + b("npx wrangler login") + "\n");
     exit(1);
   }
+  console.log(green("Signed in."), dim(who));
 }
 
 /* 2. Somewhere to keep the orders */
@@ -95,6 +116,12 @@ if (/^\s*\[\[kv_namespaces\]\]/m.test(toml) && /^\s*id\s*=\s*"[0-9a-f]{16,}"/m.t
   catch (e) { out = String(e.stdout || "") + String(e.stderr || ""); }
   const id = (out.match(/id\s*=\s*"([0-9a-f]{16,})"/) || out.match(/"id"\s*:\s*"([0-9a-f]{16,})"/) || [])[1];
   if (!id) {
+    if (/CLOUDFLARE_API_TOKEN|not authenticated|non-interactive/i.test(out)) {
+      console.log(red("Cloudflare didn't accept that — you're not signed in after all."));
+      console.log("Run this, finish it in the browser, then run `npm run setup` again:\n");
+      console.log("  " + b("npx wrangler login") + "\n");
+      exit(1);
+    }
     console.log(red("Couldn't work out the storage id. Cloudflare said:\n") + out);
     console.log("Paste the id it printed into relay/wrangler.toml under [[kv_namespaces]], then run this again.");
     exit(1);
