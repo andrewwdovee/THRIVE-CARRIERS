@@ -19,12 +19,20 @@ const green = (t) => `${ESC}[32m${t}${ESC}[0m`;
 const red = (t) => `${ESC}[31m${t}${ESC}[0m`;
 const step = (n, t) => console.log(`\n${b("Step " + n)}  ${t}`);
 
-const rl = createInterface({ input: stdin, output: stdout });
-const ask = (q) => new Promise((res) => rl.question(q, res));
+/* Created only when a plain question is actually asked. A readline interface
+   attaches to stdin the moment it exists and echoes everything typed — which
+   silently defeated the masking below and printed a live Stripe key to the
+   screen. Pausing it isn't enough; it must not exist yet. */
+let rl = null;
+const ask = (q) => new Promise((res) => {
+  rl = rl || createInterface({ input: stdin, output: stdout });
+  rl.question(q, res);
+});
 
 /* Secrets are typed, never echoed, and never passed as command arguments —
    which would leave them in your shell history. */
 const askHidden = (q) => new Promise((res) => {
+  if (rl) { rl.close(); rl = null; }   // nothing else may be reading stdin
   stdout.write(q);
   const tty = stdin.isTTY;
   if (tty) stdin.setRawMode(true);
@@ -157,7 +165,20 @@ step(5, "Putting it online");
 let deploy = "";
 try { deploy = run(`${WRANGLER} deploy`, { quiet: true }); }
 catch (e) {
-  console.log(red("Deploy failed:\n") + String(e.stdout || "") + String(e.stderr || ""));
+  const out = String(e.stdout || "") + String(e.stderr || "");
+  /* A Cloudflare account that has never run a Worker has no workers.dev
+     subdomain. Wrangler asks for one interactively; with piped output it
+     can't, and the deploy stops one step from done. */
+  if (/workers\.dev subdomain/i.test(out)) {
+    const link = (out.match(/https:\/\/dash\.cloudflare\.com\/[^\s]*onboarding/) || [])[0]
+      || "https://dash.cloudflare.com/ (Workers & Pages → set up a subdomain)";
+    console.log(red("Almost — your Cloudflare account needs a name first."));
+    console.log("\nIt's a one-off. Open this, pick any name you like (yourname works), save it:\n");
+    console.log("  " + b(link) + "\n");
+    console.log("Then run " + b("npm run setup") + " again. It keeps everything you've done so far.\n");
+    exit(1);
+  }
+  console.log(red("Deploy failed:\n") + out);
   exit(1);
 }
 const url = (deploy.match(/https:\/\/[^\s]+\.workers\.dev/) || [])[0];
@@ -220,4 +241,4 @@ ${b("Keep this safe")} - it is your relay's owner password, needed to add more l
 
   ${owner}
 `);
-rl.close();
+if (rl) rl.close();

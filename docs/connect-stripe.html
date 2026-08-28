@@ -426,6 +426,11 @@ npx wrangler pages deploy dist</pre>
       <dd>You're already inside Downloads, so there's no Downloads <em>within</em> it to walk
         into. Use <code>cd ~/Downloads</code> — that works from anywhere.</dd>
 
+      <dt>"You need to register a workers.dev subdomain"</dt>
+      <dd>Your Cloudflare account has never run one of these before, so it doesn't have a name
+        yet. The terminal prints a link — open it, pick any name (yours works fine), save.
+        Then run <code>npm run setup</code> again; it keeps everything already done.</dd>
+
       <dt>"it's necessary to set a CLOUDFLARE_API_TOKEN"</dt>
       <dd>You're not signed in to Cloudflare yet. Run <code>npx wrangler login</code>, finish it
         in the browser, then <code>npm run setup</code> again.</dd>
