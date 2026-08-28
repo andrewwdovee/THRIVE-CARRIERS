@@ -9,7 +9,7 @@ const out = await build({
 });
 const tmp = new URL("../.shared.built.mjs", import.meta.url).pathname;
 writeFileSync(tmp, out.outputFiles[0].text);
-const { normalize, match, SEED, COLS, effHours, dueOf, DEF, HOUR } = await import(tmp);
+const { normalize, match, SEED, COLS, effHours, dueOf, DEF, HOUR, custName, findCustomers } = await import(tmp);
 
 
 let pass = 0, fail = 0;
@@ -109,6 +109,31 @@ ok("due date respects a tighter product", dueOf({ receivedAt: at, productId: "p_
 ok("an unmatched order still gets a deadline", dueOf({ receivedAt: at, productId: null }, dueProducts, S) === at + 12 * HOUR);
 ok("changing the house rule re-dates an existing order",
    dueOf({ receivedAt: at, productId: "p_a" }, dueProducts, { pastDueHours: 4 }) === at + 4 * HOUR);
+
+// 10. Finding a customer by name — what the refund form leans on
+console.log("\ncustomer lookup:");
+const BOOK = [
+  { id: "c1", first: "Tanya", last: "Alvarez", email: "t@x.co", stripeId: "cus_1" },
+  { id: "c2", first: "Marcus", last: "Reed", stripeId: "cus_2" },
+  { id: "c3", first: "Ana", last: "Tanaka" },
+  { id: "c4", name: "Legacy Only" },
+];
+ok("first and last join up", custName(BOOK[0]) === "Tanya Alvarez");
+ok("a bare name still works", custName(BOOK[3]) === "Legacy Only");
+ok("nothing in, nothing out", custName({}) === "" && custName(null) === "");
+ok("no query lists everyone, alphabetically",
+   findCustomers(BOOK, "").map((c) => custName(c))[0] === "Ana Tanaka", findCustomers(BOOK, "").map(custName));
+ok("matches on first name", findCustomers(BOOK, "tan").some((c) => c.id === "c1"));
+/* "tan" is inside "Tanaka" too. The one that STARTS with what was typed is
+   almost always the one wanted, so it has to come first. */
+ok("a starts-with beats a mid-word match", findCustomers(BOOK, "tan")[0].id === "c1",
+   findCustomers(BOOK, "tan").map(custName));
+ok("matches on last name", findCustomers(BOOK, "reed")[0].id === "c2");
+ok("matches on email", findCustomers(BOOK, "t@x")[0].id === "c1");
+ok("matches on Stripe id", findCustomers(BOOK, "cus_2")[0].id === "c2");
+ok("case doesn't matter", findCustomers(BOOK, "MARCUS")[0].id === "c2");
+ok("no match is empty, not everything", findCustomers(BOOK, "zzz").length === 0);
+ok("an empty book doesn't throw", findCustomers(undefined, "x").length === 0);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

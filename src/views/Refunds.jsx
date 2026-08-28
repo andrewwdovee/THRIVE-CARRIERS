@@ -1,9 +1,56 @@
 import React, { useState, useMemo } from "react";
-import { Plus, X, Undo2, TrendingDown } from "lucide-react";
+import { Plus, X, Undo2, TrendingDown, UserPlus } from "lucide-react";
 import {
   BD, CARD, IN, BTN, PRI, M, F, W, c, cash, uid, L, Field, Confirm,
+  custName, findCustomers,
 } from "../lib/shared";
 import { CheckCircle2, Circle } from "lucide-react";
+import { CustomerForm } from "./admin";
+
+/* Type a name, get the people you've saved. Nothing is forced: what's typed
+   is what gets recorded, so an unsaved name still works — picking from the
+   list only saves the typing and keeps the spelling consistent, which is what
+   makes "who are we refunding most" answerable later. */
+function CustomerPick({ value, customers, onPick, onAddNew }) {
+  const [open, setOpen] = useState(false);
+  const hits = useMemo(() => findCustomers(customers, value).slice(0, 6), [customers, value]);
+  const exact = (customers || []).some((c) => custName(c).toLowerCase() === String(value || "").trim().toLowerCase());
+
+  return (
+    <div className="relative">
+      <input className={IN} value={value || ""} autoComplete="off"
+        placeholder={customers?.length ? "Start typing a name…" : "Customer name"}
+        onChange={(e) => { onPick(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        /* A click on a suggestion has to land before the list closes. */
+        onBlur={() => setTimeout(() => setOpen(false), 150)} />
+
+      {open && (
+        <div className={`absolute z-20 mt-1 w-full overflow-hidden rounded-lg border ${BD} bg-white shadow-lg dark:bg-slate-900`}>
+          {hits.map((cst) => (
+            <button key={cst.id} type="button"
+              onMouseDown={(e) => { e.preventDefault(); onPick(custName(cst)); setOpen(false); }}
+              className="flex w-full items-baseline gap-2 px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800">
+              <span className={`truncate text-sm ${W}`}>{custName(cst)}</span>
+              {cst.email && <span className={`truncate text-xs ${F}`}>{cst.email}</span>}
+            </button>
+          ))}
+          {!hits.length && (
+            <p className={`px-3 py-2 text-sm ${M}`}>
+              {customers?.length ? "Nobody saved by that name." : "No customers saved yet."}
+            </p>
+          )}
+          {!exact && (
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); setOpen(false); onAddNew(); }}
+              className={`flex w-full items-center gap-2 border-t px-3 py-2 text-left text-sm ${BD} text-blue-700 hover:bg-slate-100 dark:text-blue-300 dark:hover:bg-slate-800`}>
+              <UserPlus className="h-3.5 w-3.5" /> Add new customer
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /* Money that went back out.
 
@@ -15,7 +62,7 @@ import { CheckCircle2, Circle } from "lucide-react";
 
 const money = (rows) => rows.reduce((s, r) => s + (r.amount || 0), 0);
 
-export default function Refunds({ refunds, products, orders, refundTypes, onRecord, onRemove, onAnnotate, onUpdate, onSetUp }) {
+export default function Refunds({ refunds, products, orders, refundTypes, customers, onRecord, onRemove, onAnnotate, onUpdate, onSetUp, onAddCustomer }) {
   const [adding, setAdding] = useState(null);
   const [openGroup, setOpenGroup] = useState(null);
 
@@ -48,7 +95,7 @@ export default function Refunds({ refunds, products, orders, refundTypes, onReco
         <div className="grid flex-1 gap-3 sm:grid-cols-3">
           <div className={`${CARD} p-4`}>
             <L>Refunded</L>
-            <div className={`mt-2 font-mono text-2xl font-bold tabular-nums ${total ? "text-rose-400" : W}`}>{cash(total)}</div>
+            <div className={`mt-2 font-mono text-2xl font-bold tabular-nums ${total ? "text-rose-600 dark:text-rose-400" : W}`}>{cash(total)}</div>
           </div>
           <div className={`${CARD} p-4`}>
             <L>Refunds given</L>
@@ -78,24 +125,24 @@ export default function Refunds({ refunds, products, orders, refundTypes, onReco
       {groups.map((g) => {
         const open = openGroup === g.id;
         return (
-          <section key={g.id} className={`overflow-hidden rounded-xl border-l-4 ${c(g.color)[2]} border-y border-r ${BD} bg-slate-900/40`}>
+          <section key={g.id} className={`overflow-hidden rounded-xl border-l-4 ${c(g.color)[2]} border-y border-r ${BD} bg-slate-50 dark:bg-slate-900/40`}>
             <button onClick={() => setOpenGroup(open ? null : g.id)}
-              className="flex w-full flex-wrap items-center gap-3 px-3 py-2.5 text-left hover:bg-slate-900">
+              className="flex w-full flex-wrap items-center gap-3 px-3 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-900">
               <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${c(g.color)[0]}`} />
               <span className={`font-semibold ${W}`}>{g.name}</span>
               <span className={`text-xs ${F}`}>{g.rows.length} refund{g.rows.length === 1 ? "" : "s"}</span>
               <span className="ml-auto flex items-center gap-3">
                 <TrendingDown className="h-3.5 w-3.5 text-rose-400/70" />
-                <span className="font-mono text-sm text-rose-400">{cash(money(g.rows))}</span>
+                <span className="font-mono text-sm text-rose-600 dark:text-rose-400">{cash(money(g.rows))}</span>
               </span>
             </button>
 
-            <div className="divide-y divide-slate-800 border-t border-slate-800">
+            <div className="divide-y divide-slate-200 dark:divide-slate-800 border-t border-slate-200 dark:border-slate-800">
               {(open ? g.rows : g.rows.slice(0, 3)).map((r) => (
                 <RefundRow key={r.id} r={r} type={typeOf(r)} onOpen={() => setAdding({ ...r, editing: true })} onRemove={onRemove} />
               ))}
               {!open && g.rows.length > 3 && (
-                <button onClick={() => setOpenGroup(g.id)} className={`w-full px-4 py-2 text-left text-xs ${F} hover:bg-slate-900`}>
+                <button onClick={() => setOpenGroup(g.id)} className={`w-full px-4 py-2 text-left text-xs ${F} hover:bg-slate-50 dark:hover:bg-slate-900`}>
                   Show {g.rows.length - 3} more
                 </button>
               )}
@@ -106,15 +153,15 @@ export default function Refunds({ refunds, products, orders, refundTypes, onReco
 
       {byReason.length > 1 && (
         <div className={`overflow-hidden rounded-xl border ${BD}`}>
-          <div className={`border-b ${BD} bg-slate-900 px-4 py-3`}>
+          <div className={`border-b ${BD} bg-white dark:bg-slate-900 px-4 py-3`}>
             <h3 className={`text-sm font-semibold ${W}`}>Why money went back</h3>
           </div>
-          <div className="divide-y divide-slate-800">
+          <div className="divide-y divide-slate-200 dark:divide-slate-800">
             {byReason.map((r) => (
               <div key={r.reason} className="flex items-center gap-3 px-4 py-2.5">
                 <span className={`flex-1 text-sm ${M}`}>{r.reason}</span>
                 <span className={`font-mono text-xs ${F}`}>{r.n}</span>
-                <span className="w-24 text-right font-mono text-sm text-rose-400">{cash(r.amount)}</span>
+                <span className="w-24 text-right font-mono text-sm text-rose-600 dark:text-rose-400">{cash(r.amount)}</span>
               </div>
             ))}
           </div>
@@ -122,6 +169,7 @@ export default function Refunds({ refunds, products, orders, refundTypes, onReco
       )}
 
       {adding && <RefundForm draft={adding} products={products} orders={orders} types={types} onSetUp={onSetUp}
+        customers={customers} onAddCustomer={onAddCustomer}
         onCancel={() => setAdding(null)}
         onSave={(r) => {
           if (!r.editing) onRecord(r);
@@ -137,22 +185,22 @@ function RefundRow({ r, type, onOpen, onRemove }) {
   const list = (type?.steps || []).filter(Boolean);
   const did = list.filter((_, i) => r.steps?.[i]).length;
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 hover:bg-slate-900/60">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-900/60">
       <button onClick={onOpen} className="min-w-[150px] flex-1 text-left">
         <div className={`text-sm ${W}`}>{r.customer || "—"}</div>
         {r.note && <div className={`truncate text-xs ${F}`}>{r.note}</div>}
       </button>
-      <span className="w-20 text-right font-mono text-sm text-rose-400">−{cash(r.amount).slice(1)}</span>
+      <span className="w-20 text-right font-mono text-sm text-rose-600 dark:text-rose-400">−{cash(r.amount).slice(1)}</span>
       <button onClick={onOpen} className={`w-44 shrink-0 truncate text-left text-xs ${type ? M : "text-amber-300/80"}`}>
         {type?.name || "Not categorised — set one"}
       </button>
-      <span className={`w-14 shrink-0 text-right font-mono text-xs ${!list.length ? F : did === list.length ? "text-emerald-400" : "text-amber-400"}`}>
+      <span className={`w-14 shrink-0 text-right font-mono text-xs ${!list.length ? F : did === list.length ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
         {list.length ? `${did}/${list.length}` : "—"}
       </span>
       <span className={`w-24 shrink-0 text-xs ${F}`}>{r.source === "stripe" ? "from Stripe" : r.by || "recorded"}</span>
       <span className={`w-28 shrink-0 text-right text-xs ${F}`}>{new Date(r.at).toLocaleDateString()}</span>
       {r.source === "stripe"
-        ? <button onClick={onOpen} className={`rounded-md px-2 py-1 text-xs ${M} hover:bg-slate-800`}>Open</button>
+        ? <button onClick={onOpen} className={`rounded-md px-2 py-1 text-xs ${M} hover:bg-slate-200 dark:hover:bg-slate-800`}>Open</button>
         : <Confirm label="Delete this record" onConfirm={() => onRemove(r.id)} />}
     </div>
   );
@@ -175,14 +223,16 @@ function Picker({ label, hint, value, rows, onChange, onSetUp, addLabel }) {
       </select>
       <p className={`mt-1 text-xs ${F}`}>
         {hint}{" "}
-        {onSetUp && <button type="button" onClick={onSetUp} className="text-blue-400 hover:underline">{addLabel}</button>}
+        {onSetUp && <button type="button" onClick={onSetUp} className="text-blue-600 dark:text-blue-400 hover:underline">{addLabel}</button>}
       </p>
     </div>
   );
 }
 
-function RefundForm({ draft, products, orders, types, onCancel, onSave, onSetUp }) {
+function RefundForm({ draft, products, orders, types, customers, onCancel, onSave, onSetUp, onAddCustomer }) {
   const [r, setR] = useState({ typeId: types[0]?.id || "", ...draft });
+  /* Adding someone mid-refund must not lose the half-filled form behind it. */
+  const [newCust, setNewCust] = useState(null);
   const [dollars, setDollars] = useState(draft.amount != null ? (draft.amount / 100).toFixed(2) : "");
   const cents = Math.round(Number(dollars) * 100);
   const ok = r.productId && r.typeId && Number.isFinite(cents) && cents > 0;
@@ -193,7 +243,7 @@ function RefundForm({ draft, products, orders, types, onCancel, onSave, onSetUp 
   const recent = useMemo(() => orders.slice(0, 60), [orders]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4" onClick={onCancel}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 dark:bg-black/75 p-4" onClick={onCancel}>
       <div className={`max-h-[86vh] w-full max-w-lg overflow-y-auto ${CARD} p-5 shadow-2xl`} onClick={(e) => e.stopPropagation()}>
         <h3 className={`text-base font-semibold ${W}`}>{draft.editing ? "Refund" : "Record a refund"}</h3>
         <p className={`mt-1 text-sm ${M}`}>
@@ -250,8 +300,8 @@ function RefundForm({ draft, products, orders, types, onCancel, onSave, onSetUp 
                   return (
                     <li key={i}>
                       <button onClick={() => setR({ ...r, steps: { ...r.steps, [i]: !on } })}
-                        className={`flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-slate-800 ${on ? F : "text-slate-300"}`}>
-                        {on ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" /> : <Circle className={`mt-0.5 h-4 w-4 shrink-0 ${F}`} />}
+                        className={`flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-slate-200 dark:hover:bg-slate-800 ${on ? F : "text-slate-700 dark:text-slate-300"}`}>
+                        {on ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" /> : <Circle className={`mt-0.5 h-4 w-4 shrink-0 ${F}`} />}
                         <span className={on ? "line-through" : ""}>{st}</span>
                       </button>
                     </li>
@@ -263,7 +313,10 @@ function RefundForm({ draft, products, orders, types, onCancel, onSave, onSetUp 
 
           {!draft.editing && (
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Customer"><input className={IN} value={r.customer || ""} onChange={(e) => setR({ ...r, customer: e.target.value })} /></Field>
+              <Field label="Customer" hint={customers?.length ? "Pick a saved name, or type a new one." : undefined}>
+                <CustomerPick value={r.customer} customers={customers}
+                  onPick={(v) => setR({ ...r, customer: v })} onAddNew={() => setNewCust({ first: r.customer || "" })} />
+              </Field>
               <Field label="Who issued it"><input className={IN} value={r.by || ""} placeholder="Your name" onChange={(e) => setR({ ...r, by: e.target.value })} /></Field>
             </div>
           )}
@@ -272,6 +325,10 @@ function RefundForm({ draft, products, orders, types, onCancel, onSave, onSetUp 
             <textarea rows={3} className={IN} value={r.note || ""} onChange={(e) => setR({ ...r, note: e.target.value })} />
           </Field>
         </div>
+
+        {newCust && <CustomerForm draft={newCust} customers={customers}
+          onCancel={() => setNewCust(null)}
+          onSave={(cst) => { onAddCustomer(cst); setR({ ...r, customer: custName(cst) }); setNewCust(null); }} />}
 
         <div className="mt-5 flex justify-end gap-2">
           <button onClick={onCancel} className={`rounded-md px-3 py-2 text-sm ${M}`}>Cancel</button>

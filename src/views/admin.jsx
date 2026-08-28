@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
-  Plus, RefreshCw, Download, X, Package, User, Bell, Link2,
+  Plus, RefreshCw, Download, X, Package, User, Bell, Link2, Users, Sun, Moon, Monitor,
   ArrowUpDown, FlaskConical, Settings as GearIcon, AlarmClock,
 } from "lucide-react";
 import {
   BD, CARD, PANEL, IN, BTN, PRI, M, F, W, TD, P, c, sm, DEF, DAY,
   uid, paidOk, brief, dk, dl, sod, cash, L, Field, Confirm, grab, grabTrouble, dump,
+  THEMES, useTheme, custName, findCustomers,
 } from "../lib/shared";
 import { buildSamples } from "../lib/samples";
 
@@ -75,21 +76,21 @@ export function Reports({ orders, products, n, flash, refunds, refundTypes }) {
 
   const avgAll = done.length ? done.reduce((s, o) => s + (o.completedAt - o.receivedAt), 0) / done.length : null;
   const pctAll = done.length ? Math.round((done.filter((o) => o.completedAt <= o.dueAt).length / done.length) * 100) : null;
-  const tone = (p) => (p == null ? W : p >= 90 ? "text-emerald-400" : p >= 70 ? "text-amber-400" : "text-rose-400");
+  const tone = (p) => (p == null ? W : p >= 90 ? "text-emerald-600 dark:text-emerald-400" : p >= 70 ? "text-amber-600 dark:text-amber-400" : "text-rose-600 dark:text-rose-400");
 
   const Th = ({ label, k, s, set }) => <th className="px-4 py-2">
     <button onClick={() => set({ k, d: s.k === k && s.d === "desc" ? "asc" : "desc" })}
-      className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${s.k === k ? "text-blue-400" : F}`}>{label}<ArrowUpDown className="h-3 w-3" /></button>
+      className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${s.k === k ? "text-blue-600 dark:text-blue-400" : F}`}>{label}<ArrowUpDown className="h-3 w-3" /></button>
   </th>;
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-2">
-        <div className={`flex flex-wrap gap-1 rounded-lg border ${BD} bg-slate-900 p-1`}>
+        <div className={`flex flex-wrap gap-1 rounded-lg border ${BD} bg-white dark:bg-slate-900 p-1`}>
           {RANGES.map(([id, label]) => <button key={id} onClick={() => setRange(id)}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium ${range === id ? "bg-blue-600 text-white" : `${M} hover:bg-slate-800`}`}>{label}</button>)}
+            className={`rounded-md px-3 py-1.5 text-sm font-medium ${range === id ? "bg-blue-600 text-slate-900 dark:text-white" : `${M} hover:bg-slate-200 dark:hover:bg-slate-800`}`}>{label}</button>)}
         </div>
-        {range === "custom" && <div className={`flex items-center gap-2 rounded-lg border ${BD} bg-slate-900 px-3 py-1.5`}>
+        {range === "custom" && <div className={`flex items-center gap-2 rounded-lg border ${BD} bg-white dark:bg-slate-900 px-3 py-1.5`}>
           <div className="w-40"><input type="date" value={a} onChange={(e) => setA(e.target.value)} className={IN} /></div>
           <span className={`text-sm ${F}`}>to</span>
           <div className="w-40"><input type="date" value={b} onChange={(e) => setB(e.target.value)} className={IN} /></div>
@@ -124,11 +125,11 @@ export function Reports({ orders, products, n, flash, refunds, refundTypes }) {
       </div>
 
       <div className={`overflow-hidden rounded-xl border ${BD}`}>
-        <div className={`flex items-center justify-between border-b ${BD} bg-slate-900 px-4 py-3`}>
+        <div className={`flex items-center justify-between border-b ${BD} bg-white dark:bg-slate-900 px-4 py-3`}>
           <h3 className={`text-sm font-semibold ${W}`}>Day by day</h3><span className={`text-xs ${F}`}>Click a column to sort</span>
         </div>
         <div className="max-h-[26rem] overflow-auto"><table className="w-full text-sm">
-          <thead className="sticky top-0 z-10 bg-slate-900"><tr className={`border-b text-left ${BD}`}>
+          <thead className="sticky top-0 z-10 bg-white dark:bg-slate-900"><tr className={`border-b text-left ${BD}`}>
             <Th label="Date" k="day" s={ds} set={setDs} /><Th label="Placed" k="placed" s={ds} set={setDs} />
             <Th label="Delivered" k="delivered" s={ds} set={setDs} /><Th label="Avg fulfillment" k="avg" s={ds} set={setDs} />
             <Th label="Late" k="late" s={ds} set={setDs} /><Th label="Declined" k="dec" s={ds} set={setDs} />
@@ -138,10 +139,10 @@ export function Reports({ orders, products, n, flash, refunds, refundTypes }) {
             {!daily.length && <tr><td colSpan={7} className={`px-4 py-6 text-sm ${M}`}>Nothing in this window yet.</td></tr>}
             {daily.map((d) => <tr key={d.day} className={`border-b last:border-0 ${BD}`}>
               <td className={`px-4 py-2.5 ${W}`}>{dl(d.day)}</td>
-              <td className={`${TD} text-slate-300`}>{d.placed}</td><td className={`${TD} text-slate-300`}>{d.delivered}</td>
+              <td className={`${TD} text-slate-700 dark:text-slate-300`}>{d.placed}</td><td className={`${TD} text-slate-700 dark:text-slate-300`}>{d.delivered}</td>
               <td className={`${TD} ${M}`}>{d.avg ? brief(d.avg) : "—"}</td>
-              <td className={`${TD} ${d.late ? "text-rose-400" : M}`}>{d.late || "—"}</td>
-              <td className={`${TD} ${d.dec ? "text-rose-400" : M}`}>{d.dec || "—"}</td>
+              <td className={`${TD} ${d.late ? "text-rose-600 dark:text-rose-400" : M}`}>{d.late || "—"}</td>
+              <td className={`${TD} ${d.dec ? "text-rose-600 dark:text-rose-400" : M}`}>{d.dec || "—"}</td>
               <td className={`${TD} ${M}`}>{d.revenue ? cash(d.revenue) : "—"}</td>
             </tr>)}
           </tbody>
@@ -149,9 +150,9 @@ export function Reports({ orders, products, n, flash, refunds, refundTypes }) {
       </div>
 
       <div className={`overflow-hidden rounded-xl border ${BD}`}>
-        <div className={`border-b ${BD} bg-slate-900 px-4 py-3`}><h3 className={`text-sm font-semibold ${W}`}>By product</h3></div>
+        <div className={`border-b ${BD} bg-white dark:bg-slate-900 px-4 py-3`}><h3 className={`text-sm font-semibold ${W}`}>By product</h3></div>
         <div className="max-h-[26rem] overflow-auto"><table className="w-full text-sm">
-          <thead className="sticky top-0 z-10 bg-slate-900"><tr className={`border-b text-left ${BD}`}>
+          <thead className="sticky top-0 z-10 bg-white dark:bg-slate-900"><tr className={`border-b text-left ${BD}`}>
             <Th label="Product" k="name" s={ps} set={setPs} /><Th label="Ordered" k="count" s={ps} set={setPs} />
             <Th label="Open" k="open" s={ps} set={setPs} /><Th label="Avg fulfillment" k="avg" s={ps} set={setPs} />
             <Th label="On target" k="pct" s={ps} set={setPs} /><Th label="Order value" k="revenue" s={ps} set={setPs} />
@@ -163,12 +164,12 @@ export function Reports({ orders, products, n, flash, refunds, refundTypes }) {
                   <span className={`h-2.5 w-2.5 rounded-full ${c(r.color)[0]}`} /><span className={W}>{r.name}</span>
                   {r.sla && <span className={`text-xs ${F}`}>target {r.sla}h</span>}
                 </div>
-                <div className="mt-1.5 h-1 w-full max-w-[180px] overflow-hidden rounded-full bg-slate-800">
+                <div className="mt-1.5 h-1 w-full max-w-[180px] overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
                   <div className={`h-full ${c(r.color)[0]}`} style={{ width: `${(r.count / maxC) * 100}%` }} />
                 </div>
               </td>
-              <td className={`${TD} text-slate-300`}>{r.count}</td><td className={`${TD} ${M}`}>{r.open}</td>
-              <td className={`${TD} text-slate-300`}>{r.avg ? brief(r.avg) : "—"}</td>
+              <td className={`${TD} text-slate-700 dark:text-slate-300`}>{r.count}</td><td className={`${TD} ${M}`}>{r.open}</td>
+              <td className={`${TD} text-slate-700 dark:text-slate-300`}>{r.avg ? brief(r.avg) : "—"}</td>
               <td className={`${TD} ${tone(r.pct)}`}>{r.pct == null ? "—" : `${r.pct}%`}</td>
               <td className={`${TD} ${M}`}>{r.revenue ? cash(r.revenue) : "—"}</td>
             </tr>)}
@@ -180,13 +181,13 @@ export function Reports({ orders, products, n, flash, refunds, refundTypes }) {
         products={products} types={refundTypes || []} n={n} />
 
       <div className={`overflow-hidden rounded-xl border ${BD}`}>
-        <div className={`border-b ${BD} bg-slate-900 px-4 py-3`}><h3 className={`text-sm font-semibold ${W}`}>Team performance</h3></div>
+        <div className={`border-b ${BD} bg-white dark:bg-slate-900 px-4 py-3`}><h3 className={`text-sm font-semibold ${W}`}>Team performance</h3></div>
         {!people.length ? <p className={`px-4 py-6 text-sm ${M}`}>Numbers appear here once orders get marked delivered.</p>
           : <div className="max-h-[26rem] overflow-auto">{people.map((p) => <div key={p.name} className={`flex flex-wrap items-center gap-4 border-b px-4 py-3 last:border-0 ${BD}`}>
             <User className={`h-4 w-4 ${F}`} /><span className={`flex-1 text-sm ${W}`}>{p.name}</span>
-            <span className="font-mono text-sm text-slate-300">{p.count} delivered</span>
+            <span className="font-mono text-sm text-slate-700 dark:text-slate-300">{p.count} delivered</span>
             <span className={`font-mono text-sm ${M}`}>{brief(p.time / p.count)} avg</span>
-            <span className={`font-mono text-sm ${p.late ? "text-rose-400" : "text-emerald-400"}`}>{Math.round(((p.count - p.late) / p.count) * 100)}% on target</span>
+            <span className={`font-mono text-sm ${p.late ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>{Math.round(((p.count - p.late) / p.count) * 100)}% on target</span>
           </div>)}</div>}
       </div>
     </div>
@@ -242,14 +243,14 @@ function RefundReport({ refunds, products, types, n }) {
 
   const Rank = ({ title, rows, empty }) => (
     <div className={`overflow-hidden rounded-xl border ${BD}`}>
-      <div className={`border-b ${BD} bg-slate-900 px-4 py-3`}><h3 className={`text-sm font-semibold ${W}`}>{title}</h3></div>
+      <div className={`border-b ${BD} bg-white dark:bg-slate-900 px-4 py-3`}><h3 className={`text-sm font-semibold ${W}`}>{title}</h3></div>
       {!rows.length && <p className={`px-4 py-6 text-sm ${M}`}>{empty}</p>}
-      <div className="max-h-[26rem] divide-y divide-slate-800 overflow-auto">
+      <div className="max-h-[26rem] divide-y divide-slate-200 dark:divide-slate-800 overflow-auto">
         {rows.map((r) => (
           <div key={r.key} className="flex items-center gap-3 px-4 py-2.5">
             <span className={`flex-1 truncate text-sm ${W}`}>{r.label}</span>
             <span className={`font-mono text-xs ${F}`}>{r.n}</span>
-            <span className="w-24 text-right font-mono text-sm text-rose-400">{cash(r.amount)}</span>
+            <span className="w-24 text-right font-mono text-sm text-rose-600 dark:text-rose-400">{cash(r.amount)}</span>
           </div>
         ))}
       </div>
@@ -259,7 +260,7 @@ function RefundReport({ refunds, products, types, n }) {
   return (
     <div className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-3">
-        <Metric t="Refunded in this window" v={cash(total)} k={total ? "text-rose-400" : W} />
+        <Metric t="Refunded in this window" v={cash(total)} k={total ? "text-rose-600 dark:text-rose-400" : W} />
         <Metric t="Refunds issued" v={refunds.length} />
         <Metric t="Average refund" v={refunds.length ? cash(Math.round(total / refunds.length)) : "—"} />
       </div>
@@ -312,7 +313,7 @@ export function Products({ products, orders, commit, house, refundTypes, refunds
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         {products.map((p) => (
-          <div key={p.id} className={`rounded-xl border-l-4 ${c(p.color)[2]} border-y border-r ${BD} bg-slate-900 p-4`}>
+          <div key={p.id} className={`rounded-xl border-l-4 ${c(p.color)[2]} border-y border-r ${BD} bg-white dark:bg-slate-900 p-4`}>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className={`font-semibold ${W}`}>{p.name}</h3>
@@ -324,16 +325,16 @@ export function Products({ products, orders, commit, house, refundTypes, refunds
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                <button onClick={() => setEd({ ...p, steps: p.steps?.length ? p.steps : [""], cancelSteps: p.cancelSteps?.length ? p.cancelSteps : [""] })} className={`rounded-md p-1.5 ${F} hover:bg-slate-800 hover:text-white`}><GearIcon className="h-4 w-4" /></button>
+                <button onClick={() => setEd({ ...p, steps: p.steps?.length ? p.steps : [""], cancelSteps: p.cancelSteps?.length ? p.cancelSteps : [""] })} className={`rounded-md p-1.5 ${F} hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white`}><GearIcon className="h-4 w-4" /></button>
                 <Confirm label="Delete product" onConfirm={() => commit((s) => ({ ...s, products: s.products.filter((x) => x.id !== p.id) }), "Product deleted")} />
               </div>
             </div>
-            <div className={`mt-3 rounded-lg border ${BD} bg-slate-950/60 p-2.5`}>
+            <div className={`mt-3 rounded-lg border ${BD} bg-slate-200/60 dark:bg-slate-950/60 p-2.5`}>
               <L className="mb-1.5">Matches Stripe on</L>
               {(p.stripeIds || []).length ? (
                 <div className="flex flex-wrap gap-1.5">
                   {p.stripeIds.map((id) => (
-                    <span key={id} className={`rounded border ${BD} bg-slate-900 px-1.5 py-0.5 font-mono text-[11px] text-slate-300`}>{id}</span>
+                    <span key={id} className={`rounded border ${BD} bg-white dark:bg-slate-900 px-1.5 py-0.5 font-mono text-[11px] text-slate-700 dark:text-slate-300`}>{id}</span>
                   ))}
                 </div>
               ) : (
@@ -375,7 +376,7 @@ export function Products({ products, orders, commit, house, refundTypes, refunds
         <div className="mt-3 grid gap-3 md:grid-cols-2">
           {!types.length && <p className={`text-sm ${M}`}>No refund types yet. Add the things you actually give money back for.</p>}
           {types.map((t) => (
-            <div key={t.id} className={`rounded-xl border-l-4 ${c(t.color)[2]} border-y border-r ${BD} bg-slate-900 p-4`}>
+            <div key={t.id} className={`rounded-xl border-l-4 ${c(t.color)[2]} border-y border-r ${BD} bg-white dark:bg-slate-900 p-4`}>
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className={`font-semibold ${W}`}>{t.name}</h3>
@@ -385,7 +386,7 @@ export function Products({ products, orders, commit, house, refundTypes, refunds
                 </div>
                 <div className="flex items-center gap-1">
                   <button onClick={() => setEdT({ ...t, steps: t.steps?.length ? t.steps : [""] })}
-                    className={`rounded-md p-1.5 ${F} hover:bg-slate-800 hover:text-white`}><GearIcon className="h-4 w-4" /></button>
+                    className={`rounded-md p-1.5 ${F} hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white`}><GearIcon className="h-4 w-4" /></button>
                   <Confirm label="Delete refund type"
                     onConfirm={() => commit((x) => ({ ...x, refundTypes: (x.refundTypes || []).filter((y) => y.id !== t.id) }), "Refund type deleted")} />
                 </div>
@@ -423,7 +424,7 @@ function Editor({ draft, onCancel, onSave }) {
   const [v, setV] = useState("");
   const add = () => { if (v.trim()) { setP({ ...p, stripeIds: [...(p.stripeIds || []), v.trim()] }); setV(""); } };
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4" onClick={onCancel}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 dark:bg-black/75 p-4" onClick={onCancel}>
       <div className={`max-h-[86vh] w-full max-w-lg overflow-y-auto ${CARD} p-5 shadow-2xl`} onClick={(e) => e.stopPropagation()}>
         <h3 className={`text-base font-semibold ${W}`}>{draft.name ? "Edit product" : "New product"}</h3>
         <div className="mt-4 space-y-3">
@@ -431,7 +432,7 @@ function Editor({ draft, onCancel, onSave }) {
           <Field label="Color" hint="Used on every order of this type.">
             <div className="flex flex-wrap gap-2">{Object.keys(P).map((k) => (
               <button key={k} onClick={() => setP({ ...p, color: k })}
-                className={`h-7 w-7 rounded-full ${P[k][0]} ${p.color === k ? "ring-2 ring-white ring-offset-2 ring-offset-slate-900" : "opacity-60"}`} />
+                className={`h-7 w-7 rounded-full ${P[k][0]} ${p.color === k ? "ring-2 ring-slate-900 dark:ring-white ring-offset-2 ring-offset-white dark:ring-offset-slate-900" : "opacity-60"}`} />
             ))}</div>
           </Field>
           <div className="grid grid-cols-2 gap-3">
@@ -446,7 +447,7 @@ function Editor({ draft, onCancel, onSave }) {
           </div>
           <Field label="Stripe price or product IDs" hint="An exact ID match beats the keyword.">
             <div className="mb-2 flex flex-wrap gap-1.5">{(p.stripeIds || []).map((s) => (
-              <span key={s} className={`inline-flex items-center gap-1 rounded border ${BD} bg-slate-950 px-2 py-1 font-mono text-xs text-slate-300`}>{s}
+              <span key={s} className={`inline-flex items-center gap-1 rounded border ${BD} bg-slate-100 dark:bg-slate-950 px-2 py-1 font-mono text-xs text-slate-700 dark:text-slate-300`}>{s}
                 <button onClick={() => setP({ ...p, stripeIds: p.stripeIds.filter((x) => x !== s) })} className={`${F} hover:text-rose-400`}><X className="h-3 w-3" /></button>
               </span>
             ))}</div>
@@ -480,14 +481,122 @@ function Editor({ draft, onCancel, onSave }) {
 }
 
 /* ═════ SETTINGS ═════ */
-export function Settings({ cfg, products, orders, saveCfg, commit, sync, onSync, addOrders, flash, live }) {
+/* ── who you deal with ──
+   Stripe records who paid. It doesn't record who to credit — a refund goes
+   to the agent who complained, who may never have appeared on a payment
+   under that name. So the people are kept here, once, and picked by name
+   everywhere else. */
+export function CustomerBook({ customers, commit, flash }) {
+  const [q, setQ] = useState("");
+  const [add, setAdd] = useState(null);
+  const rows = useMemo(() => findCustomers(customers, q), [customers, q]);
+
+  const remove = (id) =>
+    commit((x) => ({ ...x, customers: (x.customers || []).filter((c) => c.id !== id) }), "Customer removed");
+
+  return (
+    <div className={`${CARD} p-4`}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className={`flex items-center gap-2 text-sm font-semibold ${W}`}>
+          <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" /> Customers
+        </h3>
+        <button onClick={() => setAdd({})} className={`${BTN} flex items-center gap-1.5`}>
+          <Plus className="h-3.5 w-3.5" /> Add customer
+        </button>
+      </div>
+      <p className={`mt-1 text-sm ${M}`}>
+        The people you issue refunds to. Adding them here means typing a name once instead of every time.
+      </p>
+
+      {!!customers?.length && (
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, email or Stripe ID…"
+          className={`${IN} mt-3`} />
+      )}
+
+      <div className={`mt-3 overflow-hidden rounded-lg border ${BD}`}>
+        {!rows.length && (
+          <p className={`px-3 py-6 text-center text-sm ${M}`}>
+            {customers?.length ? `Nobody matches "${q}".` : "No customers yet. Add the agents you deal with most."}
+          </p>
+        )}
+        <div className="divide-y divide-slate-200 dark:divide-slate-800">
+          {rows.map((cst) => (
+            <div key={cst.id} className="flex items-center gap-3 px-3 py-2">
+              <div className="min-w-0 flex-1">
+                <div className={`truncate text-sm font-medium ${W}`}>{custName(cst) || "Unnamed"}</div>
+                <div className={`truncate font-mono text-xs ${F}`}>{cst.stripeId || "no Stripe ID"}{cst.email ? ` · ${cst.email}` : ""}</div>
+              </div>
+              <div className="shrink-0">
+                <Confirm label={`Remove ${custName(cst) || "customer"}`} onConfirm={() => remove(cst.id)} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {add && <CustomerForm draft={add} customers={customers} onCancel={() => setAdd(null)}
+        onSave={(cst) => { commit((x) => ({ ...x, customers: [...(x.customers || []), cst] }), "Customer added"); setAdd(null); }} />}
+    </div>
+  );
+}
+
+/* Shared by Settings and the refund form, so "add someone new" asks for the
+   same things in both places and can't drift. */
+export function CustomerForm({ draft, customers, onCancel, onSave }) {
+  const [f, setF] = useState({ first: "", last: "", stripeId: "", email: "", ...draft });
+  const name = custName(f);
+  /* Two people with one name is a coin toss every time you pick one later. */
+  const clash = (customers || []).some((c) => custName(c).toLowerCase() === name.toLowerCase() && c.id !== f.id);
+  const dupId = f.stripeId && (customers || []).some((c) => c.stripeId === f.stripeId.trim() && c.id !== f.id);
+  const bad = !name ? "A first or last name is needed."
+    : dupId ? "That Stripe ID is already on someone else."
+      : "";
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 p-4 dark:bg-black/75" onClick={onCancel}>
+      <div className={`w-full max-w-md ${CARD} p-4`} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h3 className={`text-sm font-semibold ${W}`}>Add customer</h3>
+          <button onClick={onCancel} className={`rounded p-1 ${F} hover:bg-slate-200 dark:hover:bg-slate-800`}><X className="h-4 w-4" /></button>
+        </div>
+        <div className="mt-3 grid gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="First name">
+              <input autoFocus className={IN} value={f.first} onChange={(e) => setF({ ...f, first: e.target.value })} />
+            </Field>
+            <Field label="Last name">
+              <input className={IN} value={f.last} onChange={(e) => setF({ ...f, last: e.target.value })} />
+            </Field>
+          </div>
+          <Field label="Stripe customer ID" hint="Optional. Starts with cus_ — find it on their customer page in Stripe.">
+            <input className={`${IN} font-mono text-xs`} placeholder="cus_…" value={f.stripeId}
+              onChange={(e) => setF({ ...f, stripeId: e.target.value })} />
+          </Field>
+          <Field label="Email" hint="Optional. Useful when two people share a name.">
+            <input className={IN} value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />
+          </Field>
+        </div>
+        {clash && !bad && <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">Somebody with this name is already saved. Adding them twice makes them hard to tell apart later.</p>}
+        <div className="mt-4 flex justify-end gap-2">
+          <button onClick={onCancel} className={BTN}>Cancel</button>
+          <button disabled={!!bad} title={bad || undefined}
+            onClick={() => onSave({ id: uid("cst"), ...f, first: f.first.trim(), last: f.last.trim(), stripeId: f.stripeId.trim(), email: f.email.trim(), addedAt: Date.now() })}
+            className={`${PRI} disabled:cursor-not-allowed disabled:opacity-40`}>Add customer</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function Settings({ cfg, products, orders, customers, saveCfg, commit, sync, onSync, addOrders, flash, live }) {
+  const [theme, setTheme] = useTheme();
   const [l, setL] = useState(cfg);
   useEffect(() => setL(cfg), [cfg.syncUrl, cfg.autoSyncMinutes, cfg.archiveAfterDays, cfg.pastDueHours]);
   const set = (p) => setL((x) => ({ ...x, ...p }));
   const T = ({ label, k }) => <button onClick={() => { set({ [k]: !l[k] }); saveCfg({ [k]: !l[k] }); }} className="flex w-full items-center gap-3 text-left">
-    <span className={`relative h-5 w-9 shrink-0 rounded-full ${l[k] ? "bg-blue-600" : "bg-slate-700"}`}>
+    <span className={`relative h-5 w-9 shrink-0 rounded-full ${l[k] ? "bg-blue-600" : "bg-slate-300 dark:bg-slate-700"}`}>
       <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${l[k] ? "left-[18px]" : "left-0.5"}`} />
-    </span><span className="text-sm text-slate-300">{label}</span>
+    </span><span className="text-sm text-slate-700 dark:text-slate-300">{label}</span>
   </button>;
 
   const samples = () => {
@@ -500,9 +609,9 @@ export function Settings({ cfg, products, orders, saveCfg, commit, sync, onSync,
     <div className="grid gap-4 lg:grid-cols-3">
       <div className="space-y-4 lg:col-span-2">
         <div className={`${CARD} p-4`}>
-          <h3 className={`flex items-center gap-2 text-sm font-semibold ${W}`}><Link2 className="h-4 w-4 text-blue-400" /> Stripe connection</h3>
+          <h3 className={`flex items-center gap-2 text-sm font-semibold ${W}`}><Link2 className="h-4 w-4 text-blue-600 dark:text-blue-400" /> Stripe connection</h3>
           <div className={`mt-3 rounded-lg border-l-4 border-amber-500 ${PANEL} py-2 pl-3 pr-2 text-sm`}>
-            <p className="text-slate-300"><strong>Your secret key doesn't go in this portal.</strong> Anything typed here sits in shared storage the whole team can read, and browsers can't call Stripe with a secret key anyway.</p>
+            <p className="text-slate-700 dark:text-slate-300"><strong>Your secret key doesn't go in this portal.</strong> Anything typed here sits in shared storage the whole team can read, and browsers can't call Stripe with a secret key anyway.</p>
             <p className={`mt-2 ${M}`}>The key goes in the relay you deploy once — code is in <span className="font-mono text-xs">relay/</span> in this repo. Paste its address below, point a Stripe webhook at it, and orders arrive as they're paid for.</p>
           </div>
           <div className="mt-4 grid gap-3">
@@ -518,29 +627,31 @@ export function Settings({ cfg, products, orders, saveCfg, commit, sync, onSync,
               </Field>
             </div>
             {live !== null && (
-              <div className={`rounded-lg border-l-4 ${live ? "border-emerald-500" : "border-slate-600"} ${PANEL} py-2 pl-3 pr-2 text-sm`}>
+              <div className={`rounded-lg border-l-4 ${live ? "border-emerald-500" : "border-slate-400 dark:border-slate-600"} ${PANEL} py-2 pl-3 pr-2 text-sm`}>
                 {live
-                  ? <p className="text-slate-300"><strong className="text-emerald-400">Stripe is pushing payments here.</strong> New orders appear within about fifteen seconds of the charge, without anyone pressing anything.</p>
-                  : <p className="text-slate-300"><strong>Checking Stripe on a timer.</strong> Orders can take up to the interval above to appear. Add the webhook (see the README) and they arrive as they happen.</p>}
+                  ? <p className="text-slate-700 dark:text-slate-300"><strong className="text-emerald-600 dark:text-emerald-400">Stripe is pushing payments here.</strong> New orders appear within about fifteen seconds of the charge, without anyone pressing anything.</p>
+                  : <p className="text-slate-700 dark:text-slate-300"><strong>Checking Stripe on a timer.</strong> Orders can take up to the interval above to appear. Add the webhook (see the README) and they arrive as they happen.</p>}
               </div>
             )}
             <div className="flex flex-wrap items-center gap-3">
               <button onClick={onSync} disabled={sync.busy} className={`inline-flex items-center gap-1.5 ${PRI} disabled:opacity-50`}>
                 <RefreshCw className={`h-4 w-4 ${sync.busy ? "animate-spin" : ""}`} /> Test connection</button>
-              {sync.at && !sync.error && <span className="text-sm text-emerald-400">Connected — pulled {sync.added} new.</span>}
-              {sync.error && <span className="text-sm text-rose-400">{sync.error}</span>}
+              {sync.at && !sync.error && <span className="text-sm text-emerald-600 dark:text-emerald-400">Connected — pulled {sync.added} new.</span>}
+              {sync.error && <span className="text-sm text-rose-600 dark:text-rose-400">{sync.error}</span>}
             </div>
           </div>
         </div>
 
         <div className={`${CARD} p-4`}>
-          <h3 className={`flex items-center gap-2 text-sm font-semibold ${W}`}><Package className="h-4 w-4 text-blue-400" /> Stripe product mapping</h3>
+          <h3 className={`flex items-center gap-2 text-sm font-semibold ${W}`}><Package className="h-4 w-4 text-blue-600 dark:text-blue-400" /> Stripe product mapping</h3>
           <p className={`mt-1 text-sm ${M}`}>Paste the price or product ID from Stripe so orders land in the right lane and pick up the right color.</p>
           <div className="mt-3 space-y-2">{products.map((p) => <Mapper key={p.id} p={p} commit={commit} />)}</div>
         </div>
 
+        <CustomerBook customers={customers} commit={commit} flash={flash} />
+
         <div className={`${CARD} p-4`}>
-          <h3 className={`flex items-center gap-2 text-sm font-semibold ${W}`}><Bell className="h-4 w-4 text-blue-400" /> Notifications</h3>
+          <h3 className={`flex items-center gap-2 text-sm font-semibold ${W}`}><Bell className="h-4 w-4 text-blue-600 dark:text-blue-400" /> Notifications</h3>
           <p className={`mt-1 text-sm ${M}`}>A desktop alert and chime fire in whichever browser has the dashboard open. For email or text, point this at a Zapier or Make webhook — the dashboard posts the order details and Zapier sends the message.</p>
           <div className="mt-3 grid gap-3">
             <Field label="Webhook URL" hint="Zapier 'Catch Hook', Make custom webhook, or your own endpoint.">
@@ -566,7 +677,26 @@ export function Settings({ cfg, products, orders, saveCfg, commit, sync, onSync,
 
       <aside className="space-y-4">
         <div className={`${CARD} p-4`}>
-          <h3 className={`flex items-center gap-2 text-sm font-semibold ${W}`}><AlarmClock className="h-4 w-4 text-blue-400" /> Past due</h3>
+          <h3 className={`flex items-center gap-2 text-sm font-semibold ${W}`}><Sun className="h-4 w-4 text-blue-600 dark:text-blue-400" /> Appearance</h3>
+          <p className={`mt-1 text-sm ${M}`}>Applies to this browser only — everyone signing in picks their own.</p>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {THEMES.map(([id, label]) => {
+              const Icon = id === "light" ? Sun : id === "dark" ? Moon : Monitor;
+              const on = theme === id;
+              return (
+                <button key={id} onClick={() => setTheme(id)} aria-pressed={on}
+                  className={`flex flex-col items-center gap-1.5 rounded-lg border px-2 py-3 text-xs font-medium ${
+                    on ? "border-blue-500 bg-blue-500/10 text-blue-700 dark:text-blue-300"
+                      : `${BD} ${M} hover:bg-slate-100 dark:hover:bg-slate-800`}`}>
+                  <Icon className="h-4 w-4" />{label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className={`${CARD} p-4`}>
+          <h3 className={`flex items-center gap-2 text-sm font-semibold ${W}`}><AlarmClock className="h-4 w-4 text-blue-600 dark:text-blue-400" /> Past due</h3>
           <div className="mt-3">
             <Field label="Mark an order past due after (hours)"
               hint="Applies to every order. A product promised faster than this goes past due at its own target instead.">
@@ -592,7 +722,7 @@ export function Settings({ cfg, products, orders, saveCfg, commit, sync, onSync,
           </Field></div>
         </div>
         <div className={`${CARD} p-4`}>
-          <h3 className={`flex items-center gap-2 text-sm font-semibold ${W}`}><FlaskConical className="h-4 w-4 text-blue-400" /> Try it out</h3>
+          <h3 className={`flex items-center gap-2 text-sm font-semibold ${W}`}><FlaskConical className="h-4 w-4 text-blue-600 dark:text-blue-400" /> Try it out</h3>
           <p className={`mt-2 text-sm ${M}`}>Load a dozen fake orders to see the board, colors, and reports before Stripe is wired up.</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <button onClick={samples} className={BTN}>Load sample orders</button>
@@ -611,7 +741,7 @@ export function Settings({ cfg, products, orders, saveCfg, commit, sync, onSync,
 function TypeEditor({ draft, onCancel, onSave }) {
   const [t, setT] = useState({ color: "cyan", steps: [""], ...draft });
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4" onClick={onCancel}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 dark:bg-black/75 p-4" onClick={onCancel}>
       <div className={`max-h-[86vh] w-full max-w-lg overflow-y-auto ${CARD} p-5 shadow-2xl`} onClick={(e) => e.stopPropagation()}>
         <h3 className={`text-base font-semibold ${W}`}>{draft.name ? "Edit refund type" : "New refund type"}</h3>
         <div className="mt-4 space-y-3">
@@ -621,7 +751,7 @@ function TypeEditor({ draft, onCancel, onSave }) {
           <Field label="Colour">
             <div className="flex flex-wrap gap-2">{Object.keys(P).map((k) => (
               <button key={k} onClick={() => setT({ ...t, color: k })}
-                className={`h-7 w-7 rounded-full ${P[k][0]} ${t.color === k ? "ring-2 ring-white ring-offset-2 ring-offset-slate-900" : "opacity-60"}`} />
+                className={`h-7 w-7 rounded-full ${P[k][0]} ${t.color === k ? "ring-2 ring-slate-900 dark:ring-white ring-offset-2 ring-offset-white dark:ring-offset-slate-900" : "opacity-60"}`} />
             ))}</div>
           </Field>
           <StepList label="Refund steps" hint="What to do when you give this refund. Ticked off on the record."
@@ -661,7 +791,7 @@ function Mapper({ p, commit }) {
   const [v, setV] = useState((p.stripeIds || []).join(", "));
   useEffect(() => setV((p.stripeIds || []).join(", ")), [p.id]);
   return (
-    <div className={`flex flex-wrap items-center gap-3 rounded-lg border-l-4 ${c(p.color)[2]} border-y border-r ${BD} bg-slate-900/70 p-2.5`}>
+    <div className={`flex flex-wrap items-center gap-3 rounded-lg border-l-4 ${c(p.color)[2]} border-y border-r ${BD} bg-slate-50 dark:bg-slate-900/70 p-2.5`}>
       <div className="min-w-[150px] flex-1">
         <div className={`text-sm font-medium ${W}`}>{p.name}</div><div className={`text-xs ${M}`}>{p.slaHours}h target</div>
       </div>

@@ -5,25 +5,25 @@ import { Trash2 } from "lucide-react";
    One storage key, one palette, one set of statuses — if these drift the
    two windows stop agreeing about what an order is. */
 
-export const BD = "border-slate-800";
-export const CARD = "rounded-xl border border-slate-800 bg-slate-900";
-export const PANEL = "rounded-lg border border-slate-800 bg-slate-900/70";
-export const IN = "w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white placeholder-slate-600 focus:border-blue-500 focus:outline-none";
-export const BTN = "rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800";
-export const PRI = "rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500";
-export const M = "text-slate-400", F = "text-slate-500", W = "text-white", TD = "px-4 py-2.5 font-mono";
+export const BD = "border-slate-200 dark:border-slate-800";
+export const CARD = "rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900";
+export const PANEL = "rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/70";
+export const IN = "w-full rounded-md border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-950 px-3 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:border-blue-500 focus:outline-none";
+export const BTN = "rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800";
+export const PRI = "rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-slate-900 dark:text-white hover:bg-blue-500";
+export const M = "text-slate-600 dark:text-slate-400", F = "text-slate-500", W = "text-slate-900 dark:text-white", TD = "px-4 py-2.5 font-mono";
 
 export const P = {
-  blue: ["bg-blue-500", "bg-blue-500/15 text-blue-300", "border-blue-500"],
-  emerald: ["bg-emerald-500", "bg-emerald-500/15 text-emerald-300", "border-emerald-500"],
-  amber: ["bg-amber-500", "bg-amber-500/15 text-amber-300", "border-amber-500"],
-  violet: ["bg-violet-500", "bg-violet-500/15 text-violet-300", "border-violet-500"],
-  rose: ["bg-rose-500", "bg-rose-500/15 text-rose-300", "border-rose-500"],
-  cyan: ["bg-cyan-500", "bg-cyan-500/15 text-cyan-300", "border-cyan-500"],
-  orange: ["bg-orange-500", "bg-orange-500/15 text-orange-300", "border-orange-500"],
-  fuchsia: ["bg-fuchsia-500", "bg-fuchsia-500/15 text-fuchsia-300", "border-fuchsia-500"],
-  teal: ["bg-teal-500", "bg-teal-500/15 text-teal-300", "border-teal-500"],
-  slate: ["bg-slate-500", "bg-slate-500/20 text-slate-300", "border-slate-500"],
+  blue: ["bg-blue-500", "bg-blue-500/15 text-blue-700 dark:text-blue-300", "border-blue-500"],
+  emerald: ["bg-emerald-500", "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300", "border-emerald-500"],
+  amber: ["bg-amber-500", "bg-amber-500/15 text-amber-700 dark:text-amber-300", "border-amber-500"],
+  violet: ["bg-violet-500", "bg-violet-500/15 text-violet-700 dark:text-violet-300", "border-violet-500"],
+  rose: ["bg-rose-500", "bg-rose-500/15 text-rose-700 dark:text-rose-300", "border-rose-500"],
+  cyan: ["bg-cyan-500", "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300", "border-cyan-500"],
+  orange: ["bg-orange-500", "bg-orange-500/15 text-orange-700 dark:text-orange-300", "border-orange-500"],
+  fuchsia: ["bg-fuchsia-500", "bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-300", "border-fuchsia-500"],
+  teal: ["bg-teal-500", "bg-teal-500/15 text-teal-700 dark:text-teal-300", "border-teal-500"],
+  slate: ["bg-slate-500", "bg-slate-500/20 dark:bg-slate-500/20 text-slate-700 dark:text-slate-300", "border-slate-500"],
 };
 export const c = (k) => P[k] || P.slate;
 export const ST = [["new", "New"], ["active", "In progress"], ["blocked", "Waiting on client"], ["done", "Delivered"]];
@@ -80,6 +80,68 @@ export const SEED = [
 export const DEF = { syncUrl: "", syncToken: "", autoSyncMinutes: 5, notifyWebhook: "", notifyEmail: "", notifyPhone: "",
   notifyBrowser: true, notifySound: true, notifyOverdue: true, archiveAfterDays: 14, pastDueHours: 12 };
 
+/* ── customers ──
+   Stripe knows who paid; it doesn't know who to credit. A refund for an
+   individual call is issued to an agent who may never appear on a payment
+   under that name, so the people you deal with are kept here and looked up
+   by name when it matters. */
+export const custName = (c) =>
+  [c?.first, c?.last].filter(Boolean).join(" ").trim() || c?.name || "";
+
+export function findCustomers(customers, q) {
+  const t = String(q || "").trim().toLowerCase();
+  const all = customers || [];
+  if (!t) return all.slice().sort((a, b) => custName(a).localeCompare(custName(b)));
+  return all
+    .filter((c) => `${custName(c)} ${c.email || ""} ${c.stripeId || ""}`.toLowerCase().includes(t))
+    .sort((a, b) => {
+      /* A name that starts with what was typed is almost always the one
+         wanted, so it goes above a mid-word match. */
+      const A = custName(a).toLowerCase().startsWith(t), B = custName(b).toLowerCase().startsWith(t);
+      return A === B ? custName(a).localeCompare(custName(b)) : A ? -1 : 1;
+    });
+}
+
+/* ── theme ──
+   A per-person preference, not board data: the owner liking dark doesn't
+   mean the VA does, and the board record is shared between them. So it
+   lives in this browser, and never syncs. */
+export const THEME_KEY = "ltf_theme";
+export const THEMES = [["light", "Light"], ["dark", "Dark"], ["system", "Match system"]];
+
+export function readTheme() {
+  try { const v = localStorage.getItem(THEME_KEY); return THEMES.some(([id]) => id === v) ? v : "system"; }
+  catch { return "system"; }
+}
+
+export function applyTheme(pick) {
+  const dark = pick === "dark" || (pick !== "light" &&
+    typeof matchMedia === "function" && matchMedia("(prefers-color-scheme: dark)").matches);
+  const el = document.documentElement;
+  el.classList.toggle("dark", dark);
+  el.style.colorScheme = dark ? "dark" : "light";
+  /* The phone status bar sits above the page and doesn't follow a class. */
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", dark ? "#020617" : "#f1f5f9");
+  return dark;
+}
+
+/* Reads the stored choice, keeps <html> in step, and — on "match system" —
+   follows the OS if it changes while the page is open. */
+export function useTheme() {
+  const [pick, setPick] = useState(readTheme);
+  useEffect(() => {
+    applyTheme(pick);
+    try { localStorage.setItem(THEME_KEY, pick); } catch { /* private window */ }
+    if (pick !== "system" || typeof matchMedia !== "function") return;
+    const mq = matchMedia("(prefers-color-scheme: dark)");
+    const on = () => applyTheme("system");
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, [pick]);
+  return [pick, setPick];
+}
+
 export const KEY = "fulfillment_board_v3", HOUR = 36e5, DAY = 864e5;
 export const uid = (p = "o") => `${p}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
 export const paidOk = (o) => (o.paymentStatus || "succeeded") === "succeeded";
@@ -116,13 +178,21 @@ export function dueOf(order, products, settings) {
 }
 
 export const L = ({ children, className = "" }) => <div className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${F} ${className}`}>{children}</div>;
-export const Field = ({ label, hint, children }) => <div><L className="mb-1">{label}</L>{children}{hint && <p className={`mt-1 text-xs ${F}`}>{hint}</p>}</div>;
+/* The label wraps its control, so clicking the words focuses the box and a
+   screen reader announces the two together. The hint sits outside, or it
+   gets read out as part of the field's name. */
+export const Field = ({ label, hint, children }) => (
+  <div>
+    <label><L className="mb-1">{label}</L>{children}</label>
+    {hint && <p className={`mt-1 text-xs ${F}`}>{hint}</p>}
+  </div>
+);
 
 export function Confirm({ onConfirm, label = "Delete" }) {
   const [a, setA] = useState(false);
   useEffect(() => { if (a) { const t = setTimeout(() => setA(false), 4e3); return () => clearTimeout(t); } }, [a]);
-  return a ? <button onClick={() => { setA(false); onConfirm(); }} className="rounded-md bg-rose-600 px-2 py-1 text-xs font-semibold text-white">Confirm</button>
-    : <button onClick={() => setA(true)} title={label} className={`rounded-md p-1.5 ${F} hover:bg-slate-800 hover:text-rose-400`}><Trash2 className="h-4 w-4" /></button>;
+  return a ? <button onClick={() => { setA(false); onConfirm(); }} className="rounded-md bg-rose-600 px-2 py-1 text-xs font-semibold text-slate-900 dark:text-white">Confirm</button>
+    : <button onClick={() => setA(true)} title={label} className={`rounded-md p-1.5 ${F} hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-rose-400`}><Trash2 className="h-4 w-4" /></button>;
 }
 
 /* Which product does this charge belong to? An exact Stripe ID wins; the

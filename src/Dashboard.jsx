@@ -296,6 +296,9 @@ export default function Dashboard({ me: account, onSignOut }) {
     return [...fromStripe, ...(st.refunds || [])].sort((a, b) => b.at - a.at);
   }, [orders, st.refunds]);
 
+  const addCustomer = useCallback((cst) => {
+    commit((x) => ({ ...x, customers: [...(x.customers || []), cst] }), "Customer added");
+  }, [commit]);
   const recordRefund = useCallback((r) => {
     commit((x) => ({ ...x, refunds: [{ ...r, source: "manual" }, ...(x.refunds || [])] }), "Refund recorded");
   }, [commit]);
@@ -319,19 +322,19 @@ export default function Dashboard({ me: account, onSignOut }) {
   const openOrder = open ? orders.find((o) => o.id === open) : null;
   const people = useMemo(() => [...new Set(orders.map((o) => o.assignee).filter((a) => a && a !== "Unassigned"))], [orders]);
 
-  if (loading) return <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-400">
+  if (loading) return <div className="flex min-h-screen items-center justify-center bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400">
     <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Loading…</div>;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200">
-      <header className={`sticky top-0 z-20 border-b ${BD} bg-slate-950/95 backdrop-blur`}>
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-200">
+      <header className={`sticky top-0 z-20 border-b ${BD} bg-white/95 dark:bg-slate-950/95 backdrop-blur`}>
         <div className="mx-auto max-w-[1600px] px-4 py-3">
           <div className="flex flex-wrap items-center gap-3">
             <div>
               <h1 className={`text-lg font-bold tracking-tight ${W}`}>Lead Tech Fulfillment</h1>
               <L>{orders.filter((o) => paidOk(o) && o.status !== "done").length} open
-                {overdue > 0 && <span className="text-rose-400"> · {overdue} past due</span>}
-                {bleeding > 0 && <span className="text-amber-400"> · {bleeding} unpaid</span>}
+                {overdue > 0 && <span className="text-rose-600 dark:text-rose-400"> · {overdue} past due</span>}
+                {bleeding > 0 && <span className="text-amber-600 dark:text-amber-400"> · {bleeding} unpaid</span>}
               </L>
             </div>
 
@@ -351,7 +354,7 @@ export default function Dashboard({ me: account, onSignOut }) {
                 <BellOff className="h-4 w-4" /> Alerts off
               </button>
             )}
-            {perm === "granted" && <span className={`inline-flex items-center gap-1.5 text-xs ${F}`}><Bell className="h-4 w-4 text-emerald-400" /> Alerts on</span>}
+            {perm === "granted" && <span className={`inline-flex items-center gap-1.5 text-xs ${F}`}><Bell className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Alerts on</span>}
 
             <button onClick={() => runSync({ backfill: true })} disabled={sync.busy} className={`inline-flex items-center gap-1.5 ${PRI} disabled:opacity-60`}>
               <RefreshCw className={`h-4 w-4 ${sync.busy ? "animate-spin" : ""}`} />{sync.busy ? "Syncing" : "Sync"}
@@ -365,28 +368,28 @@ export default function Dashboard({ me: account, onSignOut }) {
           <nav className="mt-3 flex flex-wrap items-center gap-1">
             {TABS.map(([id, label, Icon], i) => (
               <React.Fragment key={id}>
-                {id === DIVIDE_BEFORE && <span className="mx-2 hidden h-5 w-px bg-slate-800 sm:block" aria-hidden />}
+                {id === DIVIDE_BEFORE && <span className="mx-2 hidden h-5 w-px bg-slate-200 dark:bg-slate-800 sm:block" aria-hidden />}
                 <button onClick={() => setTab(id)}
-                  className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium ${tab === id ? "bg-blue-600 text-white" : `${M} hover:bg-slate-800`}`}>
+                  className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium ${tab === id ? "bg-blue-600 text-slate-900 dark:text-white" : `${M} hover:bg-slate-200 dark:hover:bg-slate-800`}`}>
                   <Icon className="h-4 w-4" />{label}
                 </button>
               </React.Fragment>
             ))}
           </nav>
         </div>
-        {err && <div className="border-t border-rose-900 bg-rose-950/50 px-4 py-2 text-sm text-rose-200">{err}</div>}
-        {sync.error && <div className="border-t border-amber-900 bg-amber-950/40 px-4 py-2 text-sm text-amber-200">{sync.error}</div>}
+        {err && <div className="border-t border-rose-300 dark:border-rose-900 bg-rose-100 dark:bg-rose-950/50 px-4 py-2 text-sm text-rose-800 dark:text-rose-200">{err}</div>}
+        {sync.error && <div className="border-t border-amber-300 dark:border-amber-900 bg-amber-100 dark:bg-amber-950/40 px-4 py-2 text-sm text-amber-800 dark:text-amber-200">{sync.error}</div>}
       </header>
 
       <main className="mx-auto max-w-[1600px] px-4 py-5">
         {tab === "inbox" && !!unmapped.length && (
-          <div className={`mb-3 rounded-xl border-l-4 border-amber-500 border-y border-r ${BD} bg-slate-900 px-4 py-3`}>
+          <div className={`mb-3 rounded-xl border-l-4 border-amber-500 border-y border-r ${BD} bg-white dark:bg-slate-900 px-4 py-3`}>
             <h3 className={`text-sm font-semibold ${W}`}>
               {unmapped.length} order{unmapped.length === 1 ? "" : "s"} didn't match a product
             </h3>
             <p className={`mt-0.5 text-sm ${M}`}>
               They're on the board with no turnaround target and no fulfillment steps.{" "}
-              <button onClick={() => setTab("catalog")} className="text-blue-400 hover:underline">
+              <button onClick={() => setTab("catalog")} className="text-blue-600 dark:text-blue-400 hover:underline">
                 Add their Stripe price or product ID under Products
               </button>{" "}
               and they'll sort themselves out.
@@ -405,7 +408,7 @@ export default function Dashboard({ me: account, onSignOut }) {
             ? <MissedList rows={missed} products={products} now={now} onOpen={setOpen} settings={cfg} />
           : tab === "refunds"
             ? <Refunds refunds={refunds} products={products} orders={orders}
-                refundTypes={st.refundTypes}
+                refundTypes={st.refundTypes} customers={st.customers} onAddCustomer={addCustomer}
                 onRecord={recordRefund} onRemove={removeRefund}
                 onAnnotate={annotateRefund} onUpdate={updateRefund}
                 onSetUp={() => setTab("catalog")} />
@@ -418,7 +421,7 @@ export default function Dashboard({ me: account, onSignOut }) {
                 refundTypes={st.refundTypes} refunds={refunds} />
           : tab === "reports" ? <Reports orders={orders} products={products} n={now} flash={flash}
                 refunds={refunds} refundTypes={st.refundTypes} />
-          : <SettingsView cfg={cfg} products={products} orders={orders} saveCfg={saveCfg} commit={commit}
+          : <SettingsView cfg={cfg} products={products} orders={orders} customers={st.customers} saveCfg={saveCfg} commit={commit}
               sync={{ busy: sync.busy, at: sync.at, error: sync.error, added: sync.added }}
               onSync={() => runSync({ backfill: true })} addOrders={addOrders} flash={flash} live={syncEndpoint(cfg) ? live : null} />}
       </main>
@@ -426,7 +429,7 @@ export default function Dashboard({ me: account, onSignOut }) {
       {openOrder && <Drawer o={openOrder} products={products} now={now} me={mine} people={people}
         onClose={() => setOpen(null)} onPatch={patch} onMove={move} onSettle={settle} settings={cfg} />}
 
-      {toast && <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-slate-800 px-4 py-2 text-sm text-white shadow-xl">{toast}</div>}
+      {toast && <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-slate-200 dark:bg-slate-800 px-4 py-2 text-sm text-slate-900 dark:text-white shadow-xl">{toast}</div>}
     </div>
   );
 }
@@ -458,7 +461,7 @@ function Card({ o, products, now, onOpen, hideProduct, settings }) {
   return (
     <article draggable onDragStart={(e) => e.dataTransfer.setData("text/plain", o.id)}
       onClick={() => onOpen(o.id)}
-      className={`cursor-pointer rounded-lg border-l-4 ${c(p?.color)[2]} border-y border-r ${BD} bg-slate-900 p-3 hover:bg-slate-800/70`}>
+      className={`cursor-pointer rounded-lg border-l-4 ${c(p?.color)[2]} border-y border-r ${BD} bg-white dark:bg-slate-900 p-3 hover:bg-slate-200/70 dark:hover:bg-slate-800/70`}>
       <div className="flex items-start justify-between gap-2">
         <h4 className={`text-sm font-semibold leading-tight ${W}`}>{o.customer}</h4>
         <span className={`shrink-0 font-mono text-xs ${M}`}>{cash(o.amount)}</span>
@@ -467,14 +470,14 @@ function Card({ o, products, now, onOpen, hideProduct, settings }) {
 
       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
         {o.status === "done"
-          ? <CheckCircle2 className="h-3 w-3 text-emerald-400" />
-          : bad ? <AlertTriangle className="h-3 w-3 text-rose-400" /> : <Clock className={`h-3 w-3 ${F}`} />}
+          ? <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+          : bad ? <AlertTriangle className="h-3 w-3 text-rose-600 dark:text-rose-400" /> : <Clock className={`h-3 w-3 ${F}`} />}
         <Stopwatch startedAt={o.receivedAt} stoppedAt={o.completedAt} target={tgt} />
         {tgt && <span className={F}>of {Math.round(tgt / HOUR)}h</span>}
-        {!!list.length && <span className={`ml-auto font-mono ${did === list.length ? "text-emerald-400" : F}`}>{did}/{list.length}</span>}
+        {!!list.length && <span className={`ml-auto font-mono ${did === list.length ? "text-emerald-600 dark:text-emerald-400" : F}`}>{did}/{list.length}</span>}
       </div>
 
-      {!!list.length && <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-slate-800">
+      {!!list.length && <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
         <div className={`h-full ${did === list.length ? "bg-emerald-500" : c(p?.color)[0]}`} style={{ width: `${(did / list.length) * 100}%` }} />
       </div>}
 
@@ -492,19 +495,19 @@ function Card({ o, products, now, onOpen, hideProduct, settings }) {
 function OrderList({ rows, products, now, onOpen, sortBy, onSort, done, title, note, empty, settings }) {
   return (
     <div className={`overflow-hidden rounded-xl border ${BD}`}>
-      <div className={`flex flex-wrap items-center gap-3 border-b ${BD} bg-slate-900 px-4 py-3`}>
+      <div className={`flex flex-wrap items-center gap-3 border-b ${BD} bg-white dark:bg-slate-900 px-4 py-3`}>
         <div>
           <h3 className={`flex items-center gap-2 text-sm font-semibold ${W}`}>
             {title}
-            <span className={`rounded bg-slate-800 px-1.5 py-0.5 font-mono text-xs ${M}`}>{rows.length}</span>
+            <span className={`rounded bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 font-mono text-xs ${M}`}>{rows.length}</span>
           </h3>
           <p className={`text-xs ${F}`}>{note}</p>
         </div>
         {onSort && (
-          <div className={`ml-auto flex shrink-0 gap-1 rounded-lg border ${BD} bg-slate-950 p-1`}>
+          <div className={`ml-auto flex shrink-0 gap-1 rounded-lg border ${BD} bg-slate-100 dark:bg-slate-950 p-1`}>
             {SORTS.map(([id, label]) => (
               <button key={id} onClick={() => onSort(id)}
-                className={`rounded-md px-2.5 py-1 text-xs font-medium ${sortBy === id ? "bg-blue-600 text-white" : `${M} hover:bg-slate-800`}`}>
+                className={`rounded-md px-2.5 py-1 text-xs font-medium ${sortBy === id ? "bg-blue-600 text-slate-900 dark:text-white" : `${M} hover:bg-slate-200 dark:hover:bg-slate-800`}`}>
                 {label}
               </button>
             ))}
@@ -514,14 +517,14 @@ function OrderList({ rows, products, now, onOpen, sortBy, onSort, done, title, n
 
       {!rows.length && <p className={`px-4 py-8 text-sm ${M}`}>{empty}</p>}
 
-      <div className="divide-y divide-slate-800">
+      <div className="divide-y divide-slate-200 dark:divide-slate-800">
         {rows.map((o) => {
           const p = products.find((x) => x.id === o.productId);
           const tgt = target(products, o, settings);
           const bad = late(o, now);
           return (
             <button key={o.id} onClick={() => onOpen(o.id)}
-              className={`flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-left hover:bg-slate-900 ${bad ? "bg-rose-950/20" : ""}`}>
+              className={`flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-900 ${bad ? "bg-rose-50 dark:bg-rose-950/20" : ""}`}>
               <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${c(p?.color)[0]}`} />
 
               {/* What was bought leads; who bought it is the second line.
@@ -531,8 +534,8 @@ function OrderList({ rows, products, now, onOpen, sortBy, onSort, done, title, n
                   {o.productName}{freq(o) ? <span className={`font-normal ${F}`}> · {freq(o)}</span> : null}
                 </div>
                 <div className={`flex items-center gap-1.5 truncate text-xs ${M}`}>
-                  {o.renewal && <span className="rounded bg-slate-700/60 px-1 py-px text-[10px] uppercase tracking-wide text-slate-300">Renewal</span>}
-                  {!o.productId && <span className="rounded bg-amber-500/15 px-1 py-px text-[10px] uppercase tracking-wide text-amber-300">Unmapped</span>}
+                  {o.renewal && <span className="rounded bg-slate-300/60 dark:bg-slate-700/60 px-1 py-px text-[10px] uppercase tracking-wide text-slate-700 dark:text-slate-300">Renewal</span>}
+                  {!o.productId && <span className="rounded bg-amber-500/15 px-1 py-px text-[10px] uppercase tracking-wide text-amber-700 dark:text-amber-300">Unmapped</span>}
                   <span className="truncate">{o.customer}</span>
                 </div>
               </div>
@@ -544,13 +547,13 @@ function OrderList({ rows, products, now, onOpen, sortBy, onSort, done, title, n
               </span>
 
               {paidOk(o)
-                ? <span className={`w-28 shrink-0 rounded px-1.5 py-0.5 text-center text-xs ${done ? "bg-emerald-500/15 text-emerald-300" : c(p?.color)[1]}`}>{sm(o.status)[1]}</span>
-                : <span className="w-28 shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 text-center text-xs text-amber-300" title={o.declineReason}>
+                ? <span className={`w-28 shrink-0 rounded px-1.5 py-0.5 text-center text-xs ${done ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : c(p?.color)[1]}`}>{sm(o.status)[1]}</span>
+                : <span className="w-28 shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 text-center text-xs text-amber-700 dark:text-amber-300" title={o.declineReason}>
                     {mm(o.recovery || "open")[1]}
                   </span>}
 
               <span className="flex w-40 shrink-0 items-center justify-end gap-1.5">
-                {bad && <AlertTriangle className="h-3 w-3 shrink-0 text-rose-400" />}
+                {bad && <AlertTriangle className="h-3 w-3 shrink-0 text-rose-600 dark:text-rose-400" />}
                 <Stopwatch startedAt={o.receivedAt} stoppedAt={o.completedAt || o.stoppedAt} target={paidOk(o) ? tgt : null} />
                 {tgt && paidOk(o) && <span className={`text-xs ${F}`}>of {Math.round(tgt / HOUR)}h</span>}
               </span>
@@ -576,15 +579,15 @@ function OrderList({ rows, products, now, onOpen, sortBy, onSort, done, title, n
 /* Why the money stopped changes what she does about it: a decline can be
    retried, a cancellation cannot, and a dispute has a deadline attached. */
 const why = (o) =>
-  o.disputed ? ["Disputed", "bg-rose-500/15 text-rose-300"]
-    : o.subscriptionStatus === "canceled" && !o.chargeId ? ["Cancelled", "bg-slate-500/20 text-slate-300"]
+  o.disputed ? ["Disputed", "bg-rose-500/15 text-rose-700 dark:text-rose-300"]
+    : o.subscriptionStatus === "canceled" && !o.chargeId ? ["Cancelled", "bg-slate-500/20 dark:bg-slate-500/20 text-slate-700 dark:text-slate-300"]
       : null;
 
 function MissedList({ rows, products, now, onOpen, settings }) {
   const live = rows.filter((o) => !SETTLED.has(o.recovery || "open"));
   return (
     <div className="space-y-3">
-      <div className={`rounded-xl border-l-4 ${live.length ? "border-amber-500" : "border-slate-700"} border-y border-r ${BD} bg-slate-900 px-4 py-3`}>
+      <div className={`rounded-xl border-l-4 ${live.length ? "border-amber-500" : "border-slate-300 dark:border-slate-700"} border-y border-r ${BD} bg-white dark:bg-slate-900 px-4 py-3`}>
         <h3 className={`text-sm font-semibold ${W}`}>
           {live.length
             ? `${live.length} service${live.length === 1 ? "" : "s"} still running with nothing coming in`
@@ -599,7 +602,7 @@ function MissedList({ rows, products, now, onOpen, settings }) {
 
       <div className={`overflow-hidden rounded-xl border ${BD}`}>
         {!rows.length && <p className={`px-4 py-8 text-sm ${M}`}>Nothing to shut down. Stripe tells us the moment a payment bounces, a subscription is cancelled, or a charge is disputed.</p>}
-        <div className="divide-y divide-slate-800">
+        <div className="divide-y divide-slate-200 dark:divide-slate-800">
           {rows.map((o) => {
             const p = products.find((x) => x.id === o.productId);
             const settled = SETTLED.has(o.recovery || "open");
@@ -607,7 +610,7 @@ function MissedList({ rows, products, now, onOpen, settings }) {
             const did = list.filter((_, i) => o.cancelChecklist?.[i]).length;
             return (
               <button key={o.id} onClick={() => onOpen(o.id)}
-                className={`flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-left hover:bg-slate-900 ${settled ? "opacity-60" : "bg-amber-950/15"}`}>
+                className={`flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-900 ${settled ? "opacity-60" : "bg-amber-50 dark:bg-amber-950/15"}`}>
                 <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${c(p?.color)[0]}`} />
                 <div className="min-w-[170px] flex-1">
                   <div className={`flex items-center gap-1.5 text-sm font-semibold ${W}`}>
@@ -626,14 +629,14 @@ function MissedList({ rows, products, now, onOpen, settings }) {
                 </span>
 
                 <span className={`w-36 shrink-0 rounded px-1.5 py-0.5 text-center text-xs ${
-                  settled ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/15 text-amber-300"}`}>
+                  settled ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : "bg-amber-500/15 text-amber-700 dark:text-amber-300"}`}>
                   {mm(o.recovery || "open")[1]}
                 </span>
 
-                {!!list.length && <span className={`w-10 text-right font-mono text-xs ${did === list.length ? "text-emerald-400" : F}`}>{did}/{list.length}</span>}
+                {!!list.length && <span className={`w-10 text-right font-mono text-xs ${did === list.length ? "text-emerald-600 dark:text-emerald-400" : F}`}>{did}/{list.length}</span>}
 
                 <span className="flex w-32 shrink-0 items-center justify-end gap-1.5">
-                  {!settled && <AlertTriangle className="h-3 w-3 shrink-0 text-amber-400" />}
+                  {!settled && <AlertTriangle className="h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />}
                   <Stopwatch startedAt={o.receivedAt} stoppedAt={o.stoppedAt}
                     target={settled ? null : target(products, o, settings)} />
                 </span>
@@ -665,23 +668,23 @@ function Drawer({ o, products, now, me, people, onClose, onPatch, onMove, onSett
   }, [onClose]);
 
   const Row = ({ label, children }) => children ? <div className="flex gap-3 py-1 text-sm">
-    <span className={`w-32 shrink-0 ${F}`}>{label}</span><span className="min-w-0 break-words text-slate-300">{children}</span>
+    <span className={`w-32 shrink-0 ${F}`}>{label}</span><span className="min-w-0 break-words text-slate-700 dark:text-slate-300">{children}</span>
   </div> : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/70" onClick={onClose}>
-      <aside className={`h-full w-full max-w-xl overflow-y-auto border-l ${BD} bg-slate-950 shadow-2xl`} onClick={(e) => e.stopPropagation()}>
-        <div className={`sticky top-0 flex items-start gap-3 border-b ${BD} bg-slate-950/95 px-5 py-4 backdrop-blur`}>
+    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 dark:bg-black/70" onClick={onClose}>
+      <aside className={`h-full w-full max-w-xl overflow-y-auto border-l ${BD} bg-slate-100 dark:bg-slate-950 shadow-2xl`} onClick={(e) => e.stopPropagation()}>
+        <div className={`sticky top-0 flex items-start gap-3 border-b ${BD} bg-white/95 dark:bg-slate-950/95 px-5 py-4 backdrop-blur`}>
           <span className={`mt-1.5 h-3 w-3 shrink-0 rounded-full ${c(p?.color)[0]}`} />
           <div className="min-w-0 flex-1">
             <h2 className={`truncate text-base font-bold ${W}`}>{o.customer}</h2>
             <p className={`truncate text-sm ${M}`}>{o.productName}{freq(o) ? ` · ${freq(o)}` : ""}</p>
           </div>
-          <button onClick={onClose} className={`rounded-md p-1.5 ${F} hover:bg-slate-800 hover:text-white`}><X className="h-5 w-5" /></button>
+          <button onClick={onClose} className={`rounded-md p-1.5 ${F} hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white`}><X className="h-5 w-5" /></button>
         </div>
 
         <div className="space-y-5 px-5 py-5">
-          {unpaid && <div className="rounded-lg border-l-4 border-rose-500 bg-rose-950/40 px-3 py-2 text-sm text-rose-200">
+          {unpaid && <div className="rounded-lg border-l-4 border-rose-500 bg-rose-50 dark:bg-rose-950/40 px-3 py-2 text-sm text-rose-800 dark:text-rose-200">
             <strong>This payment failed.</strong>{o.declineReason ? ` ${o.declineReason}` : ""}
             {o.declineCode && <span className={`ml-1 font-mono text-xs ${F}`}>({o.declineCode})</span>}
             <p className="mt-1 text-rose-300/80">
@@ -713,7 +716,7 @@ function Drawer({ o, products, now, me, people, onClose, onPatch, onMove, onSett
                 <div className="flex flex-wrap gap-1.5">
                   {MISS.map(([id, label]) => (
                     <button key={id} onClick={() => onSettle(o.id, id)}
-                      className={`rounded-md px-3 py-1.5 text-sm font-medium ${(o.recovery || "open") === id ? "bg-blue-600 text-white" : `border border-slate-700 bg-slate-900 ${M} hover:bg-slate-800`}`}>{label}</button>
+                      className={`rounded-md px-3 py-1.5 text-sm font-medium ${(o.recovery || "open") === id ? "bg-blue-600 text-slate-900 dark:text-white" : `border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 ${M} hover:bg-slate-200 dark:hover:bg-slate-800`}`}>{label}</button>
                   ))}
                 </div>
               </div>
@@ -721,7 +724,7 @@ function Drawer({ o, products, now, me, people, onClose, onPatch, onMove, onSett
               <div>
                 <div className="mb-2 flex items-center justify-between">
                   <L>What to switch off</L>
-                  {!!cancelList.length && <span className={`font-mono text-xs ${cancelDone === cancelList.length ? "text-emerald-400" : F}`}>{cancelDone}/{cancelList.length}</span>}
+                  {!!cancelList.length && <span className={`font-mono text-xs ${cancelDone === cancelList.length ? "text-emerald-600 dark:text-emerald-400" : F}`}>{cancelDone}/{cancelList.length}</span>}
                 </div>
                 {!cancelList.length && <p className={`text-sm ${F}`}>
                   No shutdown steps set for this product yet — add them under Products so nobody has to guess what's still running.
@@ -732,8 +735,8 @@ function Drawer({ o, products, now, me, people, onClose, onPatch, onMove, onSett
                     return (
                       <li key={i}>
                         <button onClick={() => onPatch(o.id, (x) => ({ cancelChecklist: { ...x.cancelChecklist, [i]: !on } }))}
-                          className={`flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-slate-900 ${on ? F : "text-slate-300"}`}>
-                          {on ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" /> : <Circle className={`mt-0.5 h-4 w-4 shrink-0 ${F}`} />}
+                          className={`flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-900 ${on ? F : "text-slate-700 dark:text-slate-300"}`}>
+                          {on ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" /> : <Circle className={`mt-0.5 h-4 w-4 shrink-0 ${F}`} />}
                           <span className={on ? "line-through" : ""}>{st}</span>
                         </button>
                       </li>
@@ -741,7 +744,7 @@ function Drawer({ o, products, now, me, people, onClose, onPatch, onMove, onSett
                   })}
                 </ul>
                 {!!cancelList.length && cancelDone === cancelList.length && !settled &&
-                  <p className="mt-3 text-sm text-emerald-400">Everything is switched off — mark it stopped above.</p>}
+                  <p className="mt-3 text-sm text-emerald-600 dark:text-emerald-400">Everything is switched off — mark it stopped above.</p>}
               </div>
             </>
           ) : (
@@ -768,7 +771,7 @@ function Drawer({ o, products, now, me, people, onClose, onPatch, onMove, onSett
             <div className="flex flex-wrap gap-1.5">
               {ST.map(([id, label]) => (
                 <button key={id} onClick={() => onMove(o.id, id)}
-                  className={`rounded-md px-3 py-1.5 text-sm font-medium ${(o.status || "new") === id ? "bg-blue-600 text-white" : `border border-slate-700 bg-slate-900 ${M} hover:bg-slate-800`}`}>{label}</button>
+                  className={`rounded-md px-3 py-1.5 text-sm font-medium ${(o.status || "new") === id ? "bg-blue-600 text-slate-900 dark:text-white" : `border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 ${M} hover:bg-slate-200 dark:hover:bg-slate-800`}`}>{label}</button>
               ))}
             </div>
           </div>
@@ -776,7 +779,7 @@ function Drawer({ o, products, now, me, people, onClose, onPatch, onMove, onSett
           <div>
             <div className="mb-2 flex items-center justify-between">
               <L>Fulfillment steps</L>
-              {!!list.length && <span className={`font-mono text-xs ${did === list.length ? "text-emerald-400" : F}`}>{did}/{list.length}</span>}
+              {!!list.length && <span className={`font-mono text-xs ${did === list.length ? "text-emerald-600 dark:text-emerald-400" : F}`}>{did}/{list.length}</span>}
             </div>
             {!list.length && <p className={`text-sm ${F}`}>No steps set for this product yet — add them under Products.</p>}
             <ul className="space-y-1">
@@ -785,8 +788,8 @@ function Drawer({ o, products, now, me, people, onClose, onPatch, onMove, onSett
                 return (
                   <li key={i}>
                     <button onClick={() => onPatch(o.id, (x) => ({ checklist: { ...x.checklist, [i]: !on } }))}
-                      className={`flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-slate-900 ${on ? F : "text-slate-300"}`}>
-                      {on ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" /> : <Circle className={`mt-0.5 h-4 w-4 shrink-0 ${F}`} />}
+                      className={`flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-900 ${on ? F : "text-slate-700 dark:text-slate-300"}`}>
+                      {on ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" /> : <Circle className={`mt-0.5 h-4 w-4 shrink-0 ${F}`} />}
                       <span className={on ? "line-through" : ""}>{s}</span>
                     </button>
                   </li>
@@ -794,7 +797,7 @@ function Drawer({ o, products, now, me, people, onClose, onPatch, onMove, onSett
               })}
             </ul>
             {!!list.length && did === list.length && o.status !== "done" &&
-              <p className="mt-3 text-sm text-emerald-400">Every step is done — stop the clock above.</p>}
+              <p className="mt-3 text-sm text-emerald-600 dark:text-emerald-400">Every step is done — stop the clock above.</p>}
           </div>
             </>
           )}
@@ -817,9 +820,9 @@ function Drawer({ o, products, now, me, people, onClose, onPatch, onMove, onSett
           </Field>
 
           <div className={`${CARD} p-4`}>
-            <h3 className={`mb-2 flex items-center gap-2 text-sm font-semibold ${W}`}><User className="h-4 w-4 text-blue-400" /> Customer</h3>
-            <Row label="Email">{o.email && <a href={`mailto:${o.email}`} className="text-blue-400 hover:underline">{o.email}</a>}</Row>
-            <Row label="Phone">{o.phone && <a href={`tel:${o.phone}`} className="text-blue-400 hover:underline">{o.phone}</a>}</Row>
+            <h3 className={`mb-2 flex items-center gap-2 text-sm font-semibold ${W}`}><User className="h-4 w-4 text-blue-600 dark:text-blue-400" /> Customer</h3>
+            <Row label="Email">{o.email && <a href={`mailto:${o.email}`} className="text-blue-600 dark:text-blue-400 hover:underline">{o.email}</a>}</Row>
+            <Row label="Phone">{o.phone && <a href={`tel:${o.phone}`} className="text-blue-600 dark:text-blue-400 hover:underline">{o.phone}</a>}</Row>
             <Row label="Customer ID"><span className="font-mono text-xs">{o.customerId}</span></Row>
             {(o.email || o.phone) && <div className="mt-3 flex gap-2">
               {o.email && <a href={`mailto:${o.email}`} className={`inline-flex items-center gap-1.5 ${BTN}`}><Mail className="h-4 w-4" /> Email</a>}
@@ -828,7 +831,7 @@ function Drawer({ o, products, now, me, people, onClose, onPatch, onMove, onSett
           </div>
 
           <div className={`${CARD} p-4`}>
-            <h3 className={`mb-2 flex items-center gap-2 text-sm font-semibold ${W}`}><CreditCard className="h-4 w-4 text-blue-400" /> Payment</h3>
+            <h3 className={`mb-2 flex items-center gap-2 text-sm font-semibold ${W}`}><CreditCard className="h-4 w-4 text-blue-600 dark:text-blue-400" /> Payment</h3>
             <Row label="Amount">{o.amount != null && `${cash(o.amount)} ${o.currency || ""}`}</Row>
             <Row label="Paid">{new Date(o.receivedAt).toLocaleString()}</Row>
             <Row label="Card">{[o.cardBrand, o.cardLast4 && `•••• ${o.cardLast4}`, o.cardExp].filter(Boolean).join(" ")}</Row>
@@ -845,7 +848,7 @@ function Drawer({ o, products, now, me, people, onClose, onPatch, onMove, onSett
             <h3 className={`mb-2 text-sm font-semibold ${W}`}>Line items</h3>
             {o.items.map((i, k) => (
               <div key={k} className="flex justify-between py-1 text-sm">
-                <span className="text-slate-300">{i.quantity || 1}× {i.description || "—"}</span>
+                <span className="text-slate-700 dark:text-slate-300">{i.quantity || 1}× {i.description || "—"}</span>
                 <span className={`font-mono ${M}`}>{cash(i.amount)}</span>
               </div>
             ))}

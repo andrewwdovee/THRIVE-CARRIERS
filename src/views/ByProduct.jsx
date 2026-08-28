@@ -61,8 +61,8 @@ export default function ByProduct({ products, orders, now, onOpen, onMove, Card,
         const eff = effHours({ slaHours: g.sla }, settings);
 
         return (
-          <section key={g.id} className={`overflow-hidden rounded-xl border-l-4 ${c(g.color)[2]} border-y border-r ${BD} bg-slate-900/40`}>
-            <button onClick={() => toggle(g.id)} className="flex w-full flex-wrap items-center gap-3 px-3 py-2.5 text-left hover:bg-slate-900">
+          <section key={g.id} className={`overflow-hidden rounded-xl border-l-4 ${c(g.color)[2]} border-y border-r ${BD} bg-slate-50 dark:bg-slate-900/40`}>
+            <button onClick={() => toggle(g.id)} className="flex w-full flex-wrap items-center gap-3 px-3 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-900">
               {closed ? <ChevronRight className={`h-4 w-4 shrink-0 ${F}`} /> : <ChevronDown className={`h-4 w-4 shrink-0 ${F}`} />}
               <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${c(g.color)[0]}`} />
               <span className={`font-semibold ${W}`}>{g.name}</span>
@@ -74,7 +74,7 @@ export default function ByProduct({ products, orders, now, onOpen, onMove, Card,
               {g.id === "_none" && <span className={`text-xs ${F}`}>no Stripe ID matched — map these under Products</span>}
 
               <span className="ml-auto flex items-center gap-3 text-xs">
-                {overdue > 0 && <span className="inline-flex items-center gap-1 text-rose-400">
+                {overdue > 0 && <span className="inline-flex items-center gap-1 text-rose-600 dark:text-rose-400">
                   <AlertTriangle className="h-3 w-3" />{overdue} past due
                 </span>}
                 <span className={M}>{open.length} open</span>
@@ -84,7 +84,7 @@ export default function ByProduct({ products, orders, now, onOpen, onMove, Card,
             </button>
 
             {!closed && (
-              <div className="border-t border-slate-800 p-2">
+              <div className="border-t border-slate-200 dark:border-slate-800 p-2">
                 <div className="grid gap-2 lg:grid-cols-3">
                   {WORKING.map(([id, label]) => {
                     const rows = g.orders.filter((o) => (o.status || "new") === id)
@@ -93,7 +93,7 @@ export default function ByProduct({ products, orders, now, onOpen, onMove, Card,
                       <div key={id}
                         onDragOver={(e) => e.preventDefault()}
                         onDrop={(e) => { e.preventDefault(); const oid = e.dataTransfer.getData("text/plain"); if (oid) onMove(oid, id); }}
-                        className="rounded-lg bg-slate-950/40 p-1.5">
+                        className="rounded-lg bg-slate-200/40 dark:bg-slate-950/40 p-1.5">
                         <div className="flex items-center justify-between px-1 py-1">
                           <L>{label}</L><span className={`font-mono text-xs ${F}`}>{rows.length}</span>
                         </div>
@@ -111,9 +111,9 @@ export default function ByProduct({ products, orders, now, onOpen, onMove, Card,
                   <div
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => { e.preventDefault(); const oid = e.dataTransfer.getData("text/plain"); if (oid) onMove(oid, "done"); }}
-                    className="mt-2 rounded-lg bg-slate-950/40">
+                    className="mt-2 rounded-lg bg-slate-200/40 dark:bg-slate-950/40">
                     <button onClick={() => toggleDone(g.id)}
-                      className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left hover:bg-slate-900/60">
+                      className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left hover:bg-slate-100 dark:hover:bg-slate-900/60">
                       {openDone ? <ChevronDown className={`h-3.5 w-3.5 ${F}`} /> : <ChevronRight className={`h-3.5 w-3.5 ${F}`} />}
                       <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400/70" />
                       <L>Delivered</L>

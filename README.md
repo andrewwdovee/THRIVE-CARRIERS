@@ -254,6 +254,28 @@ Note the URL it prints — `https://stripe-sync.<you>.workers.dev`. Open
 Set `ALLOWED_ORIGINS` in `wrangler.toml` to the address you'll serve the app
 from, so only your own page can call the relay.
 
+### Light and dark
+
+Settings -> Appearance offers Light, Dark, or Match system. The choice is kept
+in the browser, not in the board record - the owner and the assistant share
+one board but not one pair of eyes. `<html>` gets the class from a small
+inline script in `index.html` that runs before the first paint, because
+deciding in React instead makes a dark screen flash white on every load.
+
+Every colour is declared as a light/dark pair (`bg-white dark:bg-slate-900`).
+A new one needs both halves, and a `-950` wash that reads as a subtle tint on
+dark renders as mud on white - give it a `-50` counterpart.
+
+### Customers
+
+Stripe records who paid; it doesn't record who to credit. A refund goes to the
+agent who complained, who may never appear on a payment under that name. So
+the people are kept on the board under Settings -> Customers, and the refund
+form looks them up by name, offering to add anyone it doesn't know without
+losing the half-filled form behind it. Nothing is forced: an unsaved name
+still records fine - picking from the list only keeps the spelling consistent,
+which is what makes "who are we refunding most" answerable.
+
 ### Publishing the dashboard
 
 The relay is the engine; the dashboard is a separate static site that talks to

@@ -3,14 +3,20 @@
 @tailwind utilities;
 
 html, body, #root { height: 100%; }
-body { background: #020617; -webkit-font-smoothing: antialiased; }
+body { background: #f1f5f9; -webkit-font-smoothing: antialiased; }
+html.dark body { background: #020617; }
 
-/* Dark scrollbars so the board doesn't get a bright gutter. */
-* { scrollbar-color: #334155 transparent; scrollbar-width: thin; }
+/* Scrollbars follow the theme, or the board gets a bright gutter in dark
+   and a dark one in light. */
+* { scrollbar-color: #cbd5e1 transparent; scrollbar-width: thin; }
 *::-webkit-scrollbar { width: 10px; height: 10px; }
 *::-webkit-scrollbar-track { background: transparent; }
-*::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 999px; }
-*::-webkit-scrollbar-thumb:hover { background: #334155; }
+*::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+*::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+html.dark * { scrollbar-color: #334155 transparent; }
+html.dark *::-webkit-scrollbar-thumb { background: #1e293b; }
+html.dark *::-webkit-scrollbar-thumb:hover { background: #334155; }
 
-/* Date inputs are unreadable on dark without this. */
-input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; }
+/* The date picker glyph is drawn dark; on a dark field it disappears. */
+html.dark input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; }
+input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; }
