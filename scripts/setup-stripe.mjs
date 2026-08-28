@@ -37,21 +37,23 @@ const askHidden = (q) => new Promise((res) => {
   const tty = stdin.isTTY;
   if (tty) stdin.setRawMode(true);
   let buf = "";
+  /* A terminal delivers one keystroke at a time; a pipe delivers the whole
+     line at once. Scan the chunk rather than comparing it, so both work. */
   const on = (chunk) => {
-    const s = chunk.toString("utf8");
-    if (s === "\r" || s === "\n") {
-      stdin.removeListener("data", on);
-      if (tty) stdin.setRawMode(false);
-      stdout.write("\n");
-      res(buf.trim());
-    } else if (s === "\u0003") {          // ctrl-C
-      stdout.write("\n");
-      exit(130);
-    } else if (s === "\u007f" || s === "\b") {
-      buf = buf.slice(0, -1);
-    } else {
-      buf += s;
-      stdout.write("*");
+    for (const ch of chunk.toString("utf8")) {
+      if (ch === "\r" || ch === "\n") {
+        stdin.removeListener("data", on);
+        if (tty) stdin.setRawMode(false);
+        stdout.write("\n");
+        return res(buf.trim());
+      }
+      if (ch === "\u0003") { stdout.write("\n"); exit(130); }          // ctrl-C
+      if (ch === "\u007f" || ch === "\b") {
+        if (buf) { buf = buf.slice(0, -1); stdout.write("\b \b"); }
+      } else {
+        buf += ch;
+        stdout.write("*");
+      }
     }
   };
   stdin.on("data", on);
