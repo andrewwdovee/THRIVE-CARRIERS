@@ -254,6 +254,29 @@ Note the URL it prints — `https://stripe-sync.<you>.workers.dev`. Open
 Set `ALLOWED_ORIGINS` in `wrangler.toml` to the address you'll serve the app
 from, so only your own page can call the relay.
 
+### Publishing the dashboard
+
+The relay is the engine; the dashboard is a separate static site that talks to
+it. Put it online with:
+
+```bash
+npm run deploy
+```
+
+That builds and uploads to Cloudflare Pages in one step. The `--branch` flag
+in the script matters: Pages treats a deploy from any other branch as a
+preview and hands back a throwaway URL instead of your real one.
+
+Two things live outside git and don't come with a fresh clone:
+
+- `.env` — holds `VITE_RELAY_URL`. Recreate it with the address `npm run setup`
+  printed, or the build will produce a dashboard that talks to nothing.
+- Your relay's secrets, which live on Cloudflare and are never in this repo.
+
+To make a change: edit, `npm test`, then `npm run deploy`. The relay only needs
+redeploying (`cd relay && npx wrangler deploy`) when something under `relay/`
+changes.
+
 ### 2. Point Stripe at it
 
 In the Stripe Dashboard: **Developers → Webhooks → Add endpoint**.

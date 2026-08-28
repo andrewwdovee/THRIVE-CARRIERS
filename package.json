@@ -10,6 +10,7 @@
     "lint": "eslint src --ext .js,.jsx",
     "test": "node test/run.mjs",
     "artifact": "vite build && node scripts/inline.mjs",
+    "deploy": "vite build && npx wrangler pages deploy dist --project-name lead-tech-fulfillment --branch LeadTechBackend",
     "setup": "node scripts/setup-stripe.mjs"
   },
   "dependencies": {
