@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import {
   BD, CARD, IN, BTN, PRI, M, F, W, c, ST, sm, MISS, mm, SETTLED, DEF, DAY,
-  paidOk, cash, freq, L, Field, HOUR, dk, grab, dueOf, effHours,
+  paidOk, cash, freq, L, Field, HOUR, dk, grab, dueOf, effHours, blockedBy,
 } from "./lib/shared";
 import { useBoard, appendOrders } from "./lib/useBoard";
 import { pullStripe, relayHealth, syncEndpoint } from "./lib/sync";
@@ -79,8 +79,19 @@ export default function Dashboard({ me: account, onSignOut }) {
      past-due rule re-dates every order already on the board. Everything
      downstream — the lists, By product, Reports, the CSV — reads this. */
   const orders = useMemo(
-    () => st.orders.map((o) => ({ ...o, dueAt: dueOf(o, products, cfg) })),
-    [st.orders, products, cfg.pastDueHours],
+    () => st.orders
+      /* Hidden, not deleted: switching a rule off brings these straight back.
+         One place, so the lists, By product, Reports and the CSV all agree
+         about what is on the board. */
+      .filter((o) => !blockedBy(o, st.blocks))
+      .map((o) => ({ ...o, dueAt: dueOf(o, products, cfg) })),
+    [st.orders, st.blocks, products, cfg.pastDueHours],
+  );
+  /* What the rules are currently hiding, so Settings can show it rather than
+     leaving someone to wonder where an order went. */
+  const hidden = useMemo(
+    () => st.orders.filter((o) => blockedBy(o, st.blocks)),
+    [st.orders, st.blocks],
   );
 
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 3e4); return () => clearInterval(t); }, []);
@@ -421,7 +432,7 @@ export default function Dashboard({ me: account, onSignOut }) {
                 refundTypes={st.refundTypes} refunds={refunds} />
           : tab === "reports" ? <Reports orders={orders} products={products} n={now} flash={flash}
                 refunds={refunds} refundTypes={st.refundTypes} />
-          : <SettingsView cfg={cfg} products={products} orders={orders} customers={st.customers} saveCfg={saveCfg} commit={commit}
+          : <SettingsView cfg={cfg} products={products} orders={orders} customers={st.customers} blocks={st.blocks} hidden={hidden} saveCfg={saveCfg} commit={commit}
               sync={{ busy: sync.busy, at: sync.at, error: sync.error, added: sync.added }}
               onSync={() => runSync({ backfill: true })} addOrders={addOrders} flash={flash} live={syncEndpoint(cfg) ? live : null} />}
       </main>

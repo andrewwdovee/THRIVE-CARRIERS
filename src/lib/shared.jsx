@@ -80,6 +80,70 @@ export const SEED = [
 export const DEF = { syncUrl: "", syncToken: "", autoSyncMinutes: 5, notifyWebhook: "", notifyEmail: "", notifyPhone: "",
   notifyBrowser: true, notifySound: true, notifyOverdue: true, archiveAfterDays: 14, pastDueHours: 12 };
 
+/* ── blocked payments ──
+   Not every charge is work. A test payment, a five-dollar nuisance
+   subscription, an internal card — they arrive like everything else and bury
+   the orders that matter. A rule hides them.
+
+   Hiding, never deleting: switching a rule off brings back everything still
+   on the board. What a rule stops at the door is a different matter — see
+   appendOrders — so each rule keeps a count of what it caught, because a
+   filter you can't see the effect of is how an order goes missing. */
+export const BLOCK_FIELDS = [
+  ["subscriptionId", "Subscription ID", "text"],
+  ["paymentId", "Payment ID", "text"],
+  ["chargeId", "Charge ID", "text"],
+  ["customerId", "Stripe customer ID", "text"],
+  ["stripePriceId", "Price or product ID", "text"],
+  ["customer", "Customer name", "text"],
+  ["email", "Email", "text"],
+  ["productName", "Product name", "text"],
+  ["amount", "Amount", "money"],
+];
+export const bf = (id) => BLOCK_FIELDS.find((f) => f[0] === id) || BLOCK_FIELDS[0];
+
+export const BLOCK_OPS = [
+  ["is", "is exactly", "both"],
+  ["contains", "contains", "text"],
+  ["lt", "is less than", "money"],
+  ["gt", "is more than", "money"],
+];
+export const opsFor = (field) => {
+  const kind = bf(field)[2];
+  return BLOCK_OPS.filter(([, , k]) => k === "both" || k === kind);
+};
+
+/* Amounts are held in cents but typed in dollars, so a rule saying "under
+   $5" has to compare against 500 rather than 5. */
+export function blockHits(order, rule) {
+  if (!rule || rule.enabled === false || !String(rule.value ?? "").trim()) return false;
+  const raw = order?.[rule.field];
+  if (bf(rule.field)[2] === "money") {
+    const cents = Number(raw);
+    const want = Math.round(Number(rule.value) * 100);
+    if (!Number.isFinite(cents) || !Number.isFinite(want)) return false;
+    return rule.op === "lt" ? cents < want : rule.op === "gt" ? cents > want : cents === want;
+  }
+  const a = String(raw ?? "").trim().toLowerCase();
+  const b = String(rule.value).trim().toLowerCase();
+  if (!a) return false;
+  return rule.op === "contains" ? a.includes(b) : a === b;
+}
+
+/* The rule that catches this order, or null. Returned rather than a boolean
+   so a screen can say which rule is responsible. */
+export function blockedBy(order, blocks) {
+  for (const r of blocks || []) if (blockHits(order, r)) return r;
+  return null;
+}
+
+export const describeBlock = (r) => {
+  const [, label, kind] = bf(r.field);
+  const op = (BLOCK_OPS.find(([id]) => id === r.op) || BLOCK_OPS[0])[1];
+  const v = kind === "money" ? cash(Math.round(Number(r.value) * 100)) : r.value;
+  return `${label} ${op} ${v}`;
+};
+
 /* ── customers ──
    Stripe knows who paid; it doesn't know who to credit. A refund for an
    individual call is issued to an agent who may never appear on a payment

@@ -9,7 +9,7 @@ const out = await build({
 });
 const tmp = new URL("../.shared.built.mjs", import.meta.url).pathname;
 writeFileSync(tmp, out.outputFiles[0].text);
-const { normalize, match, SEED, COLS, effHours, dueOf, DEF, HOUR, custName, findCustomers } = await import(tmp);
+const { normalize, match, SEED, COLS, effHours, dueOf, DEF, HOUR, custName, findCustomers, blockHits, blockedBy, opsFor, describeBlock } = await import(tmp);
 
 
 let pass = 0, fail = 0;
@@ -134,6 +134,46 @@ ok("matches on Stripe id", findCustomers(BOOK, "cus_2")[0].id === "c2");
 ok("case doesn't matter", findCustomers(BOOK, "MARCUS")[0].id === "c2");
 ok("no match is empty, not everything", findCustomers(BOOK, "zzz").length === 0);
 ok("an empty book doesn't throw", findCustomers(undefined, "x").length === 0);
+
+// 11. Blocking nuisance payments
+console.log("\nblock rules:");
+const ORD = { subscriptionId: "sub_nuisance", paymentId: "pi_9", chargeId: "ch_9",
+  customerId: "cus_9", stripePriceId: "price_x", customer: "Test Account",
+  email: "qa@internal.co", productName: "Individual Call", amount: 350 };
+
+ok("exact id blocks", blockHits(ORD, { field: "subscriptionId", op: "is", value: "sub_nuisance" }));
+ok("a different id doesn't", !blockHits(ORD, { field: "subscriptionId", op: "is", value: "sub_other" }));
+ok("case and padding don't matter", blockHits(ORD, { field: "subscriptionId", op: "is", value: "  SUB_NUISANCE " }));
+ok("contains matches part of it", blockHits(ORD, { field: "email", op: "contains", value: "internal" }));
+ok("contains isn't the same as is", !blockHits(ORD, { field: "email", op: "is", value: "internal" }));
+
+/* The rule is typed in dollars; the order is held in cents. Comparing them
+   raw would make "under $5" hide everything under five dollars a hundred
+   times over. */
+ok("$5 means 500 cents", blockHits(ORD, { field: "amount", op: "lt", value: "5" }));
+ok("and $3 does not", !blockHits(ORD, { field: "amount", op: "lt", value: "3" }));
+ok("more-than works too", blockHits(ORD, { field: "amount", op: "gt", value: "1" }));
+ok("an exact amount matches", blockHits(ORD, { field: "amount", op: "is", value: "3.50" }));
+
+ok("a disabled rule catches nothing", !blockHits(ORD, { field: "subscriptionId", op: "is", value: "sub_nuisance", enabled: false }));
+ok("an empty value catches nothing", !blockHits(ORD, { field: "subscriptionId", op: "is", value: "  " }));
+ok("a missing field on the order is not a match",
+   !blockHits({ amount: 350 }, { field: "subscriptionId", op: "is", value: "sub_nuisance" }));
+/* An order with no subscription must not be caught by a "contains" rule
+   matching the empty string. */
+ok("blank never matches by accident",
+   !blockHits({ subscriptionId: "" }, { field: "subscriptionId", op: "contains", value: "sub" }));
+
+ok("blockedBy names the rule that caught it",
+   blockedBy(ORD, [{ id: "r1", field: "email", op: "contains", value: "nope" },
+                   { id: "r2", field: "amount", op: "lt", value: "5" }])?.id === "r2");
+ok("blockedBy is null when nothing matches", blockedBy(ORD, [{ id: "r1", field: "email", op: "is", value: "x" }]) === null);
+ok("no rules, nothing blocked", blockedBy(ORD, []) === null && blockedBy(ORD, undefined) === null);
+
+ok("money fields don't offer 'contains'", !opsFor("amount").some(([id]) => id === "contains"));
+ok("text fields don't offer 'less than'", !opsFor("email").some(([id]) => id === "lt"));
+ok("a rule describes itself in dollars", /\$3\.50/.test(describeBlock({ field: "amount", op: "is", value: "3.50" })),
+   describeBlock({ field: "amount", op: "is", value: "3.50" }));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { KEY, SEED, SEED_REFUND_TYPES, DEF, HOUR, uid } from "./shared";
+import { KEY, SEED, SEED_REFUND_TYPES, DEF, HOUR, uid, blockedBy } from "./shared";
 import { storage } from "./storage";
 
 /* The shared record, and the rules for reading and writing it.
@@ -10,7 +10,7 @@ import { storage } from "./storage";
    it just read is newer than what we already have. */
 
 export function useBoard() {
-  const [st, setSt] = useState({ orders: [], products: SEED, refundTypes: SEED_REFUND_TYPES, refunds: [], customers: [], settings: DEF, updatedAt: 0 });
+  const [st, setSt] = useState({ orders: [], products: SEED, refundTypes: SEED_REFUND_TYPES, refunds: [], customers: [], blocks: [], settings: DEF, updatedAt: 0 });
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
   const dirty = useRef(false), lu = useRef(0), R = useRef(st);
@@ -22,7 +22,7 @@ export function useBoard() {
       if (r?.value) {
         const p = JSON.parse(r.value);
         if (!silent || (p.updatedAt || 0) > lu.current) {
-          setSt({ products: SEED, refundTypes: SEED_REFUND_TYPES, refunds: [], customers: [], settings: DEF, orders: [], ...p });
+          setSt({ products: SEED, refundTypes: SEED_REFUND_TYPES, refunds: [], customers: [], blocks: [], settings: DEF, orders: [], ...p });
           lu.current = p.updatedAt || 0;
         }
       }
@@ -57,7 +57,7 @@ export function useBoard() {
         const cur = await storage.get(KEY, true);
         const remote = cur?.value ? JSON.parse(cur.value) : null;
         if (remote && (remote.updatedAt || 0) > base) {
-          toSave = fn({ products: SEED, refundTypes: SEED_REFUND_TYPES, refunds: [], customers: [], settings: DEF, orders: [], ...remote });
+          toSave = fn({ products: SEED, refundTypes: SEED_REFUND_TYPES, refunds: [], customers: [], blocks: [], settings: DEF, orders: [], ...remote });
           toSave.updatedAt = Date.now();
           lu.current = toSave.updatedAt; R.current = toSave; setSt(toSave);
         }
@@ -112,7 +112,18 @@ function fold(drafts) {
    of an existing order is updated in place. Without that, a refund issued in
    Stripe would never appear on the board at all. */
 export function appendOrders(x, all) {
-  const drafts = fold(all);
+  /* A blocked payment never becomes an order. Filtering only on the way out
+     would work, but the board would still fill up with records nobody wants,
+     and every list would pay to skip them again. The count is kept so a rule
+     can say what it has caught — a filter whose effect is invisible is how an
+     order goes missing without anyone noticing. */
+  const blocks = x.blocks || [];
+  const caught = new Map();
+  const drafts = fold(all).filter((d) => {
+    const r = blocks.length ? blockedBy(d, blocks) : null;
+    if (r) caught.set(r.id, (caught.get(r.id) || 0) + 1);
+    return !r;
+  });
   const byExternal = new Map(x.orders.map((o) => [o.externalId, o]).filter(([k]) => k));
   const updates = new Map();
   for (const d of drafts) {
@@ -160,5 +171,11 @@ export function appendOrders(x, all) {
   const orders = updates.size
     ? x.orders.map((o) => (updates.has(o.id) ? { ...o, ...updates.get(o.id) } : o))
     : x.orders;
-  return { next: { ...x, orders: [...added, ...orders] }, added, updated: updates.size };
+  const nextBlocks = caught.size
+    ? blocks.map((r) => (caught.has(r.id) ? { ...r, hits: (r.hits || 0) + caught.get(r.id), lastHit: Date.now() } : r))
+    : blocks;
+  return {
+    next: { ...x, orders: [...added, ...orders], ...(caught.size ? { blocks: nextBlocks } : null) },
+    added, updated: updates.size, blocked: [...caught.values()].reduce((a, b) => a + b, 0),
+  };
 }

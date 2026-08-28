@@ -200,6 +200,33 @@ ok("two events in one poll make one order", folded.next.orders.length === 1, fol
 ok("and the folded row keeps the product", folded.next.orders[0].productName === "Google Calls Subscription",
    folded.next.orders[0].productName);
 
-console.log(`\n${pass} passed, ${fail} failed`);
 
+/* ── blocked payments never become orders ── */
+console.log("\nblock rules stop clutter at the door:");
+const RULES = [{ id: "b1", field: "subscriptionId", op: "is", value: "sub_junk", note: "test sub" }];
+const base = { orders: [], products: SEED, refunds: [], customers: [], blocks: RULES, settings: {} };
+const wanted = { externalId: "pi_keep", subscriptionId: "sub_real", productId: "p_gc", amount: 49700, receivedAt: Date.now() };
+const junk = { externalId: "pi_junk", subscriptionId: "sub_junk", productId: "p_gc", amount: 500, receivedAt: Date.now() };
+
+const blk1 = appendOrders(base, [wanted, junk]);
+ok("only the real payment lands", blk1.next.orders.length === 1, blk1.next.orders.length);
+ok("and it's the right one", blk1.next.orders[0].externalId === "pi_keep");
+ok("the block is counted", blk1.blocked === 1, blk1.blocked);
+ok("the rule records what it caught", blk1.next.blocks[0].hits === 1, blk1.next.blocks[0]);
+
+/* Stripe retries deliveries. A rule must not inflate its count every time
+   the same blocked payment arrives again — but it must keep blocking it. */
+const blk2 = appendOrders(blk1.next, [junk]);
+ok("a retry is still blocked", blk2.next.orders.length === 1, blk2.next.orders.length);
+ok("counting keeps going up", blk2.next.blocks[0].hits === 2, blk2.next.blocks[0].hits);
+
+/* Turning a rule off has to let the next one through. */
+const off = { ...blk1.next, blocks: [{ ...RULES[0], enabled: false }] };
+ok("a disabled rule lets it in", appendOrders(off, [junk]).next.orders.length === 2);
+
+/* No rules at all must not change anything. */
+const none = appendOrders({ ...base, blocks: [] }, [wanted, junk]);
+ok("no rules, nothing blocked", none.next.orders.length === 2 && none.blocked === 0);
+
+console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

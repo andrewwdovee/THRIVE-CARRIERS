@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Plus, RefreshCw, Download, X, Package, User, Bell, Link2, Users, Sun, Moon, Monitor,
-  ArrowUpDown, FlaskConical, Settings as GearIcon, AlarmClock,
+  ArrowUpDown, FlaskConical, Settings as GearIcon, AlarmClock, Ban, Eye,
 } from "lucide-react";
 import {
   BD, CARD, PANEL, IN, BTN, PRI, M, F, W, TD, P, c, sm, DEF, DAY,
   uid, paidOk, brief, dk, dl, sod, cash, L, Field, Confirm, grab, grabTrouble, dump,
   THEMES, useTheme, custName, findCustomers,
+  BLOCK_FIELDS, BLOCK_OPS, bf, opsFor, blockHits, blockedBy, describeBlock,
 } from "../lib/shared";
 import { buildSamples } from "../lib/samples";
 
@@ -588,7 +589,170 @@ export function CustomerForm({ draft, customers, onCancel, onSave }) {
   );
 }
 
-export function Settings({ cfg, products, orders, customers, saveCfg, commit, sync, onSync, addOrders, flash, live }) {
+/* ── payments you don't want to see ──
+   A test charge, a five-dollar nuisance subscription, an internal card. They
+   arrive like any other payment and bury the orders that matter. A rule hides
+   them — and says how many it has caught, because a filter whose effect is
+   invisible is how an order goes missing. */
+export function BlockRules({ blocks, hidden, orders, commit, flash }) {
+  const [draft, setDraft] = useState(null);
+  const [peek, setPeek] = useState(false);
+  const rules = blocks || [];
+
+  const toggle = (id) => commit((x) => ({
+    ...x, blocks: (x.blocks || []).map((r) => (r.id === id ? { ...r, enabled: r.enabled === false } : r)),
+  }), "Rule updated");
+  const drop = (id) => commit((x) => ({ ...x, blocks: (x.blocks || []).filter((r) => r.id !== id) }), "Rule removed");
+
+  return (
+    <div className={`${CARD} p-4`}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className={`flex items-center gap-2 text-sm font-semibold ${W}`}>
+          <Ban className="h-4 w-4 text-blue-600 dark:text-blue-400" /> Blocked payments
+        </h3>
+        <button onClick={() => setDraft({ field: "subscriptionId", op: "is", value: "", note: "" })}
+          className={`${BTN} flex items-center gap-1.5`}><Plus className="h-3.5 w-3.5" /> Add rule</button>
+      </div>
+      <p className={`mt-1 text-sm ${M}`}>
+        Payments matching a rule never reach the board. Nothing is deleted — switch a rule off and anything
+        still on the board comes back.
+      </p>
+
+      <div className={`mt-3 overflow-hidden rounded-lg border ${BD}`}>
+        {!rules.length && <p className={`px-3 py-6 text-center text-sm ${M}`}>No rules. Every payment reaches the board.</p>}
+        <div className="divide-y divide-slate-200 dark:divide-slate-800">
+          {rules.map((r) => {
+            const on = r.enabled !== false;
+            return (
+              <div key={r.id} className={`flex items-center gap-3 px-3 py-2 ${on ? "" : "opacity-50"}`}>
+                <button onClick={() => toggle(r.id)} title={on ? "Turn this rule off" : "Turn this rule on"}
+                  className={`relative h-5 w-9 shrink-0 rounded-full ${on ? "bg-blue-600" : "bg-slate-300 dark:bg-slate-700"}`}>
+                  <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${on ? "left-[18px]" : "left-0.5"}`} />
+                </button>
+                <div className="min-w-0 flex-1">
+                  <div className={`truncate text-sm ${W}`}>{describeBlock(r)}</div>
+                  <div className={`truncate text-xs ${F}`}>
+                    {r.note ? `${r.note} · ` : ""}{r.hits ? `${r.hits} kept off the board` : "nothing caught yet"}
+                  </div>
+                </div>
+                <div className="shrink-0"><Confirm label="Remove this rule" onConfirm={() => drop(r.id)} /></div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {!!hidden?.length && (
+        <div className={`mt-3 rounded-lg border-l-4 border-amber-500 ${PANEL} py-2 pl-3 pr-2`}>
+          <button onClick={() => setPeek(!peek)} className={`flex items-center gap-1.5 text-sm ${W}`}>
+            <Eye className="h-3.5 w-3.5" />
+            {hidden.length} order{hidden.length === 1 ? "" : "s"} on the board {hidden.length === 1 ? "is" : "are"} hidden by these rules
+          </button>
+          {peek && (
+            <ul className={`mt-2 max-h-48 space-y-1 overflow-auto text-xs ${M}`}>
+              {hidden.map((o) => (
+                <li key={o.id} className="truncate">
+                  {o.productName} — {o.customer} — {cash(o.amount)}
+                  <span className={F}> · {describeBlock(blockedBy(o, blocks))}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {draft && <BlockForm draft={draft} orders={orders} onCancel={() => setDraft(null)}
+        onSave={(r) => {
+          commit((x) => ({ ...x, blocks: [...(x.blocks || []), r] }), "Rule added");
+          setDraft(null);
+        }} />}
+    </div>
+  );
+}
+
+/* Shows what the rule would catch before it is saved. Typing "5" into an
+   amount rule and meaning "$5" while it quietly hides every order under
+   five hundred dollars is the mistake worth preventing. */
+function BlockForm({ draft, orders, onCancel, onSave }) {
+  const [r, setR] = useState({ enabled: true, ...draft });
+  const kind = bf(r.field)[2];
+  const ops = opsFor(r.field);
+  const value = String(r.value ?? "").trim();
+  const bad = !value ? "Type what to match on."
+    : kind === "money" && !Number.isFinite(Number(value)) ? "That isn't a number."
+      : "";
+  const would = useMemo(
+    () => (bad ? [] : (orders || []).filter((o) => blockHits(o, { ...r, enabled: true }))),
+    [orders, r, bad],
+  );
+
+  /* Changing the field can strand an operator the new field doesn't offer. */
+  const pickField = (field) => {
+    const allowed = opsFor(field).map(([id]) => id);
+    setR((x) => ({ ...x, field, op: allowed.includes(x.op) ? x.op : allowed[0] }));
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 p-4 dark:bg-black/75" onClick={onCancel}>
+      <div className={`w-full max-w-lg ${CARD} p-4`} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h3 className={`text-sm font-semibold ${W}`}>Block a payment</h3>
+          <button onClick={onCancel} className={`rounded p-1 ${F} hover:bg-slate-200 dark:hover:bg-slate-800`}><X className="h-4 w-4" /></button>
+        </div>
+
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <Field label="Match on">
+            <select className={IN} value={r.field} onChange={(e) => pickField(e.target.value)}>
+              {BLOCK_FIELDS.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+            </select>
+          </Field>
+          <Field label="That">
+            <select className={IN} value={r.op} onChange={(e) => setR({ ...r, op: e.target.value })}>
+              {ops.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+            </select>
+          </Field>
+          <Field label={kind === "money" ? "Amount in dollars" : "Value"}>
+            <input autoFocus className={`${IN} ${kind === "money" ? "" : "font-mono text-xs"}`}
+              placeholder={kind === "money" ? "5.00" : bf(r.field)[0] === "subscriptionId" ? "sub_…" : ""}
+              value={r.value} onChange={(e) => setR({ ...r, value: e.target.value })} />
+          </Field>
+        </div>
+
+        <div className="mt-3">
+          <Field label="Why" hint="Optional, but the next person to read this list will want to know.">
+            <input className={IN} placeholder="e.g. internal test card" value={r.note || ""}
+              onChange={(e) => setR({ ...r, note: e.target.value })} />
+          </Field>
+        </div>
+
+        <div className={`mt-3 rounded-lg border-l-4 ${would.length ? "border-amber-500" : "border-slate-300 dark:border-slate-700"} ${PANEL} py-2 pl-3 pr-2`}>
+          <p className={`text-sm ${W}`}>
+            {bad ? "Nothing to preview yet."
+              : would.length ? `Hides ${would.length} order${would.length === 1 ? "" : "s"} already on the board.`
+                : "Matches nothing on the board right now. It still applies to payments that arrive later."}
+          </p>
+          {!!would.length && (
+            <ul className={`mt-1 max-h-32 space-y-0.5 overflow-auto text-xs ${M}`}>
+              {would.slice(0, 12).map((o) => (
+                <li key={o.id} className="truncate">{o.productName} — {o.customer} — {cash(o.amount)}</li>
+              ))}
+              {would.length > 12 && <li className={F}>and {would.length - 12} more</li>}
+            </ul>
+          )}
+        </div>
+
+        <div className="mt-4 flex justify-end gap-2">
+          <button onClick={onCancel} className={BTN}>Cancel</button>
+          <button disabled={!!bad} title={bad || undefined}
+            onClick={() => onSave({ id: uid("blk"), ...r, value: value, hits: 0, createdAt: Date.now() })}
+            className={`${PRI} disabled:cursor-not-allowed disabled:opacity-40`}>Add rule</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function Settings({ cfg, products, orders, customers, blocks, hidden, saveCfg, commit, sync, onSync, addOrders, flash, live }) {
   const [theme, setTheme] = useTheme();
   const [l, setL] = useState(cfg);
   useEffect(() => setL(cfg), [cfg.syncUrl, cfg.autoSyncMinutes, cfg.archiveAfterDays, cfg.pastDueHours]);
@@ -649,6 +813,8 @@ export function Settings({ cfg, products, orders, customers, saveCfg, commit, sy
         </div>
 
         <CustomerBook customers={customers} commit={commit} flash={flash} />
+
+        <BlockRules blocks={blocks} hidden={hidden} orders={orders} commit={commit} flash={flash} />
 
         <div className={`${CARD} p-4`}>
           <h3 className={`flex items-center gap-2 text-sm font-semibold ${W}`}><Bell className="h-4 w-4 text-blue-600 dark:text-blue-400" /> Notifications</h3>

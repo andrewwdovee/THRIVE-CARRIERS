@@ -276,6 +276,28 @@ losing the half-filled form behind it. Nothing is forced: an unsaved name
 still records fine - picking from the list only keeps the spelling consistent,
 which is what makes "who are we refunding most" answerable.
 
+### Blocked payments
+
+Settings -> Blocked payments hides charges that aren't work: a test card, a
+nuisance subscription, an internal account. A rule matches one field
+(subscription/payment/charge/customer/price ID, customer name, email, product
+name, or amount) with `is`, `contains`, or — for amounts — `less than` /
+`more than`.
+
+Two things matter about the implementation:
+
+- **Amounts are typed in dollars and stored in cents.** `blockHits` converts,
+  so "under $5" is 500, not 5. Comparing raw would hide a hundred times more
+  than intended.
+- **Existing orders are hidden, not deleted** — filtered once in `Dashboard`
+  where `orders` is derived, so the lists, By product, Reports and the CSV all
+  agree. Switching a rule off brings them straight back. What a rule stops in
+  `appendOrders` never joins the board at all, so each rule keeps a `hits`
+  count and Settings lists what is currently hidden: a filter whose effect is
+  invisible is how an order goes missing.
+
+The add-rule form previews which orders a rule would hide before it is saved.
+
 ### Publishing the dashboard
 
 The relay is the engine; the dashboard is a separate static site that talks to
