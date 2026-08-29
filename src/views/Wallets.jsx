@@ -13,7 +13,11 @@ import { CustomerForm } from "./admin";
    worth watching per person is not one week's wipe but the pattern: somebody
    wiped for a lot every week is being sold more than they can use, which is
    a conversation to have before they work it out themselves. */
-export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAddCustomer }) {
+export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAddCustomer, onRemoveCustomer }) {
+  /* Two boxes, not one. The weekly table and the totals table are different
+     jobs — filtering one from a box sitting in the other card is a search
+     nobody would think to look for. */
+  const [wq, setWq] = useState("");
   const [q, setQ] = useState("");
   const [adding, setAdding] = useState(null);
   const [week, setWeek] = useState(() => satOf(Date.now()));
@@ -31,6 +35,7 @@ export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAdd
     return by;
   }, [rows, week]);
 
+  const forWeek = useMemo(() => findCustomers(users, wq), [users, wq]);
   const totals = useMemo(() => walletTotals(users, rows), [users, rows]);
   const shown = useMemo(() => {
     const hits = findCustomers(users, q);
@@ -47,9 +52,19 @@ export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAdd
      which is different from wiped for nothing, and neither should overwrite
      a figure already recorded for that week. */
   const pending = Object.entries(entry).filter(([, v]) => String(v).trim() !== "");
+  /* Typing an amount, then searching for somebody else, hides the figure but
+     doesn't discard it — so say how many are about to be saved out of sight
+     rather than letting the count on the button look wrong. */
+  const hiddenPending = useMemo(() => {
+    const seen = new Set(forWeek.map((u) => u.id));
+    return pending.filter(([id]) => !seen.has(id)).length;
+  }, [pending, forWeek]);
   const saveWeek = () => {
     const made = pending.map(([userId, v]) => ({
       id: uid("wp"), userId, amount: Math.round(Number(v) * 100), at: week, recordedAt: Date.now(),
+      /* The name as it stood when the figure was entered. Removing somebody
+         later must not turn their history into a row of "Unknown". */
+      name: custName(users.find((u) => u.id === userId)),
     })).filter((w) => Number.isFinite(w.amount) && w.amount >= 0);
     if (!made.length) return;
     onRecord(made, week);
@@ -109,7 +124,11 @@ export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAdd
           </div>
         ) : (
           <>
-            <div className={`mt-3 overflow-hidden rounded-lg border ${BD}`}>
+            <input value={wq} onChange={(e) => setWq(e.target.value)}
+              placeholder={`Search ${users.length} ${users.length === 1 ? "person" : "people"}…`}
+              className={`${IN} mt-3`} />
+
+            <div className={`mt-2 overflow-hidden rounded-lg border ${BD}`}>
               <div className="max-h-96 overflow-auto">
                 <table className="w-full text-sm">
                   <thead className={`sticky top-0 z-10 bg-white dark:bg-slate-900`}>
@@ -119,7 +138,10 @@ export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAdd
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                    {findCustomers(users, q).map((u) => {
+                    {!forWeek.length && (
+                      <tr><td colSpan={2} className={`px-3 py-6 text-center text-sm ${M}`}>Nobody matches “{wq}”.</td></tr>
+                    )}
+                    {forWeek.map((u) => {
                       const already = thisWeek.get(u.id);
                       return (
                         <tr key={u.id}>
@@ -161,6 +183,11 @@ export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAdd
                   {cash(pending.reduce((s, [, v]) => s + Math.round(Number(v) * 100 || 0), 0))} for week of {weekLabel(week)}
                 </span>
               )}
+              {hiddenPending > 0 && (
+                <span className="text-sm text-amber-600 dark:text-amber-400">
+                  {hiddenPending} more typed for {hiddenPending === 1 ? "somebody" : "people"} the search is hiding — {hiddenPending === 1 ? "it saves" : "they save"} too.
+                </span>
+              )}
               {!!saved && (
                 <span className="inline-flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400">
                   <Check className="h-4 w-4" /> Saved {saved}
@@ -185,9 +212,14 @@ export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAdd
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or email…" className={`${IN} mt-3`} />
         )}
 
+        <p className={`mt-2 text-xs ${F}`}>
+          Removing somebody takes them off this list and out of Customers. Money already recorded stays on the week
+          it was wiped, so past totals don't change underneath you.
+        </p>
+
         <div className={`mt-3 overflow-hidden rounded-lg border ${BD}`}>
           {!shown.length && <p className={`px-3 py-6 text-center text-sm ${M}`}>
-            {users.length ? `Nobody matches "${q}".` : "No people yet."}
+            {users.length ? `Nobody matches “${q}”.` : "No people yet."}
           </p>}
           {!!shown.length && (
             <div className="overflow-x-auto">
@@ -199,6 +231,7 @@ export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAdd
                     <th className={`px-3 py-2 text-right text-xs font-medium uppercase tracking-wide ${F}`}>Weeks</th>
                     <th className={`px-3 py-2 text-right text-xs font-medium uppercase tracking-wide ${F}`}>Average</th>
                     <th className={`px-3 py-2 text-right text-xs font-medium uppercase tracking-wide ${F}`}>Last</th>
+                    <th className="w-10 px-3 py-2"><span className="sr-only">Remove</span></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -212,6 +245,9 @@ export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAdd
                       <td className={`${TD} text-right ${M}`}>{u.count || "—"}</td>
                       <td className={`${TD} text-right ${M}`}>{u.count ? cash(u.average) : "—"}</td>
                       <td className={`px-3 py-2 text-right text-xs ${F}`}>{u.lastAt ? weekLabel(satOf(u.lastAt)) : "never"}</td>
+                      <td className="px-3 py-2 text-right">
+                        <Confirm label={`Remove ${custName(u) || "this person"}`} onConfirm={() => onRemoveCustomer(u.id)} />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -235,7 +271,9 @@ function WalletWeeks({ weeks, wipes, users, onRemove }) {
   const [open, setOpen] = useState(null);
   const desc = [...weeks].reverse();
   const peak = Math.max(1, ...weeks.map((w) => w.total));
-  const name = (id) => custName(users.find((u) => u.id === id)) || "Unknown";
+  /* Each wipe carries the name it was entered under, so removing somebody
+     doesn't turn last month's history into a column of "Unknown". */
+  const name = (r) => custName(users.find((u) => u.id === r.userId)) || r.name || "Removed person";
 
   return (
     <div className={`${CARD} p-4`}>
@@ -263,7 +301,7 @@ function WalletWeeks({ weeks, wipes, users, onRemove }) {
                 <ul className={`ml-2 mt-1 space-y-0.5 border-l pl-3 ${BD}`}>
                   {rows.map((r) => (
                     <li key={r.id} className="flex items-center gap-2 py-0.5">
-                      <span className={`min-w-0 flex-1 truncate text-sm ${M}`}>{name(r.userId)}</span>
+                      <span className={`min-w-0 flex-1 truncate text-sm ${M}`}>{name(r)}</span>
                       <span className={`font-mono text-sm ${W}`}>{cash(r.amount)}</span>
                       <Confirm label="Remove this figure" onConfirm={() => onRemove(r.id)} />
                     </li>

@@ -312,6 +312,12 @@ export default function Dashboard({ me: account, onSignOut }) {
   const addCustomer = useCallback((cst) => {
     commit((x) => ({ ...x, customers: [...(x.customers || []), cst] }), "Customer added");
   }, [commit]);
+  /* The person goes; the money they were wiped for stays on the week it
+     happened. A past weekly total that changes because of something done
+     today is a number nobody can trust. */
+  const removeCustomer = useCallback((id) => {
+    commit((x) => ({ ...x, customers: (x.customers || []).filter((c) => c.id !== id) }), "Person removed");
+  }, [commit]);
   const recordRefund = useCallback((r) => {
     commit((x) => ({ ...x, refunds: [{ ...r, source: "manual" }, ...(x.refunds || [])] }), "Refund recorded");
   }, [commit]);
@@ -423,7 +429,8 @@ export default function Dashboard({ me: account, onSignOut }) {
                 empty="Nothing delivered yet. Orders land here once someone stops the clock." />
           : tab === "wallets"
             ? <Wallets customers={st.customers} wipes={st.wipes} n={now}
-                onRecord={recordWipes} onRemove={removeWipe} onAddCustomer={addCustomer} />
+                onRecord={recordWipes} onRemove={removeWipe}
+                onAddCustomer={addCustomer} onRemoveCustomer={removeCustomer} />
           : tab === "products-view" ? <ByProduct products={products} orders={grouped} now={now} onOpen={setOpen} onMove={move} Card={Card} settings={cfg} />
           : tab === "catalog" ? <Products products={products} orders={orders} commit={commit} house={cfg.pastDueHours}
                 refundTypes={st.refundTypes} refunds={refunds} />

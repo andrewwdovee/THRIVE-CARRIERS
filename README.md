@@ -279,6 +279,10 @@ zero.
   on last night's wipe instead of splitting the week in two.
 - **One record per person per week.** Saving the same Saturday again corrects
   the figure rather than adding a second one nobody can see.
+- **A removed person keeps their history.** Each wipe stores the name it was
+  entered under, so deleting somebody doesn't turn past weeks into a column of
+  "Unknown", and their money stays on the week it was wiped — a past total
+  that changes because of something done today is one nobody can trust.
 - **People are the Customers list**, not a second directory — the agents you
   refund and the agents who hold wallets are the same people, and one person
   in two lists with two spellings is the problem that book exists to solve.
