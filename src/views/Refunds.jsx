@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { Plus, X, Undo2, TrendingDown, UserPlus } from "lucide-react";
 import {
   BD, CARD, IN, BTN, PRI, M, F, W, c, cash, uid, L, Field, Confirm,
-  custName, findCustomers,
+  custName, findCustomers, SCROLL,
 } from "../lib/shared";
 import { CheckCircle2, Circle } from "lucide-react";
 import { CustomerForm } from "./admin";
@@ -137,7 +137,7 @@ export default function Refunds({ refunds, products, orders, refundTypes, custom
               </span>
             </button>
 
-            <div className="divide-y divide-slate-200 dark:divide-slate-800 border-t border-slate-200 dark:border-slate-800">
+            <div className={`divide-y divide-slate-200 dark:divide-slate-800 border-t border-slate-200 dark:border-slate-800 ${SCROLL}`}>
               {(open ? g.rows : g.rows.slice(0, 3)).map((r) => (
                 <RefundRow key={r.id} r={r} type={typeOf(r)} onOpen={() => setAdding({ ...r, editing: true })} onRemove={onRemove} />
               ))}

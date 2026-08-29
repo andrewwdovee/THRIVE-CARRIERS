@@ -2,9 +2,10 @@ import React, { useState, useMemo } from "react";
 import { Plus, Wallet, TrendingDown, Check, X } from "lucide-react";
 import {
   BD, CARD, PANEL, IN, BTN, PRI, M, F, W, TD, cash, uid, L, Field, Confirm,
-  custName, findCustomers, satOf, weekLabel, walletTotals, walletWeeks, DAY,
+  custName, findCustomers, satOf, weekLabel, walletTotals, walletWeeks, DAY, SCROLL, STICKY,
 } from "../lib/shared";
 import { CustomerForm } from "./admin";
+import WipeLine from "./WipeLine";
 
 /* Money that never gets spent.
 
@@ -129,7 +130,7 @@ export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAdd
               className={`${IN} mt-3`} />
 
             <div className={`mt-2 overflow-hidden rounded-lg border ${BD}`}>
-              <div className="max-h-96 overflow-auto">
+              <div className={SCROLL}>
                 <table className="w-full text-sm">
                   <thead className={`sticky top-0 z-10 bg-white dark:bg-slate-900`}>
                     <tr className={`border-b ${BD} text-left`}>
@@ -222,9 +223,9 @@ export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAdd
             {users.length ? `Nobody matches “${q}”.` : "No people yet."}
           </p>}
           {!!shown.length && (
-            <div className="overflow-x-auto">
+            <div className={SCROLL}>
               <table className="w-full text-sm">
-                <thead>
+                <thead className={STICKY}>
                   <tr className={`border-b ${BD} text-left`}>
                     <th className={`px-3 py-2 text-xs font-medium uppercase tracking-wide ${F}`}>Person</th>
                     <th className={`px-3 py-2 text-right text-xs font-medium uppercase tracking-wide ${F}`}>Total wiped</th>
@@ -269,49 +270,36 @@ export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAdd
    place a wrong figure can be taken back out. */
 function WalletWeeks({ weeks, wipes, users, onRemove }) {
   const [open, setOpen] = useState(null);
-  const desc = [...weeks].reverse();
-  const peak = Math.max(1, ...weeks.map((w) => w.total));
   /* Each wipe carries the name it was entered under, so removing somebody
-     doesn't turn last month's history into a column of "Unknown". */
+     doesn't turn last month's history into a column of "Removed person". */
   const name = (r) => custName(users.find((u) => u.id === r.userId)) || r.name || "Removed person";
+  const rows = open == null ? [] : wipes.filter((x) => satOf(x.at) === open).sort((a, b) => b.amount - a.amount);
 
   return (
     <div className={`${CARD} p-4`}>
       <h3 className={`text-sm font-semibold ${W}`}>Week by week</h3>
-      <p className={`mt-0.5 text-sm ${M}`}>Newest first. Open a week to check or remove a figure.</p>
+      <p className={`mt-0.5 text-sm ${M}`}>Hover to read a week. Click one to check or remove a figure.</p>
 
-      {!desc.length && <p className={`mt-3 text-sm ${F}`}>Nothing recorded yet.</p>}
+      <WipeLine weeks={weeks} active={open} onPick={(wk) => setOpen(open === wk ? null : wk)} />
 
-      <div className="mt-3 max-h-96 space-y-1 overflow-auto">
-        {desc.map((w) => {
-          const on = open === w.week;
-          const rows = wipes.filter((x) => satOf(x.at) === w.week).sort((a, b) => b.amount - a.amount);
-          return (
-            <div key={w.week}>
-              <button onClick={() => setOpen(on ? null : w.week)}
-                className={`flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left hover:bg-slate-100 dark:hover:bg-slate-800`}>
-                <span className={`w-32 shrink-0 text-sm ${W}`}>{weekLabel(w.week)}</span>
-                <span className="h-2 flex-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-                  <span className="block h-full rounded-full bg-blue-500" style={{ width: `${(w.total / peak) * 100}%` }} />
-                </span>
-                <span className={`w-24 shrink-0 text-right font-mono text-sm ${W}`}>{cash(w.total)}</span>
-                <span className={`w-16 shrink-0 text-right text-xs ${F}`}>{w.count} {w.count === 1 ? "person" : "people"}</span>
-              </button>
-              {on && (
-                <ul className={`ml-2 mt-1 space-y-0.5 border-l pl-3 ${BD}`}>
-                  {rows.map((r) => (
-                    <li key={r.id} className="flex items-center gap-2 py-0.5">
-                      <span className={`min-w-0 flex-1 truncate text-sm ${M}`}>{name(r)}</span>
-                      <span className={`font-mono text-sm ${W}`}>{cash(r.amount)}</span>
-                      <Confirm label="Remove this figure" onConfirm={() => onRemove(r.id)} />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      {open != null && (
+        <div className={`mt-3 rounded-lg border ${BD} p-3`}>
+          <div className="flex items-baseline justify-between gap-2">
+            <span className={`text-sm font-medium ${W}`}>{weekLabel(open)}</span>
+            <button onClick={() => setOpen(null)} className={`text-xs ${F} hover:underline`}>close</button>
+          </div>
+          <ul className={`mt-1 space-y-0.5 ${SCROLL}`}>
+            {!rows.length && <li className={`py-1 text-sm ${F}`}>Nothing recorded for this week.</li>}
+            {rows.map((r) => (
+              <li key={r.id} className="flex items-center gap-2 py-0.5">
+                <span className={`min-w-0 flex-1 truncate text-sm ${M}`}>{name(r)}</span>
+                <span className={`font-mono text-sm ${W}`}>{cash(r.amount)}</span>
+                <Confirm label="Remove this figure" onConfirm={() => onRemove(r.id)} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

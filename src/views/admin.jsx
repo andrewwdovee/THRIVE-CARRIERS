@@ -5,11 +5,12 @@ import {
 } from "lucide-react";
 import {
   BD, CARD, PANEL, IN, BTN, PRI, M, F, W, TD, P, c, sm, DEF, DAY,
-  uid, paidOk, brief, dk, dl, sod, cash, L, Field, Confirm, grab, grabTrouble, dump,
+  uid, paidOk, brief, dk, dl, sod, cash, L, Field, Confirm, grab, grabTrouble, dump, SCROLL, STICKY,
   THEMES, useTheme, custName, findCustomers, walletTotals, walletWeeks, weekLabel,
   BLOCK_FIELDS, BLOCK_OPS, bf, opsFor, blockHits, blockedBy, describeBlock,
 } from "../lib/shared";
 import { buildSamples } from "../lib/samples";
+import WipeLine from "./WipeLine";
 
 /* The owner's screens: what sold, what you sell, and how it's all wired up. */
 
@@ -120,7 +121,7 @@ export function Reports({ orders, products, n, flash, refunds, refundTypes, cust
         <div className={`flex items-center justify-between border-b ${BD} bg-white dark:bg-slate-900 px-4 py-3`}>
           <h3 className={`text-sm font-semibold ${W}`}>Day by day</h3><span className={`text-xs ${F}`}>Click a column to sort</span>
         </div>
-        <div className="max-h-[26rem] overflow-auto"><table className="w-full text-sm">
+        <div className={SCROLL}><table className="w-full text-sm">
           <thead className="sticky top-0 z-10 bg-white dark:bg-slate-900"><tr className={`border-b text-left ${BD}`}>
             <Th label="Date" k="day" s={ds} set={setDs} /><Th label="Placed" k="placed" s={ds} set={setDs} />
             <Th label="Delivered" k="delivered" s={ds} set={setDs} /><Th label="Avg fulfillment" k="avg" s={ds} set={setDs} />
@@ -143,7 +144,7 @@ export function Reports({ orders, products, n, flash, refunds, refundTypes, cust
 
       <div className={`overflow-hidden rounded-xl border ${BD}`}>
         <div className={`border-b ${BD} bg-white dark:bg-slate-900 px-4 py-3`}><h3 className={`text-sm font-semibold ${W}`}>By product</h3></div>
-        <div className="max-h-[26rem] overflow-auto"><table className="w-full text-sm">
+        <div className={SCROLL}><table className="w-full text-sm">
           <thead className="sticky top-0 z-10 bg-white dark:bg-slate-900"><tr className={`border-b text-left ${BD}`}>
             <Th label="Product" k="name" s={ps} set={setPs} /><Th label="Ordered" k="count" s={ps} set={setPs} />
             <Th label="Open" k="open" s={ps} set={setPs} /><Th label="Avg fulfillment" k="avg" s={ps} set={setPs} />
@@ -216,7 +217,6 @@ function WalletReport({ customers, wipes, from, to }) {
   );
   const total = rows.reduce((s, w) => s + (w.amount || 0), 0);
   const perWeek = weeks.length ? Math.round(total / weeks.length) : 0;
-  const peak = Math.max(1, ...weeks.map((w) => w.total));
 
   /* The same shape as every other section: headline numbers, then the detail
      behind them. */
@@ -241,17 +241,7 @@ function WalletReport({ customers, wipes, from, to }) {
             <div className="mt-3 grid gap-4 lg:grid-cols-2">
               <div>
                 <L className="mb-2">By week</L>
-                <div className="max-h-64 space-y-1 overflow-auto pr-1">
-                  {[...weeks].reverse().map((w) => (
-                    <div key={w.week} className="flex items-center gap-2">
-                      <span className={`w-28 shrink-0 text-xs ${M}`}>{weekLabel(w.week)}</span>
-                      <span className="h-2 flex-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-                        <span className="block h-full rounded-full bg-blue-500" style={{ width: `${(w.total / peak) * 100}%` }} />
-                      </span>
-                      <span className={`w-20 shrink-0 text-right font-mono text-xs ${W}`}>{cash(w.total)}</span>
-                    </div>
-                  ))}
-                </div>
+                <WipeLine weeks={weeks} />
               </div>
               <div>
                 <L className="mb-2">Most wiped</L>
@@ -321,7 +311,7 @@ function RefundReport({ refunds, products, types, n }) {
     <div className={`overflow-hidden rounded-xl border ${BD}`}>
       <div className={`border-b ${BD} bg-white dark:bg-slate-900 px-4 py-3`}><h3 className={`text-sm font-semibold ${W}`}>{title}</h3></div>
       {!rows.length && <p className={`px-4 py-6 text-sm ${M}`}>{empty}</p>}
-      <div className="max-h-[26rem] divide-y divide-slate-200 dark:divide-slate-800 overflow-auto">
+      <div className={`divide-y divide-slate-200 dark:divide-slate-800 ${SCROLL}`}>
         {rows.map((r) => (
           <div key={r.key} className="flex items-center gap-3 px-4 py-2.5">
             <span className={`flex-1 truncate text-sm ${W}`}>{r.label}</span>
@@ -571,7 +561,7 @@ export function CustomerBook({ customers, commit, flash }) {
             {customers?.length ? `Nobody matches "${q}".` : "No customers yet. Add the agents you deal with most."}
           </p>
         )}
-        <div className="divide-y divide-slate-200 dark:divide-slate-800">
+        <div className={`divide-y divide-slate-200 dark:divide-slate-800 ${SCROLL}`}>
           {rows.map((cst) => (
             <div key={cst.id} className="flex items-center gap-3 px-3 py-2">
               <div className="min-w-0 flex-1">
@@ -671,7 +661,7 @@ export function BlockRules({ blocks, hidden, orders, commit, flash }) {
 
       <div className={`mt-3 overflow-hidden rounded-lg border ${BD}`}>
         {!rules.length && <p className={`px-3 py-6 text-center text-sm ${M}`}>No rules. Every payment reaches the board.</p>}
-        <div className="divide-y divide-slate-200 dark:divide-slate-800">
+        <div className={`divide-y divide-slate-200 dark:divide-slate-800 ${SCROLL}`}>
           {rules.map((r) => {
             const on = r.enabled !== false;
             return (

@@ -294,6 +294,27 @@ zero.
 person's `last` is their surname, and spreading a timestamp over it renames
 them to a number.
 
+### Charts and long lists
+
+Any list that grows with the business scrolls inside its own box rather than
+stretching the page — `SCROLL` in `shared.jsx`, one constant so the tables
+can't drift to different heights. Table headings get `STICKY` so the column
+labels stay put while the rows move under them.
+
+`WipeLine` draws money wiped per week: one series over time, so a line, no
+legend (the heading names it), and a crosshair that reads the value under the
+pointer instead of printing a number on every point. Two things it gets right
+that are easy to get wrong:
+
+- **Points are positioned by date, not by index.** A week nobody recorded
+  shows as the gap it is rather than being quietly closed up.
+- **Date labels are chosen by measured spacing**, keeping one only when it
+  clears the last. Sampling every nth point looks even in the code and
+  collides on screen, because the points aren't evenly spaced in time.
+
+The y-scale ladder is deliberately fine (1, 1.25, 1.5, 2, 2.5, …): jumping
+1000 → 2000 for a peak of 1050 throws away half the height of the chart.
+
 ### Blocked payments
 
 Settings -> Blocked payments hides charges that aren't work: a test card, a
