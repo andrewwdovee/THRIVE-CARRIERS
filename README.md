@@ -24,10 +24,10 @@ Then the standing picture:
 - **Products** — add and remove what you sell, set each one's turnaround target,
   and paste the Stripe price or product ID that routes an order to it.
 - **Wallets** — what was wiped from each agent's wallet each Saturday.
-- **Reports** — four sections under one date range: **Orders** (what sold and
-  how fast), **Team** (who delivered it), **Refunds** (what went back out), and
-  **Wallets** (what was wiped). Each opens with headline figures and then the
-  detail behind them, so the numbers that belong together read together.
+- **Reports** — three sections under one date range: **Orders** (what sold and
+  how fast), **Refunds** (what went back out), and **Wallets** (what was
+  wiped). Each opens with headline figures and then the detail behind them, so
+  the numbers that belong together read together.
 - **Settings** — the Stripe connection, notifications, and how long delivered
   orders stay visible under By product.
 

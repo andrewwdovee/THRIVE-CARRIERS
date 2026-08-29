@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
-  Plus, RefreshCw, Download, X, Package, User, Bell, Link2, Users, Sun, Moon, Monitor,
+  Plus, RefreshCw, Download, X, Package, Bell, Link2, Users, Sun, Moon, Monitor,
   ArrowUpDown, FlaskConical, Settings as GearIcon, AlarmClock, Ban, Eye, Undo2, Wallet,
 } from "lucide-react";
 import {
@@ -64,16 +64,6 @@ export function Reports({ orders, products, n, flash, refunds, refundTypes, cust
   }, [paid, products, ps]);
 
   const top = [...prod].sort((x, y) => y.count - x.count)[0], maxC = Math.max(1, ...prod.map((r) => r.count));
-
-  const people = useMemo(() => {
-    const m = new Map();
-    done.forEach((o) => {
-      const k = o.assignee || "Unassigned";
-      if (!m.has(k)) m.set(k, { name: k, count: 0, time: 0, late: 0 });
-      const e = m.get(k); e.count++; e.time += o.completedAt - o.receivedAt; if (o.completedAt > o.dueAt) e.late++;
-    });
-    return [...m.values()].sort((x, y) => y.count - x.count);
-  }, [done]);
 
   const avgAll = done.length ? done.reduce((s, o) => s + (o.completedAt - o.receivedAt), 0) / done.length : null;
   const pctAll = done.length ? Math.round((done.filter((o) => o.completedAt <= o.dueAt).length / done.length) * 100) : null;
@@ -177,19 +167,6 @@ export function Reports({ orders, products, n, flash, refunds, refundTypes, cust
             </tr>)}
           </tbody>
         </table></div>
-      </div>
-      </Section>
-
-      <Section icon={User} title="Team" note="Who delivered it, and whether they hit the target.">
-      <div className={`overflow-hidden rounded-xl border ${BD}`}>
-        <div className={`border-b ${BD} bg-white dark:bg-slate-900 px-4 py-3`}><h3 className={`text-sm font-semibold ${W}`}>Team performance</h3></div>
-        {!people.length ? <p className={`px-4 py-6 text-sm ${M}`}>Numbers appear here once orders get marked delivered.</p>
-          : <div className="max-h-[26rem] overflow-auto">{people.map((p) => <div key={p.name} className={`flex flex-wrap items-center gap-4 border-b px-4 py-3 last:border-0 ${BD}`}>
-            <User className={`h-4 w-4 ${F}`} /><span className={`flex-1 text-sm ${W}`}>{p.name}</span>
-            <span className="font-mono text-sm text-slate-700 dark:text-slate-300">{p.count} delivered</span>
-            <span className={`font-mono text-sm ${M}`}>{brief(p.time / p.count)} avg</span>
-            <span className={`font-mono text-sm ${p.late ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>{Math.round(((p.count - p.late) / p.count) * 100)}% on target</span>
-          </div>)}</div>}
       </div>
       </Section>
 
