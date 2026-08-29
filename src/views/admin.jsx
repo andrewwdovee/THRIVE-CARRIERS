@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Plus, RefreshCw, Download, X, Package, User, Bell, Link2, Users, Sun, Moon, Monitor,
-  ArrowUpDown, FlaskConical, Settings as GearIcon, AlarmClock, Ban, Eye,
+  ArrowUpDown, FlaskConical, Settings as GearIcon, AlarmClock, Ban, Eye, Undo2, Wallet,
 } from "lucide-react";
 import {
   BD, CARD, PANEL, IN, BTN, PRI, M, F, W, TD, P, c, sm, DEF, DAY,
@@ -85,7 +85,7 @@ export function Reports({ orders, products, n, flash, refunds, refundTypes, cust
   </th>;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-7">
       <div className="flex flex-wrap items-center gap-2">
         <div className={`flex flex-wrap gap-1 rounded-lg border ${BD} bg-white dark:bg-slate-900 p-1`}>
           {RANGES.map(([id, label]) => <button key={id} onClick={() => setRange(id)}
@@ -102,6 +102,7 @@ export function Reports({ orders, products, n, flash, refunds, refundTypes, cust
         </div>
       </div>
 
+      <Section icon={Package} title="Orders" note="What sold, and how fast it went out.">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <Metric t="Orders placed" v={paid.length} /><Metric t="Delivered" v={done.length} />
         <Metric t="Avg time to fulfill" v={avgAll ? brief(avgAll) : "—"} />
@@ -177,12 +178,9 @@ export function Reports({ orders, products, n, flash, refunds, refundTypes, cust
           </tbody>
         </table></div>
       </div>
+      </Section>
 
-      <RefundReport refunds={(refunds || []).filter((r) => r.at >= from && r.at <= to)}
-        products={products} types={refundTypes || []} n={n} />
-
-      <WalletReport customers={customers} wipes={wipes} from={from} to={to} />
-
+      <Section icon={User} title="Team" note="Who delivered it, and whether they hit the target.">
       <div className={`overflow-hidden rounded-xl border ${BD}`}>
         <div className={`border-b ${BD} bg-white dark:bg-slate-900 px-4 py-3`}><h3 className={`text-sm font-semibold ${W}`}>Team performance</h3></div>
         {!people.length ? <p className={`px-4 py-6 text-sm ${M}`}>Numbers appear here once orders get marked delivered.</p>
@@ -193,9 +191,34 @@ export function Reports({ orders, products, n, flash, refunds, refundTypes, cust
             <span className={`font-mono text-sm ${p.late ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>{Math.round(((p.count - p.late) / p.count) * 100)}% on target</span>
           </div>)}</div>}
       </div>
+      </Section>
+
+      <Section icon={Undo2} title="Refunds" note="What went back out, and who to.">
+        <RefundReport refunds={(refunds || []).filter((r) => r.at >= from && r.at <= to)}
+          products={products} types={refundTypes || []} n={n} />
+      </Section>
+
+      <Section icon={Wallet} title="Wallets" note="What was wiped each Saturday, and from whom.">
+        <WalletReport customers={customers} wipes={wipes} from={from} to={to} />
+      </Section>
     </div>
   );
 }
+
+/* One question per section. The range picker at the top governs all of them,
+   so the headings are what tell you which numbers belong together — without
+   them the page is a stack of tables that happen to be adjacent. */
+const Section = ({ icon: Icon, title, note, children }) => (
+  <section className="space-y-3">
+    <div className={`flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b ${BD} pb-2`}>
+      <h2 className={`flex items-center gap-2 text-base font-semibold ${W}`}>
+        <Icon className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />{title}
+      </h2>
+      {note && <p className={`text-xs ${F}`}>{note}</p>}
+    </div>
+    {children}
+  </section>
+);
 
 const Metric = ({ t, v, k, small }) => <div className={`${CARD} p-4`}>
   <L>{t}</L><div className={`mt-2 font-bold tabular-nums ${small ? "text-base leading-tight" : "font-mono text-2xl"} ${k || W}`}>{v}</div>
@@ -218,8 +241,17 @@ function WalletReport({ customers, wipes, from, to }) {
   const perWeek = weeks.length ? Math.round(total / weeks.length) : 0;
   const peak = Math.max(1, ...weeks.map((w) => w.total));
 
+  /* The same shape as every other section: headline numbers, then the detail
+     behind them. */
   return (
-    <div className={`${CARD} p-4`}>
+    <div className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Metric t="Wiped in this window" v={cash(total)} k={total ? "text-emerald-600 dark:text-emerald-400" : W} />
+        <Metric t="Weeks recorded" v={weeks.length || "—"} />
+        <Metric t="Average a week" v={weeks.length ? cash(perWeek) : "—"} />
+      </div>
+
+      <div className={`${CARD} p-4`}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 className={`text-sm font-semibold ${W}`}>Wallets wiped</h3>
         <span className={`font-mono text-sm ${W}`}>{cash(total)} <span className={F}>over {weeks.length} week{weeks.length === 1 ? "" : "s"}</span></span>
@@ -263,6 +295,7 @@ function WalletReport({ customers, wipes, from, to }) {
             </div>
           </>
         )}
+      </div>
     </div>
   );
 }
