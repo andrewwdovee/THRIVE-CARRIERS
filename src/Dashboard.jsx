@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   RefreshCw, Inbox, Clock, AlertTriangle, X, Mail, Phone,
-  CreditCard, Receipt, CheckCircle2, Bell, BellOff, RotateCcw, User, PackageOpen,
+  CreditCard, Receipt, CheckCircle2, Bell, BellOff, RotateCcw, User, PackageOpen, Wallet,
   Package, BarChart3, Settings as GearIcon, Layers, LogOut, Undo2,
 } from "lucide-react";
 import {
   BD, CARD, IN, BTN, PRI, M, F, W, c, ST, sm, MISS, mm, SETTLED, DEF, DAY,
-  paidOk, cash, freq, L, Field, HOUR, dk, grab, dueOf, effHours, blockedBy,
+  paidOk, cash, freq, L, Field, HOUR, dk, grab, dueOf, effHours, blockedBy, satOf,
 } from "./lib/shared";
 import { useBoard, appendOrders } from "./lib/useBoard";
 import { pullStripe, relayHealth, syncEndpoint } from "./lib/sync";
@@ -16,6 +16,7 @@ import { Stopwatch } from "./components/Elapsed";
 import ByProduct from "./views/ByProduct";
 import { Reports, Products, Settings as SettingsView } from "./views/admin";
 import Refunds from "./views/Refunds";
+import Wallets from "./views/Wallets";
 
 /* The dashboard.
 
@@ -32,6 +33,7 @@ const TABS = [
   ["missed", "Missed payments", CreditCard],
   ["refunds", "Refunds", Undo2],
   ["completed", "Completed", CheckCircle2],
+  ["wallets", "Wallets", Wallet],
   ["products-view", "By product", Layers],
   ["catalog", "Products", Package],
   ["reports", "Reports", BarChart3],
@@ -294,6 +296,19 @@ export default function Dashboard({ me: account, onSignOut }) {
     return [...fromStripe, ...(st.refunds || [])].sort((a, b) => b.at - a.at);
   }, [orders, st.refunds]);
 
+  /* One record per person per week: entering the same Saturday twice
+     corrects the figure rather than adding a second nobody can see. */
+  const recordWipes = useCallback((made, week) => {
+    commit((x) => {
+      const ids = new Set(made.map((w) => w.userId));
+      const kept = (x.wipes || []).filter((w) => !(satOf(w.at) === week && ids.has(w.userId)));
+      return { ...x, wipes: [...made, ...kept] };
+    }, made.length === 1 ? "Wipe recorded" : `${made.length} wipes recorded`);
+  }, [commit]);
+  const removeWipe = useCallback((id) => {
+    commit((x) => ({ ...x, wipes: (x.wipes || []).filter((w) => w.id !== id) }), "Figure removed");
+  }, [commit]);
+
   const addCustomer = useCallback((cst) => {
     commit((x) => ({ ...x, customers: [...(x.customers || []), cst] }), "Customer added");
   }, [commit]);
@@ -406,11 +421,15 @@ export default function Dashboard({ me: account, onSignOut }) {
             ? <OrderList rows={completed} products={products} now={now} onOpen={setOpen} done settings={cfg}
                 title="Delivered" note="Delivered orders and settled failed payments, newest first."
                 empty="Nothing delivered yet. Orders land here once someone stops the clock." />
+          : tab === "wallets"
+            ? <Wallets customers={st.customers} wipes={st.wipes} n={now}
+                onRecord={recordWipes} onRemove={removeWipe} onAddCustomer={addCustomer} />
           : tab === "products-view" ? <ByProduct products={products} orders={grouped} now={now} onOpen={setOpen} onMove={move} Card={Card} settings={cfg} />
           : tab === "catalog" ? <Products products={products} orders={orders} commit={commit} house={cfg.pastDueHours}
                 refundTypes={st.refundTypes} refunds={refunds} />
           : tab === "reports" ? <Reports orders={orders} products={products} n={now} flash={flash}
-                refunds={refunds} refundTypes={st.refundTypes} />
+                refunds={refunds} refundTypes={st.refundTypes}
+                customers={st.customers} wipes={st.wipes} />
           : <SettingsView cfg={cfg} products={products} orders={orders} customers={st.customers} blocks={st.blocks} hidden={hidden} saveCfg={saveCfg} commit={commit}
               sync={{ busy: sync.busy, at: sync.at, error: sync.error, added: sync.added }}
               onSync={() => runSync({ backfill: true })} addOrders={addOrders} flash={flash} live={syncEndpoint(cfg) ? live : null} />}

@@ -10,7 +10,7 @@ import { storage } from "./storage";
    it just read is newer than what we already have. */
 
 export function useBoard() {
-  const [st, setSt] = useState({ orders: [], products: SEED, refundTypes: SEED_REFUND_TYPES, refunds: [], customers: [], blocks: [], settings: DEF, updatedAt: 0 });
+  const [st, setSt] = useState({ orders: [], products: SEED, refundTypes: SEED_REFUND_TYPES, refunds: [], customers: [], blocks: [], wipes: [], settings: DEF, updatedAt: 0 });
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
   const dirty = useRef(false), lu = useRef(0), R = useRef(st);
@@ -22,7 +22,7 @@ export function useBoard() {
       if (r?.value) {
         const p = JSON.parse(r.value);
         if (!silent || (p.updatedAt || 0) > lu.current) {
-          setSt({ products: SEED, refundTypes: SEED_REFUND_TYPES, refunds: [], customers: [], blocks: [], settings: DEF, orders: [], ...p });
+          setSt({ products: SEED, refundTypes: SEED_REFUND_TYPES, refunds: [], customers: [], blocks: [], wipes: [], settings: DEF, orders: [], ...p });
           lu.current = p.updatedAt || 0;
         }
       }
@@ -57,7 +57,7 @@ export function useBoard() {
         const cur = await storage.get(KEY, true);
         const remote = cur?.value ? JSON.parse(cur.value) : null;
         if (remote && (remote.updatedAt || 0) > base) {
-          toSave = fn({ products: SEED, refundTypes: SEED_REFUND_TYPES, refunds: [], customers: [], blocks: [], settings: DEF, orders: [], ...remote });
+          toSave = fn({ products: SEED, refundTypes: SEED_REFUND_TYPES, refunds: [], customers: [], blocks: [], wipes: [], settings: DEF, orders: [], ...remote });
           toSave.updatedAt = Date.now();
           lu.current = toSave.updatedAt; R.current = toSave; setSt(toSave);
         }

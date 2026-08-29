@@ -23,7 +23,8 @@ Then the standing picture:
 
 - **Products** — add and remove what you sell, set each one's turnaround target,
   and paste the Stripe price or product ID that routes an order to it.
-- **Reports** — what sold, how fast it shipped, who shipped it.
+- **Wallets** — what was wiped from each agent's wallet each Saturday.
+- **Reports** — what sold, how fast it shipped, who shipped it, and what was wiped.
 - **Settings** — the Stripe connection, notifications, and how long delivered
   orders stay visible under By product.
 
@@ -261,6 +262,30 @@ form looks them up by name, offering to add anyone it doesn't know without
 losing the half-filled form behind it. Nothing is forced: an unsaved name
 still records fine - picking from the list only keeps the spelling consistent,
 which is what makes "who are we refunding most" answerable.
+
+### Wallets
+
+Agents hold a balance they spend on calls, and every Saturday whatever is left
+is wiped. That wipe is money the business keeps, so it gets its own tab
+between Completed and the divider.
+
+The Saturday job is one screen: pick the week, type an amount beside each
+person, save the lot in one go. A blank box means "not wiped", which is not
+the same as wiped for nothing, so blanks are skipped rather than stored as
+zero.
+
+- **A week is named by its Saturday.** `satOf` snaps any timestamp back to the
+  Saturday on or before it, so somebody entering Sunday's figures still lands
+  on last night's wipe instead of splitting the week in two.
+- **One record per person per week.** Saving the same Saturday again corrects
+  the figure rather than adding a second one nobody can see.
+- **People are the Customers list**, not a second directory — the agents you
+  refund and the agents who hold wallets are the same people, and one person
+  in two lists with two spellings is the problem that book exists to solve.
+
+`walletTotals` returns the wipe timestamp as `lastAt`, never `last`: a
+person's `last` is their surname, and spreading a timestamp over it renames
+them to a number.
 
 ### Blocked payments
 

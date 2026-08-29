@@ -80,6 +80,59 @@ export const SEED = [
 export const DEF = { syncUrl: "", syncToken: "", autoSyncMinutes: 5, notifyWebhook: "", notifyEmail: "", notifyPhone: "",
   notifyBrowser: true, notifySound: true, notifyOverdue: true, archiveAfterDays: 14, pastDueHours: 12 };
 
+/* ── wallets ──
+   Agents hold a balance they spend on calls, and every Saturday whatever is
+   left is wiped. The wipe is the number worth watching: it is money the
+   business keeps, and an agent who is wiped for a lot every week is one who
+   is being sold more than they can use.
+
+   A week is named by the Saturday it was wiped on, so two people entering the
+   same week from different days still land on one record. */
+export function satOf(t) {
+  const d = new Date(t);
+  d.setHours(0, 0, 0, 0);
+  /* Saturday is 6. Step back to the Saturday on or before this date. */
+  d.setDate(d.getDate() - ((d.getDay() + 1) % 7));
+  return d.getTime();
+}
+
+export const weekLabel = (t) =>
+  new Date(t).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+
+/* Per-person totals, newest wipe first. Everything the Wallets tab and the
+   report read comes from here, so the two can't disagree. */
+export function walletTotals(users, wipes, from = 0, to = Infinity) {
+  const inRange = (wipes || []).filter((w) => w.at >= from && w.at <= to);
+  const by = new Map();
+  for (const w of inRange) {
+    const cur = by.get(w.userId) || { total: 0, count: 0, lastAt: 0 };
+    cur.total += w.amount || 0;
+    cur.count += 1;
+    cur.lastAt = Math.max(cur.lastAt, w.at);
+    by.set(w.userId, cur);
+  }
+  /* lastAt, not last: a person's `last` is their surname, and spreading a
+     timestamp over it turns "Tanya Alvarez" into "Tanya 1787961600000". */
+  return (users || []).map((u) => {
+    const t = by.get(u.id) || { total: 0, count: 0, lastAt: 0 };
+    return { ...u, ...t, average: t.count ? Math.round(t.total / t.count) : 0 };
+  });
+}
+
+/* Wipes grouped by the Saturday they belong to, oldest first. */
+export function walletWeeks(wipes, from = 0, to = Infinity) {
+  const by = new Map();
+  for (const w of wipes || []) {
+    if (w.at < from || w.at > to) continue;
+    const k = satOf(w.at);
+    const cur = by.get(k) || { week: k, total: 0, count: 0 };
+    cur.total += w.amount || 0;
+    cur.count += 1;
+    by.set(k, cur);
+  }
+  return [...by.values()].sort((a, b) => a.week - b.week);
+}
+
 /* ── blocked payments ──
    Not every charge is work. A test payment, a five-dollar nuisance
    subscription, an internal card — they arrive like everything else and bury

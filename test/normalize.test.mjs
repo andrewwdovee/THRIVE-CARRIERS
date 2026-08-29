@@ -9,7 +9,7 @@ const out = await build({
 });
 const tmp = new URL("../.shared.built.mjs", import.meta.url).pathname;
 writeFileSync(tmp, out.outputFiles[0].text);
-const { normalize, match, SEED, COLS, effHours, dueOf, DEF, HOUR, custName, findCustomers, blockHits, blockedBy, opsFor, describeBlock } = await import(tmp);
+const { normalize, match, SEED, COLS, effHours, dueOf, DEF, HOUR, custName, findCustomers, blockHits, blockedBy, opsFor, describeBlock, satOf, walletTotals, walletWeeks } = await import(tmp);
 
 
 let pass = 0, fail = 0;
@@ -174,6 +174,51 @@ ok("money fields don't offer 'contains'", !opsFor("amount").some(([id]) => id ==
 ok("text fields don't offer 'less than'", !opsFor("email").some(([id]) => id === "lt"));
 ok("a rule describes itself in dollars", /\$3\.50/.test(describeBlock({ field: "amount", op: "is", value: "3.50" })),
    describeBlock({ field: "amount", op: "is", value: "3.50" }));
+
+// 12. Wallets — the week a wipe belongs to
+console.log("\nwallet weeks:");
+const day = (iso) => Date.parse(iso + "T12:00:00");
+const sat = day("2026-08-29");        // a Saturday
+ok("a Saturday is its own week", satOf(sat) === satOf(day("2026-08-29")));
+/* Somebody entering Sunday's figures still means last night's wipe. */
+ok("Sunday belongs to the Saturday before", satOf(day("2026-08-30")) === satOf(sat));
+ok("Friday belongs to the Saturday before it", satOf(day("2026-09-04")) === satOf(sat));
+ok("the next Saturday starts a new week", satOf(day("2026-09-05")) !== satOf(sat));
+ok("every day of one week lands on the same Saturday",
+   new Set(["2026-08-29","2026-08-30","2026-08-31","2026-09-01","2026-09-02","2026-09-03","2026-09-04"]
+     .map((d) => satOf(day(d)))).size === 1);
+ok("a week starts at midnight", new Date(satOf(day("2026-09-02"))).getHours() === 0);
+
+const U = [{ id: "u1", first: "Tanya", last: "A" }, { id: "u2", first: "Marcus", last: "R" }, { id: "u3", first: "Never", last: "Wiped" }];
+const WP = [
+  { id: "w1", userId: "u1", amount: 12000, at: satOf(sat) },
+  { id: "w2", userId: "u2", amount: 3000, at: satOf(sat) },
+  { id: "w3", userId: "u1", amount: 8000, at: satOf(day("2026-09-05")) },
+];
+const T = walletTotals(U, WP);
+ok("totals add up per person", T.find((u) => u.id === "u1").total === 20000);
+ok("counts the weeks they were wiped", T.find((u) => u.id === "u1").count === 2);
+/* `last` is a surname. Spreading a "last wiped" timestamp over it renamed
+   people to a number on screen before this was caught. */
+ok("totals don't overwrite the surname", T.find((u) => u.id === "u1").last === "A",
+   T.find((u) => u.id === "u1").last);
+ok("the last wipe is kept under its own name", T.find((u) => u.id === "u1").lastAt > 0);
+ok("averages across those weeks", T.find((u) => u.id === "u1").average === 10000);
+ok("somebody never wiped still appears, at zero",
+   T.find((u) => u.id === "u3").total === 0 && T.find((u) => u.id === "u3").count === 0);
+ok("average of nothing is zero, not NaN", T.find((u) => u.id === "u3").average === 0);
+ok("a range narrows the totals",
+   walletTotals(U, WP, satOf(day("2026-09-05"))).find((u) => u.id === "u1").total === 8000);
+
+const WK = walletWeeks(WP);
+ok("two weeks, oldest first", WK.length === 2 && WK[0].week < WK[1].week);
+ok("the first week sums both people", WK[0].total === 15000 && WK[0].count === 2);
+/* A wipe entered on the Sunday after must land in the same week as one
+   entered on the Saturday, or the weekly total splits in two. */
+ok("a Sunday entry joins its Saturday",
+   walletWeeks([{ id: "a", userId: "u1", amount: 100, at: satOf(sat) },
+                { id: "b", userId: "u2", amount: 100, at: day("2026-08-30") }]).length === 1);
+ok("no wipes, no weeks", walletWeeks([]).length === 0 && walletWeeks(undefined).length === 0);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

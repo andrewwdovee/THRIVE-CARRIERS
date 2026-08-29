@@ -6,7 +6,7 @@ import {
 import {
   BD, CARD, PANEL, IN, BTN, PRI, M, F, W, TD, P, c, sm, DEF, DAY,
   uid, paidOk, brief, dk, dl, sod, cash, L, Field, Confirm, grab, grabTrouble, dump,
-  THEMES, useTheme, custName, findCustomers,
+  THEMES, useTheme, custName, findCustomers, walletTotals, walletWeeks, weekLabel,
   BLOCK_FIELDS, BLOCK_OPS, bf, opsFor, blockHits, blockedBy, describeBlock,
 } from "../lib/shared";
 import { buildSamples } from "../lib/samples";
@@ -16,7 +16,7 @@ import { buildSamples } from "../lib/samples";
 /* ═════ REPORTS ═════ */
 const RANGES = [["today", "Today"], ["7", "Last 7 days"], ["30", "Last 30 days"], ["90", "Last 90 days"], ["all", "All time"], ["custom", "Custom"]];
 
-export function Reports({ orders, products, n, flash, refunds, refundTypes }) {
+export function Reports({ orders, products, n, flash, refunds, refundTypes, customers, wipes }) {
   const save = async (kind) => { const bad = grabTrouble(await dump(scoped, kind)); if (bad) flash(bad); };
   const [range, setRange] = useState("30"), [a, setA] = useState(dk(n - 14 * DAY)), [b, setB] = useState(dk(n));
   const [ds, setDs] = useState({ k: "day", d: "desc" }), [ps, setPs] = useState({ k: "count", d: "desc" });
@@ -181,6 +181,8 @@ export function Reports({ orders, products, n, flash, refunds, refundTypes }) {
       <RefundReport refunds={(refunds || []).filter((r) => r.at >= from && r.at <= to)}
         products={products} types={refundTypes || []} n={n} />
 
+      <WalletReport customers={customers} wipes={wipes} from={from} to={to} />
+
       <div className={`overflow-hidden rounded-xl border ${BD}`}>
         <div className={`border-b ${BD} bg-white dark:bg-slate-900 px-4 py-3`}><h3 className={`text-sm font-semibold ${W}`}>Team performance</h3></div>
         {!people.length ? <p className={`px-4 py-6 text-sm ${M}`}>Numbers appear here once orders get marked delivered.</p>
@@ -202,6 +204,69 @@ const Metric = ({ t, v, k, small }) => <div className={`${CARD} p-4`}>
 /* How much is going back out, and where from. A refund total on its own says
    little; what's useful is the trend week to week, which agent keeps asking,
    and which of your products keeps causing it. */
+/* Wallets, in the same range as everything else on this page. A wipe is
+   money the business keeps, so it belongs beside what was sold rather than
+   only on its own tab. */
+function WalletReport({ customers, wipes, from, to }) {
+  const rows = useMemo(() => (wipes || []).filter((w) => w.at >= from && w.at <= to), [wipes, from, to]);
+  const weeks = useMemo(() => walletWeeks(rows), [rows]);
+  const people = useMemo(
+    () => walletTotals(customers, rows).filter((u) => u.count).sort((a, b) => b.total - a.total),
+    [customers, rows],
+  );
+  const total = rows.reduce((s, w) => s + (w.amount || 0), 0);
+  const perWeek = weeks.length ? Math.round(total / weeks.length) : 0;
+  const peak = Math.max(1, ...weeks.map((w) => w.total));
+
+  return (
+    <div className={`${CARD} p-4`}>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h3 className={`text-sm font-semibold ${W}`}>Wallets wiped</h3>
+        <span className={`font-mono text-sm ${W}`}>{cash(total)} <span className={F}>over {weeks.length} week{weeks.length === 1 ? "" : "s"}</span></span>
+      </div>
+      {!rows.length
+        ? <p className={`mt-3 text-sm ${M}`}>Nothing wiped in this range.</p>
+        : (
+          <>
+            <p className={`mt-0.5 text-sm ${M}`}>{cash(perWeek)} a week on average, across {people.length} {people.length === 1 ? "person" : "people"}.</p>
+            <div className="mt-3 grid gap-4 lg:grid-cols-2">
+              <div>
+                <L className="mb-2">By week</L>
+                <div className="max-h-64 space-y-1 overflow-auto pr-1">
+                  {[...weeks].reverse().map((w) => (
+                    <div key={w.week} className="flex items-center gap-2">
+                      <span className={`w-28 shrink-0 text-xs ${M}`}>{weekLabel(w.week)}</span>
+                      <span className="h-2 flex-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+                        <span className="block h-full rounded-full bg-blue-500" style={{ width: `${(w.total / peak) * 100}%` }} />
+                      </span>
+                      <span className={`w-20 shrink-0 text-right font-mono text-xs ${W}`}>{cash(w.total)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <L className="mb-2">Most wiped</L>
+                <div className="max-h-64 overflow-auto pr-1">
+                  <table className="w-full text-sm">
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                      {people.slice(0, 20).map((u) => (
+                        <tr key={u.id}>
+                          <td className={`py-1.5 pr-2 ${W}`}><span className="truncate">{custName(u) || "Unnamed"}</span></td>
+                          <td className={`py-1.5 text-right font-mono ${W}`}>{cash(u.total)}</td>
+                          <td className={`py-1.5 pl-2 text-right text-xs ${F}`}>{cash(u.average)} avg</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+    </div>
+  );
+}
+
 function RefundReport({ refunds, products, types, n }) {
   const total = refunds.reduce((s, r) => s + (r.amount || 0), 0);
 
