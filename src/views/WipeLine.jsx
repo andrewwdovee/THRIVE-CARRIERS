@@ -91,19 +91,20 @@ export default function WipeLine({ points, money = true, onPick, active, empty =
   /* The pointer is nowhere near a single point most of the time, so snap to
      the nearest one by x — a line chart you have to hit exactly is a line
      chart nobody hovers. */
-  const track = (e) => {
+  const nearest = (e) => {
     const r = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - r.left) / r.width) * VB.w;
     let best = pts[0];
     for (const p of pts) if (Math.abs(p.x - x) < Math.abs(best.x - x)) best = p;
-    setHover(best);
+    return best;
   };
+  const track = (e) => setHover(nearest(e));
 
   return (
     <div className="relative mt-3">
       <svg viewBox={`0 0 ${VB.w} ${VB.h}`} className="w-full" style={{ height: 210 }}
         onMouseMove={track} onMouseLeave={() => setHover(null)}
-        onClick={() => shown && onPick?.(shown.at)}
+        onClick={(e) => onPick?.(nearest(e).at)}
         role="img" aria-label={`${weekLabel(weeks[0].at)} to ${weekLabel(weeks[weeks.length - 1].at)}`}>
 
         {/* Recessive grid: there to be measured against, not looked at. */}

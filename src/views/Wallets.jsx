@@ -115,7 +115,13 @@ export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAdd
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Tile label="Wiped all time" value={cash(wipedAllTime)} note={`${weeks.length} week${weeks.length === 1 ? "" : "s"} recorded`} />
-        <Tile label="Wiped this week" value={cash(wipedNow)} note={weekLabel(nowWeek)} />
+        {/* Follows the week being looked at, and names it. A tile that says
+            "this week" while showing another one is how the number came to
+            look broken; a tile that ignores the week you navigated to looks
+            broken too. So it tracks, and the label tracks with it. */}
+        <Tile label={week === nowWeek ? "Wiped this week" : "Wiped that week"}
+          value={cash(wipedThisWeek)}
+          note={`${weekLabel(week)}${week === nowWeek ? "" : " · not the current week"}`} />
         <Tile label="Average a week" value={cash(perWeek)} />
         <Tile label="People" value={String(users.length)} note="shared with Customers" />
       </div>
@@ -165,12 +171,13 @@ export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAdd
                   <thead className={`sticky top-0 z-10 bg-white dark:bg-slate-900`}>
                     <tr className={`border-b ${BD} text-left`}>
                       <th className={`px-3 py-2 text-xs font-medium uppercase tracking-wide ${F}`}>Person</th>
-                      <th className={`px-3 py-2 text-right text-xs font-medium uppercase tracking-wide ${F}`}>Wiped this week</th>
+                      <th className={`px-3 py-2 text-right text-xs font-medium uppercase tracking-wide ${F}`}>Amount wiped</th>
+                      <th className="w-8 px-3 py-2"><span className="sr-only">Remove</span></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                     {!forWeek.length && (
-                      <tr><td colSpan={2} className={`px-3 py-6 text-center text-sm ${M}`}>Nobody matches “{wq}”.</td></tr>
+                      <tr><td colSpan={3} className={`px-3 py-6 text-center text-sm ${M}`}>Nobody matches “{wq}”.</td></tr>
                     )}
                     {forWeek.map((u) => {
                       const already = thisWeek.get(u.id);
@@ -193,6 +200,13 @@ export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAdd
                                   value={entry[u.id] ?? ""}
                                   onChange={(e) => setEntry((x) => ({ ...x, [u.id]: e.target.value }))} />
                               </div>
+                              {/* Taking a figure back out has to be as easy as
+                                  putting it in. It used to mean finding the
+                                  right point on a chart. */}
+                              <span className="w-8 shrink-0">
+                                {already && <Confirm label={`Remove ${cash(already.amount)} for ${custName(u)}`}
+                                  onConfirm={() => onRemove(already.id)} />}
+                              </span>
                             </div>
                           </td>
                         </tr>
