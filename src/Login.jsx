@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { LogIn, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { BD, CARD, IN, PRI, M, F, W, L, Field, buildStamp } from "./lib/shared";
+import Logo from "./components/Logo";
 import { signIn } from "./lib/auth";
 
 /* The way in.
@@ -34,11 +35,8 @@ export default function Login({ onSignedIn }) {
     <div className="flex min-h-screen items-center justify-center bg-slate-100 dark:bg-slate-950 px-4">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
-          <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600">
-            <LogIn className="h-5 w-5 text-slate-900 dark:text-white" />
-          </div>
-          <h1 className={`mt-3 text-lg font-bold tracking-tight ${W}`}>Lead Tech Fulfillment</h1>
-          <L className="mt-1">Sign in to see today's orders</L>
+          <Logo size="lg" className={`justify-center ${W}`} />
+          <L className="mt-3 block">Fulfillment · sign in to see today's orders</L>
         </div>
 
         <form onSubmit={submit} className={`${CARD} space-y-3 p-5`}>

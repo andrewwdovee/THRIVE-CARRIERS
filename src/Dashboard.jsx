@@ -17,6 +17,7 @@ import { Stopwatch } from "./components/Elapsed";
 import ByProduct from "./views/ByProduct";
 import { Reports, Products, Settings as SettingsView } from "./views/admin";
 import Refunds from "./views/Refunds";
+import Logo from "./components/Logo";
 import Wallets from "./views/Wallets";
 
 /* The dashboard.
@@ -350,12 +351,15 @@ export default function Dashboard({ me: account, onSignOut }) {
       <header className={`sticky top-0 z-20 border-b ${BD} bg-white/95 dark:bg-slate-950/95 backdrop-blur`}>
         <div className="mx-auto max-w-[1600px] px-4 py-3">
           <div className="flex flex-wrap items-center gap-3">
-            <div>
+            <div className="flex items-center gap-3">
+              <Logo size="sm" withWord={false} className={`shrink-0 text-blue-600 dark:text-blue-400`} />
+              <div>
               <h1 className={`text-lg font-bold tracking-tight ${W}`}>Lead Tech Fulfillment</h1>
               <L>{orders.filter((o) => paidOk(o) && o.status !== "done").length} open
                 {overdue > 0 && <span className="text-rose-600 dark:text-rose-400"> · {overdue} past due</span>}
                 {bleeding > 0 && <span className="text-amber-600 dark:text-amber-400"> · {bleeding} unpaid</span>}
               </L>
+              </div>
             </div>
 
             <datalist id="desk-people">{people.map((p) => <option key={p} value={p} />)}</datalist>

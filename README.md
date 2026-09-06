@@ -315,6 +315,18 @@ that are easy to get wrong:
 The y-scale ladder is deliberately fine (1, 1.25, 1.5, 2, 2.5, …): jumping
 1000 → 2000 for a peak of 1050 throws away half the height of the chart.
 
+### Branding
+
+`src/components/Logo.jsx` holds the LeadTech mark and wordmark. Everything is
+stroked in `currentColor` rather than a fixed white, so one file serves the
+dark header, the light one and the sign-in screen — set the colour on the
+parent and it follows. `<Mark/>` is the symbol alone, for the header and the
+favicon; `<Logo/>` adds the wordmark.
+
+The mark is a recreation from the supplied artwork. To use the original file
+instead, drop it in `public/` and swap `<Mark/>` for an `<img>` — the sizes
+and placements stay as they are.
+
 ### Knowing which build you are looking at
 
 `vite.config.js` stamps the package version and the build time into the
