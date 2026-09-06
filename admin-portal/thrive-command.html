@@ -1,0 +1,1895 @@
+<title>Thrive Command</title>
+<meta name="description" content="Owner console for Thrive Companies — LOA production and Lead Tech fulfillment in one view.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+/* ======================================================================
+   Thrive Command — the owner console.
+
+   The brand system is inherited wholesale from the Thrive LOA Producer
+   Desk so the two read as one suite: same navy/sky palette, same
+   Archivo + IBM Plex Mono pairing, same panel and pill vocabulary. What
+   is new here is the cross-business layer — a console reads two P&Ls at
+   once, so money tiles carry a source stripe and every figure says which
+   side of the house it came from.
+   ====================================================================== */
+
+:root {
+  color-scheme: light;
+  --ink:      #0A0E13;
+  --navy:     #0F2A4C;
+  --navy-2:   #071A31;
+  --navy-3:   #163A66;
+  --sky:      #2F6FE0;
+  --sky-soft: #E8F0FE;
+  --paper:    #FFFFFF;
+  --mist:     #F4F7FA;
+  --mist-2:   #EBF0F6;
+  --line:     #DCE3EC;
+  --line-2:   #C6D1DF;
+  --muted:    #64717F;
+  --good:     #0F7A57;
+  --good-bg:  #E2F4EC;
+  --warn:     #9A6100;
+  --warn-bg:  #FBEFD9;
+  --bad:      #B8362B;
+  --bad-bg:   #FBE7E4;
+  --btn-bg:   #2F6FE0;
+  --btn-fg:   #FFFFFF;
+  --shadow:   0 1px 2px rgba(7,26,49,.06), 0 8px 24px rgba(7,26,49,.06);
+
+  /* Chart tokens. Series colors validated with the dataviz validator:
+     light #2a78d6/#eb6834/#1baf7a/#eda100/#4a3aa7 — worst adjacent CVD
+     ΔE 9.1 (protan), normal-vision 22.9. Contrast on the green and
+     amber sits under 3:1, so every slice and series is direct-labeled
+     and every chart is backed by a table. */
+  --s-loa:   #2a78d6;
+  --s-lt:    #eb6834;
+  --paid:    #1baf7a;
+  --pipe:    #eda100;
+  --fell:    #4a3aa7;
+  --grid:    #E4EAF1;
+  --axis:    #94A3B4;
+  --loa-fill: rgba(42,120,214,.13);
+  --lt-fill:  rgba(235,104,52,.11);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ink:      #E7EDF4;
+    --navy:     #0D1D31;
+    --navy-2:   #060C14;
+    --navy-3:   #1C3352;
+    --sky:      #74A6FF;
+    --sky-soft: #14243B;
+    --paper:    #0B1119;
+    --mist:     #101822;
+    --mist-2:   #16202C;
+    --line:     #22303F;
+    --line-2:   #2E4055;
+    --muted:    #8A99AB;
+    --good:     #45C79B;
+    --good-bg:  #0E2A22;
+    --warn:     #E0A44A;
+    --warn-bg:  #2C2114;
+    --bad:      #F08276;
+    --bad-bg:   #2E1613;
+    --btn-bg:   #3B7BE4;
+    --btn-fg:   #FFFFFF;
+    --shadow:   0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    --s-loa:   #3987e5;
+    --s-lt:    #d95926;
+    --paid:    #199e70;
+    --pipe:    #c98500;
+    --fell:    #9085e9;
+    --grid:    #1C2836;
+    --axis:    #5D6E80;
+    --loa-fill: rgba(57,135,229,.18);
+    --lt-fill:  rgba(217,89,38,.16);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ink:      #E7EDF4;
+  --navy:     #0D1D31;
+  --navy-2:   #060C14;
+  --navy-3:   #1C3352;
+  --sky:      #74A6FF;
+  --sky-soft: #14243B;
+  --paper:    #0B1119;
+  --mist:     #101822;
+  --mist-2:   #16202C;
+  --line:     #22303F;
+  --line-2:   #2E4055;
+  --muted:    #8A99AB;
+  --good:     #45C79B;
+  --good-bg:  #0E2A22;
+  --warn:     #E0A44A;
+  --warn-bg:  #2C2114;
+  --bad:      #F08276;
+  --bad-bg:   #2E1613;
+  --btn-bg:   #3B7BE4;
+  --btn-fg:   #FFFFFF;
+  --shadow:   0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  --s-loa:   #3987e5;
+  --s-lt:    #d95926;
+  --paid:    #199e70;
+  --pipe:    #c98500;
+  --fell:    #9085e9;
+  --grid:    #1C2836;
+  --axis:    #5D6E80;
+  --loa-fill: rgba(57,135,229,.18);
+  --lt-fill:  rgba(217,89,38,.16);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Archivo', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; border: 0; background: none; }
+a { color: var(--sky); }
+:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; border-radius: 3px; }
+
+.mono, .num { font-family: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace; font-variant-numeric: tabular-nums; }
+.eyebrow {
+  font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  font-size: 10px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--muted); margin: 0;
+}
+
+/* ---------- masthead ---------- */
+.mast { background: var(--navy-2); color: #fff; }
+.mast-in {
+  max-width: 1320px; margin: 0 auto; padding: 18px 24px 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap;
+}
+.wordmark { display: flex; align-items: stretch; gap: 13px; }
+/* Two bars, not one: this console reads two businesses. */
+.wordmark .bar { width: 4px; flex: 0 0 4px; border-radius: 2px; background: linear-gradient(var(--s-loa) 50%, var(--s-lt) 50%); }
+.wordmark .lock { display: flex; flex-direction: column; justify-content: center; }
+.wordmark h1 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: -.01em; color: #fff; text-wrap: balance; }
+.wordmark p { margin: 2px 0 0; font-size: 11px; letter-spacing: .05em; color: #93AAC6; }
+.mast-right { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.owner-chip {
+  display: inline-flex; align-items: center; gap: 7px; padding: 4px 11px 5px; border-radius: 999px;
+  background: rgba(116,166,255,.16); border: 1px solid rgba(116,166,255,.32); color: #BBD3FF;
+  font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: .06em;
+}
+.owner-chip i { width: 7px; height: 7px; border-radius: 50%; background: var(--paid); flex: none; }
+.mast .linkish { color: #9DB2CB; font-size: 12px; font-weight: 600; }
+.mast .linkish:hover { color: #fff; }
+
+/* ---------- sync strip ---------- */
+/* Sits directly under the masthead because in a mirrored console the
+   first question is always "how old is this?" */
+.syncstrip { background: var(--navy); border-bottom: 1px solid rgba(255,255,255,.08); color: #C4D4E8; }
+.syncstrip-in {
+  max-width: 1320px; margin: 0 auto; padding: 7px 24px 8px;
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  font-size: 11.5px; font-family: 'IBM Plex Mono', monospace;
+}
+.syncstrip .src { display: inline-flex; align-items: center; gap: 7px; }
+.syncstrip .src i { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+.syncstrip .src.loa i { background: var(--s-loa); }
+.syncstrip .src.lt i { background: var(--s-lt); }
+.syncstrip .src.stale b, .syncstrip .src.none b { color: #F2C77E; }
+.syncstrip .src b { color: #fff; font-weight: 600; }
+.syncstrip .spacer { flex: 1 1 auto; }
+
+/* ---------- tab rail ---------- */
+.rail { background: var(--navy-2); border-bottom: 1px solid rgba(255,255,255,.09); }
+.rail-in { max-width: 1320px; margin: 0 auto; padding: 0 24px; display: flex; gap: 2px; overflow-x: auto; }
+.rail button {
+  padding: 10px 14px 11px; color: #9DB2CB; font-size: 12.5px; font-weight: 600;
+  letter-spacing: .01em; border-bottom: 2px solid transparent; white-space: nowrap;
+}
+.rail button:hover { color: #DCE7F5; }
+.rail button[aria-current="page"] { color: #fff; border-bottom-color: var(--sky); }
+.rail .tab-badge {
+  display: inline-block; margin-left: 7px; min-width: 18px; padding: 1px 5px 2px;
+  border-radius: 999px; background: var(--bad); color: #fff;
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 700;
+  line-height: 1.3; text-align: center; vertical-align: 1px;
+}
+
+/* ---------- page shell ---------- */
+.wrap { max-width: 1320px; margin: 0 auto; padding: 22px 24px 72px; }
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; flex-wrap: wrap; margin-bottom: 18px; }
+.page-head h2 { margin: 3px 0 0; font-size: 22px; font-weight: 700; letter-spacing: -.015em; text-wrap: balance; }
+.page-head .sub { margin: 4px 0 0; color: var(--muted); font-size: 13px; max-width: 66ch; }
+.section-head { margin: 34px 0 16px; padding-top: 26px; border-top: 1px solid var(--line); }
+.section-head h3 { margin: 3px 0 0; font-size: 17px; font-weight: 700; letter-spacing: -.012em; }
+.section-head .sub { margin: 4px 0 0; color: var(--muted); font-size: 13px; max-width: 70ch; line-height: 1.6; }
+
+/* ---------- controls ---------- */
+.btn {
+  display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 6px;
+  background: var(--navy-2); color: #fff; font-size: 13px; font-weight: 600; border: 1px solid var(--navy-2);
+  transition: filter .12s ease;
+}
+.btn:hover { filter: brightness(1.25); }
+.btn.accent { background: var(--btn-bg); border-color: var(--btn-bg); color: var(--btn-fg); }
+.btn.ghost { background: transparent; color: var(--ink); border-color: var(--line-2); }
+.btn.ghost:hover { background: var(--mist-2); filter: none; }
+.btn.sm { padding: 5px 10px; font-size: 12px; }
+.btn:disabled { opacity: .45; cursor: not-allowed; filter: none; }
+
+/* The range picker is a segmented control, not five loose buttons —
+   it is one setting with five positions. */
+.seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: 7px; overflow: hidden; background: var(--paper); }
+.seg button {
+  padding: 6px 12px 7px; font-size: 12px; font-weight: 600; color: var(--muted);
+  border-right: 1px solid var(--line);
+}
+.seg button:last-child { border-right: 0; }
+.seg button:hover { background: var(--mist-2); color: var(--ink); }
+.seg button[aria-pressed="true"] { background: var(--navy-2); color: #fff; }
+
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field > label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.field .hint { font-size: 11.5px; color: var(--muted); }
+input[type=text], input[type=password], input[type=search], select, textarea {
+  padding: 8px 10px; border: 1px solid var(--line-2); border-radius: 6px;
+  background: var(--paper); color: var(--ink); width: 100%; font-size: 13.5px;
+}
+textarea { resize: vertical; min-height: 120px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
+select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: right 14px top 50%, right 9px top 50%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 30px; }
+.filters { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 14px; }
+.filters .field { min-width: 140px; }
+.filters .field.searchbox { flex: 1 1 300px; min-width: 220px; max-width: 460px; }
+
+/* ---------- panels ---------- */
+.panel { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); }
+.panel + .panel { margin-top: 18px; }
+.panel-head { padding: 14px 18px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.panel-head h3 { margin: 0; font-size: 14.5px; font-weight: 700; }
+.panel-head .note { font-size: 12px; color: var(--muted); }
+.panel-body { padding: 18px; }
+.panel-body.flush { padding: 0; }
+
+/* ---------- stat tiles ---------- */
+/* The stripe is the source marker: blue = LOA, orange = Lead Tech,
+   navy = both businesses combined. It is doing information work, not
+   decoration, which is why it is the one ornament on the tile. */
+.tiles { display: grid; gap: 12px; grid-template-columns: repeat(2, 1fr); }
+@media (min-width: 760px)  { .tiles { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 1060px) { .tiles { grid-template-columns: repeat(4, 1fr); } }
+.tile { background: var(--mist); border: 1px solid var(--line); border-radius: 9px; padding: 13px 14px 14px; position: relative; overflow: hidden; }
+.tile::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--line-2); }
+.tile.src-loa::before { background: var(--s-loa); }
+.tile.src-lt::before  { background: var(--s-lt); }
+.tile.src-all::before { background: linear-gradient(var(--s-loa) 50%, var(--s-lt) 50%); }
+.tile.is-good::before { background: var(--good); }
+.tile.is-warn::before { background: var(--warn); }
+.tile.is-bad::before  { background: var(--bad); }
+.tile .v { display: block; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-size: 23px; font-weight: 600; letter-spacing: -.02em; margin-top: 5px; line-height: 1.15; }
+.tile .v.neg { color: var(--bad); }
+.tile .v.pos { color: var(--good); }
+.tile .foot { display: block; margin-top: 3px; font-size: 11.5px; color: var(--muted); }
+
+/* The headline pair on Overview: company net gets the weight, the two
+   business lines sit beside it at tile scale. */
+.headline { display: grid; gap: 12px; grid-template-columns: 1fr; margin-bottom: 12px; }
+.headline-side { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 640px) { .headline-side { grid-template-columns: 1fr 1fr; } }
+/* The two business-line tiles stack beside the hero rather than
+   stretching to its height — a tile with 90px of empty air under its
+   number reads as a mistake. */
+@media (min-width: 900px) {
+  .headline { grid-template-columns: 1.2fr 1fr; }
+  .headline-side { grid-template-columns: 1fr; grid-auto-rows: 1fr; }
+}
+.hero {
+  background: var(--navy-2); color: #fff; border-radius: 10px; padding: 18px 20px 19px;
+  border: 1px solid var(--navy-2); box-shadow: var(--shadow);
+}
+.hero .eyebrow { color: #8FA8C4; }
+.hero .v { display: block; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-size: 38px; font-weight: 600; letter-spacing: -.03em; line-height: 1.05; margin-top: 7px; }
+.hero .v.neg { color: #F08276; }
+.hero .foot { display: block; margin-top: 7px; font-size: 12px; color: #A9BDD4; }
+.hero .split { display: flex; gap: 16px; margin-top: 13px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.13); flex-wrap: wrap; }
+.hero .split div { font-size: 11.5px; color: #A9BDD4; }
+.hero .split b { display: block; font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600; color: #fff; margin-top: 2px; }
+
+/* ---------- tables ---------- */
+.tblwrap { overflow-x: auto; }
+table.data { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.data th {
+  text-align: left; padding: 9px 12px; background: var(--mist-2); color: var(--muted);
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+  font-weight: 500; white-space: nowrap; border-bottom: 1px solid var(--line);
+}
+table.data td { padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.data tbody tr:hover { background: var(--mist); }
+table.data td.n, table.data th.n { text-align: right; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.data tr.total td { background: var(--mist-2); font-weight: 700; border-top: 2px solid var(--line-2); }
+table.data .who { font-weight: 600; }
+table.data .dim { color: var(--muted); font-size: 12px; }
+table.data .nowrap { white-space: nowrap; }
+table.data tr:last-child td { border-bottom: 0; }
+
+/* ---------- pills ---------- */
+.pill {
+  display: inline-block; padding: 2px 8px 3px; border-radius: 999px; font-size: 11px;
+  font-weight: 600; white-space: nowrap;
+  background: var(--mist-2); color: var(--muted); border: 1px solid var(--line);
+}
+.pill.good { background: var(--good-bg); color: var(--good); border-color: transparent; }
+.pill.warn { background: var(--warn-bg); color: var(--warn); border-color: transparent; }
+.pill.bad  { background: var(--bad-bg);  color: var(--bad);  border-color: transparent; }
+.pill.key  { background: var(--sky-soft); color: var(--sky); border-color: transparent; }
+
+/* ---------- messages / empties ---------- */
+.msg { padding: 10px 12px; border-radius: 6px; font-size: 12.5px; border: 1px solid transparent; }
+.msg.err  { background: var(--bad-bg);  color: var(--bad);  }
+.msg.ok   { background: var(--good-bg); color: var(--good); }
+.msg.info { background: var(--sky-soft); color: var(--sky); }
+.msg.warnbar { background: var(--warn-bg); color: var(--warn); }
+.empty { padding: 40px 20px; text-align: center; color: var(--muted); }
+.empty strong { display: block; color: var(--ink); font-size: 15px; margin-bottom: 5px; }
+.empty p { margin: 0 auto; max-width: 52ch; font-size: 13px; line-height: 1.6; }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.spacer { flex: 1 1 auto; }
+.stack { display: grid; gap: 14px; }
+
+/* ---------- charts ---------- */
+.charts { display: grid; gap: 18px; grid-template-columns: 1fr; align-items: start; }
+@media (min-width: 1000px) { .charts.c2 { grid-template-columns: 1.35fr 1fr; } }
+.charts .panel { margin-top: 0; }
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart .gridline { stroke: var(--grid); stroke-width: 1; }
+.chart .axisline { stroke: var(--axis); stroke-width: 1; }
+.chart .tick { fill: var(--muted); font-size: 10px; font-family: 'IBM Plex Mono', monospace; }
+.chart .mark { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.chart .dot { stroke: var(--paper); stroke-width: 2; }
+.chart .hit { fill: transparent; cursor: crosshair; }
+.chart .crosshair { stroke: var(--line-2); stroke-width: 1; stroke-dasharray: 3 3; }
+.chart .endlabel { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; font-weight: 600; }
+/* Segments carry their own stroke and width as attributes — a CSS stroke
+   here would repaint every ring in one colour. */
+.chart .seg { stroke-linecap: butt; }
+.chart .bar { rx: 4; }
+.chart .cat { fill: var(--muted); font-size: 11px; }
+.chart .val { fill: var(--ink); font-size: 11px; font-weight: 600; font-family: 'IBM Plex Mono', monospace; }
+.chart .center-v { fill: var(--ink); font-size: 21px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; }
+.chart .center-l { fill: var(--muted); font-size: 10px; letter-spacing: .12em; font-family: 'IBM Plex Mono', monospace; }
+.chart-tip {
+  position: absolute; z-index: 20; pointer-events: none; opacity: 0;
+  transform: translate(-50%, -125%); transition: opacity .1s ease;
+  background: var(--navy-2); color: #fff; border-radius: 6px; padding: 7px 10px;
+  font-size: 11.5px; line-height: 1.5; white-space: nowrap; box-shadow: var(--shadow);
+}
+.chart-tip.on { opacity: 1; }
+.chart-tip b { font-family: 'IBM Plex Mono', monospace; font-weight: 600; }
+.chart-tip .k { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.viz-legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; font-size: 12px; color: var(--muted); }
+.viz-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.viz-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex: none; }
+.chart.donut svg { width: auto; max-width: 100%; height: 236px; margin: 2px auto 0; }
+.donut-key { display: grid; gap: 9px; width: 100%; max-width: 300px; margin: 16px auto 0; }
+.donut-key > div { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto 46px; align-items: center; gap: 10px; font-size: 12.5px; }
+.donut-key i { width: 10px; height: 10px; border-radius: 3px; display: block; }
+.donut-key .v, .donut-key .p { font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }
+.donut-key .v { font-weight: 600; }
+.donut-key .p { color: var(--muted); text-align: right; }
+
+/* ---------- source cards (Sync) ---------- */
+.srcgrid { display: grid; gap: 14px; grid-template-columns: 1fr; }
+@media (min-width: 860px) { .srcgrid { grid-template-columns: 1fr 1fr; } }
+.srccard { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--paper); box-shadow: var(--shadow); }
+.srccard .top { padding: 14px 16px; border-bottom: 1px solid var(--line); display: flex; align-items: flex-start; gap: 11px; }
+.srccard .top i { width: 4px; align-self: stretch; border-radius: 2px; flex: none; }
+.srccard.loa .top i { background: var(--s-loa); }
+.srccard.lt  .top i { background: var(--s-lt); }
+.srccard h4 { margin: 0; font-size: 14.5px; font-weight: 700; }
+.srccard .top p { margin: 3px 0 0; font-size: 12px; color: var(--muted); }
+.srccard .body { padding: 14px 16px 16px; display: grid; gap: 11px; }
+.srccard dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 5px 14px; font-size: 12.5px; }
+.srccard dt { color: var(--muted); font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; align-self: center; }
+.srccard dd { margin: 0; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }
+.srccard .how { font-size: 12.5px; color: var(--muted); line-height: 1.6; border-top: 1px dashed var(--line-2); padding-top: 11px; }
+
+/* ---------- auth ---------- */
+.auth-shell { min-height: 100vh; display: grid; place-items: center; padding: 32px 20px; background: var(--mist); }
+.auth-card { width: 100%; max-width: 440px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+.auth-top { background: var(--navy-2); padding: 22px 24px; }
+.auth-body { padding: 24px; display: grid; gap: 15px; }
+.auth-body p.lede { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+.codebox { font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: var(--mist-2); border: 1px dashed var(--line-2); border-radius: 6px; padding: 8px 10px; word-break: break-all; }
+.bar-mini { height: 5px; border-radius: 3px; background: var(--mist-2); overflow: hidden; min-width: 54px; }
+.bar-mini i { display: block; height: 100%; background: var(--s-loa); }
+.bar-mini i.good { background: var(--paid); }
+.bar-mini i.bad { background: var(--bad); }
+.toast { position: fixed; right: 18px; bottom: 18px; z-index: 40; padding: 9px 15px; border-radius: 999px; background: var(--navy-2); color: #fff; font-size: 12.5px; font-weight: 600; box-shadow: var(--shadow); }
+
+@media (max-width: 720px) {
+  .mast-in { padding: 14px 16px; }
+  .rail-in, .wrap, .syncstrip-in { padding-left: 16px; padding-right: 16px; }
+  .page-head h2 { font-size: 19px; }
+  .hero .v { font-size: 30px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}
+</style>
+
+<div id="app">
+  <div class="auth-shell">
+    <div class="auth-card">
+      <div class="auth-top">
+        <div class="wordmark">
+          <span class="bar"></span>
+          <span class="lock">
+            <h1>Thrive Command</h1>
+            <p>OWNER CONSOLE · THRIVE COMPANIES</p>
+          </span>
+        </div>
+      </div>
+      <div class="auth-body">
+        <p class="lede">Connecting to the company database…</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ====================================================================
+     Thrive Command — owner console.
+
+     This page is a MIRROR, never a source of truth. Two portals own their
+     own data:
+
+       · Thrive LOA Producer Desk   — writes its state into its own
+                                      published HTML, so a sync run can
+                                      read it straight from the artifact.
+       · Lead Tech Fulfillment      — keeps its board in browser storage,
+                                      and mirrors a scrubbed digest into
+                                      its own database so a sync run can
+                                      read it from outside the browser.
+
+     A sync writes a snapshot document here; this page only ever reads
+     them and does the arithmetic. Nothing typed here flows back to
+     either portal — which is the point. The owner watches; the desks
+     operate.
+     ==================================================================== */
+
+  var SOURCES = {
+    loa: {
+      key: "loa", doc: "snapshots/loa", cls: "loa",
+      name: "LOA Producer Desk",
+      blurb: "Agents, written business, carrier commissions and inbound call spend.",
+      url: "https://claude.ai/code/artifact/604efc81-daa6-4fa0-852a-e3dd33577682"
+    },
+    lt: {
+      key: "lt", doc: "snapshots/leadtech", cls: "lt",
+      name: "Lead Tech Fulfillment",
+      blurb: "Orders, delivery against SLA, subscriptions and refunds.",
+      url: "https://claude.ai/code/artifact/c0337537-9660-4dbe-a3d9-78c6f7c8fd6f"
+    }
+  };
+
+  var OWNER_DOC = "config/owner";
+  var PW_ITER = 210000;
+  var UNLOCK_KEY = "thrive_command_unlock";
+  var UNLOCK_HOURS = 12;
+  var STALE_HOURS = 36;
+
+  /* LOA deal statuses, mirrored from the Producer Desk so a deal is
+     bucketed here exactly the way the desk buckets it. */
+  var LOA_STATUS = {
+    underwriting: { label: "In underwriting",    tone: "warn", group: "pending" },
+    approved:     { label: "Approved, not paid", tone: "key",  group: "pending" },
+    issued_paid:  { label: "Issued & paid",      tone: "good", group: "paid"    },
+    nsf:          { label: "Insufficient funds", tone: "bad",  group: "lost"    },
+    declined:     { label: "Declined",           tone: "bad",  group: "lost"    },
+    chargeback:   { label: "Chargeback",         tone: "bad",  group: "lost"    }
+  };
+  var LOA_ALIAS = { submitted: "underwriting", not_taken: "declined", withdrawn: "declined", lapsed: "chargeback" };
+
+  var RANGES = [
+    { k: "d30",  label: "30 days" },
+    { k: "d90",  label: "90 days" },
+    { k: "mtd",  label: "Month" },
+    { k: "ytd",  label: "Year" },
+    { k: "all",  label: "All time" }
+  ];
+
+  var app = document.getElementById("app");
+  var db = null, downloads = null;
+  var ui = {
+    tab: "overview",
+    range: "d90",
+    unlocked: false,
+    booting: true,
+    dbError: null,
+    owner: null,          /* {salt, hash, iter} or null before it is set */
+    loa: null,            /* snapshot document body */
+    lt: null,
+    filters: { dealStatus: "", dealAgent: "", dealQuery: "", orderStatus: "", orderProduct: "", orderQuery: "" },
+    toast: null
+  };
+
+  /* --------------------------------------------------------- utilities */
+  function esc(v) {
+    return String(v == null ? "" : v)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  function num(v) { var n = parseFloat(v); return isFinite(n) ? n : 0; }
+  function money(n, dp) {
+    var d = dp == null ? 0 : dp;
+    var s = Math.abs(num(n)).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+    return (num(n) < 0 ? "-$" : "$") + s;
+  }
+  function intf(n) { return Math.round(num(n)).toLocaleString("en-US"); }
+  function pct(n, dp) { return (isFinite(n) ? num(n) : 0).toFixed(dp == null ? 1 : dp) + "%"; }
+  function ratio(a, b) { return b > 0 ? (a / b) * 100 : 0; }
+  function sumBy(arr, key) { var t = 0; for (var i = 0; i < arr.length; i++) t += num(arr[i][key]); return t; }
+  function todayISO() {
+    var d = new Date(), z = d.getTimezoneOffset() * 60000;
+    return new Date(d - z).toISOString().slice(0, 10);
+  }
+  function addDays(iso, n) {
+    var d = new Date(iso + "T12:00:00");
+    d.setDate(d.getDate() + n);
+    return d.toISOString().slice(0, 10);
+  }
+  function prettyDate(iso) {
+    if (!iso) return "—";
+    var d = new Date(String(iso).slice(0, 10) + "T12:00:00");
+    if (isNaN(d)) return "—";
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" });
+  }
+  /* Sources disagree about time: the desk writes YYYY-MM-DD, the
+     fulfillment board writes epoch milliseconds. One reader for both. */
+  function toISODate(v) {
+    if (v == null || v === "") return "";
+    if (typeof v === "number") { var d = new Date(v); return isNaN(d) ? "" : localISO(d); }
+    var s = String(v);
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+    var p = new Date(s);
+    return isNaN(p) ? "" : localISO(p);
+  }
+  function localISO(d) { return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
+  function toMillis(v) {
+    if (v == null || v === "") return 0;
+    if (typeof v === "number") return v;
+    var d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(String(v)) ? String(v) + "T12:00:00" : String(v));
+    return isNaN(d) ? 0 : d.getTime();
+  }
+  function inRange(iso, from, to) { return !!iso && iso >= from && iso <= to; }
+  function hoursSince(v) {
+    var ms = toMillis(v);
+    return ms ? (Date.now() - ms) / 3600000 : Infinity;
+  }
+  function agoLabel(v) {
+    var h = hoursSince(v);
+    if (!isFinite(h)) return "never";
+    if (h < 1) return Math.max(1, Math.round(h * 60)) + "m ago";
+    if (h < 48) return Math.round(h) + "h ago";
+    return Math.round(h / 24) + "d ago";
+  }
+  function rangeWindow() {
+    var t = todayISO();
+    if (ui.range === "d30") return { from: addDays(t, -29), to: t, label: "Last 30 days" };
+    if (ui.range === "d90") return { from: addDays(t, -89), to: t, label: "Last 90 days" };
+    if (ui.range === "mtd") return { from: t.slice(0, 8) + "01", to: t, label: "Month to date" };
+    if (ui.range === "ytd") return { from: t.slice(0, 4) + "-01-01", to: t, label: "Year to date" };
+    return { from: "0000-01-01", to: "9999-12-31", label: "All time" };
+  }
+  function toast(text) {
+    ui.toast = text;
+    render();
+    setTimeout(function () { ui.toast = null; render(); }, 2600);
+  }
+
+  /* ------------------------------------------------------------ LOA math */
+  /* Straight from the Producer Desk, so the two never disagree: carriers
+     advance a share of the first year, and commission is paid on that
+     advance — $125/mo x 12 = $1,500 x 75% = $1,125 x 30% = $337.50. */
+  function loaOrg() {
+    var o = (ui.loa && ui.loa.org) || {};
+    return {
+      name: o.name || "Thrive Companies LOA",
+      houseLevel: o.houseLevel || "150",
+      costPerCall: o.costPerCall == null ? 0 : num(o.costPerCall),
+      advanceRate: (o.advanceRate == null ? 75 : num(o.advanceRate)) / 100
+    };
+  }
+  function statusOf(k) { return LOA_STATUS[k] || LOA_STATUS[LOA_ALIAS[k]] || LOA_STATUS.underwriting; }
+  function advancedAP(d) { return num(d.ap) * loaOrg().advanceRate; }
+  function agentCommOn(d) { return advancedAP(d) * num(d.agentPct) / 100; }
+  function houseCommOn(d) { return advancedAP(d) * num(d.housePct) / 100; }
+  function spreadOn(d) { return houseCommOn(d) - agentCommOn(d); }
+
+  function loaDeals() { return (ui.loa && Array.isArray(ui.loa.deals)) ? ui.loa.deals : []; }
+  function loaAgents() { return (ui.loa && Array.isArray(ui.loa.agents)) ? ui.loa.agents : []; }
+  function loaCalls() { return (ui.loa && Array.isArray(ui.loa.calls)) ? ui.loa.calls : []; }
+  function agentName(id) {
+    var a = loaAgents().filter(function (x) { return x.id === id; })[0];
+    return a ? a.name : "Unassigned";
+  }
+  function carrierName(id) {
+    var c = (ui.loa && ui.loa.carriers) || {};
+    return c[id] || String(id || "—");
+  }
+
+  function loaMetrics(from, to, agentIds) {
+    var deals = loaDeals().filter(function (d) {
+      return inRange(toISODate(d.date), from, to) && (!agentIds || agentIds.indexOf(d.agentId) >= 0);
+    });
+    var calls = loaCalls().filter(function (c) {
+      return inRange(toISODate(c.date), from, to) && (!agentIds || agentIds.indexOf(c.agentId) >= 0);
+    });
+    var m = { deals: deals, callRows: calls };
+    m.callsTaken = sumBy(calls, "calls");
+    m.marketingCost = m.callsTaken * loaOrg().costPerCall;
+    m.written = deals.length;
+    m.mpWritten = sumBy(deals, "mp");
+    m.apWritten = sumBy(deals, "ap");
+
+    var paid = [], pend = [], lost = [];
+    deals.forEach(function (d) {
+      var g = statusOf(d.status).group;
+      if (g === "paid") paid.push(d); else if (g === "pending") pend.push(d); else lost.push(d);
+    });
+    m.paid = paid; m.pending = pend; m.lost = lost;
+    m.apPaid = sumBy(paid, "ap");
+    m.apPending = sumBy(pend, "ap");
+    m.apLost = sumBy(lost, "ap");
+    m.advPaid = paid.reduce(function (t, d) { return t + advancedAP(d); }, 0);
+    m.agentCommPaid = paid.reduce(function (t, d) { return t + agentCommOn(d); }, 0);
+    m.houseGrossPaid = paid.reduce(function (t, d) { return t + houseCommOn(d); }, 0);
+    m.spreadPaid = m.houseGrossPaid - m.agentCommPaid;
+    m.net = m.spreadPaid - m.marketingCost;
+    m.placement = ratio(m.apPaid, m.apPaid + m.apLost);
+    m.callsPerPaid = paid.length ? m.callsTaken / paid.length : 0;
+    return m;
+  }
+
+  /* ------------------------------------------------- Lead Tech normalizing */
+  /* The fulfillment board stores money in cents and is looser about field
+     names than the desk, so everything is read through one normalizer and
+     nothing downstream guesses. */
+  function ltSettings() {
+    var s = (ui.lt && ui.lt.settings) || {};
+    return {
+      callCost: num(s.callCost) / 100,
+      callPrice: num(s.callPrice) / 100,
+      pastDueHours: num(s.pastDueHours) || 12
+    };
+  }
+  function ltProducts() { return (ui.lt && Array.isArray(ui.lt.products)) ? ui.lt.products : []; }
+  function ltProduct(id) {
+    var p = ltProducts().filter(function (x) { return x.id === id; })[0];
+    return p || null;
+  }
+  function ltOrders() {
+    var raw = (ui.lt && Array.isArray(ui.lt.orders)) ? ui.lt.orders : [];
+    return raw.map(function (o) {
+      var prod = ltProduct(o.productId);
+      var paidOk = (o.paymentStatus || "succeeded") === "succeeded";
+      var created = toMillis(o.createdAt);
+      var done = toMillis(o.completedAt);
+      var due = toMillis(o.dueAt);
+      return {
+        id: o.id,
+        customer: o.customer || o.customerName || "—",
+        email: o.email || o.customerEmail || "",
+        productId: o.productId || "",
+        product: o.productName || (prod && prod.name) || "—",
+        kind: o.kind || (prod && prod.kind) || "one-time",
+        amount: num(o.amount) / 100,
+        currency: (o.currency || "usd").toUpperCase(),
+        status: o.status === "done" ? "done" : "open",
+        paid: paidOk,
+        paymentStatus: o.paymentStatus || "succeeded",
+        assignee: o.assignee || "",
+        subscriptionId: o.subscriptionId || "",
+        createdAt: created, completedAt: done, dueAt: due,
+        date: toISODate(o.createdAt),
+        turnaround: (done && created) ? (done - created) / 3600000 : null,
+        onTime: (done && due) ? done <= due : null,
+        overdue: (o.status !== "done" && due) ? Date.now() > due : false
+      };
+    });
+  }
+  function ltRefunds() {
+    var raw = (ui.lt && Array.isArray(ui.lt.refunds)) ? ui.lt.refunds : [];
+    var types = (ui.lt && Array.isArray(ui.lt.refundTypes)) ? ui.lt.refundTypes : [];
+    return raw.map(function (r) {
+      var t = types.filter(function (x) { return x.id === (r.typeId || r.type); })[0];
+      return {
+        id: r.id,
+        customer: r.customer || r.customerName || "—",
+        type: r.typeName || (t && t.name) || "Refund",
+        amount: num(r.amount) / 100,
+        status: r.status || "",
+        date: toISODate(r.createdAt || r.refundedAt || r.date),
+        createdAt: toMillis(r.createdAt || r.refundedAt || r.date)
+      };
+    });
+  }
+  function ltCallCount() {
+    var raw = (ui.lt && Array.isArray(ui.lt.calls)) ? ui.lt.calls : [];
+    return raw.map(function (c) {
+      return {
+        date: toISODate(c.date || c.createdAt),
+        count: num(c.calls != null ? c.calls : (c.count != null ? c.count : (c.qty != null ? c.qty : 1)))
+      };
+    });
+  }
+
+  function ltMetrics(from, to) {
+    var orders = ltOrders().filter(function (o) { return inRange(o.date, from, to); });
+    var refunds = ltRefunds().filter(function (r) { return inRange(r.date, from, to); });
+    var calls = ltCallCount().filter(function (c) { return inRange(c.date, from, to); });
+    var set = ltSettings();
+
+    var m = { orders: orders, refunds: refunds, callRows: calls };
+    m.count = orders.length;
+    m.collected = orders.filter(function (o) { return o.paid; }).reduce(function (t, o) { return t + o.amount; }, 0);
+    m.failed = orders.filter(function (o) { return !o.paid; });
+    m.failedValue = m.failed.reduce(function (t, o) { return t + o.amount; }, 0);
+    m.refunded = refunds.reduce(function (t, r) { return t + r.amount; }, 0);
+    m.callsTaken = calls.reduce(function (t, c) { return t + c.count; }, 0);
+    m.callCost = m.callsTaken * set.callCost;
+    m.net = m.collected - m.refunded - m.callCost;
+
+    m.done = orders.filter(function (o) { return o.status === "done"; });
+    m.open = orders.filter(function (o) { return o.status !== "done"; });
+    m.overdue = orders.filter(function (o) { return o.overdue; });
+    var rated = m.done.filter(function (o) { return o.onTime !== null; });
+    m.onTimePct = rated.length ? ratio(rated.filter(function (o) { return o.onTime; }).length, rated.length) : null;
+    var timed = m.done.filter(function (o) { return o.turnaround != null; });
+    m.avgTurnaround = timed.length ? timed.reduce(function (t, o) { return t + o.turnaround; }, 0) / timed.length : null;
+
+    /* Recurring revenue is a standing figure, not a windowed one: every
+       live subscription regardless of when it was sold. */
+    var live = {};
+    ltOrders().forEach(function (o) {
+      if (o.kind === "subscription" && o.paid && o.subscriptionId) live[o.subscriptionId] = o.amount;
+      else if (o.kind === "subscription" && o.paid && !o.subscriptionId) live["o:" + o.id] = o.amount;
+    });
+    m.mrr = Object.keys(live).reduce(function (t, k) { return t + live[k]; }, 0);
+    m.subs = Object.keys(live).length;
+    return m;
+  }
+
+  function hasLOA() { return !!(ui.loa && loaDeals().length + loaAgents().length > 0); }
+  function hasLT()  { return !!(ui.lt && (ltOrders().length + ltProducts().length) > 0); }
+
+  /* ------------------------------------------------------------- charts */
+  /* Charts are emitted as HTML strings, so their data cannot ride on the
+     node. Each one takes an id at build time and parks its data in a
+     registry the hover layer reads back after the paint. */
+  var chartData = {}, chartSeq = 0;
+  function chartId(data) {
+    var id = "ch" + (++chartSeq);
+    chartData[id] = data;
+    return id;
+  }
+  function chartTip() { return '<div class="chart-tip" data-tip></div>'; }
+
+  /* One shared dollar scale, two series — never two y-axes. Both series
+     are money, so they belong on one chart; anything in other units gets
+     its own. */
+  function lineChart(buckets, series) {
+    var W = 760, H = 250, L = 60, R = 74, T = 16, B = 28;
+    var iw = W - L - R, ih = H - T - B;
+    var max = 0;
+    series.forEach(function (s) { s.values.forEach(function (v) { if (v > max) max = v; }); });
+    if (max <= 0) max = 100;
+    var top = niceCeil(max);
+    var n = buckets.length;
+    function x(i) { return n <= 1 ? L + iw / 2 : L + (i / (n - 1)) * iw; }
+    function y(v) { return T + ih - (v / top) * ih; }
+
+    var out = '<div class="chart" data-chart="line" data-cid="' + chartId({ buckets: buckets, series: series }) + '">';
+    out += '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Contribution by business line over time">';
+
+    /* grid + y ticks */
+    for (var g = 0; g <= 4; g++) {
+      var yv = top * g / 4, yy = y(yv);
+      out += '<line class="gridline" x1="' + L + '" y1="' + yy + '" x2="' + (L + iw) + '" y2="' + yy + '"></line>';
+      out += '<text class="tick" x="' + (L - 8) + '" y="' + (yy + 3.5) + '" text-anchor="end">' + esc(shortMoney(yv)) + '</text>';
+    }
+    out += '<line class="axisline" x1="' + L + '" y1="' + (T + ih) + '" x2="' + (L + iw) + '" y2="' + (T + ih) + '"></line>';
+
+    /* x ticks: first, middle, last only — a dense axis is unreadable */
+    [0, Math.floor((n - 1) / 2), n - 1].filter(function (v, i, a) { return n > 0 && a.indexOf(v) === i; })
+      .forEach(function (i) {
+        out += '<text class="tick" x="' + x(i) + '" y="' + (T + ih + 16) + '" text-anchor="middle">' + esc(buckets[i].label) + '</text>';
+      });
+
+    series.forEach(function (s) {
+      if (!n) return;
+      var d = "";
+      s.values.forEach(function (v, i) { d += (i ? " L" : "M") + x(i).toFixed(1) + " " + y(v).toFixed(1); });
+      /* One series gets an area to read as a magnitude; two overlapping
+         fills just muddy each other, so a pair stays as lines. */
+      if (series.length === 1) {
+        var area = d + " L" + x(n - 1).toFixed(1) + " " + (T + ih) + " L" + x(0).toFixed(1) + " " + (T + ih) + " Z";
+        out += '<path d="' + area + '" fill="' + s.fill + '" stroke="none"></path>';
+      }
+      out += '<path class="mark" d="' + d + '" stroke="' + s.color + '"></path>';
+      var last = s.values[n - 1];
+      out += '<circle class="dot" cx="' + x(n - 1) + '" cy="' + y(last) + '" r="4" fill="' + s.color + '"></circle>';
+      out += '<text class="endlabel" x="' + (L + iw + 9) + '" y="' + (y(last) + 3.5) + '" fill="' + s.color + '">' + esc(shortMoney(last)) + '</text>';
+    });
+
+    /* hover layer */
+    out += '<g class="crosshair-g" data-cross hidden><line class="crosshair" y1="' + T + '" y2="' + (T + ih) + '"></line></g>';
+    for (var i = 0; i < n; i++) {
+      var bw = n <= 1 ? iw : iw / (n - 1);
+      out += '<rect class="hit" data-i="' + i + '" x="' + (x(i) - bw / 2) + '" y="' + T + '" width="' + bw + '" height="' + ih + '"></rect>';
+    }
+    out += "</svg>" + chartTip() + "</div>";
+
+    out += '<div class="viz-legend">';
+    series.forEach(function (s) { out += '<span><i style="background:' + s.color + '"></i>' + esc(s.label) + "</span>"; });
+    out += "</div>";
+    return out;
+  }
+  function niceCeil(v) {
+    if (v <= 0) return 100;
+    var mag = Math.pow(10, Math.floor(Math.log(v) / Math.LN10));
+    var f = v / mag;
+    var step = f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10;
+    return step * mag;
+  }
+  function shortMoney(v) {
+    var a = Math.abs(v);
+    if (a >= 1000000) return "$" + (v / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
+    if (a >= 1000) return "$" + (v / 1000).toFixed(a >= 10000 ? 0 : 1).replace(/\.0$/, "") + "k";
+    return "$" + Math.round(v);
+  }
+
+  function donut(slices, centerValue, centerLabel) {
+    var total = slices.reduce(function (t, s) { return t + s.value; }, 0);
+    var S = 236, cx = S / 2, cy = S / 2, r = 88, sw = 26;
+    var out = '<div class="chart donut" data-chart="donut" data-cid="' + chartId(slices) + '">';
+    out += '<svg viewBox="0 0 ' + S + ' ' + S + '" role="img" aria-label="' + esc(centerLabel) + '">';
+    if (total <= 0) {
+      out += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="var(--grid)" stroke-width="' + sw + '"></circle>';
+    } else {
+      var a0 = -Math.PI / 2;
+      slices.forEach(function (s, i) {
+        if (s.value <= 0) return;
+        var a1 = a0 + (s.value / total) * Math.PI * 2;
+        out += '<path class="seg" data-i="' + i + '" d="' + arcPath(cx, cy, r, a0, a1) + '" fill="none" stroke="' + s.color + '" stroke-width="' + sw + '"></path>';
+        a0 = a1;
+      });
+    }
+    out += '<text class="center-v" x="' + cx + '" y="' + (cy + 2) + '" text-anchor="middle">' + esc(centerValue) + "</text>";
+    out += '<text class="center-l" x="' + cx + '" y="' + (cy + 20) + '" text-anchor="middle">' + esc(centerLabel.toUpperCase()) + "</text>";
+    out += "</svg>" + chartTip() + "</div>";
+
+    /* Every slice is direct-labeled with its value and share — the green
+       and amber sit under 3:1 against the panel, so the key is not
+       optional decoration, it is how the chart stays readable. */
+    out += '<div class="donut-key">';
+    slices.forEach(function (s) {
+      out += '<div><i style="background:' + s.color + '"></i>' +
+        '<span class="k">' + esc(s.label) + "</span>" +
+        '<span class="v">' + esc(s.display || money(s.value)) + "</span>" +
+        '<span class="p">' + esc(total > 0 ? pct(ratio(s.value, total), 0) : "—") + "</span></div>";
+    });
+    out += "</div>";
+    return out;
+  }
+  function arcPath(cx, cy, r, a0, a1) {
+    /* A 2px surface gap between segments keeps adjacent fills legible. */
+    var gap = 0.018;
+    if (a1 - a0 > gap * 2) { a0 += gap; a1 -= gap; }
+    var x0 = cx + r * Math.cos(a0), y0 = cy + r * Math.sin(a0);
+    var x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
+    var large = (a1 - a0) > Math.PI ? 1 : 0;
+    return "M" + x0.toFixed(2) + " " + y0.toFixed(2) + " A" + r + " " + r + " 0 " + large + " 1 " + x1.toFixed(2) + " " + y1.toFixed(2);
+  }
+
+  function barRows(rows, color) {
+    if (!rows.length) return '<div class="empty"><p>Nothing in this range.</p></div>';
+    var max = rows.reduce(function (t, r) { return Math.max(t, r.value); }, 0) || 1;
+    var out = '<div class="stack">';
+    rows.forEach(function (r) {
+      out += '<div>' +
+        '<div class="row" style="justify-content:space-between;gap:12px;margin-bottom:4px">' +
+          '<span style="font-size:12.5px">' + esc(r.label) + '</span>' +
+          '<span class="num" style="font-size:12.5px;font-weight:600">' + esc(r.display || money(r.value)) + '</span>' +
+        '</div>' +
+        '<div class="bar-mini" style="height:8px"><i style="width:' + (r.value / max * 100).toFixed(1) + '%;background:' + color + '"></i></div>' +
+      '</div>';
+    });
+    return out + "</div>";
+  }
+
+  /* Group a window into daily or weekly buckets — 90 daily points is
+     noise, so anything over six weeks steps up to weeks. */
+  function buildBuckets(from, to) {
+    var days = Math.round((new Date(to + "T12:00:00") - new Date(from + "T12:00:00")) / 86400000) + 1;
+    if (!isFinite(days) || days < 1) days = 1;
+    if (days > 400) { from = addDays(to, -399); days = 400; }
+    var weekly = days > 45;
+    var buckets = [], cur = from, idx = {};
+    while (cur <= to) {
+      var end = weekly ? minDate(addDays(cur, 6), to) : cur;
+      var b = { from: cur, to: end, label: bucketLabel(cur, weekly), loa: 0, lt: 0 };
+      buckets.push(b);
+      var d = cur;
+      while (d <= end) { idx[d] = buckets.length - 1; d = addDays(d, 1); }
+      cur = addDays(end, 1);
+    }
+    return { buckets: buckets, index: idx };
+  }
+  function minDate(a, b) { return a < b ? a : b; }
+  /* "All time" has no real start date, so plotting it literally would run
+     the axis back to the year zero. Start the chart at the first day the
+     company actually has a record for. */
+  function chartStart(w) {
+    if (w.from !== "0000-01-01") return w.from;
+    var earliest = "";
+    loaDeals().forEach(function (d) { var x = toISODate(d.date); if (x && (!earliest || x < earliest)) earliest = x; });
+    ltOrders().forEach(function (o) { if (o.date && (!earliest || o.date < earliest)) earliest = o.date; });
+    return earliest || addDays(w.to, -89);
+  }
+  function bucketLabel(iso, weekly) {
+    var d = new Date(iso + "T12:00:00");
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  }
+
+  /* ------------------------------------------------------------ shell */
+  function render() {
+    chartData = {}; chartSeq = 0;
+    if (ui.booting) { app.innerHTML = authShell('<p class="lede">Connecting to the company database…</p>'); return; }
+    if (ui.dbError) { app.innerHTML = authShell(dbErrorBody()); return; }
+    if (!ui.unlocked) { app.innerHTML = authShell(ui.owner ? unlockBody() : setPasscodeBody()); focusFirst(); return; }
+
+    var body;
+    if (ui.tab === "loa") body = pageLOA();
+    else if (ui.tab === "lt") body = pageLT();
+    else if (ui.tab === "people") body = pagePeople();
+    else if (ui.tab === "sync") body = pageSync();
+    else body = pageOverview();
+
+    app.innerHTML = masthead() + syncStrip() + rail() + '<div class="wrap">' + body + "</div>" +
+      (ui.toast ? '<div class="toast">' + esc(ui.toast) + "</div>" : "");
+    wireCharts();
+  }
+  function focusFirst() {
+    var el = app.querySelector("input");
+    if (el) el.focus();
+  }
+
+  function authShell(inner) {
+    return '<div class="auth-shell"><div class="auth-card">' +
+      '<div class="auth-top"><div class="wordmark"><span class="bar"></span><span class="lock">' +
+      "<h1>Thrive Command</h1><p>OWNER CONSOLE · THRIVE COMPANIES</p></span></div></div>" +
+      '<div class="auth-body">' + inner + "</div></div></div>";
+  }
+  function dbErrorBody() {
+    return '<div class="msg err">' + esc(ui.dbError) + "</div>" +
+      '<p class="lede">This console reads a shared database that only opens inside claude.ai, for people signed in to the Thrive workspace. Open it from your artifact gallery and it will connect.</p>';
+  }
+  function setPasscodeBody() {
+    return '<p class="lede">No owner passcode is set yet. Choose one now — it locks this console for everyone who opens it afterwards.</p>' +
+      '<div class="field"><label for="pw1">Owner passcode</label><input type="password" id="pw1" autocomplete="new-password" placeholder="At least 8 characters"></div>' +
+      '<div class="field"><label for="pw2">Type it again</label><input type="password" id="pw2" autocomplete="new-password"></div>' +
+      '<div id="autherr"></div>' +
+      '<button class="btn accent" data-act="setpw">Set passcode and open</button>' +
+      '<p class="lede" style="font-size:12px">Stored as a PBKDF2-SHA256 hash over a random salt, never as the passcode itself. It keeps a casual reader out; the real lock is that this artifact is private to your workspace.</p>';
+  }
+  function unlockBody() {
+    return '<p class="lede">Company-wide numbers from the LOA desk and the Lead Tech board. Owners only.</p>' +
+      '<div class="field"><label for="pw1">Owner passcode</label><input type="password" id="pw1" autocomplete="current-password"></div>' +
+      '<div id="autherr"></div>' +
+      '<button class="btn accent" data-act="unlock">Open the console</button>';
+  }
+
+  function masthead() {
+    return '<header class="mast"><div class="mast-in">' +
+      '<div class="wordmark"><span class="bar"></span><span class="lock">' +
+      "<h1>Thrive Command</h1><p>OWNER CONSOLE · THRIVE COMPANIES</p></span></div>" +
+      '<div class="mast-right">' +
+        '<span class="owner-chip"><i></i>OWNER VIEW · READ ONLY</span>' +
+        '<button class="linkish" data-act="lock">Lock</button>' +
+      "</div></div></header>";
+  }
+
+  function syncStrip() {
+    function cell(src, snap) {
+      var when = snap && snap.syncedAt;
+      var stale = !when ? "none" : (hoursSince(when) > STALE_HOURS ? "stale" : "");
+      return '<span class="src ' + src.cls + " " + stale + '">' +
+        "<i></i>" + esc(src.name) + " <b>" + esc(when ? agoLabel(when) : "not synced") + "</b></span>";
+    }
+    return '<div class="syncstrip"><div class="syncstrip-in">' +
+      '<span style="letter-spacing:.14em;color:#7B93B0">LAST SYNC</span>' +
+      cell(SOURCES.loa, ui.loa) + cell(SOURCES.lt, ui.lt) +
+      '<span class="spacer"></span>' +
+      '<button class="linkish" data-act="tab" data-tab="sync">Sync &amp; sources →</button>' +
+      "</div></div>";
+  }
+
+  function rail() {
+    var alerts = attentionItems().length;
+    var tabs = [
+      { k: "overview", label: "Overview" },
+      { k: "loa", label: "LOA Production" },
+      { k: "lt", label: "Lead Tech" },
+      { k: "people", label: "People" },
+      { k: "sync", label: "Sync & sources" }
+    ];
+    var out = '<nav class="rail"><div class="rail-in">';
+    tabs.forEach(function (t) {
+      out += '<button data-act="tab" data-tab="' + t.k + '"' + (ui.tab === t.k ? ' aria-current="page"' : "") + ">" +
+        esc(t.label) +
+        (t.k === "overview" && alerts ? '<span class="tab-badge">' + alerts + "</span>" : "") +
+        "</button>";
+    });
+    return out + "</div></nav>";
+  }
+
+  function rangePicker() {
+    var out = '<div class="seg" role="group" aria-label="Date range">';
+    RANGES.forEach(function (r) {
+      out += '<button data-act="range" data-range="' + r.k + '" aria-pressed="' + (ui.range === r.k) + '">' + esc(r.label) + "</button>";
+    });
+    return out + "</div>";
+  }
+
+  function notSynced(which) {
+    var src = SOURCES[which];
+    return '<div class="panel"><div class="empty">' +
+      "<strong>" + esc(src.name) + " has not synced yet</strong>" +
+      "<p>Nothing has been written into this console from that portal. Open <b>Sync &amp; sources</b> to see how it feeds in, or paste a snapshot there to fill it in now.</p>" +
+      '<p style="margin-top:14px"><button class="btn ghost sm" data-act="tab" data-tab="sync">Go to Sync &amp; sources</button></p>' +
+      "</div></div>";
+  }
+
+  /* ---------------------------------------------------------- attention */
+  function attentionItems() {
+    var w = rangeWindow(), items = [];
+    if (hasLOA()) {
+      var lm = loaMetrics(w.from, w.to);
+      lm.lost.forEach(function (d) {
+        items.push({
+          when: toISODate(d.date), tone: "bad", source: "LOA",
+          what: statusOf(d.status).label,
+          who: d.client + " · " + agentName(d.agentId),
+          value: -spreadOn(d)
+        });
+      });
+      var soon = addDays(todayISO(), 7);
+      loaDeals().forEach(function (d) {
+        var g = statusOf(d.status).group, dd = toISODate(d.draftDate);
+        if (g === "pending" && dd && dd >= todayISO() && dd <= soon) {
+          items.push({
+            when: dd, tone: "warn", source: "LOA", what: "Draft date due",
+            who: d.client + " · " + agentName(d.agentId), value: spreadOn(d)
+          });
+        }
+      });
+    }
+    if (hasLT()) {
+      ltOrders().forEach(function (o) {
+        if (o.overdue) items.push({ when: toISODate(o.dueAt), tone: "bad", source: "Lead Tech", what: "Past its delivery window", who: o.customer + " · " + o.product, value: o.amount });
+        else if (!o.paid) items.push({ when: o.date, tone: "warn", source: "Lead Tech", what: "Payment failed", who: o.customer + " · " + o.product, value: o.amount });
+      });
+    }
+    items.sort(function (a, b) { return (b.when || "").localeCompare(a.when || ""); });
+    return items;
+  }
+
+  /* ---------------------------------------------------------- Overview */
+  function pageOverview() {
+    if (!hasLOA() && !hasLT()) {
+      return pageHead("Overview", "Both businesses, one set of numbers.") +
+        '<div class="panel"><div class="empty">' +
+        "<strong>Nothing has synced into this console yet</strong>" +
+        "<p>Thrive Command mirrors the LOA Producer Desk and the Lead Tech Fulfillment board. Once either one syncs, the company-wide numbers appear here.</p>" +
+        '<p style="margin-top:14px"><button class="btn accent sm" data-act="tab" data-tab="sync">Open Sync &amp; sources</button></p>' +
+        "</div></div>";
+    }
+
+    var w = rangeWindow();
+    var lm = hasLOA() ? loaMetrics(w.from, w.to) : null;
+    var tm = hasLT() ? ltMetrics(w.from, w.to) : null;
+    var loaNet = lm ? lm.net : 0, ltNet = tm ? tm.net : 0;
+    var companyNet = loaNet + ltNet;
+
+    var out = pageHead("Overview", "Everything the two portals wrote, added up. " + w.label + ".", rangePicker());
+
+    /* headline */
+    out += '<div class="headline">';
+    out += '<div class="hero"><p class="eyebrow">Company net · ' + esc(w.label) + "</p>" +
+      '<span class="v' + (companyNet < 0 ? " neg" : "") + '">' + esc(money(companyNet)) + "</span>" +
+      '<span class="foot">Commission spread and fulfillment revenue, after marketing and refunds.</span>' +
+      '<div class="split">' +
+        "<div>LOA spread after call spend<b>" + esc(money(loaNet)) + "</b></div>" +
+        "<div>Lead Tech after refunds<b>" + esc(money(ltNet)) + "</b></div>" +
+      "</div></div>";
+
+    out += '<div class="headline-side">';
+    out += tile("src-loa", "LOA written premium", money(lm ? lm.apWritten : 0),
+      lm ? (intf(lm.written) + " policies · " + money(lm.mpWritten) + "/mo") : "not synced");
+    out += tile("src-lt", "Lead Tech collected", money(tm ? tm.collected : 0),
+      tm ? (intf(tm.count) + " orders · " + money(tm.refunded) + " refunded") : "not synced");
+    out += "</div></div>";
+
+    /* second tile row */
+    out += '<div class="tiles">';
+    out += tile("src-loa", "House commission paid", money(lm ? lm.houseGrossPaid : 0), lm ? "on " + money(lm.advPaid) + " advanced" : "—");
+    out += tile("src-loa", "Paid out to agents", money(lm ? lm.agentCommPaid : 0), lm ? intf(lm.paid.length) + " issued & paid" : "—");
+    out += tile("src-loa", "Inbound call spend", money(lm ? lm.marketingCost : 0), lm ? intf(lm.callsTaken) + " calls at " + money(loaOrg().costPerCall) : "—");
+    out += tile("src-lt", "Recurring revenue", money(tm ? tm.mrr : 0), tm ? intf(tm.subs) + " live subscriptions" : "—");
+    out += "</div>";
+
+    /* charts */
+    var b = buildBuckets(chartStart(w), w.to);
+    if (lm) lm.paid.forEach(function (d) { var i = b.index[toISODate(d.date)]; if (i != null) b.buckets[i].loa += spreadOn(d); });
+    if (tm) tm.orders.forEach(function (o) { var i = b.index[o.date]; if (i != null && o.paid) b.buckets[i].lt += o.amount; });
+    if (tm) tm.refunds.forEach(function (r) { var i = b.index[r.date]; if (i != null) b.buckets[i].lt -= r.amount; });
+
+    var series = [];
+    if (lm) series.push({ label: "LOA commission spread", color: "var(--s-loa)", fill: "var(--loa-fill)", values: b.buckets.map(function (x) { return Math.max(0, x.loa); }) });
+    if (tm) series.push({ label: "Lead Tech net revenue", color: "var(--s-lt)", fill: "var(--lt-fill)", values: b.buckets.map(function (x) { return Math.max(0, x.lt); }) });
+
+    out += '<div class="charts c2" style="margin-top:18px">';
+    out += '<section class="panel"><div class="panel-head"><h3>Where the money came from</h3>' +
+      '<span class="note">Both lines are dollars on one scale</span></div><div class="panel-body">' +
+      lineChart(b.buckets, series) + "</div></section>";
+
+    if (lm) {
+      var slices = [
+        { label: "Issued & paid", value: lm.apPaid, color: "var(--paid)" },
+        { label: "Still pending", value: lm.apPending, color: "var(--pipe)" },
+        { label: "Fell off", value: lm.apLost, color: "var(--fell)" }
+      ];
+      out += '<section class="panel"><div class="panel-head"><h3>Written business, by outcome</h3>' +
+        '<span class="note">Annualized premium</span></div><div class="panel-body">' +
+        donut(slices, shortMoney(lm.apWritten), "written AP") +
+        '<p class="hint" style="margin:14px 0 0;font-size:12px;color:var(--muted);text-align:center">Placement rate ' +
+        esc(pct(lm.placement)) + " of everything that settled.</p></div></section>";
+    } else {
+      out += notSynced("loa");
+    }
+    out += "</div>";
+
+    /* attention */
+    var items = attentionItems();
+    out += '<div class="section-head"><p class="eyebrow">Needs a look</p><h3>' +
+      (items.length ? esc(intf(items.length)) + " open item" + (items.length === 1 ? "" : "s") : "Nothing needs attention") +
+      "</h3><p class=\"sub\">Money that fell off, payments that failed, orders past their window, and drafts landing in the next seven days.</p></div>";
+    if (!items.length) {
+      out += '<div class="panel"><div class="empty"><strong>All clear</strong><p>No chargebacks, failed payments or overdue deliveries in this range.</p></div></div>';
+    } else {
+      out += '<div class="panel"><div class="panel-body flush"><div class="tblwrap"><table class="data">' +
+        "<thead><tr><th>Date</th><th>Source</th><th>What</th><th>Who</th><th class=\"n\">At stake</th></tr></thead><tbody>";
+      items.slice(0, 25).forEach(function (it) {
+        out += "<tr><td class=\"nowrap dim\">" + esc(prettyDate(it.when)) + "</td>" +
+          '<td><span class="pill ' + (it.source === "LOA" ? "key" : "") + '">' + esc(it.source) + "</span></td>" +
+          '<td><span class="pill ' + it.tone + '">' + esc(it.what) + "</span></td>" +
+          '<td class="who">' + esc(it.who) + "</td>" +
+          '<td class="n">' + esc(money(Math.abs(it.value))) + "</td></tr>";
+      });
+      out += "</tbody></table></div>";
+      if (items.length > 25) out += '<div class="panel-body" style="border-top:1px solid var(--line)"><span class="note" style="color:var(--muted);font-size:12px">Showing the 25 most recent of ' + esc(intf(items.length)) + ".</span></div>";
+      out += "</div></div>";
+    }
+    return out;
+  }
+
+  function pageHead(title, sub, right) {
+    return '<div class="page-head"><div><p class="eyebrow">Thrive Companies</p>' +
+      "<h2>" + esc(title) + '</h2><p class="sub">' + esc(sub) + "</p></div>" +
+      (right ? "<div>" + right + "</div>" : "") + "</div>";
+  }
+  function tile(cls, label, value, foot, tone) {
+    return '<div class="tile ' + cls + '"><p class="eyebrow">' + esc(label) + "</p>" +
+      '<span class="v' + (tone ? " " + tone : "") + '">' + esc(value) + "</span>" +
+      '<span class="foot">' + esc(foot || "") + "</span></div>";
+  }
+
+  /* ------------------------------------------------------ LOA production */
+  function pageLOA() {
+    if (!hasLOA()) return pageHead("LOA Production", "Written business, commissions and call spend.") + notSynced("loa");
+    var w = rangeWindow(), m = loaMetrics(w.from, w.to), org = loaOrg();
+
+    var out = pageHead("LOA Production", org.name + " · house contract at " + org.houseLevel + "%. " + w.label + ".", rangePicker());
+
+    out += '<div class="tiles">';
+    out += tile("src-loa", "Written premium", money(m.apWritten), intf(m.written) + " policies · " + money(m.mpWritten) + "/mo");
+    out += tile("src-loa", "Advanced premium", money(m.advPaid), Math.round(org.advanceRate * 100) + "% advance on issued business");
+    out += tile("src-loa", "House commission", money(m.houseGrossPaid), "gross, before agent splits");
+    out += tile("src-loa", "Agent commission", money(m.agentCommPaid), "paid out on issued business");
+    out += tile("is-good", "Commission spread", money(m.spreadPaid), "house keeps this");
+    out += tile("src-loa", "Call spend", money(m.marketingCost), intf(m.callsTaken) + " calls at " + money(org.costPerCall));
+    out += tile(m.net >= 0 ? "is-good" : "is-bad", "Net after marketing", money(m.net), "spread minus call spend", m.net < 0 ? "neg" : "pos");
+    out += tile(m.placement >= 70 ? "is-good" : "is-warn", "Placement rate", pct(m.placement), "of settled premium stuck");
+    out += "</div>";
+
+    /* agents */
+    out += '<div class="section-head"><p class="eyebrow">By producer</p><h3>Who wrote what</h3>' +
+      '<p class="sub">Ranked by the spread the house kept after their split.</p></div>';
+    var rows = loaAgents().map(function (a) {
+      var am = loaMetrics(w.from, w.to, [a.id]);
+      return { agent: a, m: am };
+    }).filter(function (r) { return r.m.written > 0 || r.m.callsTaken > 0; })
+      .sort(function (x, y) { return y.m.spreadPaid - x.m.spreadPaid; });
+
+    if (!rows.length) {
+      out += '<div class="panel"><div class="empty"><strong>No production in this range</strong><p>Widen the range to see earlier business.</p></div></div>';
+    } else {
+      out += '<div class="panel"><div class="panel-body flush"><div class="tblwrap"><table class="data"><thead><tr>' +
+        "<th>Producer</th><th>Contract</th><th class=\"n\">Calls</th><th class=\"n\">Written</th><th class=\"n\">Written AP</th>" +
+        "<th class=\"n\">Paid AP</th><th class=\"n\">Agent comm</th><th class=\"n\">Spread</th><th>Placement</th>" +
+        "</tr></thead><tbody>";
+      rows.forEach(function (r) {
+        var p = r.m.placement;
+        out += "<tr><td class=\"who\">" + esc(r.agent.name) + '<div class="dim">' + esc(r.agent.role === "admin" ? "Admin" : "Producer") + " · " + esc(r.agent.status || "active") + "</div></td>" +
+          '<td class="num">' + esc(r.agent.level || "—") + "%</td>" +
+          '<td class="n">' + esc(intf(r.m.callsTaken)) + "</td>" +
+          '<td class="n">' + esc(intf(r.m.written)) + "</td>" +
+          '<td class="n">' + esc(money(r.m.apWritten)) + "</td>" +
+          '<td class="n">' + esc(money(r.m.apPaid)) + "</td>" +
+          '<td class="n">' + esc(money(r.m.agentCommPaid)) + "</td>" +
+          '<td class="n">' + esc(money(r.m.spreadPaid)) + "</td>" +
+          '<td><div class="row" style="gap:8px;flex-wrap:nowrap"><div class="bar-mini" style="flex:1 1 54px"><i class="' + (p >= 70 ? "good" : p < 50 ? "bad" : "") + '" style="width:' + Math.min(100, p).toFixed(0) + '%"></i></div>' +
+          '<span class="num" style="font-size:12px">' + esc(pct(p, 0)) + "</span></div></td></tr>";
+      });
+      var tot = m;
+      out += '<tr class="total"><td>All producers</td><td class="num">—</td>' +
+        '<td class="n">' + esc(intf(tot.callsTaken)) + '</td><td class="n">' + esc(intf(tot.written)) + "</td>" +
+        '<td class="n">' + esc(money(tot.apWritten)) + '</td><td class="n">' + esc(money(tot.apPaid)) + "</td>" +
+        '<td class="n">' + esc(money(tot.agentCommPaid)) + '</td><td class="n">' + esc(money(tot.spreadPaid)) + "</td>" +
+        "<td>" + esc(pct(tot.placement, 0)) + "</td></tr>";
+      out += "</tbody></table></div></div></div>";
+    }
+
+    /* carrier mix */
+    var byCarrier = {};
+    m.deals.forEach(function (d) {
+      var k = d.carrierId || "—";
+      byCarrier[k] = byCarrier[k] || { ap: 0, n: 0, spread: 0 };
+      byCarrier[k].ap += num(d.ap);
+      byCarrier[k].n += 1;
+      if (statusOf(d.status).group === "paid") byCarrier[k].spread += spreadOn(d);
+    });
+    var carrierRows = Object.keys(byCarrier).map(function (k) {
+      return { label: carrierName(k) + "  ·  " + byCarrier[k].n + " policies", value: byCarrier[k].ap };
+    }).sort(function (a, b) { return b.value - a.value; });
+    var shown = carrierRows.slice(0, 8);
+    if (carrierRows.length > 8) {
+      var rest = carrierRows.slice(8).reduce(function (t, r) { return t + r.value; }, 0);
+      shown.push({ label: "Other carriers  ·  " + (carrierRows.length - 8), value: rest });
+    }
+
+    out += '<div class="charts c2" style="margin-top:18px">';
+    out += '<section class="panel"><div class="panel-head"><h3>Carrier mix</h3><span class="note">Written premium</span></div>' +
+      '<div class="panel-body">' + barRows(shown, "var(--s-loa)") + "</div></section>";
+
+    var slices = [
+      { label: "Issued & paid", value: m.apPaid, color: "var(--paid)" },
+      { label: "Still pending", value: m.apPending, color: "var(--pipe)" },
+      { label: "Fell off", value: m.apLost, color: "var(--fell)" }
+    ];
+    out += '<section class="panel"><div class="panel-head"><h3>Outcome</h3><span class="note">Annualized premium</span></div>' +
+      '<div class="panel-body">' + donut(slices, shortMoney(m.apWritten), "written AP") + "</div></section>";
+    out += "</div>";
+
+    /* deals */
+    out += '<div class="section-head"><p class="eyebrow">Policy ledger</p><h3>Every deal in the range</h3>' +
+      '<p class="sub">Read-only. Corrections belong in the Producer Desk — this console mirrors whatever the desk last said.</p></div>';
+
+    out += '<div class="filters">' +
+      '<div class="field"><label for="f-status">Status</label><select id="f-status" data-filter="dealStatus">' +
+        '<option value="">Any status</option>' +
+        Object.keys(LOA_STATUS).map(function (k) {
+          return '<option value="' + k + '"' + (ui.filters.dealStatus === k ? " selected" : "") + ">" + esc(LOA_STATUS[k].label) + "</option>";
+        }).join("") + "</select></div>" +
+      '<div class="field"><label for="f-agent">Producer</label><select id="f-agent" data-filter="dealAgent">' +
+        '<option value="">Everyone</option>' +
+        loaAgents().map(function (a) {
+          return '<option value="' + esc(a.id) + '"' + (ui.filters.dealAgent === a.id ? " selected" : "") + ">" + esc(a.name) + "</option>";
+        }).join("") + "</select></div>" +
+      '<div class="field searchbox"><label for="f-q">Search</label>' +
+        '<input type="search" id="f-q" data-filter="dealQuery" value="' + esc(ui.filters.dealQuery) + '" placeholder="Client, policy number or carrier"></div>' +
+      "</div>";
+
+    var q = ui.filters.dealQuery.trim().toLowerCase();
+    var list = m.deals.filter(function (d) {
+      if (ui.filters.dealStatus && d.status !== ui.filters.dealStatus) return false;
+      if (ui.filters.dealAgent && d.agentId !== ui.filters.dealAgent) return false;
+      if (q) {
+        var hay = (d.client + " " + (d.policyNo || "") + " " + carrierName(d.carrierId) + " " + (d.product || "")).toLowerCase();
+        if (hay.indexOf(q) < 0) return false;
+      }
+      return true;
+    }).sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
+
+    if (!list.length) {
+      out += '<div class="panel"><div class="empty"><strong>No deals match</strong><p>Clear a filter or widen the range.</p></div></div>';
+    } else {
+      out += '<div class="panel"><div class="panel-body flush"><div class="tblwrap"><table class="data"><thead><tr>' +
+        "<th>Date</th><th>Client</th><th>Producer</th><th>Carrier &amp; product</th><th class=\"n\">Monthly</th>" +
+        "<th class=\"n\">Annualized</th><th class=\"n\">Agent</th><th class=\"n\">House</th><th class=\"n\">Spread</th><th>Status</th>" +
+        "</tr></thead><tbody>";
+      list.forEach(function (d) {
+        var s = statusOf(d.status);
+        out += "<tr><td class=\"nowrap dim\">" + esc(prettyDate(d.date)) + "</td>" +
+          '<td class="who">' + esc(d.client) + (d.policyNo ? '<div class="dim">' + esc(d.policyNo) + "</div>" : "") + "</td>" +
+          "<td>" + esc(agentName(d.agentId)) + "</td>" +
+          "<td>" + esc(carrierName(d.carrierId)) + '<div class="dim">' + esc(d.product || "") + "</div></td>" +
+          '<td class="n">' + esc(money(d.mp)) + "</td>" +
+          '<td class="n">' + esc(money(d.ap)) + "</td>" +
+          '<td class="n">' + esc(money(agentCommOn(d))) + '<div class="dim">' + esc(d.agentPct) + "%</div></td>" +
+          '<td class="n">' + esc(money(houseCommOn(d))) + '<div class="dim">' + esc(d.housePct) + "%</div></td>" +
+          '<td class="n">' + esc(money(spreadOn(d))) + "</td>" +
+          '<td><span class="pill ' + s.tone + '">' + esc(s.label) + "</span></td></tr>";
+      });
+      out += "</tbody></table></div></div></div>";
+    }
+    return out;
+  }
+
+  /* -------------------------------------------------------- Lead Tech */
+  function pageLT() {
+    if (!hasLT()) return pageHead("Lead Tech Fulfillment", "Orders, delivery and refunds.") + notSynced("lt");
+    var w = rangeWindow(), m = ltMetrics(w.from, w.to), set = ltSettings();
+
+    var out = pageHead("Lead Tech Fulfillment", "Order flow, delivery against SLA and money back out the door. " + w.label + ".", rangePicker());
+
+    out += '<div class="tiles">';
+    out += tile("src-lt", "Collected", money(m.collected), intf(m.count) + " orders");
+    out += tile("src-lt", "Refunded", money(m.refunded), intf(m.refunds.length) + " refunds");
+    out += tile(m.net >= 0 ? "is-good" : "is-bad", "Net revenue", money(m.net), "after refunds and call cost", m.net < 0 ? "neg" : "pos");
+    out += tile("src-lt", "Recurring revenue", money(m.mrr), intf(m.subs) + " live subscriptions");
+    out += tile(m.onTimePct == null ? "src-lt" : (m.onTimePct >= 90 ? "is-good" : "is-warn"),
+      "Delivered on time", m.onTimePct == null ? "—" : pct(m.onTimePct), intf(m.done.length) + " completed in range");
+    out += tile(m.overdue.length ? "is-bad" : "is-good", "Past due now", intf(m.overdue.length), "open orders past their window");
+    out += tile("src-lt", "Average turnaround", m.avgTurnaround == null ? "—" : m.avgTurnaround.toFixed(1) + "h", "order paid to order delivered");
+    out += tile(m.failed.length ? "is-warn" : "src-lt", "Failed payments", intf(m.failed.length), money(m.failedValue) + " not collected");
+    out += "</div>";
+
+    /* revenue by product */
+    var byProd = {};
+    m.orders.forEach(function (o) {
+      if (!o.paid) return;
+      var k = o.product || "—";
+      byProd[k] = byProd[k] || { value: 0, n: 0 };
+      byProd[k].value += o.amount;
+      byProd[k].n += 1;
+    });
+    var prodRows = Object.keys(byProd).map(function (k) {
+      return { label: k + "  ·  " + byProd[k].n + " orders", value: byProd[k].value };
+    }).sort(function (a, b) { return b.value - a.value; });
+
+    var deliv = [
+      { label: "Delivered on time", value: m.done.filter(function (o) { return o.onTime === true; }).length, color: "var(--paid)", display: null },
+      { label: "Delivered late", value: m.done.filter(function (o) { return o.onTime === false; }).length, color: "var(--pipe)", display: null },
+      { label: "Still open", value: m.open.length, color: "var(--fell)", display: null }
+    ].map(function (s) { s.display = intf(s.value); return s; });
+
+    out += '<div class="charts c2" style="margin-top:18px">';
+    out += '<section class="panel"><div class="panel-head"><h3>Revenue by product</h3><span class="note">Collected in range</span></div>' +
+      '<div class="panel-body">' + barRows(prodRows, "var(--s-lt)") + "</div></section>";
+    out += '<section class="panel"><div class="panel-head"><h3>Delivery</h3><span class="note">Orders in range</span></div>' +
+      '<div class="panel-body">' + donut(deliv, intf(m.count), "orders") + "</div></section>";
+    out += "</div>";
+
+    /* orders */
+    out += '<div class="section-head"><p class="eyebrow">Order ledger</p><h3>Every order in the range</h3>' +
+      '<p class="sub">Read-only. The board itself is where orders get worked.</p></div>';
+
+    var products = ltProducts();
+    out += '<div class="filters">' +
+      '<div class="field"><label for="o-status">Status</label><select id="o-status" data-filter="orderStatus">' +
+        '<option value="">Any status</option>' +
+        ["open", "done", "overdue", "failed"].map(function (k) {
+          var lbl = k === "open" ? "Open" : k === "done" ? "Delivered" : k === "overdue" ? "Past due" : "Payment failed";
+          return '<option value="' + k + '"' + (ui.filters.orderStatus === k ? " selected" : "") + ">" + lbl + "</option>";
+        }).join("") + "</select></div>" +
+      '<div class="field"><label for="o-prod">Product</label><select id="o-prod" data-filter="orderProduct">' +
+        '<option value="">Every product</option>' +
+        products.map(function (p) {
+          return '<option value="' + esc(p.id) + '"' + (ui.filters.orderProduct === p.id ? " selected" : "") + ">" + esc(p.name) + "</option>";
+        }).join("") + "</select></div>" +
+      '<div class="field searchbox"><label for="o-q">Search</label>' +
+        '<input type="search" id="o-q" data-filter="orderQuery" value="' + esc(ui.filters.orderQuery) + '" placeholder="Customer, email or product"></div>' +
+      "</div>";
+
+    var oq = ui.filters.orderQuery.trim().toLowerCase();
+    var list = m.orders.filter(function (o) {
+      var f = ui.filters.orderStatus;
+      if (f === "open" && o.status !== "open") return false;
+      if (f === "done" && o.status !== "done") return false;
+      if (f === "overdue" && !o.overdue) return false;
+      if (f === "failed" && o.paid) return false;
+      if (ui.filters.orderProduct && o.productId !== ui.filters.orderProduct) return false;
+      if (oq && (o.customer + " " + o.email + " " + o.product).toLowerCase().indexOf(oq) < 0) return false;
+      return true;
+    }).sort(function (a, b) { return b.createdAt - a.createdAt; });
+
+    if (!list.length) {
+      out += '<div class="panel"><div class="empty"><strong>No orders match</strong><p>Clear a filter or widen the range.</p></div></div>';
+    } else {
+      out += '<div class="panel"><div class="panel-body flush"><div class="tblwrap"><table class="data"><thead><tr>' +
+        "<th>Ordered</th><th>Customer</th><th>Product</th><th class=\"n\">Amount</th><th>Payment</th>" +
+        "<th>Delivery</th><th class=\"n\">Turnaround</th><th>Worked by</th>" +
+        "</tr></thead><tbody>";
+      list.slice(0, 200).forEach(function (o) {
+        var dl = o.status === "done"
+          ? '<span class="pill ' + (o.onTime === false ? "warn" : "good") + '">' + (o.onTime === false ? "Late" : "Delivered") + "</span>"
+          : '<span class="pill ' + (o.overdue ? "bad" : "") + '">' + (o.overdue ? "Past due" : "Open") + "</span>";
+        out += "<tr><td class=\"nowrap dim\">" + esc(prettyDate(o.date)) + "</td>" +
+          '<td class="who">' + esc(o.customer) + (o.email ? '<div class="dim">' + esc(o.email) + "</div>" : "") + "</td>" +
+          "<td>" + esc(o.product) + '<div class="dim">' + esc(o.kind === "subscription" ? "Subscription" : "One-time") + "</div></td>" +
+          '<td class="n">' + esc(money(o.amount, 2)) + "</td>" +
+          '<td><span class="pill ' + (o.paid ? "good" : "bad") + '">' + esc(o.paid ? "Paid" : "Failed") + "</span></td>" +
+          "<td>" + dl + "</td>" +
+          '<td class="n">' + esc(o.turnaround == null ? "—" : o.turnaround.toFixed(1) + "h") + "</td>" +
+          "<td>" + esc(o.assignee || "—") + "</td></tr>";
+      });
+      out += "</tbody></table></div>";
+      if (list.length > 200) out += '<div class="panel-body" style="border-top:1px solid var(--line)"><span style="color:var(--muted);font-size:12px">Showing the 200 most recent of ' + esc(intf(list.length)) + ".</span></div>";
+      out += "</div></div>";
+    }
+
+    /* refunds */
+    if (m.refunds.length) {
+      out += '<div class="section-head"><p class="eyebrow">Money back out</p><h3>Refunds in the range</h3>' +
+        '<p class="sub">Grouped by reason, so a pattern shows up before it becomes a habit.</p></div>';
+      var byType = {};
+      m.refunds.forEach(function (r) {
+        byType[r.type] = byType[r.type] || { n: 0, value: 0 };
+        byType[r.type].n += 1;
+        byType[r.type].value += r.amount;
+      });
+      out += '<div class="panel"><div class="panel-body flush"><div class="tblwrap"><table class="data">' +
+        "<thead><tr><th>Reason</th><th class=\"n\">Count</th><th class=\"n\">Amount</th><th class=\"n\">Share of collected</th></tr></thead><tbody>";
+      Object.keys(byType).sort(function (a, b) { return byType[b].value - byType[a].value; }).forEach(function (k) {
+        out += "<tr><td class=\"who\">" + esc(k) + "</td>" +
+          '<td class="n">' + esc(intf(byType[k].n)) + "</td>" +
+          '<td class="n">' + esc(money(byType[k].value, 2)) + "</td>" +
+          '<td class="n">' + esc(pct(ratio(byType[k].value, m.collected))) + "</td></tr>";
+      });
+      out += '<tr class="total"><td>All refunds</td><td class="n">' + esc(intf(m.refunds.length)) + "</td>" +
+        '<td class="n">' + esc(money(m.refunded, 2)) + '</td><td class="n">' + esc(pct(ratio(m.refunded, m.collected))) + "</td></tr>";
+      out += "</tbody></table></div></div></div>";
+    }
+    return out;
+  }
+
+  /* ------------------------------------------------------------ People */
+  function pagePeople() {
+    var w = rangeWindow();
+    var out = pageHead("People", "Everyone across both businesses, and what they moved. " + w.label + ".", rangePicker());
+
+    if (!hasLOA() && !hasLT()) return out + notSynced("loa");
+
+    if (hasLOA()) {
+      out += '<div class="panel"><div class="panel-head"><h3>Licensed producers</h3>' +
+        '<span class="note">From the LOA Producer Desk</span></div><div class="panel-body flush"><div class="tblwrap"><table class="data"><thead><tr>' +
+        "<th>Name</th><th>Role</th><th>Contract</th><th>Status</th><th>Started</th><th class=\"n\">Calls</th><th class=\"n\">Written AP</th><th class=\"n\">Spread to house</th>" +
+        "</tr></thead><tbody>";
+      loaAgents().slice().sort(function (a, b) { return (a.name || "").localeCompare(b.name || ""); }).forEach(function (a) {
+        var am = loaMetrics(w.from, w.to, [a.id]);
+        out += "<tr><td class=\"who\">" + esc(a.name) + (a.email ? '<div class="dim">' + esc(a.email) + "</div>" : "") + "</td>" +
+          "<td>" + esc(a.role === "admin" ? "Admin" : "Producer") + "</td>" +
+          '<td class="num">' + esc(a.level || "—") + "%</td>" +
+          '<td><span class="pill ' + (a.status === "active" ? "good" : "warn") + '">' + esc(a.status || "active") + "</span></td>" +
+          '<td class="nowrap dim">' + esc(prettyDate(a.startedOn || a.createdAt)) + "</td>" +
+          '<td class="n">' + esc(intf(am.callsTaken)) + "</td>" +
+          '<td class="n">' + esc(money(am.apWritten)) + "</td>" +
+          '<td class="n">' + esc(money(am.spreadPaid)) + "</td></tr>";
+      });
+      out += "</tbody></table></div></div></div>";
+    }
+
+    if (hasLT()) {
+      var byWho = {};
+      ltOrders().filter(function (o) { return inRange(o.date, w.from, w.to); }).forEach(function (o) {
+        var k = o.assignee || "Unassigned";
+        byWho[k] = byWho[k] || { n: 0, done: 0, onTime: 0, rated: 0, value: 0 };
+        byWho[k].n += 1;
+        byWho[k].value += o.paid ? o.amount : 0;
+        if (o.status === "done") {
+          byWho[k].done += 1;
+          if (o.onTime !== null) { byWho[k].rated += 1; if (o.onTime) byWho[k].onTime += 1; }
+        }
+      });
+      var keys = Object.keys(byWho);
+      out += '<div class="panel"><div class="panel-head"><h3>Fulfillment team</h3>' +
+        '<span class="note">From the Lead Tech board</span></div>';
+      if (!keys.length) {
+        out += '<div class="empty"><p>No orders were worked in this range.</p></div></div>';
+      } else {
+        out += '<div class="panel-body flush"><div class="tblwrap"><table class="data"><thead><tr>' +
+          "<th>Name</th><th class=\"n\">Orders</th><th class=\"n\">Delivered</th><th>On time</th><th class=\"n\">Order value</th>" +
+          "</tr></thead><tbody>";
+        keys.sort(function (a, b) { return byWho[b].n - byWho[a].n; }).forEach(function (k) {
+          var r = byWho[k], p = r.rated ? ratio(r.onTime, r.rated) : null;
+          out += "<tr><td class=\"who\">" + esc(k) + "</td>" +
+            '<td class="n">' + esc(intf(r.n)) + '</td><td class="n">' + esc(intf(r.done)) + "</td>" +
+            "<td>" + (p == null ? '<span class="dim">—</span>' :
+              '<div class="row" style="gap:8px;flex-wrap:nowrap"><div class="bar-mini" style="flex:1 1 54px"><i class="' + (p >= 90 ? "good" : p < 70 ? "bad" : "") + '" style="width:' + p.toFixed(0) + '%"></i></div><span class="num" style="font-size:12px">' + esc(pct(p, 0)) + "</span></div>") + "</td>" +
+            '<td class="n">' + esc(money(r.value)) + "</td></tr>";
+        });
+        out += "</tbody></table></div></div></div>";
+      }
+    }
+    return out;
+  }
+
+  /* -------------------------------------------------------------- Sync */
+  function pageSync() {
+    var out = pageHead("Sync & sources", "Where these numbers come from, how fresh they are, and how to top them up.");
+
+    out += '<div class="srcgrid">';
+    out += srcCard(SOURCES.loa, ui.loa, loaCounts(), "The desk keeps its state inside its own published page, so a sync run reads it straight from the artifact and writes it here. Nothing needs to be open for that to work.");
+    out += srcCard(SOURCES.lt, ui.lt, ltCounts(), "The board keeps its data in the browser it was worked in. It mirrors a scrubbed copy into its own database whenever it is open, and a sync run copies that across. Open the board once after a busy day and the numbers here catch up.");
+    out += "</div>";
+
+    out += '<div class="section-head"><p class="eyebrow">Top it up by hand</p><h3>Paste a snapshot</h3>' +
+      '<p class="sub">Export from either portal and drop the JSON here. The console works out which source it came from. This overwrites that source’s snapshot; it never touches the portal it came from.</p></div>';
+    out += '<div class="panel"><div class="panel-body stack">' +
+      '<textarea id="importbox" placeholder="Paste the exported JSON here" spellcheck="false"></textarea>' +
+      '<div id="importmsg"></div>' +
+      '<div class="row"><button class="btn accent" data-act="import">Load snapshot</button>' +
+      '<button class="btn ghost" data-act="export">Download everything as JSON</button>' +
+      '<span class="spacer"></span></div>' +
+      "</div></div>";
+
+    out += '<div class="section-head"><p class="eyebrow">Who can see this</p><h3>Access</h3>' +
+      '<p class="sub">Straight answers, because a console full of company numbers deserves them.</p></div>';
+    out += '<div class="panel"><div class="panel-body stack">' +
+      '<p style="margin:0;font-size:13px;line-height:1.65;max-width:70ch">This artifact is private to your Claude workspace and, because it uses a shared database, it <b>cannot be made public at all</b> — every reader is a signed-in member of your organization. Sharing it with someone is a deliberate act.</p>' +
+      '<p style="margin:0;font-size:13px;line-height:1.65;max-width:70ch">The passcode is a second door, not the lock. It stops a casual over-the-shoulder read; it will not stop someone determined who already has access to the page. Treat workspace access as the real boundary.</p>' +
+      '<p style="margin:0;font-size:13px;line-height:1.65;max-width:70ch">Nothing here writes back. The Producer Desk and the fulfillment board stay the systems of record; this console only ever reads what they last published.</p>' +
+      '<div class="row"><button class="btn ghost sm" data-act="changepw">Change the owner passcode</button></div>' +
+      '<div id="pwmsg"></div>' +
+      "</div></div>";
+    return out;
+  }
+
+  function loaCounts() {
+    if (!ui.loa) return null;
+    return [["Producers", intf(loaAgents().length)], ["Policies", intf(loaDeals().length)], ["Call days logged", intf(loaCalls().length)]];
+  }
+  function ltCounts() {
+    if (!ui.lt) return null;
+    return [["Orders", intf(ltOrders().length)], ["Products", intf(ltProducts().length)], ["Refunds", intf(ltRefunds().length)]];
+  }
+  function srcCard(src, snap, counts, how) {
+    var when = snap && snap.syncedAt;
+    var stale = when && hoursSince(when) > STALE_HOURS;
+    var out = '<div class="srccard ' + src.cls + '"><div class="top"><i></i><div>' +
+      "<h4>" + esc(src.name) + "</h4><p>" + esc(src.blurb) + "</p></div></div><div class=\"body\">";
+    out += "<dl>";
+    out += "<dt>Last sync</dt><dd>" + (when ? esc(agoLabel(when)) + (stale ? ' <span class="pill warn">stale</span>' : "") : '<span class="pill warn">never</span>') + "</dd>";
+    if (when) out += "<dt>Taken</dt><dd>" + esc(new Date(toMillis(when)).toLocaleString()) + "</dd>";
+    if (snap && snap.syncedBy) out += "<dt>By</dt><dd>" + esc(snap.syncedBy === "import" ? "pasted by hand" : snap.syncedBy) + "</dd>";
+    (counts || []).forEach(function (c) { out += "<dt>" + esc(c[0]) + "</dt><dd>" + esc(c[1]) + "</dd>"; });
+    out += "</dl>";
+    out += '<div class="how">' + esc(how) + "</div>";
+    out += '<div class="row"><a class="btn ghost sm" href="' + esc(src.url) + '" target="_blank" rel="noopener">Open the portal →</a></div>';
+    return out + "</div></div>";
+  }
+
+  /* -------------------------------------------------------- chart hover */
+  function wireCharts() {
+    Array.prototype.forEach.call(app.querySelectorAll('[data-chart="line"]'), function (box) {
+      var svg = box.querySelector("svg"), tip = box.querySelector("[data-tip]");
+      var cross = box.querySelector("[data-cross]"), line = cross ? cross.querySelector("line") : null;
+      box.addEventListener("mousemove", function (ev) {
+        var hit = ev.target.closest ? ev.target.closest(".hit") : null;
+        if (!hit) return;
+        var i = +hit.getAttribute("data-i");
+        var d = chartData[box.getAttribute("data-cid")];
+        if (!d) return;
+        var r = svg.getBoundingClientRect(), br = box.getBoundingClientRect();
+        var cx = hit.x.baseVal.value + hit.width.baseVal.value / 2;
+        var px = (cx / 760) * r.width;
+        if (line) { line.setAttribute("x1", cx); line.setAttribute("x2", cx); cross.removeAttribute("hidden"); }
+        tip.innerHTML = "<b>" + esc(d.buckets[i].label) + "</b><br>" +
+          d.series.map(function (s) {
+            return '<span class="k" style="background:' + s.color + '"></span>' + esc(s.label) + " <b>" + esc(money(s.values[i])) + "</b>";
+          }).join("<br>");
+        tip.style.left = px + "px";
+        tip.style.top = (r.top - br.top + 46) + "px";
+        tip.classList.add("on");
+      });
+      box.addEventListener("mouseleave", function () {
+        tip.classList.remove("on");
+        if (cross) cross.setAttribute("hidden", "");
+      });
+    });
+    Array.prototype.forEach.call(app.querySelectorAll('[data-chart="donut"]'), function (box) {
+      var tip = box.querySelector("[data-tip]");
+      box.addEventListener("mousemove", function (ev) {
+        var seg = ev.target.closest ? ev.target.closest(".seg") : null;
+        if (!seg) { tip.classList.remove("on"); return; }
+        var d = chartData[box.getAttribute("data-cid")];
+        if (!d) return;
+        var s = d[+seg.getAttribute("data-i")];
+        var br = box.getBoundingClientRect();
+        tip.innerHTML = '<span class="k" style="background:' + s.color + '"></span>' + esc(s.label) + " <b>" + esc(s.display || money(s.value)) + "</b>";
+        tip.style.left = (ev.clientX - br.left) + "px";
+        tip.style.top = (ev.clientY - br.top) + "px";
+        tip.classList.add("on");
+      });
+      box.addEventListener("mouseleave", function () { tip.classList.remove("on"); });
+    });
+  }
+
+  /* ------------------------------------------------------------- crypto */
+  function subtle() { return window.crypto && window.crypto.subtle ? window.crypto.subtle : null; }
+  function toHex(buf) {
+    var b = new Uint8Array(buf), s = "";
+    for (var i = 0; i < b.length; i++) s += ("0" + b[i].toString(16)).slice(-2);
+    return s;
+  }
+  function randomSalt() {
+    var b = new Uint8Array(16);
+    window.crypto.getRandomValues(b);
+    return toHex(b.buffer);
+  }
+  function hashPw(pw, saltHex, iter) {
+    var s = subtle();
+    if (!s) return Promise.reject(new Error("This browser cannot hash the passcode."));
+    var enc = new TextEncoder();
+    var salt = new Uint8Array(saltHex.match(/../g).map(function (h) { return parseInt(h, 16); }));
+    return s.importKey("raw", enc.encode(pw), { name: "PBKDF2" }, false, ["deriveBits"])
+      .then(function (k) {
+        return s.deriveBits({ name: "PBKDF2", salt: salt, iterations: iter || PW_ITER, hash: "SHA-256" }, k, 256);
+      })
+      .then(toHex);
+  }
+
+  function rememberUnlock(hash) {
+    try {
+      localStorage.setItem(UNLOCK_KEY, hash.slice(0, 16) + ":" + (Date.now() + UNLOCK_HOURS * 3600000));
+    } catch (e) {}
+  }
+  function unlockRemembered(hash) {
+    try {
+      var v = localStorage.getItem(UNLOCK_KEY);
+      if (!v) return false;
+      var p = v.split(":");
+      return p[0] === hash.slice(0, 16) && Date.now() < +p[1];
+    } catch (e) { return false; }
+  }
+  function forgetUnlock() { try { localStorage.removeItem(UNLOCK_KEY); } catch (e) {} }
+
+  /* --------------------------------------------------------- snapshots */
+  /* An import is a favour to the owner, not a parser exercise: work out
+     which portal the JSON came from rather than making them tell us. */
+  function classify(obj) {
+    if (!obj || typeof obj !== "object") return null;
+    if (obj.source === "loa" || obj.source === "leadtech") return obj.source === "loa" ? "loa" : "lt";
+    if (Array.isArray(obj.deals) && Array.isArray(obj.agents)) return "loa";
+    if (Array.isArray(obj.orders) && (Array.isArray(obj.products) || Array.isArray(obj.refundTypes))) return "lt";
+    return null;
+  }
+  function normalizeLOA(o) {
+    return {
+      syncedAt: new Date().toISOString(), syncedBy: "import",
+      sourceUrl: SOURCES.loa.url, sourceUpdatedAt: o.updatedAt || "",
+      org: o.org || {}, agents: o.agents || [], deals: o.deals || [],
+      calls: o.calls || [], goals: o.goals || {}, carriers: o.carriers || {}
+    };
+  }
+  function normalizeLT(o) {
+    var s = o.settings || {};
+    return {
+      syncedAt: new Date().toISOString(), syncedBy: "import",
+      sourceUrl: SOURCES.lt.url, version: o.version || "",
+      /* Only the four settings this console actually reads — a board's
+         sync tokens and webhooks have no business in a shared store. */
+      settings: { callCost: s.callCost, callPrice: s.callPrice, pastDueHours: s.pastDueHours, archiveAfterDays: s.archiveAfterDays },
+      products: o.products || [], refundTypes: o.refundTypes || [],
+      orders: o.orders || [], refunds: o.refunds || [],
+      customers: o.customers || [], calls: o.calls || []
+    };
+  }
+
+  function doImport() {
+    var box = document.getElementById("importbox");
+    var msg = document.getElementById("importmsg");
+    var raw = box ? box.value.trim() : "";
+    if (!raw) { msg.innerHTML = '<div class="msg warnbar">Paste the exported JSON first.</div>'; return; }
+    var obj;
+    try { obj = JSON.parse(raw); }
+    catch (e) { msg.innerHTML = '<div class="msg err">That is not valid JSON. Copy the whole export, including the outermost braces.</div>'; return; }
+    var kind = classify(obj);
+    if (!kind) {
+      msg.innerHTML = '<div class="msg err">This does not look like either portal’s export. The desk export carries <b>agents</b> and <b>deals</b>; the board export carries <b>orders</b> and <b>products</b>.</div>';
+      return;
+    }
+    var body = kind === "loa" ? normalizeLOA(obj) : normalizeLT(obj);
+    msg.innerHTML = '<div class="msg info">Saving…</div>';
+    db.doc(SOURCES[kind].doc).set(body).then(function () {
+      toast(SOURCES[kind].name + " snapshot loaded");
+    }).catch(function (e) {
+      var m = e && e.code === "invalid_argument"
+        ? "That snapshot is too large for one document (the limit is 256 KB). Trim it, or let a sync run split it."
+        : "Could not save it: " + ((e && e.message) || "unknown error");
+      msg.innerHTML = '<div class="msg err">' + esc(m) + "</div>";
+    });
+  }
+
+  function doExport() {
+    var payload = JSON.stringify({
+      exportedAt: new Date().toISOString(),
+      company: "Thrive Companies",
+      loa: ui.loa || null,
+      leadtech: ui.lt || null
+    }, null, 2);
+    if (!downloads) { toast("Saving files is not available in this view"); return; }
+    downloads.save({ filename: "thrive-command-" + todayISO() + ".json", data: payload })
+      .then(function () { toast("Saved"); })
+      .catch(function (e) { if (e && e.code !== "cancelled") toast("Could not save the file"); });
+  }
+
+  /* ---------------------------------------------------------- handlers */
+  document.addEventListener("click", function (ev) {
+    var t = ev.target.closest ? ev.target.closest("[data-act]") : null;
+    if (!t) return;
+    var act = t.getAttribute("data-act");
+
+    if (act === "tab") { ui.tab = t.getAttribute("data-tab"); window.scrollTo(0, 0); render(); }
+    else if (act === "range") { ui.range = t.getAttribute("data-range"); render(); }
+    else if (act === "lock") { forgetUnlock(); ui.unlocked = false; render(); }
+    else if (act === "import") { doImport(); }
+    else if (act === "export") { doExport(); }
+    else if (act === "setpw") { setPasscode(); }
+    else if (act === "unlock") { tryUnlock(); }
+    else if (act === "changepw") { changePasscode(); }
+  });
+
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key !== "Enter") return;
+    var el = ev.target;
+    if (el && el.id === "pw1" || el && el.id === "pw2") {
+      ev.preventDefault();
+      if (ui.owner) tryUnlock(); else setPasscode();
+    }
+  });
+
+  document.addEventListener("change", function (ev) {
+    var f = ev.target.getAttribute && ev.target.getAttribute("data-filter");
+    if (!f) return;
+    ui.filters[f] = ev.target.value;
+    render();
+  });
+  var searchTimer = null;
+  document.addEventListener("input", function (ev) {
+    var f = ev.target.getAttribute && ev.target.getAttribute("data-filter");
+    if (!f || ev.target.tagName !== "INPUT") return;
+    ui.filters[f] = ev.target.value;
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(function () {
+      var id = ev.target.id, pos = ev.target.selectionStart;
+      render();
+      var again = document.getElementById(id);
+      if (again) { again.focus(); try { again.setSelectionRange(pos, pos); } catch (e) {} }
+    }, 220);
+  });
+
+  function setPasscode() {
+    var a = document.getElementById("pw1"), b = document.getElementById("pw2");
+    var err = document.getElementById("autherr");
+    var p1 = a ? a.value : "", p2 = b ? b.value : "";
+    if (p1.length < 8) { err.innerHTML = '<div class="msg err">Use at least 8 characters.</div>'; return; }
+    if (p1 !== p2) { err.innerHTML = '<div class="msg err">The two entries do not match.</div>'; return; }
+    err.innerHTML = '<div class="msg info">Setting it…</div>';
+    var salt = randomSalt();
+    hashPw(p1, salt, PW_ITER).then(function (h) {
+      return db.doc(OWNER_DOC).set({ salt: salt, hash: h, iter: PW_ITER, setAt: new Date().toISOString() })
+        .then(function () {
+          ui.owner = { salt: salt, hash: h, iter: PW_ITER };
+          ui.unlocked = true;
+          rememberUnlock(h);
+          render();
+        });
+    }).catch(function (e) {
+      err.innerHTML = '<div class="msg err">' + esc((e && e.message) || "Could not set the passcode.") + "</div>";
+    });
+  }
+
+  function tryUnlock() {
+    var a = document.getElementById("pw1");
+    var err = document.getElementById("autherr");
+    var pw = a ? a.value : "";
+    if (!pw) { err.innerHTML = '<div class="msg err">Enter the passcode.</div>'; return; }
+    err.innerHTML = '<div class="msg info">Checking…</div>';
+    hashPw(pw, ui.owner.salt, ui.owner.iter).then(function (h) {
+      if (h !== ui.owner.hash) {
+        err.innerHTML = '<div class="msg err">That passcode does not match.</div>';
+        return;
+      }
+      ui.unlocked = true;
+      rememberUnlock(h);
+      render();
+    }).catch(function (e) {
+      err.innerHTML = '<div class="msg err">' + esc((e && e.message) || "Could not check the passcode.") + "</div>";
+    });
+  }
+
+  function changePasscode() {
+    var msg = document.getElementById("pwmsg");
+    var next = window.prompt("New owner passcode (at least 8 characters)");
+    if (next == null) return;
+    if (next.length < 8) { msg.innerHTML = '<div class="msg err">Use at least 8 characters.</div>'; return; }
+    var salt = randomSalt();
+    hashPw(next, salt, PW_ITER).then(function (h) {
+      return db.doc(OWNER_DOC).set({ salt: salt, hash: h, iter: PW_ITER, setAt: new Date().toISOString() });
+    }).then(function () {
+      msg.innerHTML = '<div class="msg ok">Passcode changed. Everyone else will be asked for the new one.</div>';
+    }).catch(function (e) {
+      msg.innerHTML = '<div class="msg err">' + esc((e && e.message) || "Could not change it.") + "</div>";
+    });
+  }
+
+  /* ---------------------------------------------------------- bootstrap */
+  render();
+
+  if (!window.claude || typeof window.claude.use !== "function") {
+    ui.booting = false;
+    ui.dbError = "This view is running outside claude.ai, so it cannot reach the company database.";
+    render();
+  } else {
+    window.claude.use("downloads").then(function (d) { downloads = d; }).catch(function () {});
+    window.claude.use("db").then(function (d) {
+      if (!d) {
+        ui.booting = false;
+        ui.dbError = "This view could not open the company database.";
+        render();
+        return;
+      }
+      db = d;
+      return db.doc(OWNER_DOC).get().then(function (snap) {
+        ui.owner = snap.exists ? snap.data() : null;
+        if (ui.owner && ui.owner.hash) ui.unlocked = unlockRemembered(ui.owner.hash);
+        ui.booting = false;
+        render();
+        subscribe();
+      });
+    }).catch(function (e) {
+      ui.booting = false;
+      ui.dbError = (e && e.message) || "Could not reach the company database.";
+      render();
+    });
+  }
+
+  function subscribe() {
+    db.doc(SOURCES.loa.doc).onSnapshot(function (s) {
+      ui.loa = s.exists ? s.data() : null;
+      render();
+    }, function () {});
+    db.doc(SOURCES.lt.doc).onSnapshot(function (s) {
+      ui.lt = s.exists ? s.data() : null;
+      render();
+    }, function () {});
+    db.doc(OWNER_DOC).onSnapshot(function (s) {
+      if (s.exists) ui.owner = s.data();
+    }, function () {});
+  }
+})();
+</script>

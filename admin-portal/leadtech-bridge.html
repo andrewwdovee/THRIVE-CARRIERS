@@ -1,0 +1,123 @@
+
+<script>
+/* ======================================================================
+   Thrive Command bridge — appended to the Lead Tech Fulfillment board.
+
+   Why this exists: the board keeps its record in this browser's local
+   storage, which nothing outside this page can read — not the owner
+   console, not a sync run. This script mirrors a scrubbed digest of the
+   board into the board's OWN database, where a sync run can pick it up
+   and copy it across to Thrive Command.
+
+   What it deliberately does NOT do:
+     · touch the board, its state, its DOM or its React tree — it only
+       reads local storage and writes to the database;
+     · mirror anything not on the allow-list below. Sync tokens, notify
+       webhooks, notification emails and phone numbers stay on this
+       device. A shared database is the wrong place for a credential.
+
+   If the database is unavailable the whole thing quietly does nothing,
+   and the board carries on exactly as before.
+   ====================================================================== */
+(function () {
+  "use strict";
+
+  var KEY = "fulfillment_board_v3";
+  var DOC = "mirror/board";
+  var MAX_BYTES = 230000;          /* a document caps at 256 KB */
+  var POLL_MS = 60000;
+
+  var db = null, lastSent = -1, timer = null;
+
+  function parse(s) {
+    if (typeof s !== "string") return s;
+    try { return JSON.parse(s); } catch (e) { return null; }
+  }
+  function arr(v) { return Array.isArray(v) ? v : []; }
+  function pick(o, keys) {
+    var r = {};
+    keys.forEach(function (k) { if (o && o[k] !== undefined && o[k] !== null) r[k] = o[k]; });
+    return r;
+  }
+
+  function readBoard() {
+    var raw;
+    try { raw = window.localStorage.getItem(KEY); } catch (e) { return null; }
+    if (!raw) return null;
+    var o = parse(raw);
+    /* The storage layer hands a record back inside a {value:"<json>"}
+       envelope; local storage holds the bare string. Cope with both. */
+    if (o && typeof o === "object" && !o.orders && o.value) o = parse(o.value) || o.value;
+    return (o && typeof o === "object" && (o.orders || o.products)) ? o : null;
+  }
+
+  function digest(b, lean) {
+    return {
+      syncedAt: new Date().toISOString(),
+      syncedBy: "portal-mirror",
+      boardUpdatedAt: b.updatedAt || 0,
+      /* Four settings, named one by one. Everything else on the settings
+         object stays here. */
+      settings: pick(b.settings || {}, ["callCost", "callPrice", "pastDueHours", "archiveAfterDays"]),
+      products: arr(b.products).map(function (p) { return pick(p, ["id", "name", "kind", "slaHours"]); }),
+      refundTypes: arr(b.refundTypes).map(function (t) { return pick(t, ["id", "name"]); }),
+      orders: arr(b.orders).map(function (o) {
+        var r = pick(o, ["id", "customer", "productId", "productName", "kind", "amount", "currency",
+          "status", "paymentStatus", "assignee", "subscriptionId", "createdAt", "dueAt", "completedAt", "source"]);
+        if (!lean) { if (o.email) r.email = o.email; }
+        return r;
+      }),
+      refunds: arr(b.refunds).map(function (r) {
+        return pick(r, ["id", "customer", "typeId", "typeName", "amount", "status", "createdAt"]);
+      }),
+      calls: arr(b.calls).map(function (c) { return pick(c, ["date", "calls", "count"]); }),
+      counts: {
+        orders: arr(b.orders).length, refunds: arr(b.refunds).length,
+        customers: arr(b.customers).length, blocks: arr(b.blocks).length, wipes: arr(b.wipes).length
+      }
+    };
+  }
+
+  /* A busy year of orders can outgrow one document. Shed the optional
+     fields first, then the oldest orders, rather than failing the write
+     and leaving the console showing nothing. */
+  function fit(b) {
+    var d = digest(b, false);
+    if (JSON.stringify(d).length <= MAX_BYTES) return d;
+    d = digest(b, true);
+    if (JSON.stringify(d).length <= MAX_BYTES) { d.trimmed = "emails"; return d; }
+    d.orders.sort(function (x, y) { return (y.createdAt || 0) - (x.createdAt || 0); });
+    while (d.orders.length > 50 && JSON.stringify(d).length > MAX_BYTES) {
+      d.orders.length = Math.floor(d.orders.length * 0.8);
+    }
+    d.trimmed = "oldest orders";
+    return d;
+  }
+
+  function push() {
+    if (!db) return;
+    var b = readBoard();
+    if (!b) return;
+    var stamp = b.updatedAt || 0;
+    if (stamp && stamp === lastSent) return;
+    var d;
+    try { d = fit(b); } catch (e) { return; }
+    db.doc(DOC).set(d).then(function () { lastSent = stamp; }).catch(function () { /* try again next tick */ });
+  }
+  function schedule() { clearTimeout(timer); timer = setTimeout(push, 1500); }
+
+  if (!window.claude || typeof window.claude.use !== "function") return;
+  window.claude.use("db").then(function (d) {
+    if (!d) return;
+    db = d;
+    push();
+    setInterval(push, POLL_MS);
+    /* Same-tab writes never fire a storage event, so listen on the
+       channel the board already broadcasts on as well. */
+    try { window.addEventListener("storage", function (e) { if (!e.key || e.key === KEY) schedule(); }); } catch (e) {}
+    try {
+      if ("BroadcastChannel" in window) new BroadcastChannel("fulfillment_storage").addEventListener("message", schedule);
+    } catch (e) {}
+  }).catch(function () {});
+})();
+</script>
