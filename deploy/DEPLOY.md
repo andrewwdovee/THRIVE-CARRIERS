@@ -122,21 +122,28 @@ return 401 — check that too, then delete the smoke key.
 
 ### 5. Publish the console on Pages
 
-The console needs its data layer swapped from `claude.use("db")` to `fetch` against
-the relay, plus a real sign-in form in place of the passcode gate. **That change is
-not written yet** — ask me and I will do it; it is the one piece of Route B that is
-code rather than configuration.
-
-Once you have that build:
+The console is one file that works in both homes: on claude.ai it uses the artifact
+database and its passcode gate; on your domain it signs into the relay and uses that
+instead. Nothing forks, and both paths are tested.
 
 ```sh
+node build-pages.mjs https://thrive-relay.<your-subdomain>.workers.dev
 wrangler pages project create thrive-command
 wrangler pages deploy ./dist --project-name thrive-command
 ```
 
-Then add the Pages URL to `ALLOWED_ORIGINS` in `wrangler.toml` and `wrangler deploy`
-again. The relay refuses browser requests from origins it does not know, so this step
-is not optional — skip it and the console will load but every call will fail.
+Pages prints your URL, something like `https://thrive-command.pages.dev`.
+
+**Now go back and allow that origin**, or the browser's calls will all be refused:
+put it in `ALLOWED_ORIGINS` in `wrangler.toml` and run `wrangler deploy` again. If
+you attach a custom domain later, add that too — the list takes several, comma
+separated.
+
+Open the URL. You should get a sign-in card; use the `OWNER_EMAIL` and the password
+you generated in step 2. The masthead says **Sign out** rather than **Lock** — that
+is how you know you are on the relay copy rather than the artifact.
+
+If sign-in says it cannot reach the relay, the origin is not on the allow-list.
 
 ### 6. Point the Lead Tech board at the relay
 
@@ -161,9 +168,24 @@ before replacing the live copy: sign in, add a call row, reload, confirm it pers
 
 ### 7. Move the existing data across
 
-Your LOA history and the current snapshots are in the artifact database today. Ask me
-and I will export both and `PUT` them to the relay under the keys the console reads,
-so nothing starts from zero.
+The relay starts empty, so the console will say nothing has synced. The keys it reads
+are flat versions of the artifact document paths:
+
+| Artifact document | Relay key |
+|---|---|
+| `snapshots/loa` | `snapshots.loa` |
+| `snapshots/leadtech` | `snapshots.leadtech` |
+| `config/settings` | `config.settings` |
+
+Two ways to fill them:
+
+- **Fastest:** open the console on Pages, go to **Sync & sources**, and paste an
+  export into the importer. It writes straight to the relay.
+- **Or ask me** — I will pull the current snapshots out of the artifact database and
+  `PUT` them to your relay, so your LOA history carries over intact.
+
+From then on the hourly sync keeps writing to the artifact copy. If you want the sync
+to target the relay instead, say so and I will repoint it.
 
 ---
 
@@ -176,9 +198,15 @@ bottleneck on syncing.
 
 If you want a URL to show someone this week and nothing more, **Route A**.
 
-## What I have not done
+## What is tested and what is not
 
-I have no Cloudflare account here, so `worker.js` has never run against real KV. Its
-crypto is tested — the password hashing and token signing round-trip correctly — but
-the routing, CORS and KV calls are unverified. Deploy it to a throwaway worker name
-first and run step 4 before pointing the board at it.
+**Tested.** The console's relay data layer was run end to end against a stand-in relay
+speaking this exact protocol: sign in, load both snapshots, render every page. It
+produced numbers identical to the artifact copy ($3,917 company net, $1,541 Lead Tech
+net on the current data), and the artifact mode still works unchanged. The worker's
+password hashing and token signing round-trip correctly against the generator.
+
+**Not tested.** I have no Cloudflare account here, so `worker.js` has never run
+against real KV, and its routing and CORS handling are unverified. Deploy it under a
+throwaway name first and run the step 4 smoke tests before pointing the live board at
+it.

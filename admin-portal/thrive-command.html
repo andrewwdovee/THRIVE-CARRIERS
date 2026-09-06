@@ -560,12 +560,111 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
 
   var app = document.getElementById("app");
   var db = null, downloads = null;
+
+  /* ====================================================================
+     Two homes, one file.
+
+     Published as a claude.ai artifact, this page stores everything in the
+     artifact database and gates itself with an owner passcode. Deployed
+     to your own domain, there is no artifact database, so it talks to the
+     Cloudflare relay instead and the relay's own sign-in is the gate.
+
+     Everything above this line reads and writes through `store`, so no
+     page, chart or table knows or cares which one it got.
+     ==================================================================== */
+  var RELAY = String(window.THRIVE_RELAY || "").replace(/\/+$/, "");
+  var TOKEN_KEY = "thrive_relay_token";
+  var store = null;
+
+  /* Document paths are collection/doc; the relay's keyspace is flat, so
+     the separator changes and nothing else does. */
+  function relayKey(path) { return path.replace(/\//g, "."); }
+
+  function relayToken() {
+    try { return localStorage.getItem(TOKEN_KEY) || ""; } catch (e) { return ""; }
+  }
+  function setRelayToken(t) {
+    try { if (t) localStorage.setItem(TOKEN_KEY, t); else localStorage.removeItem(TOKEN_KEY); } catch (e) {}
+  }
+
+  function relayFetch(path, opts) {
+    opts = opts || {};
+    var headers = opts.headers || {};
+    var t = relayToken();
+    if (t) headers.Authorization = "Bearer " + t;
+    return fetch(RELAY + path, {
+      method: opts.method || "GET",
+      headers: headers,
+      body: opts.body
+    }).then(function (res) {
+      /* A dead token is not an error the caller should have to reason
+         about — drop it and send them back to the sign-in screen. */
+      if (res.status === 401) {
+        setRelayToken("");
+        ui.signedIn = false;
+        render();
+        throw { code: "signed_out", message: "Your session ended. Sign in again." };
+      }
+      return res;
+    });
+  }
+
+  function makeArtifactStore(d) {
+    return {
+      mode: "artifact",
+      get: function (path) {
+        return d.doc(path).get().then(function (s) { return s.exists ? s.data() : null; });
+      },
+      set: function (path, data) { return d.doc(path).set(data); },
+      del: function (path) { return d.doc(path).delete(); },
+      /* Live: the platform pushes every change to every open view. */
+      watch: function (path, cb) { return d.doc(path).onSnapshot(function (s) { cb(s.exists ? s.data() : null); }, function () {}); }
+    };
+  }
+
+  function makeRelayStore() {
+    return {
+      mode: "relay",
+      get: function (path) {
+        return relayFetch("/kv/" + encodeURIComponent(relayKey(path))).then(function (res) {
+          if (res.status === 404) return null;
+          if (!res.ok) throw { code: "read_failed", message: "Could not read " + path + " (" + res.status + ")." };
+          return res.json();
+        }).then(function (body) {
+          if (!body) return null;
+          try { return typeof body.value === "string" ? JSON.parse(body.value) : body.value; }
+          catch (e) { return null; }
+        });
+      },
+      set: function (path, data) {
+        return relayFetch("/kv/" + encodeURIComponent(relayKey(path)), {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ value: JSON.stringify(data) })
+        }).then(function (res) {
+          if (!res.ok) throw { code: "write_failed", message: "Could not save (" + res.status + ")." };
+          return true;
+        });
+      },
+      /* The relay has no delete verb, so an empty document stands in for
+         one. Readers already treat a falsy snapshot as absent. */
+      del: function (path) { return this.set(path, null); },
+      /* No push channel here — read once now, and the fifteen-minute
+         refresh keeps it current. */
+      watch: function (path, cb) {
+        this.get(path).then(cb).catch(function () {});
+        return function () {};
+      }
+    };
+  }
   var ui = {
     tab: "overview",
     range: "d30",
     customFrom: "",
     customTo: "",
     unlocked: false,
+    signedIn: false,      /* relay mode only — the relay's own session */
+    relayUser: "",
     booting: true,
     dbError: null,
     owner: null,          /* {salt, hash, iter} or null before it is set */
@@ -1046,7 +1145,16 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     chartData = {}; chartSeq = 0;
     if (ui.booting) { app.innerHTML = authShell('<p class="lede">Connecting to the company database…</p>'); return; }
     if (ui.dbError) { app.innerHTML = authShell(dbErrorBody()); return; }
-    if (!ui.unlocked) { app.innerHTML = authShell(ui.owner ? unlockBody() : setPasscodeBody()); focusFirst(); return; }
+    /* Each backend brings its own gate: the artifact has a passcode, the
+       relay has a real account. Never both — two locks on one door is
+       friction, not security. */
+    if (store && store.mode === "relay") {
+      if (!ui.signedIn) { app.innerHTML = authShell(signInBody()); focusFirst(); return; }
+    } else if (!ui.unlocked) {
+      app.innerHTML = authShell(ui.owner ? unlockBody() : setPasscodeBody());
+      focusFirst();
+      return;
+    }
 
     var body;
     if (ui.tab === "loa") body = pageLOA();
@@ -1083,6 +1191,14 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       '<button class="btn accent" data-act="setpw">Set passcode and open</button>' +
       '<p class="lede" style="font-size:12px">Stored as a PBKDF2-SHA256 hash over a random salt, never as the passcode itself. It keeps a casual reader out; the real lock is that this artifact is private to your workspace.</p>';
   }
+  function signInBody() {
+    return '<p class="lede">Company-wide numbers from the LOA desk and the Lead Tech board. Owners only.</p>' +
+      '<div class="field"><label for="si-email">Email</label><input type="text" id="si-email" autocomplete="username" inputmode="email"></div>' +
+      '<div class="field"><label for="si-pass">Password</label><input type="password" id="si-pass" autocomplete="current-password"></div>' +
+      '<div id="autherr"></div>' +
+      '<button class="btn accent" data-act="signin">Sign in</button>';
+  }
+
   function unlockBody() {
     return '<p class="lede">Company-wide numbers from the LOA desk and the Lead Tech board. Owners only.</p>' +
       '<div class="field"><label for="pw1">Owner passcode</label><input type="password" id="pw1" autocomplete="current-password"></div>' +
@@ -1096,7 +1212,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       "<h1>Thrive Command</h1><p>OWNER CONSOLE · THRIVE COMPANIES</p></span></div>" +
       '<div class="mast-right">' +
         '<span class="owner-chip"><i></i>OWNER VIEW · READ ONLY</span>' +
-        '<button class="linkish" data-act="lock">Lock</button>' +
+        '<button class="linkish" data-act="lock">' + (store && store.mode === "relay" ? "Sign out" : "Lock") + "</button>" +
       "</div></div></header>";
   }
 
@@ -1125,14 +1241,8 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
   var REFRESH_MS = 15 * 60 * 1000;
   function refreshData() {
     if (!db) return;
-    db.doc(SOURCES.loa.doc).get().then(function (s) {
-      ui.loa = s.exists ? s.data() : null;
-      render();
-    }).catch(function () {});
-    db.doc(SOURCES.lt.doc).get().then(function (s) {
-      ui.lt = s.exists ? s.data() : null;
-      render();
-    }).catch(function () {});
+    store.get(SOURCES.loa.doc).then(function (d) { ui.loa = d; render(); }).catch(function () {});
+    store.get(SOURCES.lt.doc).then(function (d) { ui.lt = d; render(); }).catch(function () {});
   }
 
   function rail() {
@@ -1900,10 +2010,14 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     out += '<div class="section-head"><p class="eyebrow">Who can see this</p><h3>Access</h3>' +
       '<p class="sub">Straight answers, because a console full of company numbers deserves them.</p></div>';
     out += '<div class="panel"><div class="panel-body stack">' +
-      '<p style="margin:0;font-size:13px;line-height:1.65;max-width:70ch">This artifact is private to your Claude workspace and, because it uses a shared database, it <b>cannot be made public at all</b> — every reader is a signed-in member of your organization. Sharing it with someone is a deliberate act.</p>' +
-      '<p style="margin:0;font-size:13px;line-height:1.65;max-width:70ch">The passcode is a second door, not the lock. It stops a casual over-the-shoulder read; it will not stop someone determined who already has access to the page. Treat workspace access as the real boundary.</p>' +
+      (store && store.mode === "relay"
+        ? '<p style="margin:0;font-size:13px;line-height:1.65;max-width:70ch">This copy runs on your own domain and signs in against your Cloudflare relay. The relay account <b>is</b> the lock: anyone who reaches this page still needs your email and password, and the relay only answers browsers on the origins you listed.</p>' +
+          '<p style="margin:0;font-size:13px;line-height:1.65;max-width:70ch">Signed in as <b>' + esc(ui.relayUser || "—") + '</b>. To change the password, rerun <code>make-credentials.mjs</code> and replace the two secrets on the worker.</p>'
+        : '<p style="margin:0;font-size:13px;line-height:1.65;max-width:70ch">This artifact is private to your Claude workspace and, because it uses a shared database, it <b>cannot be made public at all</b> — every reader is a signed-in member of your organization. Sharing it with someone is a deliberate act.</p>' +
+          '<p style="margin:0;font-size:13px;line-height:1.65;max-width:70ch">The passcode is a second door, not the lock. It stops a casual over-the-shoulder read; it will not stop someone determined who already has access to the page. Treat workspace access as the real boundary.</p>') +
       '<p style="margin:0;font-size:13px;line-height:1.65;max-width:70ch">Nothing here writes back. The Producer Desk and the fulfillment board stay the systems of record; this console only ever reads what they last published.</p>' +
-      '<div class="row"><button class="btn ghost sm" data-act="changepw">Change the owner passcode</button></div>' +
+      (store && store.mode === "relay" ? "" :
+        '<div class="row"><button class="btn ghost sm" data-act="changepw">Change the owner passcode</button></div>') +
       '<div id="pwmsg"></div>' +
       "</div></div>";
     return out;
@@ -2113,7 +2227,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     }
     var body = kind === "loa" ? normalizeLOA(obj) : normalizeLT(obj);
     msg.innerHTML = '<div class="msg info">Saving…</div>';
-    db.doc(SOURCES[kind].doc).set(body).then(function () {
+    store.set(SOURCES[kind].doc, body).then(function () {
       toast(SOURCES[kind].name + " snapshot loaded");
     }).catch(function (e) {
       var m = e && e.code === "invalid_argument"
@@ -2144,7 +2258,17 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
 
     if (act === "tab") { ui.tab = t.getAttribute("data-tab"); window.scrollTo(0, 0); render(); }
     else if (act === "range") { ui.range = t.getAttribute("data-range"); render(); }
-    else if (act === "lock") { forgetUnlock(); ui.unlocked = false; render(); }
+    else if (act === "lock") {
+      if (store && store.mode === "relay") {
+        relayFetch("/auth/logout", { method: "POST" }).catch(function () {});
+        setRelayToken("");
+        ui.signedIn = false;
+      } else {
+        forgetUnlock();
+        ui.unlocked = false;
+      }
+      render();
+    }
     else if (act === "import") { doImport(); }
     else if (act === "export") { doExport(); }
     else if (act === "setpw") { setPasscode(); }
@@ -2152,6 +2276,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     else if (act === "changepw") { changePasscode(); }
     else if (act === "clearsample") { clearSample(); }
     else if (act === "savespread") { saveSpread(); }
+    else if (act === "signin") { signIn(); }
   });
 
   function saveSpread() {
@@ -2164,7 +2289,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       return;
     }
     msg.innerHTML = '<div class="msg info">Saving…</div>';
-    db.doc(SETTINGS_DOC).set({ brokerageSpreadPct: v, updatedAt: new Date().toISOString() })
+    store.set(SETTINGS_DOC, { brokerageSpreadPct: v, updatedAt: new Date().toISOString() })
       .then(function () { toast("Commission spread set to " + v + "%"); })
       .catch(function (e) {
         msg.innerHTML = '<div class="msg err">' + esc((e && e.message) || "Could not save the rate.") + "</div>";
@@ -2173,8 +2298,8 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
 
   function clearSample() {
     var jobs = [];
-    if (isSample(ui.loa)) jobs.push(db.doc(SOURCES.loa.doc).delete());
-    if (isSample(ui.lt)) jobs.push(db.doc(SOURCES.lt.doc).delete());
+    if (isSample(ui.loa)) jobs.push(store.del(SOURCES.loa.doc));
+    if (isSample(ui.lt)) jobs.push(store.del(SOURCES.lt.doc));
     if (!jobs.length) return;
     Promise.all(jobs).then(function () { toast("Sample data removed"); })
       .catch(function () { toast("Could not remove it — try again"); });
@@ -2184,6 +2309,11 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     if (ev.key !== "Enter") return;
     var el = ev.target;
     if (!el || !el.id) return;
+    if (el.id === "si-email" || el.id === "si-pass") {
+      ev.preventDefault();
+      signIn();
+      return;
+    }
     if (el.id === "pw1" || el.id === "pw2") {
       ev.preventDefault();
       if (ui.owner) tryUnlock(); else setPasscode();
@@ -2229,7 +2359,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     err.innerHTML = '<div class="msg info">Setting it…</div>';
     var salt = randomSalt();
     hashPw(p1, salt, PW_ITER).then(function (h) {
-      return db.doc(OWNER_DOC).set({ salt: salt, hash: h, iter: PW_ITER, setAt: new Date().toISOString() })
+      return store.set(OWNER_DOC, { salt: salt, hash: h, iter: PW_ITER, setAt: new Date().toISOString() })
         .then(function () {
           ui.owner = { salt: salt, hash: h, iter: PW_ITER };
           ui.unlocked = true;
@@ -2238,6 +2368,39 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
         });
     }).catch(function (e) {
       err.innerHTML = '<div class="msg err">' + esc((e && e.message) || "Could not set the passcode.") + "</div>";
+    });
+  }
+
+  function signIn() {
+    var email = document.getElementById("si-email");
+    var pass = document.getElementById("si-pass");
+    var err = document.getElementById("autherr");
+    var e = email ? email.value.trim() : "", p = pass ? pass.value : "";
+    if (!e || !p) { err.innerHTML = '<div class="msg err">Enter your email and password.</div>'; return; }
+    err.innerHTML = '<div class="msg info">Signing in…</div>';
+    fetch(RELAY + "/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: e, password: p })
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (body) {
+        if (!res.ok) throw new Error(body.error || "That email and password don't match.");
+        return body;
+      });
+    }).then(function (body) {
+      setRelayToken(body.token);
+      ui.signedIn = true;
+      ui.relayUser = (body.user && body.user.email) || e;
+      ui.booting = false;
+      render();
+      subscribe();
+      setInterval(refreshData, REFRESH_MS);
+    }).catch(function (ex) {
+      var msg = (ex && ex.message) || "Could not sign in.";
+      if (/failed to fetch|networkerror/i.test(msg)) {
+        msg = "Could not reach the relay. Check that this page's address is listed in the relay's allowed origins.";
+      }
+      err.innerHTML = '<div class="msg err">' + esc(msg) + "</div>";
     });
   }
 
@@ -2267,7 +2430,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     if (next.length < 8) { msg.innerHTML = '<div class="msg err">Use at least 8 characters.</div>'; return; }
     var salt = randomSalt();
     hashPw(next, salt, PW_ITER).then(function (h) {
-      return db.doc(OWNER_DOC).set({ salt: salt, hash: h, iter: PW_ITER, setAt: new Date().toISOString() });
+      return store.set(OWNER_DOC, { salt: salt, hash: h, iter: PW_ITER, setAt: new Date().toISOString() });
     }).then(function () {
       msg.innerHTML = '<div class="msg ok">Passcode changed. Everyone else will be asked for the new one.</div>';
     }).catch(function (e) {
@@ -2278,54 +2441,76 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
   /* ---------------------------------------------------------- bootstrap */
   render();
 
-  if (!window.claude || typeof window.claude.use !== "function") {
+  function ready() {
     ui.booting = false;
-    ui.dbError = "This view is running outside claude.ai, so it cannot reach the company database.";
     render();
-  } else {
-    window.claude.use("downloads").then(function (d) { downloads = d; }).catch(function () {});
-    window.claude.use("db").then(function (d) {
-      if (!d) {
-        ui.booting = false;
-        ui.dbError = "This view could not open the company database.";
-        render();
-        return;
-      }
-      db = d;
-      return db.doc(OWNER_DOC).get().then(function (snap) {
-        ui.owner = snap.exists ? snap.data() : null;
-        if (ui.owner && ui.owner.hash) ui.unlocked = unlockRemembered(ui.owner.hash);
-        ui.booting = false;
-        render();
-        subscribe();
-        /* Live snapshots already push most changes; this is the backstop
-           that guarantees a page left open overnight is never showing
-           yesterday's numbers. */
-        setInterval(refreshData, REFRESH_MS);
-      });
-    }).catch(function (e) {
+    subscribe();
+    /* The backstop that guarantees a page left open overnight is never
+       showing yesterday's numbers. On the relay it is the only refresh
+       there is. */
+    setInterval(refreshData, REFRESH_MS);
+  }
+
+  function bootArtifact(d) {
+    db = d;
+    store = makeArtifactStore(d);
+    return store.get(OWNER_DOC).then(function (owner) {
+      ui.owner = owner;
+      if (ui.owner && ui.owner.hash) ui.unlocked = unlockRemembered(ui.owner.hash);
+      ready();
+    });
+  }
+
+  function bootRelay() {
+    store = makeRelayStore();
+    if (!relayToken()) { ui.booting = false; render(); return Promise.resolve(); }
+    /* A stored token is worth nothing until the relay agrees. */
+    return relayFetch("/auth/me").then(function (res) {
+      if (!res.ok) throw new Error("signed out");
+      return res.json();
+    }).then(function (body) {
+      ui.signedIn = true;
+      ui.relayUser = (body && body.user && body.user.email) || "";
+      ready();
+    }).catch(function () {
+      setRelayToken("");
+      ui.signedIn = false;
       ui.booting = false;
-      ui.dbError = (e && e.message) || "Could not reach the company database.";
       render();
     });
   }
 
+  if (window.claude && typeof window.claude.use === "function") {
+    window.claude.use("downloads").then(function (d) { downloads = d; }).catch(function () {});
+    window.claude.use("db").then(function (d) {
+      if (d) return bootArtifact(d);
+      /* Served by claude.ai but without a database — fall through to the
+         relay if this build has one configured. */
+      if (RELAY) return bootRelay();
+      ui.booting = false;
+      ui.dbError = "This view could not open the company database.";
+      render();
+    }).catch(function (e) {
+      if (RELAY) return bootRelay();
+      ui.booting = false;
+      ui.dbError = (e && e.message) || "Could not reach the company database.";
+      render();
+    });
+  } else if (RELAY) {
+    bootRelay();
+  } else {
+    ui.booting = false;
+    ui.dbError = "This copy has no data source configured. On claude.ai it uses the artifact database; on your own domain it needs THRIVE_RELAY set to your relay URL.";
+    render();
+  }
+
   function subscribe() {
-    db.doc(SOURCES.loa.doc).onSnapshot(function (s) {
-      ui.loa = s.exists ? s.data() : null;
-      render();
-    }, function () {});
-    db.doc(SOURCES.lt.doc).onSnapshot(function (s) {
-      ui.lt = s.exists ? s.data() : null;
-      render();
-    }, function () {});
-    db.doc(OWNER_DOC).onSnapshot(function (s) {
-      if (s.exists) ui.owner = s.data();
-    }, function () {});
-    db.doc(SETTINGS_DOC).onSnapshot(function (s) {
-      ui.settings = s.exists ? s.data() : null;
-      render();
-    }, function () {});
+    store.watch(SOURCES.loa.doc, function (d) { ui.loa = d; render(); });
+    store.watch(SOURCES.lt.doc, function (d) { ui.lt = d; render(); });
+    store.watch(SETTINGS_DOC, function (d) { ui.settings = d; render(); });
+    /* Only the artifact keeps a passcode; the relay's own sign-in is the
+       gate there, so there is nothing to watch. */
+    if (store.mode === "artifact") store.watch(OWNER_DOC, function (d) { if (d) ui.owner = d; });
   }
 })();
 </script>
