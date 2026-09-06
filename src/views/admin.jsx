@@ -7,6 +7,7 @@ import {
   BD, CARD, PANEL, IN, BTN, PRI, M, F, W, TD, P, c, sm, DEF, DAY,
   uid, paidOk, brief, dk, dl, sod, cash, L, Field, Confirm, grab, grabTrouble, dump, SCROLL, STICKY,
   THEMES, useTheme, custName, findCustomers, walletTotals, walletWeeks, weekLabel, buildStamp,
+  callTotals, callWeeks,
   BLOCK_FIELDS, BLOCK_OPS, bf, opsFor, blockHits, blockedBy, describeBlock,
 } from "../lib/shared";
 import { buildSamples } from "../lib/samples";
@@ -17,7 +18,7 @@ import WipeLine from "./WipeLine";
 /* ═════ REPORTS ═════ */
 const RANGES = [["today", "Today"], ["7", "Last 7 days"], ["30", "Last 30 days"], ["90", "Last 90 days"], ["all", "All time"], ["custom", "Custom"]];
 
-export function Reports({ orders, products, n, flash, refunds, refundTypes, customers, wipes }) {
+export function Reports({ orders, products, n, flash, refunds, refundTypes, customers, wipes, calls, settings }) {
   const save = async (kind) => { const bad = grabTrouble(await dump(scoped, kind)); if (bad) flash(bad); };
   const [range, setRange] = useState("30"), [a, setA] = useState(dk(n - 14 * DAY)), [b, setB] = useState(dk(n));
   const [ds, setDs] = useState({ k: "day", d: "desc" }), [ps, setPs] = useState({ k: "count", d: "desc" });
@@ -94,7 +95,7 @@ export function Reports({ orders, products, n, flash, refunds, refundTypes, cust
       </div>
 
       <Section icon={Package} title="Orders" note="What sold, and how fast it went out.">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Metric t="Orders placed" v={paid.length} /><Metric t="Delivered" v={done.length} />
         <Metric t="Avg time to fulfill" v={avgAll ? brief(avgAll) : "—"} />
         <Metric t="Hit the target" v={pctAll == null ? "—" : `${pctAll}%`} k={tone(pctAll)} />
@@ -170,6 +171,10 @@ export function Reports({ orders, products, n, flash, refunds, refundTypes, cust
       <Section icon={Wallet} title="Wallets" note="What was wiped each Saturday, and from whom.">
         <WalletReport customers={customers} wipes={wipes} from={from} to={to} />
       </Section>
+
+      <Section icon={PhoneCall} title="Calls" note="Bought against sold, and what the gap is worth.">
+        <CallReport calls={calls} settings={settings} from={from} to={to} />
+      </Section>
     </div>
   );
 }
@@ -189,13 +194,57 @@ const Section = ({ icon: Icon, title, note, children }) => (
   </section>
 );
 
-const Metric = ({ t, v, k, small }) => <div className={`${CARD} p-4`}>
-  <L>{t}</L><div className={`mt-2 font-bold tabular-nums ${small ? "text-base leading-tight" : "font-mono text-2xl"} ${k || W}`}>{v}</div>
+const Metric = ({ t, v, k, small }) => <div className={`${CARD} p-3 sm:p-4`}>
+  <L>{t}</L><div className={`mt-1.5 font-bold tabular-nums sm:mt-2 ${small ? "text-base leading-tight" : "font-mono text-xl sm:text-2xl"} ${k || W}`}>{v}</div>
 </div>;
 
 /* How much is going back out, and where from. A refund total on its own says
    little; what's useful is the trend week to week, which agent keeps asking,
    and which of your products keeps causing it. */
+/* Calls in the page's range. The tab answers "how are we doing today"; this
+   answers "how did that window go", beside what sold and what went back. */
+function CallReport({ calls, settings, from, to }) {
+  const rows = useMemo(
+    () => (calls || []).filter((r) => {
+      const t = Date.parse(r.day + "T12:00:00");
+      return !isNaN(t) && t >= from && t <= to;
+    }),
+    [calls, from, to],
+  );
+  const total = useMemo(() => callTotals(rows, settings), [rows, settings]);
+  const weeks = useMemo(() => callWeeks(rows, settings), [rows, settings]);
+  const money = (c) => (c < 0 ? `−${cash(Math.abs(c))}` : cash(c));
+  const tone = (c) => (c > 0 ? "text-emerald-600 dark:text-emerald-400" : c < 0 ? "text-rose-600 dark:text-rose-400" : W);
+  /* Per call, so a good window and a busy one can be told apart. */
+  const perCall = total.sold ? Math.round(total.profit / total.sold) : null;
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Metric t="Profit" v={money(total.profit)} k={tone(total.profit)} />
+        <Metric t="Calls sold" v={total.sold} />
+        <Metric t="Calls billed" v={total.billable} />
+        <Metric t="Profit per call sold" v={perCall == null ? "—" : money(perCall)} k={perCall == null ? W : tone(perCall)} />
+      </div>
+
+      {!rows.length
+        ? <div className={`${CARD} p-4`}><p className={`text-sm ${M}`}>No call days logged in this range.</p></div>
+        : (
+          <div className={`${CARD} p-4`}>
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h3 className={`text-sm font-semibold ${W}`}>Profit per week</h3>
+              <span className={`font-mono text-sm ${W}`}>
+                {cash(total.revenue)} <span className={F}>in ·</span> {cash(total.spend)} <span className={F}>out over {total.days} day{total.days === 1 ? "" : "s"}</span>
+              </span>
+            </div>
+            <WipeLine empty="Nothing logged in this range."
+              points={weeks.map((w) => ({ at: w.week, value: w.profit, note: `${w.sold} sold · ${w.billable} billed` }))} />
+          </div>
+        )}
+    </div>
+  );
+}
+
 /* Wallets, in the same range as everything else on this page. A wipe is
    money the business keeps, so it belongs beside what was sold rather than
    only on its own tab. */
@@ -213,7 +262,7 @@ function WalletReport({ customers, wipes, from, to }) {
      behind them. */
   return (
     <div className="space-y-3">
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Metric t="Wiped in this window" v={cash(total)} k={total ? "text-emerald-600 dark:text-emerald-400" : W} />
         <Metric t="Weeks recorded" v={weeks.length || "—"} />
         <Metric t="Average a week" v={weeks.length ? cash(perWeek) : "—"} />
@@ -318,7 +367,7 @@ function RefundReport({ refunds, products, types, n }) {
 
   return (
     <div className="space-y-3">
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Metric t="Refunded in this window" v={cash(total)} k={total ? "text-rose-600 dark:text-rose-400" : W} />
         <Metric t="Refunds issued" v={refunds.length} />
         <Metric t="Average refund" v={refunds.length ? cash(Math.round(total / refunds.length)) : "—"} />

@@ -385,12 +385,12 @@ export default function Dashboard({ me: account, onSignOut }) {
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-200">
       <header className={`sticky top-0 z-20 border-b ${BD} bg-white/95 dark:bg-slate-950/95 backdrop-blur`}>
-        <div className="mx-auto max-w-[1600px] px-4 py-3">
-          <div className="flex flex-wrap items-center gap-3">
+        <div className="mx-auto max-w-[1600px] px-4 py-2 sm:py-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <div className="flex items-center gap-3">
               <Logo size="sm" withWord={false} className={`shrink-0 text-blue-600 dark:text-blue-400`} />
               <div>
-              <h1 className={`text-lg font-bold tracking-tight ${W}`}>Lead Tech Fulfillment</h1>
+              <h1 className={`text-base font-bold tracking-tight sm:text-lg ${W}`}>Lead Tech Fulfillment</h1>
               <L>{orders.filter((o) => paidOk(o) && o.status !== "done").length} open
                 {overdue > 0 && <span className="text-rose-600 dark:text-rose-400"> · {overdue} past due</span>}
                 {bleeding > 0 && <span className="text-amber-600 dark:text-amber-400"> · {bleeding} unpaid</span>}
@@ -403,13 +403,14 @@ export default function Dashboard({ me: account, onSignOut }) {
 
             {perm !== "granted" && perm !== "unsupported" && (
               <button onClick={async () => setPerm(await askPermission())} className={`inline-flex items-center gap-1.5 ${BTN}`} title="Allow desktop alerts">
-                <BellOff className="h-4 w-4" /> Alerts off
+                <BellOff className="h-4 w-4" /> <span className="hidden sm:inline">Alerts off</span>
               </button>
             )}
             {perm === "granted" && <span className={`inline-flex items-center gap-1.5 text-xs ${F}`}><Bell className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Alerts on</span>}
 
             <button onClick={() => runSync({ backfill: true })} disabled={sync.busy} className={`inline-flex items-center gap-1.5 ${PRI} disabled:opacity-60`}>
-              <RefreshCw className={`h-4 w-4 ${sync.busy ? "animate-spin" : ""}`} />{sync.busy ? "Syncing" : "Sync"}
+              <RefreshCw className={`h-4 w-4 ${sync.busy ? "animate-spin" : ""}`} />
+              <span className="hidden sm:inline">{sync.busy ? "Syncing" : "Sync"}</span>
             </button>
             <button onClick={() => load(false)} className={BTN} title="Refresh"><RotateCcw className="h-4 w-4" /></button>
             {onSignOut && <button onClick={onSignOut} className={BTN} title={account ? `Sign out ${account.name || account.email}` : "Sign out"}>
@@ -417,12 +418,20 @@ export default function Dashboard({ me: account, onSignOut }) {
             </button>}
           </div>
 
-          <nav className="mt-3 flex flex-wrap items-center gap-1">
-            {TABS.map(([id, label, Icon], i) => (
+          {/* Nine tabs wrap to four rows on a phone, so a sticky header eats
+              most of the screen before any work is visible. One row that
+              swipes instead — the wrapping layout is kept from sm up, where
+              it fits and reads better than a scroller. */}
+          <nav className="-mx-4 mt-3 flex snap-x items-center gap-1 overflow-x-auto px-4 pb-0.5
+                          [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
+                          sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+            {TABS.map(([id, label, Icon]) => (
               <React.Fragment key={id}>
                 {id === DIVIDE_BEFORE && <span className="mx-2 hidden h-5 w-px bg-slate-200 dark:bg-slate-800 sm:block" aria-hidden />}
                 <button onClick={() => setTab(id)}
-                  className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium ${tab === id ? "bg-blue-600 text-slate-900 dark:text-white" : `${M} hover:bg-slate-200 dark:hover:bg-slate-800`}`}>
+                  /* Shrink-0 so a label can't be squeezed into two lines, and
+                     snap so a swipe settles on a tab rather than mid-word. */
+                  className={`flex shrink-0 snap-start items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium ${tab === id ? "bg-blue-600 text-slate-900 dark:text-white" : `${M} hover:bg-slate-200 dark:hover:bg-slate-800`}`}>
                   <Icon className="h-4 w-4" />{label}
                 </button>
               </React.Fragment>
@@ -480,7 +489,7 @@ export default function Dashboard({ me: account, onSignOut }) {
                 refundTypes={st.refundTypes} refunds={refunds} />
           : tab === "reports" ? <Reports orders={orders} products={products} n={now} flash={flash}
                 refunds={refunds} refundTypes={st.refundTypes}
-                customers={st.customers} wipes={st.wipes} />
+                customers={st.customers} wipes={st.wipes} calls={st.calls} settings={cfg} />
           : <SettingsView cfg={cfg} products={products} orders={orders} customers={st.customers} blocks={st.blocks} hidden={hidden} saveCfg={saveCfg} commit={commit}
               sync={{ busy: sync.busy, at: sync.at, error: sync.error, added: sync.added }}
               onSync={() => runSync({ backfill: true })} addOrders={addOrders} flash={flash} live={syncEndpoint(cfg) ? live : null} />}
@@ -570,10 +579,10 @@ function OrderList({ rows, products, now, onOpen, sortBy, onSort, done, title, n
           <p className={`text-xs ${F}`}>{note}</p>
         </div>
         {onSort && (
-          <div className={`ml-auto flex shrink-0 gap-1 rounded-lg border ${BD} bg-slate-100 dark:bg-slate-950 p-1`}>
+          <div className={`flex w-full shrink-0 gap-1 rounded-lg border ${BD} bg-slate-100 p-1 dark:bg-slate-950 sm:ml-auto sm:w-auto`}>
             {SORTS.map(([id, label]) => (
               <button key={id} onClick={() => onSort(id)}
-                className={`rounded-md px-2.5 py-1 text-xs font-medium ${sortBy === id ? "bg-blue-600 text-slate-900 dark:text-white" : `${M} hover:bg-slate-200 dark:hover:bg-slate-800`}`}>
+                className={`flex-1 rounded-md px-2.5 py-1 text-xs font-medium sm:flex-none ${sortBy === id ? "bg-blue-600 text-slate-900 dark:text-white" : `${M} hover:bg-slate-200 dark:hover:bg-slate-800`}`}>
                 {label}
               </button>
             ))}
@@ -596,7 +605,7 @@ function OrderList({ rows, products, now, onOpen, sortBy, onSort, done, title, n
               {/* What was bought leads; who bought it is the second line.
                   Someone scanning this list is deciding what work to pick up. */}
               <div className="min-w-[170px] flex-1">
-                <div className={`truncate text-sm font-semibold ${W}`}>
+                <div className={`line-clamp-2 text-sm font-semibold sm:truncate ${W}`}>
                   {o.productName}{freq(o) ? <span className={`font-normal ${F}`}> · {freq(o)}</span> : null}
                 </div>
                 <div className={`flex items-center gap-1.5 truncate text-xs ${M}`}>
@@ -685,7 +694,7 @@ function MissedList({ rows, products, now, onOpen, settings }) {
                 <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${c(p?.color)[0]}`} />
                 <div className="min-w-[170px] flex-1">
                   <div className={`flex items-center gap-1.5 text-sm font-semibold ${W}`}>
-                    <span className="truncate">{o.productName}</span>
+                    <span className="line-clamp-2 sm:truncate">{o.productName}</span>
                     {freq(o) ? <span className={`shrink-0 font-normal ${F}`}>· {freq(o)}</span> : null}
                     {why(o) && <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${why(o)[1]}`}>{why(o)[0]}</span>}
                   </div>

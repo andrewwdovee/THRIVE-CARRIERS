@@ -171,7 +171,7 @@ export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAdd
         </div>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Tile label="Wiped all time" value={cash(wipedAllTime)} note={`${weeks.length} week${weeks.length === 1 ? "" : "s"} recorded`} />
         {/* Follows the week being looked at, and names it. A tile that says
             "this week" while showing another one is how the number came to

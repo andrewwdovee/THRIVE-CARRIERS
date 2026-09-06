@@ -299,6 +299,22 @@ zero.
 person's `last` is their surname, and spreading a timestamp over it renames
 them to a number.
 
+### On a phone
+
+The desktop layout is the one that was designed; the phone rules are
+adjustments on top of it, all `sm:`-gated so nothing above 640px moves.
+
+- **The tab strip is one swipeable row.** Nine tabs wrap to four rows on a
+  phone, and since the header is sticky that meant most of the screen was
+  chrome before any work was visible. It scrolls horizontally with snap
+  points below `sm` and keeps the wrapping layout above it.
+- **Tiles are two-up.** A short number in a full-width card means scrolling
+  past a screen of whitespace to reach the next one.
+- **Header buttons lose their labels**, keeping the icons; the sort control
+  goes full width under its heading instead of floating right; product names
+  wrap to two lines rather than truncating, because the product name is the
+  thing being scanned for.
+
 ### Charts and long lists
 
 Any list that grows with the business scrolls inside its own box rather than

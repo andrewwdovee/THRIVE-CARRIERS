@@ -154,7 +154,7 @@ export default function Refunds({ refunds, products, orders, refundTypes, custom
       </div>
 
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="grid flex-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid flex-1 grid-cols-2 gap-3 lg:grid-cols-4">
           <div className={`${CARD} p-4`}>
             <L>Refunded all time</L>
             <div className={`mt-2 font-mono text-2xl font-bold tabular-nums ${lifetime ? "text-rose-600 dark:text-rose-400" : W}`}>{cash(lifetime)}</div>

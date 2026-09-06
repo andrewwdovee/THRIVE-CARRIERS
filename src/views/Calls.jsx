@@ -121,7 +121,7 @@ export default function Calls({ calls, settings, onSave, onRemove }) {
           </div>
         </div>
 
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-4 grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Lead Tech billable calls" hint={`What you pay for, at ${cash(cost)} each`}>
             <input inputMode="numeric" className={`${IN} text-lg`} placeholder="0"
               value={draft.billable} onChange={(e) => setBillable(e.target.value)} />
@@ -157,7 +157,7 @@ export default function Calls({ calls, settings, onSave, onRemove }) {
       </div>
 
       {/* ── where it stands ── */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Tile label="Today" value={money(today.profit)} tone={tone(today.profit)}
           note={`${today.sold} sold · ${today.billable} billed`} />
         <Tile label="This week" value={money(thisWeek?.profit || 0)} tone={tone(thisWeek?.profit || 0)}
@@ -177,7 +177,7 @@ export default function Calls({ calls, settings, onSave, onRemove }) {
       <div className={`${CARD} p-4`}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className={`text-sm font-semibold ${W}`}>Profit {grain === "week" ? "per week" : "per day"}</h3>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
             <div className={`flex gap-1 rounded-lg border ${BD} p-1`}>
               {[["day", "Daily"], ["week", "Weekly"]].map(([id, label]) => (
                 <button key={id} onClick={() => setGrain(id)}
