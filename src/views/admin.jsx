@@ -103,18 +103,9 @@ export function Reports({ orders, products, n, flash, refunds, refundTypes, cust
 
       <div className={`${CARD} p-4`}>
         <h3 className={`text-sm font-semibold ${W}`}>Orders placed per day</h3>
-        <div className="mt-4 flex h-32 items-end gap-1">
-          {!chart.length && <p className={`text-sm ${M}`}>No orders in this window.</p>}
-          {chart.map((d) => <div key={d.day} className="group flex flex-1 flex-col justify-end" title={`${dl(d.day)} — ${d.placed} placed, ${d.delivered} delivered`}>
-            <div className="w-full rounded-t bg-blue-500 group-hover:bg-blue-400" style={{ height: `${(d.placed / peak) * 100}px` }} />
-            <div className="w-full bg-emerald-500" style={{ height: `${(d.delivered / peak) * 28}px` }} />
-          </div>)}
-        </div>
-        <div className={`mt-2 flex items-center gap-4 text-xs ${M}`}>
-          <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-blue-500" /> placed</span>
-          <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-emerald-500" /> delivered</span>
-          {chart.length > 0 && <span className="ml-auto">{dl(chart[0].day)} → {dl(chart[chart.length - 1].day)}</span>}
-        </div>
+        <WipeLine money={false} empty="No orders in this window."
+          points={chart.map((d) => ({ at: Date.parse(d.day + "T12:00:00"), value: d.placed,
+            note: `${d.delivered} delivered` }))} />
       </div>
 
       <div className={`overflow-hidden rounded-xl border ${BD}`}>
@@ -241,7 +232,9 @@ function WalletReport({ customers, wipes, from, to }) {
             <div className="mt-3 grid gap-4 lg:grid-cols-2">
               <div>
                 <L className="mb-2">By week</L>
-                <WipeLine weeks={weeks} />
+                <WipeLine empty="Nothing wiped in this range."
+                  points={weeks.map((w) => ({ at: w.week, value: w.total,
+                    note: `${w.count} ${w.count === 1 ? "person" : "people"}` }))} />
               </div>
               <div>
                 <L className="mb-2">Most wiped</L>
@@ -332,24 +325,10 @@ function RefundReport({ refunds, products, types, n }) {
       </div>
 
       <div className={`${CARD} p-4`}>
-        <h3 className={`text-sm font-semibold ${W}`}>Refunds per week</h3>
-        {/* Capped width so one lonely week reads as a bar, not a filled panel. */}
-        <div className="mt-4 flex h-24 items-end gap-1.5">
-          {!weekly.length && <p className={`text-sm ${M}`}>No refunds in this window.</p>}
-          {weekly.map((w) => (
-            <div key={w.at} className="group flex max-w-[56px] flex-1 flex-col justify-end"
-              title={`Week of ${dl(dk(w.at))} — ${w.n} refund${w.n === 1 ? "" : "s"}, ${cash(w.amount)}`}>
-              <div className="w-full rounded-t bg-rose-500/70 group-hover:bg-rose-400"
-                style={{ height: `${Math.max(3, (w.amount / peak) * 96)}px` }} />
-            </div>
-          ))}
-        </div>
-        {weekly.length > 0 && (
-          <div className={`mt-2 flex items-center justify-between text-xs ${F}`}>
-            <span>week of {dl(dk(weekly[0].at))}</span>
-            <span>{weekly[weekly.length - 1].n} this week · {cash(weekly[weekly.length - 1].amount)}</span>
-          </div>
-        )}
+        <h3 className={`text-sm font-semibold ${W}`}>Refunded per week</h3>
+        <WipeLine empty="No refunds in this window."
+          points={weekly.map((w) => ({ at: w.at, value: w.amount,
+            note: `${w.n} refund${w.n === 1 ? "" : "s"}` }))} />
       </div>
 
       <div className="grid gap-3 lg:grid-cols-3">

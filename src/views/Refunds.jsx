@@ -2,8 +2,9 @@ import React, { useState, useMemo } from "react";
 import { Plus, X, Undo2, TrendingDown, UserPlus } from "lucide-react";
 import {
   BD, CARD, IN, BTN, PRI, M, F, W, c, cash, uid, L, Field, Confirm,
-  custName, findCustomers, SCROLL,
+  custName, findCustomers, SCROLL, DAY, dk, satOf, weekLabel,
 } from "../lib/shared";
+import WipeLine from "./WipeLine";
 import { CheckCircle2, Circle } from "lucide-react";
 import { CustomerForm } from "./admin";
 
@@ -52,6 +53,8 @@ function CustomerPick({ value, customers, onPick, onAddNew }) {
   );
 }
 
+const RANGES = [["7", "Last 7 days"], ["30", "Last 30 days"], ["90", "Last 90 days"], ["all", "All time"], ["custom", "Custom"]];
+
 /* Money that went back out.
 
    Two kinds end up here. A charge Stripe tells us was refunded shows up on its
@@ -65,46 +68,112 @@ const money = (rows) => rows.reduce((s, r) => s + (r.amount || 0), 0);
 export default function Refunds({ refunds, products, orders, refundTypes, customers, onRecord, onRemove, onAnnotate, onUpdate, onSetUp, onAddCustomer }) {
   const [adding, setAdding] = useState(null);
   const [openGroup, setOpenGroup] = useState(null);
+  const [range, setRange] = useState("all");
+  const [a, setA] = useState(dk(Date.now() - 30 * DAY)), [b, setB] = useState(dk(Date.now()));
+
+  /* Lifetime figures never move with the range — that is the point of them.
+     Everything else on the page answers "in this window". */
+  const lifetime = money(refunds);
+
+  const [from, to] = useMemo(() => {
+    if (range === "all") return [0, Infinity];
+    if (range === "custom") {
+      const f = Date.parse(a + "T00:00:00"), t = Date.parse(b + "T23:59:59");
+      return [isNaN(f) ? 0 : f, isNaN(t) ? Infinity : t];
+    }
+    /* Open-ended, so a refund recorded a second ago is still in "last 7 days". */
+    return [Date.now() - Number(range) * DAY, Infinity];
+  }, [range, a, b]);
+
+  const scoped = useMemo(() => refunds.filter((r) => r.at >= from && r.at <= to), [refunds, from, to]);
 
   const groups = useMemo(() => {
     const rows = products.map((p) => ({
       id: p.id, name: p.name, color: p.color,
-      rows: refunds.filter((r) => r.productId === p.id),
+      rows: scoped.filter((r) => r.productId === p.id),
     }));
-    const loose = refunds.filter((r) => !r.productId || !products.some((p) => p.id === r.productId));
+    const loose = scoped.filter((r) => !r.productId || !products.some((p) => p.id === r.productId));
     if (loose.length) rows.push({ id: "_none", name: "Not linked to a product", color: "slate", rows: loose });
-    return rows.filter((g) => g.rows.length).sort((a, b) => money(b.rows) - money(a.rows));
-  }, [refunds, products]);
+    return rows.filter((g) => g.rows.length).sort((a2, b2) => money(b2.rows) - money(a2.rows));
+  }, [scoped, products]);
 
-  const total = money(refunds);
+  /* The Saturday-to-Saturday week the business already runs on. */
+  const thisWeek = useMemo(() => {
+    const wk = satOf(Date.now());
+    return refunds.filter((r) => satOf(r.at) === wk);
+  }, [refunds]);
+
+  /* How many different people we are giving money back to — a rising count
+     is a different problem from one agent refunding more and more. */
+  const agents = useMemo(
+    () => new Set(scoped.map((r) => (r.customer || "").trim().toLowerCase()).filter(Boolean)).size,
+    [scoped],
+  );
+
+  const weekly = useMemo(() => {
+    const m = new Map();
+    for (const r of scoped) {
+      const k = satOf(r.at);
+      const e = m.get(k) || { at: k, n: 0, amount: 0 };
+      e.n++; e.amount += r.amount || 0;
+      m.set(k, e);
+    }
+    return [...m.values()].sort((x, y) => x.at - y.at);
+  }, [scoped]);
+
+  const total = money(scoped);
   const worst = groups[0];
   const types = refundTypes || [];
   const typeOf = (r) => types.find((t) => t.id === r.typeId);
   const byReason = useMemo(() => {
     const m = new Map();
-    refunds.forEach((r) => {
+    scoped.forEach((r) => {
       const k = types.find((t) => t.id === r.typeId)?.name || r.reason || "Not categorised";
       m.set(k, { reason: k, n: (m.get(k)?.n || 0) + 1, amount: (m.get(k)?.amount || 0) + (r.amount || 0) });
     });
-    return [...m.values()].sort((a, b) => b.amount - a.amount);
-  }, [refunds, types]);
+    return [...m.values()].sort((x, y) => y.amount - x.amount);
+  }, [scoped, types]);
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className={`flex flex-wrap gap-1 rounded-lg border ${BD} bg-white p-1 dark:bg-slate-900`}>
+          {RANGES.map(([id, label]) => (
+            <button key={id} onClick={() => setRange(id)}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium ${range === id
+                ? "bg-blue-600 text-white" : `${M} hover:bg-slate-200 dark:hover:bg-slate-800`}`}>{label}</button>
+          ))}
+        </div>
+        {range === "custom" && (
+          <div className={`flex items-center gap-2 rounded-lg border ${BD} bg-white px-3 py-1.5 dark:bg-slate-900`}>
+            <div className="w-40"><input type="date" value={a} onChange={(e) => setA(e.target.value)} className={IN} /></div>
+            <span className={`text-sm ${F}`}>to</span>
+            <div className="w-40"><input type="date" value={b} onChange={(e) => setB(e.target.value)} className={IN} /></div>
+          </div>
+        )}
+      </div>
+
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="grid flex-1 gap-3 sm:grid-cols-3">
+        <div className="grid flex-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className={`${CARD} p-4`}>
-            <L>Refunded</L>
-            <div className={`mt-2 font-mono text-2xl font-bold tabular-nums ${total ? "text-rose-600 dark:text-rose-400" : W}`}>{cash(total)}</div>
+            <L>Refunded all time</L>
+            <div className={`mt-2 font-mono text-2xl font-bold tabular-nums ${lifetime ? "text-rose-600 dark:text-rose-400" : W}`}>{cash(lifetime)}</div>
+            <div className={`mt-0.5 text-xs ${F}`}>{refunds.length} in total</div>
+          </div>
+          <div className={`${CARD} p-4`}>
+            <L>Refunded this week</L>
+            <div className={`mt-2 font-mono text-2xl font-bold tabular-nums ${W}`}>{cash(money(thisWeek))}</div>
+            <div className={`mt-0.5 text-xs ${F}`}>week of {weekLabel(satOf(Date.now()))}</div>
           </div>
           <div className={`${CARD} p-4`}>
             <L>Refunds given</L>
-            <div className={`mt-2 font-mono text-2xl font-bold tabular-nums ${W}`}>{refunds.length}</div>
+            <div className={`mt-2 font-mono text-2xl font-bold tabular-nums ${W}`}>{scoped.length}</div>
+            <div className={`mt-0.5 text-xs ${F}`}>{range === "all" ? "all time" : "in this window"}</div>
           </div>
           <div className={`${CARD} p-4`}>
-            <L>Costs you most</L>
-            <div className={`mt-2 text-base font-bold leading-tight ${W}`}>{worst ? worst.name : "—"}</div>
-            {worst && <div className={`mt-0.5 font-mono text-xs ${M}`}>{cash(money(worst.rows))}</div>}
+            <L>Agents refunded</L>
+            <div className={`mt-2 font-mono text-2xl font-bold tabular-nums ${W}`}>{agents}</div>
+            <div className={`mt-0.5 text-xs ${F}`}>{agents ? `${cash(Math.round(total / agents))} each on average` : "nobody yet"}</div>
           </div>
         </div>
         <button onClick={() => setAdding({ id: uid("rf"), at: Date.now(), currency: "USD" })}
@@ -150,6 +219,19 @@ export default function Refunds({ refunds, products, orders, refundTypes, custom
           </section>
         );
       })}
+
+      {/* The shape over time, at the bottom where you look once you have read
+          the individual records above. */}
+      <div className={`${CARD} p-4`}>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h3 className={`text-sm font-semibold ${W}`}>Refunded per week</h3>
+          <span className={`font-mono text-sm ${W}`}>
+            {cash(total)} <span className={F}>over {weekly.length} week{weekly.length === 1 ? "" : "s"}</span>
+          </span>
+        </div>
+        <WipeLine empty="No refunds in this window."
+          points={weekly.map((w) => ({ at: w.at, value: w.amount, note: `${w.n} refund${w.n === 1 ? "" : "s"}` }))} />
+      </div>
 
       {byReason.length > 1 && (
         <div className={`overflow-hidden rounded-xl border ${BD}`}>

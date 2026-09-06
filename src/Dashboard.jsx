@@ -424,7 +424,7 @@ export default function Dashboard({ me: account, onSignOut }) {
                 onAnnotate={annotateRefund} onUpdate={updateRefund}
                 onSetUp={() => setTab("catalog")} />
           : tab === "completed"
-            ? <OrderList rows={completed} products={products} now={now} onOpen={setOpen} done settings={cfg}
+            ? <OrderList rows={completed} products={products} now={now} onOpen={setOpen} done paged settings={cfg}
                 title="Delivered" note="Delivered orders and settled failed payments, newest first."
                 empty="Nothing delivered yet. Orders land here once someone stops the clock." />
           : tab === "wallets"
@@ -503,7 +503,18 @@ function Card({ o, products, now, onOpen, hideProduct, settings }) {
 /* New orders and Completed are the same table with different contents, so
    they're one component. The columns earn their place: who it's for, what
    they bought, what it cost, who owns it, and the clock. */
-function OrderList({ rows, products, now, onOpen, sortBy, onSort, done, title, note, empty, settings }) {
+const PAGE = 50;
+
+function OrderList({ rows, products, now, onOpen, sortBy, onSort, done, title, note, empty, settings, paged }) {
+  /* Completed grows forever. Rendering a year of it to show the twenty rows
+     somebody actually looks at costs a visible freeze on every open. */
+  const [limit, setLimit] = useState(PAGE);
+  /* Re-sorting or re-filtering should start from the top again, not leave
+     you deep in a list that no longer means the same thing. */
+  useEffect(() => setLimit(PAGE), [sortBy, rows.length === 0]);
+  const shown = paged ? rows.slice(0, limit) : rows;
+  const more = rows.length - shown.length;
+
   return (
     <div className={`overflow-hidden rounded-xl border ${BD}`}>
       <div className={`flex flex-wrap items-center gap-3 border-b ${BD} bg-white dark:bg-slate-900 px-4 py-3`}>
@@ -529,7 +540,7 @@ function OrderList({ rows, products, now, onOpen, sortBy, onSort, done, title, n
       {!rows.length && <p className={`px-4 py-8 text-sm ${M}`}>{empty}</p>}
 
       <div className="divide-y divide-slate-200 dark:divide-slate-800">
-        {rows.map((o) => {
+        {shown.map((o) => {
           const p = products.find((x) => x.id === o.productId);
           const tgt = target(products, o, settings);
           const bad = late(o, now);
@@ -578,6 +589,13 @@ function OrderList({ rows, products, now, onOpen, sortBy, onSort, done, title, n
           );
         })}
       </div>
+
+      {more > 0 && (
+        <button onClick={() => setLimit((n) => n + PAGE)}
+          className={`w-full border-t ${BD} px-4 py-3 text-sm font-medium text-blue-600 hover:bg-slate-50 dark:text-blue-400 dark:hover:bg-slate-900`}>
+          Load {Math.min(PAGE, more)} more <span className={F}>· {more} still to show</span>
+        </button>
+      )}
     </div>
   );
 }

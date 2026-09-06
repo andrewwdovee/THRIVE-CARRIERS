@@ -279,5 +279,41 @@ ok("no payment id falls back to externalId", manual.next.orders.length === 1, ma
 const cancel = appendOrders(renewals.next, [mk({ paymentId: "sub_1", externalId: "sub_1", paymentStatus: "failed" })]);
 ok("a cancellation is its own row, not a duplicate renewal", cancel.next.orders.length === 3, cancel.next.orders.length);
 
+/* When one payment is described twice, the description that names a product
+   is the one worth keeping. */
+console.log("\nthe product-linked record wins:");
+const sold = { paymentId: "pi_x", externalId: "ch_x", productId: "p_gc",
+  productName: "Google Calls Subscription", stripePriceId: "price_gc", amount: 49700, receivedAt: Date.now() };
+const admin = { paymentId: "pi_x", externalId: "ch_x", productId: "",
+  productName: "Subscription update", amount: 49700, receivedAt: Date.now() };
+const base3 = { orders: [], products: SEED, refunds: [], customers: [], blocks: [], settings: {} };
+
+for (const [label, batch] of [["bookkeeping first", [admin, sold]], ["bookkeeping second", [sold, admin]]]) {
+  const r = appendOrders(base3, batch);
+  ok(`${label}: one order`, r.next.orders.length === 1, r.next.orders.length);
+  ok(`${label}: keeps the product name`, r.next.orders[0].productName === "Google Calls Subscription",
+     r.next.orders[0].productName);
+  ok(`${label}: keeps the product link`, r.next.orders[0].productId === "p_gc", r.next.orders[0].productId);
+}
+
+/* Neither side knows the product: nothing to prefer, still one order. */
+const blind = appendOrders(base3, [{ ...admin }, { ...admin, productName: "Subscription creation" }]);
+ok("neither linked: still one order", blind.next.orders.length === 1, blind.next.orders.length);
+
+/* An order already on the board under "Needs triage" gets upgraded when a
+   later event finally names what was sold. */
+const triage = appendOrders(base3, [admin]).next;
+ok("it landed unmatched", !triage.orders[0].productId, triage.orders[0].productId);
+const fixed = appendOrders(triage, [sold]);
+ok("a later event names the product", fixed.next.orders[0].productId === "p_gc", fixed.next.orders[0].productId);
+ok("and does not add a second order", fixed.next.orders.length === 1, fixed.next.orders.length);
+
+/* An order that already knows what it is must not be renamed by a vaguer
+   description arriving afterwards. */
+const known = appendOrders(base3, [sold]).next;
+const later = appendOrders(known, [admin]);
+ok("a known product is not overwritten", later.next.orders[0].productName === "Google Calls Subscription",
+   later.next.orders[0].productName);
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

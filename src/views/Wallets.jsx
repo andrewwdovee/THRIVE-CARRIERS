@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Plus, Wallet, TrendingDown, Check, X } from "lucide-react";
+import { Plus, Wallet, TrendingDown, Check, X, ArrowUpDown } from "lucide-react";
 import {
   BD, CARD, PANEL, IN, BTN, PRI, M, F, W, TD, cash, uid, L, Field, Confirm,
   custName, findCustomers, satOf, weekLabel, walletTotals, walletWeeks, DAY, SCROLL, STICKY,
@@ -14,12 +14,26 @@ import WipeLine from "./WipeLine";
    worth watching per person is not one week's wipe but the pattern: somebody
    wiped for a lot every week is being sold more than they can use, which is
    a conversation to have before they work it out themselves. */
+/* Click to sort, click again to flip it. */
+function SortTh({ label, k, sort, set, right }) {
+  const on = sort.k === k;
+  return (
+    <th className={`px-3 py-2 ${right ? "text-right" : "text-left"}`}>
+      <button onClick={() => set({ k, d: on && sort.d === "desc" ? "asc" : "desc" })}
+        className={`inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wide ${on ? "text-blue-600 dark:text-blue-400" : F}`}>
+        {label}<ArrowUpDown className="h-3 w-3" />
+      </button>
+    </th>
+  );
+}
+
 export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAddCustomer, onRemoveCustomer }) {
   /* Two boxes, not one. The weekly table and the totals table are different
      jobs — filtering one from a box sitting in the other card is a search
      nobody would think to look for. */
   const [wq, setWq] = useState("");
   const [q, setQ] = useState("");
+  const [sort, setSort] = useState({ k: "total", d: "desc" });
   const [adding, setAdding] = useState(null);
   const [week, setWeek] = useState(() => satOf(Date.now()));
   const [entry, setEntry] = useState({});
@@ -38,11 +52,26 @@ export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAdd
 
   const forWeek = useMemo(() => findCustomers(users, wq), [users, wq]);
   const totals = useMemo(() => walletTotals(users, rows), [users, rows]);
+  /* The actual current Saturday, not the one being edited. Navigating back to
+     fill in a past week used to silently repoint this tile at that week, so
+     the headline said "this week" and showed something else. */
+  const nowWeek = satOf(Date.now());
+  const wipedNow = useMemo(
+    () => rows.filter((w) => satOf(w.at) === nowWeek).reduce((s, w) => s + (w.amount || 0), 0),
+    [rows, nowWeek],
+  );
   const shown = useMemo(() => {
-    const hits = findCustomers(users, q);
-    const ids = new Set(hits.map((u) => u.id));
-    return totals.filter((t) => ids.has(t.id)).sort((a, b) => b.total - a.total);
-  }, [totals, users, q]);
+    const ids = new Set(findCustomers(users, q).map((u) => u.id));
+    const rows = totals.filter((t) => ids.has(t.id));
+    const dir = sort.d === "asc" ? 1 : -1;
+    return rows.sort((a, b) => {
+      if (sort.k === "name") return dir * custName(a).localeCompare(custName(b));
+      const av = a[sort.k] || 0, bv = b[sort.k] || 0;
+      /* Ties on a number fall back to the name, so the order is stable
+         instead of reshuffling every time the data reloads. */
+      return av === bv ? custName(a).localeCompare(custName(b)) : dir * (av - bv);
+    });
+  }, [totals, users, q, sort]);
 
   const weeks = useMemo(() => walletWeeks(rows), [rows]);
   const wipedAllTime = rows.reduce((s, w) => s + (w.amount || 0), 0);
@@ -85,8 +114,8 @@ export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAdd
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Tile label="Wiped this week" value={cash(wipedThisWeek)} note={`${thisWeek.size} of ${users.length} entered`} />
         <Tile label="Wiped all time" value={cash(wipedAllTime)} note={`${weeks.length} week${weeks.length === 1 ? "" : "s"} recorded`} />
+        <Tile label="Wiped this week" value={cash(wipedNow)} note={weekLabel(nowWeek)} />
         <Tile label="Average a week" value={cash(perWeek)} />
         <Tile label="People" value={String(users.length)} note="shared with Customers" />
       </div>
@@ -99,7 +128,8 @@ export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAdd
               <Wallet className="h-4 w-4 text-blue-600 dark:text-blue-400" /> Week of {weekLabel(week)}
             </h3>
             <p className={`mt-0.5 text-sm ${M}`}>
-              Type what was wiped from each wallet, then save the lot in one go. Leave someone blank if they weren't wiped.
+              {cash(wipedThisWeek)} recorded so far, {thisWeek.size} of {users.length} entered.
+              Leave someone blank if they weren't wiped.
             </p>
           </div>
           <div className="flex items-end gap-2">
@@ -227,11 +257,11 @@ export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAdd
               <table className="w-full text-sm">
                 <thead className={STICKY}>
                   <tr className={`border-b ${BD} text-left`}>
-                    <th className={`px-3 py-2 text-xs font-medium uppercase tracking-wide ${F}`}>Person</th>
-                    <th className={`px-3 py-2 text-right text-xs font-medium uppercase tracking-wide ${F}`}>Total wiped</th>
-                    <th className={`px-3 py-2 text-right text-xs font-medium uppercase tracking-wide ${F}`}>Weeks</th>
-                    <th className={`px-3 py-2 text-right text-xs font-medium uppercase tracking-wide ${F}`}>Average</th>
-                    <th className={`px-3 py-2 text-right text-xs font-medium uppercase tracking-wide ${F}`}>Last</th>
+                    <SortTh label="Person" k="name" sort={sort} set={setSort} />
+                    <SortTh label="Total wiped" k="total" sort={sort} set={setSort} right />
+                    <SortTh label="Weeks" k="count" sort={sort} set={setSort} right />
+                    <SortTh label="Average" k="average" sort={sort} set={setSort} right />
+                    <SortTh label="Last" k="lastAt" sort={sort} set={setSort} right />
                     <th className="w-10 px-3 py-2"><span className="sr-only">Remove</span></th>
                   </tr>
                 </thead>
@@ -280,7 +310,8 @@ function WalletWeeks({ weeks, wipes, users, onRemove }) {
       <h3 className={`text-sm font-semibold ${W}`}>Week by week</h3>
       <p className={`mt-0.5 text-sm ${M}`}>Hover to read a week. Click one to check or remove a figure.</p>
 
-      <WipeLine weeks={weeks} active={open} onPick={(wk) => setOpen(open === wk ? null : wk)} />
+      <WipeLine points={weeks.map((w) => ({ at: w.week, value: w.total, note: `${w.count} ${w.count === 1 ? "person" : "people"}` }))}
+        active={open} onPick={(wk) => setOpen(open === wk ? null : wk)} />
 
       {open != null && (
         <div className={`mt-3 rounded-lg border ${BD} p-3`}>

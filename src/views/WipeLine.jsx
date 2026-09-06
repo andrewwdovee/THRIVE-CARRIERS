@@ -40,20 +40,30 @@ const axisMoney = (c) => {
 const tickLabel = (t) =>
   new Date(t).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
-export default function WipeLine({ weeks, onPick, active }) {
+/* points: [{ at, value, note }] — at is a timestamp, value a number.
+   money=false draws plain counts, for "orders placed per day". */
+export default function WipeLine({ points, money = true, onPick, active, empty = "Nothing recorded yet." }) {
   const [hover, setHover] = useState(null);
+  /* Loud rather than empty. Renaming this prop once left a call site passing
+     the old name, and the chart drew a tidy "nothing recorded yet" over data
+     that was right there — a blank chart looks like no data, not a bug. */
+  if (points === undefined) throw new Error("WipeLine needs `points`; it was not passed one.");
+  const weeks = points || [];
+
+  const fmt = money ? (v) => cash(v) : (v) => String(Math.round(v));
+  const axisFmt = money ? axisMoney : (v) => String(Math.round(v));
 
   const { pts, top, ticks } = useMemo(() => {
     if (!weeks.length) return { pts: [], top: 0, ticks: [] };
-    const max = Math.max(...weeks.map((w) => w.total));
+    const max = Math.max(...weeks.map((w) => w.value));
     const t = niceTop(max);
-    const first = weeks[0].week, last = weeks[weeks.length - 1].week;
+    const first = weeks[0].at, last = weeks[weeks.length - 1].at;
     const span = last - first;
     const pts = weeks.map((w, i) => ({
       ...w,
-      /* A single week has no span to divide by; sit it in the middle. */
-      x: PAD.l + (span ? ((w.week - first) / span) * PLOT.w : PLOT.w / 2),
-      y: PAD.t + PLOT.h - (t ? (w.total / t) * PLOT.h : 0),
+      /* A single point has no span to divide by; sit it in the middle. */
+      x: PAD.l + (span ? ((w.at - first) / span) * PLOT.w : PLOT.w / 2),
+      y: PAD.t + PLOT.h - (t ? (w.value / t) * PLOT.h : 0),
       i,
     }));
     /* Keep a label only when it clears the last one kept. Sampling every nth
@@ -71,12 +81,12 @@ export default function WipeLine({ weeks, onPick, active }) {
     return { pts, top: t, ticks: keep };
   }, [weeks]);
 
-  if (!weeks.length) return <p className={`mt-3 text-sm ${F}`}>Nothing recorded yet.</p>;
+  if (!weeks.length) return <p className={`mt-3 text-sm ${F}`}>{empty}</p>;
 
   const line = pts.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
   const area = `${line} L${pts[pts.length - 1].x.toFixed(1)},${PAD.t + PLOT.h} L${pts[0].x.toFixed(1)},${PAD.t + PLOT.h} Z`;
   const grid = [0, 0.5, 1];
-  const shown = hover ?? (active != null ? pts.find((p) => p.week === active) : null);
+  const shown = hover ?? (active != null ? pts.find((p) => p.at === active) : null);
 
   /* The pointer is nowhere near a single point most of the time, so snap to
      the nearest one by x — a line chart you have to hit exactly is a line
@@ -93,8 +103,8 @@ export default function WipeLine({ weeks, onPick, active }) {
     <div className="relative mt-3">
       <svg viewBox={`0 0 ${VB.w} ${VB.h}`} className="w-full" style={{ height: 210 }}
         onMouseMove={track} onMouseLeave={() => setHover(null)}
-        onClick={() => shown && onPick?.(shown.week)}
-        role="img" aria-label={`Money wiped per week, ${weekLabel(weeks[0].week)} to ${weekLabel(weeks[weeks.length - 1].week)}`}>
+        onClick={() => shown && onPick?.(shown.at)}
+        role="img" aria-label={`${weekLabel(weeks[0].at)} to ${weekLabel(weeks[weeks.length - 1].at)}`}>
 
         {/* Recessive grid: there to be measured against, not looked at. */}
         {grid.map((g) => {
@@ -104,7 +114,7 @@ export default function WipeLine({ weeks, onPick, active }) {
               <line x1={PAD.l} x2={VB.w - PAD.r} y1={y} y2={y}
                 className="stroke-slate-200 dark:stroke-slate-800" strokeWidth="1" />
               <text x={PAD.l - 8} y={y + 3.5} textAnchor="end"
-                className="fill-slate-500 text-[10px] font-medium">{axisMoney(Math.round(top * g))}</text>
+                className="fill-slate-500 text-[10px] font-medium">{axisFmt(Math.round(top * g))}</text>
             </g>
           );
         })}
@@ -114,7 +124,7 @@ export default function WipeLine({ weeks, onPick, active }) {
           strokeLinejoin="round" strokeLinecap="round" />
 
         {pts.map((p) => (
-          <circle key={p.week} cx={p.x} cy={p.y} r={shown?.week === p.week ? 5 : 3.5}
+          <circle key={p.at} cx={p.x} cy={p.y} r={shown?.at === p.at ? 5 : 3.5}
             className="fill-blue-500 stroke-white dark:stroke-slate-900" strokeWidth="2" />
         ))}
 
@@ -124,17 +134,17 @@ export default function WipeLine({ weeks, onPick, active }) {
         )}
 
         {ticks.map((p) => (
-          <text key={p.week} x={p.x} y={VB.h - 10}
+          <text key={p.at} x={p.x} y={VB.h - 10}
             textAnchor={p.i === 0 ? "start" : p.i === pts.length - 1 ? "end" : "middle"}
-            className="fill-slate-500 text-[10px]">{tickLabel(p.week)}</text>
+            className="fill-slate-500 text-[10px]">{tickLabel(p.at)}</text>
         ))}
       </svg>
 
       {/* Read the value here rather than printing one on every point. */}
       <div className={`mt-1 flex flex-wrap items-baseline gap-x-2 text-sm ${shown ? "" : "opacity-0"}`} aria-live="polite">
-        <span className={W}>{shown ? weekLabel(shown.week) : "—"}</span>
-        <span className={`font-mono ${W}`}>{shown ? cash(shown.total) : ""}</span>
-        <span className={`text-xs ${F}`}>{shown ? `${shown.count} ${shown.count === 1 ? "person" : "people"}` : ""}</span>
+        <span className={W}>{shown ? weekLabel(shown.at) : "—"}</span>
+        <span className={`font-mono ${W}`}>{shown ? fmt(shown.value) : ""}</span>
+        <span className={`text-xs ${F}`}>{shown?.note || ""}</span>
       </div>
     </div>
   );

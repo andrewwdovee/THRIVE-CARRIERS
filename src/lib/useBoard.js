@@ -81,6 +81,11 @@ const PAYMENT_FACTS = ["paymentStatus", "declineCode", "declineReason", "refunde
   "amountRefunded", "refundedAt", "receiptUrl", "subscriptionStatus", "cardBrand", "cardLast4", "cardExp",
   "disputed", "disputeStatus"];
 
+/* What a payment was for, as opposed to what happened to it. These travel
+   together: taking the product from one record and the price id from another
+   describes something nobody sold. */
+const PRODUCT_FACTS = ["productId", "productName", "stripePriceId", "items", "interval", "intervalCount", "quantity"];
+
 /* What makes two records the same money.
 
    The payment id, and nothing else. A charge id is not enough: a declined
@@ -110,6 +115,13 @@ function fold(drafts) {
       const empty = v == null || v === "" || (Array.isArray(v) && !v.length);
       if (!empty) next[k] = v;
     }
+    /* Stripe describes one payment twice: once as what was sold — "Google
+       unlimited package" — and once as bookkeeping, "Subscription update".
+       Both are true and only one is work. Whichever side matched a product
+       keeps the description, no matter which arrived second. */
+    const winner = prev.productId && !d.productId ? prev : !prev.productId && d.productId ? d : null;
+    if (winner) for (const k of PRODUCT_FACTS) if (winner[k] != null && winner[k] !== "") next[k] = winner[k];
+
     if (prev.paymentStatus === "failed" || d.paymentStatus === "failed") next.paymentStatus = "failed";
     next.refunded = !!(prev.refunded || d.refunded);
     next.disputed = !!(prev.disputed || d.disputed);
@@ -159,6 +171,12 @@ export function appendOrders(x, all) {
     for (const k of PAYMENT_FACTS) {
       if (d[k] == null || d[k] === "") continue;
       if (prior[k] !== d[k]) patch[k] = d[k];
+    }
+    /* An order sitting under "Needs triage" because the first event about it
+       carried no line items: if a later one names the product, adopt it. An
+       order that already knows what it is keeps what it has. */
+    if (!prior.productId && d.productId) {
+      for (const k of PRODUCT_FACTS) if (d[k] != null && d[k] !== "") patch[k] = d[k];
     }
     if (Object.keys(patch).length) updates.set(prior.id, patch);
   }

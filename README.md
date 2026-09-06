@@ -334,6 +334,14 @@ new, duplicating every open order exactly once on the next sync.
 Records with no payment id (samples, hand-entered rows) fall back to
 `externalId`, so nothing that worked before stops working.
 
+**Which of two descriptions survives.** Stripe describes one payment twice:
+once as what was sold ("Google unlimited package") and once as bookkeeping
+("Subscription update"). Both are true and only one is work, so whichever
+record matched a product keeps the description — no matter which arrived
+second. An order already sitting under "Needs triage" is upgraded when a
+later event finally names the product; an order that already knows what it is
+is never renamed by a vaguer one.
+
 ### Blocked payments
 
 Settings -> Blocked payments hides charges that aren't work: a test card, a
