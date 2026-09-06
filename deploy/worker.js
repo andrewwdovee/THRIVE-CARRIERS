@@ -141,8 +141,53 @@ async function readToken(env, request) {
 
 /* --------------------------------------------------------------- routes */
 
+/* Which pieces of configuration are present. Booleans only — never a
+   value — so this is safe to read from a browser or paste into a chat. */
+function configReport(env) {
+  return {
+    ownerEmail: !!env.OWNER_EMAIL && env.OWNER_EMAIL !== "you@example.com",
+    passwordSalt: typeof env.OWNER_PASSWORD_SALT === "string" && env.OWNER_PASSWORD_SALT.length > 0,
+    saltLooksValid: typeof env.OWNER_PASSWORD_SALT === "string" && /^[0-9a-fA-F]{32}$/.test(env.OWNER_PASSWORD_SALT.trim()),
+    passwordHash: typeof env.OWNER_PASSWORD_HASH === "string" && env.OWNER_PASSWORD_HASH.length > 0,
+    hashLooksValid: typeof env.OWNER_PASSWORD_HASH === "string" && /^[0-9a-fA-F]{64}$/.test(env.OWNER_PASSWORD_HASH.trim()),
+    tokenSecret: typeof env.TOKEN_SECRET === "string" && env.TOKEN_SECRET.length > 0,
+    kv: !!env.THRIVE_KV,
+    iterations: Number(env.OWNER_PASSWORD_ITER || 0),
+    allowedOrigins: (env.ALLOWED_ORIGINS || "").split(",").map((s) => s.trim()).filter(Boolean),
+  };
+}
+
+/* A missing secret used to surface as Cloudflare's blank 500 page, which
+   says nothing about what is wrong. Name the gap instead. */
+function missingConfig(env) {
+  const c = configReport(env);
+  const gaps = [];
+  if (!c.passwordSalt) gaps.push("OWNER_PASSWORD_SALT is not set");
+  else if (!c.saltLooksValid) gaps.push("OWNER_PASSWORD_SALT is not 32 hex characters — the wrong value was pasted");
+  if (!c.passwordHash) gaps.push("OWNER_PASSWORD_HASH is not set");
+  else if (!c.hashLooksValid) gaps.push("OWNER_PASSWORD_HASH is not 64 hex characters — the wrong value was pasted");
+  if (!c.tokenSecret) gaps.push("TOKEN_SECRET is not set");
+  if (!c.ownerEmail) gaps.push("OWNER_EMAIL is not set in wrangler.toml");
+  return gaps;
+}
+
 export default {
   async fetch(request, env) {
+    try {
+      return await handle(request, env);
+    } catch (err) {
+      /* Never let an exception become a blank Cloudflare error page. */
+      return json({
+        error: "The relay hit an unexpected error.",
+        detail: (err && err.message) || String(err),
+        config: configReport(env),
+      }, 500);
+    }
+  },
+};
+
+async function handle(request, env) {
+  {
     const cors = corsHeaders(request, env);
 
     if (request.method === "OPTIONS") {
@@ -161,7 +206,12 @@ export default {
     const path = url.pathname.replace(/\/+$/, "") || "/";
 
     if (path === "/" || path === "/health") {
-      return json({ ok: true, service: "thrive-relay" }, 200, head);
+      return json({
+        ok: true,
+        service: "thrive-relay",
+        config: configReport(env),
+        missing: missingConfig(env),
+      }, 200, head);
     }
 
     /* ---- auth ---- */
@@ -172,11 +222,16 @@ export default {
       const password = String(body.password || "");
       if (!email || !password) return json({ error: "Email and password are required." }, 400, head);
 
+      const gaps = missingConfig(env);
+      if (gaps.length) {
+        return json({ error: "The relay is not fully configured.", missing: gaps }, 500, head);
+      }
+
       if (email !== String(env.OWNER_EMAIL || "").trim().toLowerCase()) {
         return json({ error: "That email and password don't match." }, 401, head);
       }
-      const hash = await pbkdf2(password, env.OWNER_PASSWORD_SALT, Number(env.OWNER_PASSWORD_ITER || 210000));
-      if (!sameBytes(enc.encode(hash), enc.encode(env.OWNER_PASSWORD_HASH))) {
+      const hash = await pbkdf2(password, env.OWNER_PASSWORD_SALT.trim(), Number(env.OWNER_PASSWORD_ITER || 210000));
+      if (!sameBytes(enc.encode(hash), enc.encode(env.OWNER_PASSWORD_HASH.trim()))) {
         return json({ error: "That email and password don't match." }, 401, head);
       }
       return json({ token: await issueToken(env, email), user: { email } }, 200, head);
@@ -222,5 +277,5 @@ export default {
     }
 
     return json({ error: "Not found" }, 404, head);
-  },
-};
+  }
+}
