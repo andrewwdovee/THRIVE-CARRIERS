@@ -168,6 +168,11 @@ function missingConfig(env) {
   else if (!c.hashLooksValid) gaps.push("OWNER_PASSWORD_HASH is not 64 hex characters — the wrong value was pasted");
   if (!c.tokenSecret) gaps.push("TOKEN_SECRET is not set");
   if (!c.ownerEmail) gaps.push("OWNER_EMAIL is not set in wrangler.toml");
+  /* Workers cap PBKDF2 here. Above it, every login throws — so say so on
+     /health rather than letting it surface as a failed sign-in. */
+  if (c.iterations > 100000) {
+    gaps.push("OWNER_PASSWORD_ITER is " + c.iterations + " — Cloudflare Workers do not support PBKDF2 above 100000");
+  }
   return gaps;
 }
 

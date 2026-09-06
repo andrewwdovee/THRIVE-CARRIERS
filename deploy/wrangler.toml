@@ -19,7 +19,8 @@ id = "cc65589c8dfe4579b355f3804db2fb65"
 ALLOWED_ORIGINS = "https://thrive-command.pages.dev,https://*.thrive-command.pages.dev"
 
 OWNER_EMAIL = "you@example.com"
-OWNER_PASSWORD_ITER = "210000"
+# 100000 is the ceiling Cloudflare Workers allow for PBKDF2.
+OWNER_PASSWORD_ITER = "100000"
 
 # The three below are SECRETS. Do not put them here — set them with:
 #   wrangler secret put TOKEN_SECRET

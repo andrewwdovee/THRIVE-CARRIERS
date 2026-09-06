@@ -21,7 +21,10 @@ if (password.length < 12) {
   process.exit(1);
 }
 
-const ITER = 210000;
+/* Cloudflare Workers refuse PBKDF2 above 100,000 iterations, and the
+   relay is where this hash gets checked. A hash generated at a higher
+   count simply cannot be verified there. */
+const ITER = 100000;
 const enc = new TextEncoder();
 const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 
