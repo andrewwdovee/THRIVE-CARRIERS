@@ -309,6 +309,9 @@ table.data .who { font-weight: 600; }
 table.data .dim { color: var(--muted); font-size: 12px; }
 table.data .nowrap { white-space: nowrap; }
 table.data tr:last-child td { border-bottom: 0; }
+/* In the P&L the in/out marker is a tag, not a column of data — let it
+   hug the right edge so the amounts sit beside their labels. */
+table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-space: nowrap; }
 
 /* ---------- pills ---------- */
 .pill {
@@ -989,11 +992,11 @@ table.data tr:last-child td { border-bottom: 0; }
     var body;
     if (ui.tab === "loa") body = pageLOA();
     else if (ui.tab === "lt") body = pageLT();
-    else if (ui.tab === "people") body = pagePeople();
+    else if (ui.tab === "company") body = pageCompany();
     else if (ui.tab === "sync") body = pageSync();
     else body = pageOverview();
 
-    app.innerHTML = masthead() + syncStrip() + rail() + '<div class="wrap">' + body + "</div>" +
+    app.innerHTML = masthead() + syncStrip() + rail() + sampleBanner() + '<div class="wrap">' + body + "</div>" +
       (ui.toast ? '<div class="toast">' + esc(ui.toast) + "</div>" : "");
     wireCharts();
   }
@@ -1037,9 +1040,30 @@ table.data tr:last-child td { border-bottom: 0; }
       "</div></div></header>";
   }
 
+  function isSample(snap) { return !!(snap && snap.isSample); }
+
+  /* Sample figures sitting in a console full of real ones is how someone
+     ends up quoting a made-up number in a real meeting. It gets said
+     loudly, on every page, until it is cleared. */
+  function sampleBanner() {
+    var which = [];
+    if (isSample(ui.loa)) which.push(SOURCES.loa.name);
+    if (isSample(ui.lt)) which.push(SOURCES.lt.name);
+    if (!which.length) return "";
+    return '<div style="background:var(--warn-bg);border-bottom:1px solid var(--warn)">' +
+      '<div style="max-width:1320px;margin:0 auto;padding:9px 24px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;color:var(--warn);font-size:12.5px;font-weight:600">' +
+      "<span>Sample data loaded for " + esc(which.join(" and ")) +
+      " — these are made-up figures for a look at the layout, not your business.</span>" +
+      '<button class="btn sm" data-act="clearsample" style="background:var(--warn);border-color:var(--warn);color:#fff">Remove sample data</button>' +
+      "</div></div>";
+  }
+
   function syncStrip() {
     function cell(src, snap) {
       var when = snap && snap.syncedAt;
+      if (isSample(snap)) {
+        return '<span class="src ' + src.cls + ' stale"><i></i>' + esc(src.name) + " <b>sample data</b></span>";
+      }
       var stale = !when ? "none" : (hoursSince(when) > STALE_HOURS ? "stale" : "");
       return '<span class="src ' + src.cls + " " + stale + '">' +
         "<i></i>" + esc(src.name) + " <b>" + esc(when ? agoLabel(when) : "not synced") + "</b></span>";
@@ -1058,7 +1082,7 @@ table.data tr:last-child td { border-bottom: 0; }
       { k: "overview", label: "Overview" },
       { k: "loa", label: "LOA Production" },
       { k: "lt", label: "Lead Tech" },
-      { k: "people", label: "People" },
+      { k: "company", label: "Thrive Companies" },
       { k: "sync", label: "Sync & sources" }
     ];
     var out = '<nav class="rail"><div class="rail-in">';
@@ -1512,64 +1536,169 @@ table.data tr:last-child td { border-bottom: 0; }
         '<td class="n">' + esc(money(m.refunded, 2)) + '</td><td class="n">' + esc(pct(ratio(m.refunded, m.collected))) + "</td></tr>";
       out += "</tbody></table></div></div></div>";
     }
-    return out;
-  }
 
-  /* ------------------------------------------------------------ People */
-  function pagePeople() {
-    var w = rangeWindow();
-    var out = pageHead("People", "Everyone across both businesses, and what they moved. " + w.label + ".", rangePicker());
-
-    if (!hasLOA() && !hasLT()) return out + notSynced("loa");
-
-    if (hasLOA()) {
-      out += '<div class="panel"><div class="panel-head"><h3>Licensed producers</h3>' +
-        '<span class="note">From the LOA Producer Desk</span></div><div class="panel-body flush"><div class="tblwrap"><table class="data"><thead><tr>' +
-        "<th>Name</th><th>Role</th><th>Contract</th><th>Status</th><th>Started</th><th class=\"n\">Calls</th><th class=\"n\">Written AP</th><th class=\"n\">Spread to house</th>" +
+    /* who worked the board */
+    var byWho = {};
+    m.orders.forEach(function (o) {
+      var k = o.assignee || "Unassigned";
+      byWho[k] = byWho[k] || { n: 0, done: 0, onTime: 0, rated: 0, value: 0 };
+      byWho[k].n += 1;
+      byWho[k].value += o.paid ? o.amount : 0;
+      if (o.status === "done") {
+        byWho[k].done += 1;
+        if (o.onTime !== null) { byWho[k].rated += 1; if (o.onTime) byWho[k].onTime += 1; }
+      }
+    });
+    var whoKeys = Object.keys(byWho);
+    if (whoKeys.length) {
+      out += '<div class="section-head"><p class="eyebrow">Who worked it</p><h3>Fulfillment team</h3>' +
+        '<p class="sub">Orders handled and how often they landed inside the delivery window.</p></div>';
+      out += '<div class="panel"><div class="panel-body flush"><div class="tblwrap"><table class="data"><thead><tr>' +
+        '<th>Name</th><th class="n">Orders</th><th class="n">Delivered</th><th>On time</th><th class="n">Order value</th>' +
         "</tr></thead><tbody>";
-      loaAgents().slice().sort(function (a, b) { return (a.name || "").localeCompare(b.name || ""); }).forEach(function (a) {
-        var am = loaMetrics(w.from, w.to, [a.id]);
-        out += "<tr><td class=\"who\">" + esc(a.name) + (a.email ? '<div class="dim">' + esc(a.email) + "</div>" : "") + "</td>" +
-          "<td>" + esc(a.role === "admin" ? "Admin" : "Producer") + "</td>" +
-          '<td class="num">' + esc(a.level || "—") + "%</td>" +
-          '<td><span class="pill ' + (a.status === "active" ? "good" : "warn") + '">' + esc(a.status || "active") + "</span></td>" +
-          '<td class="nowrap dim">' + esc(prettyDate(a.startedOn || a.createdAt)) + "</td>" +
-          '<td class="n">' + esc(intf(am.callsTaken)) + "</td>" +
-          '<td class="n">' + esc(money(am.apWritten)) + "</td>" +
-          '<td class="n">' + esc(money(am.spreadPaid)) + "</td></tr>";
+      whoKeys.sort(function (a, b) { return byWho[b].n - byWho[a].n; }).forEach(function (k) {
+        var r = byWho[k], p = r.rated ? ratio(r.onTime, r.rated) : null;
+        out += "<tr><td class=\"who\">" + esc(k) + "</td>" +
+          '<td class="n">' + esc(intf(r.n)) + '</td><td class="n">' + esc(intf(r.done)) + "</td>" +
+          "<td>" + (p == null ? '<span class="dim">—</span>' :
+            '<div class="row" style="gap:8px;flex-wrap:nowrap"><div class="bar-mini" style="flex:1 1 54px"><i class="' +
+            (p >= 90 ? "good" : p < 70 ? "bad" : "") + '" style="width:' + p.toFixed(0) + '%"></i></div>' +
+            '<span class="num" style="font-size:12px">' + esc(pct(p, 0)) + "</span></div>") + "</td>" +
+          '<td class="n">' + esc(money(r.value)) + "</td></tr>";
       });
       out += "</tbody></table></div></div></div>";
     }
+    return out;
+  }
 
-    if (hasLT()) {
-      var byWho = {};
-      ltOrders().filter(function (o) { return inRange(o.date, w.from, w.to); }).forEach(function (o) {
-        var k = o.assignee || "Unassigned";
-        byWho[k] = byWho[k] || { n: 0, done: 0, onTime: 0, rated: 0, value: 0 };
-        byWho[k].n += 1;
-        byWho[k].value += o.paid ? o.amount : 0;
-        if (o.status === "done") {
-          byWho[k].done += 1;
-          if (o.onTime !== null) { byWho[k].rated += 1; if (o.onTime) byWho[k].onTime += 1; }
-        }
+  /* -------------------------------------------------- Thrive Companies */
+  /* The holding company's own scorecard: one profit and loss across both
+     businesses, then where the house's commission actually came from. */
+  function pageCompany() {
+    var w = rangeWindow();
+    var lm = hasLOA() ? loaMetrics(w.from, w.to) : null;
+    var tm = hasLT() ? ltMetrics(w.from, w.to) : null;
+    var out = pageHead("Thrive Companies", "The holding company's profit and loss, and where the commission came from. " + w.label + ".", rangePicker());
+
+    if (!lm && !tm) return out + notSynced("loa");
+
+    var loaProfit = lm ? lm.net : 0;
+    var ltPnl = tm ? tm.pnl : 0;
+    var companyNet = loaProfit + ltPnl;
+    /* The carrier keeps 25% of first-year commission back and pays it as
+       the policy earns. It is real money already written, just not yet
+       in the bank — so it is a memo line, never in the net. */
+    var tail = lm ? (lm.houseFullPaid - lm.houseGrossPaid) : 0;
+
+    out += '<div class="tiles">';
+    out += tile(companyNet >= 0 ? "is-good" : "is-bad", "Company net", money(companyNet), "both businesses, " + w.label.toLowerCase(), companyNet < 0 ? "neg" : "pos");
+    out += tile("src-loa", "LOA profit", lm ? money(loaProfit) : "—", "brokerage after agent splits and calls");
+    out += tile("src-lt", "Lead Tech P&L", tm ? money(ltPnl) : "—", tm ? "call ledger" : "not synced");
+    out += tile("is-key", "Commission still to come", lm ? money(tail) : "—", "as-earned tail on business already written");
+    out += "</div>";
+
+    /* ---- the P&L itself ---- */
+    out += '<div class="section-head"><p class="eyebrow">Profit and loss</p><h3>Where the money went</h3>' +
+      '<p class="sub">Money in, money out, in the order it moves. Memo lines are marked and are not part of the net.</p></div>';
+
+    function plRow(label, note, amount, kind) {
+      var cls = kind === "total" ? ' class="total"' : "";
+      var v = kind === "memo" ? '<span class="dim">' + esc(money(amount)) + "</span>" : esc(money(amount));
+      return "<tr" + cls + '><td class="who">' + esc(label) +
+        (note ? '<div class="dim">' + esc(note) + "</div>" : "") + "</td>" +
+        '<td class="n">' + v + "</td>" +
+        "<td>" + (kind === "memo" ? '<span class="pill">memo</span>' : kind === "out" ? '<span class="pill bad">out</span>' : kind === "in" ? '<span class="pill good">in</span>' : "") + "</td></tr>";
+    }
+
+    out += '<div class="panel"><div class="panel-body flush"><div class="tblwrap"><table class="data pl">' +
+      '<thead><tr><th>Line</th><th class="n">Amount</th><th></th></tr></thead><tbody>';
+
+    if (lm) {
+      out += '<tr><td colspan="3" style="background:var(--mist);font-family:\'IBM Plex Mono\',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)">LOA brokerage</td></tr>';
+      out += plRow("Written premium", intf(lm.written) + " policies written", lm.apWritten, "memo");
+      out += plRow("Thrive upfront commission", "house cut of the " + Math.round(loaOrg().advanceRate * 100) + "% advance", lm.houseGrossPaid, "in");
+      out += plRow("Agent commission", "paid out to producers", -lm.agentCommPaid, "out");
+      out += plRow("Inbound call spend", intf(lm.callsTaken) + " calls at " + money(loaOrg().costPerCall), -lm.marketingCost, "out");
+      out += plRow("LOA profit", "", loaProfit, "total");
+      out += plRow("First-year commission still to be earned", "paid by the carrier as the policy earns", tail, "memo");
+    }
+    if (tm) {
+      var set = ltSettings();
+      out += '<tr><td colspan="3" style="background:var(--mist);font-family:\'IBM Plex Mono\',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)">Lead Tech</td></tr>';
+      out += plRow("Cash collected on calls", intf(tm.callsTaken) + " at " + money(set.callPrice), tm.callRevenue, "in");
+      out += plRow("Spent on calls", intf(tm.callsTaken) + " at " + money(set.callCost), -tm.callSpend, "out");
+      out += plRow("Refunds", intf(tm.refunds.length) + " refunds", -tm.refunded, "out");
+      out += plRow("Wiped wallets", intf(tm.wipeRows.length) + " wipes", -tm.wiped, "out");
+      out += plRow("Lead Tech profit & loss", "", ltPnl, "total");
+      if (tm.collected > 0) out += plRow("Product & subscription orders", intf(tm.count) + " orders — fulfillment side, not in this ledger", tm.collected, "memo");
+    }
+    out += plRow("Company net", w.label, companyNet, "total");
+    out += "</tbody></table></div></div></div>";
+
+    /* ---- where the commission came from ---- */
+    if (lm) {
+      out += '<div class="section-head"><p class="eyebrow">Commission by carrier</p><h3>Who is actually paying us</h3>' +
+        '<p class="sub">Issued and paid business only. Total commission is the full first year; upfront is the share the carrier has already advanced.</p></div>';
+
+      var byCarrier = {};
+      lm.paid.forEach(function (d) {
+        var k = d.carrierId || "—";
+        byCarrier[k] = byCarrier[k] || { n: 0, ap: 0, upfront: 0, full: 0, agent: 0 };
+        var c = byCarrier[k];
+        c.n += 1; c.ap += num(d.ap);
+        c.upfront += houseCommOn(d); c.full += houseCommFullOn(d); c.agent += agentCommOn(d);
       });
-      var keys = Object.keys(byWho);
-      out += '<div class="panel"><div class="panel-head"><h3>Fulfillment team</h3>' +
-        '<span class="note">From the Lead Tech board</span></div>';
+      var keys = Object.keys(byCarrier).sort(function (a, b) { return byCarrier[b].full - byCarrier[a].full; });
+
       if (!keys.length) {
-        out += '<div class="empty"><p>No orders were worked in this range.</p></div></div>';
+        out += '<div class="panel"><div class="empty"><strong>No issued business in this range</strong><p>Widen the range to see earlier commission.</p></div></div>';
       } else {
-        out += '<div class="panel-body flush"><div class="tblwrap"><table class="data"><thead><tr>' +
-          "<th>Name</th><th class=\"n\">Orders</th><th class=\"n\">Delivered</th><th>On time</th><th class=\"n\">Order value</th>" +
+        out += '<div class="panel"><div class="panel-body flush"><div class="tblwrap"><table class="data"><thead><tr>' +
+          '<th>Carrier</th><th class="n">Policies</th><th class="n">Annualized</th><th class="n">Upfront</th>' +
+          '<th class="n">Total</th><th class="n">Agent</th><th class="n">House spread</th>' +
           "</tr></thead><tbody>";
-        keys.sort(function (a, b) { return byWho[b].n - byWho[a].n; }).forEach(function (k) {
-          var r = byWho[k], p = r.rated ? ratio(r.onTime, r.rated) : null;
-          out += "<tr><td class=\"who\">" + esc(k) + "</td>" +
-            '<td class="n">' + esc(intf(r.n)) + '</td><td class="n">' + esc(intf(r.done)) + "</td>" +
-            "<td>" + (p == null ? '<span class="dim">—</span>' :
-              '<div class="row" style="gap:8px;flex-wrap:nowrap"><div class="bar-mini" style="flex:1 1 54px"><i class="' + (p >= 90 ? "good" : p < 70 ? "bad" : "") + '" style="width:' + p.toFixed(0) + '%"></i></div><span class="num" style="font-size:12px">' + esc(pct(p, 0)) + "</span></div>") + "</td>" +
-            '<td class="n">' + esc(money(r.value)) + "</td></tr>";
+        keys.forEach(function (k) {
+          var c = byCarrier[k];
+          out += "<tr><td class=\"who\">" + esc(carrierName(k)) + "</td>" +
+            '<td class="n">' + esc(intf(c.n)) + '</td><td class="n">' + esc(money(c.ap)) + "</td>" +
+            '<td class="n">' + esc(money(c.upfront)) + '</td><td class="n">' + esc(money(c.full)) + "</td>" +
+            '<td class="n">' + esc(money(c.agent)) + '</td><td class="n">' + esc(money(c.upfront - c.agent)) + "</td></tr>";
         });
+        out += '<tr class="total"><td>All carriers</td><td class="n">' + esc(intf(lm.paid.length)) + "</td>" +
+          '<td class="n">' + esc(money(lm.apPaid)) + '</td><td class="n">' + esc(money(lm.houseGrossPaid)) + "</td>" +
+          '<td class="n">' + esc(money(lm.houseFullPaid)) + '</td><td class="n">' + esc(money(lm.agentCommPaid)) + "</td>" +
+          '<td class="n">' + esc(money(lm.spreadPaid)) + "</td></tr>";
+        out += "</tbody></table></div></div></div>";
+      }
+
+      /* ---- producer contribution ---- */
+      out += '<div class="section-head"><p class="eyebrow">Contribution</p><h3>What each producer returned to the house</h3>' +
+        '<p class="sub">Their spread, less the calls it took to get there. This is the number that decides whether a seat pays for itself.</p></div>';
+
+      var rows = loaAgents().map(function (a) {
+        var am = loaMetrics(w.from, w.to, [a.id]);
+        return { agent: a, m: am, contribution: am.spreadPaid - am.marketingCost };
+      }).filter(function (r) { return r.m.written > 0 || r.m.callsTaken > 0; })
+        .sort(function (x, y) { return y.contribution - x.contribution; });
+
+      if (!rows.length) {
+        out += '<div class="panel"><div class="empty"><p>No production in this range.</p></div></div>';
+      } else {
+        out += '<div class="panel"><div class="panel-body flush"><div class="tblwrap"><table class="data"><thead><tr>' +
+          '<th>Producer</th><th>Contract</th><th class="n">Written AP</th><th class="n">Upfront comm</th>' +
+          '<th class="n">Their commission</th><th class="n">Call spend</th><th class="n">Contribution</th>' +
+          "</tr></thead><tbody>";
+        rows.forEach(function (r) {
+          out += "<tr><td class=\"who\">" + esc(r.agent.name) + '<div class="dim">' + esc(r.agent.role === "admin" ? "Admin" : "Producer") + "</div></td>" +
+            '<td class="num">' + esc(r.agent.level || "—") + "%</td>" +
+            '<td class="n">' + esc(money(r.m.apWritten)) + '</td><td class="n">' + esc(money(r.m.houseGrossPaid)) + "</td>" +
+            '<td class="n">' + esc(money(r.m.agentCommPaid)) + '</td><td class="n">' + esc(money(r.m.marketingCost)) + "</td>" +
+            '<td class="n"><b style="color:' + (r.contribution >= 0 ? "var(--good)" : "var(--bad)") + '">' + esc(money(r.contribution)) + "</b></td></tr>";
+        });
+        out += '<tr class="total"><td>All producers</td><td class="num">—</td>' +
+          '<td class="n">' + esc(money(lm.apWritten)) + '</td><td class="n">' + esc(money(lm.houseGrossPaid)) + "</td>" +
+          '<td class="n">' + esc(money(lm.agentCommPaid)) + '</td><td class="n">' + esc(money(lm.marketingCost)) + "</td>" +
+          '<td class="n">' + esc(money(loaProfit)) + "</td></tr>";
         out += "</tbody></table></div></div></div>";
       }
     }
@@ -1621,13 +1750,16 @@ table.data tr:last-child td { border-bottom: 0; }
     var out = '<div class="srccard ' + src.cls + '"><div class="top"><i></i><div>' +
       "<h4>" + esc(src.name) + "</h4><p>" + esc(src.blurb) + "</p></div></div><div class=\"body\">";
     out += "<dl>";
-    out += "<dt>Last sync</dt><dd>" + (when ? esc(agoLabel(when)) + (stale ? ' <span class="pill warn">stale</span>' : "") : '<span class="pill warn">never</span>') + "</dd>";
+    out += "<dt>Last sync</dt><dd>" + (isSample(snap) ? '<span class="pill warn">sample data</span>'
+      : when ? esc(agoLabel(when)) + (stale ? ' <span class="pill warn">stale</span>' : "")
+      : '<span class="pill warn">never</span>') + "</dd>";
     if (when) out += "<dt>Taken</dt><dd>" + esc(new Date(toMillis(when)).toLocaleString()) + "</dd>";
     if (snap && snap.syncedBy) out += "<dt>By</dt><dd>" + esc(snap.syncedBy === "import" ? "pasted by hand" : snap.syncedBy) + "</dd>";
     (counts || []).forEach(function (c) { out += "<dt>" + esc(c[0]) + "</dt><dd>" + esc(c[1]) + "</dd>"; });
     out += "</dl>";
     out += '<div class="how">' + esc(how) + "</div>";
-    out += '<div class="row"><a class="btn ghost sm" href="' + esc(src.url) + '" target="_blank" rel="noopener">Open the portal →</a></div>';
+    out += '<div class="row"><a class="btn ghost sm" href="' + esc(src.url) + '" target="_blank" rel="noopener">Open the portal →</a>' +
+      (isSample(snap) ? '<button class="btn ghost sm" data-act="clearsample">Remove sample data</button>' : "") + "</div>";
     return out + "</div></div>";
   }
 
@@ -1805,7 +1937,17 @@ table.data tr:last-child td { border-bottom: 0; }
     else if (act === "setpw") { setPasscode(); }
     else if (act === "unlock") { tryUnlock(); }
     else if (act === "changepw") { changePasscode(); }
+    else if (act === "clearsample") { clearSample(); }
   });
+
+  function clearSample() {
+    var jobs = [];
+    if (isSample(ui.loa)) jobs.push(db.doc(SOURCES.loa.doc).delete());
+    if (isSample(ui.lt)) jobs.push(db.doc(SOURCES.lt.doc).delete());
+    if (!jobs.length) return;
+    Promise.all(jobs).then(function () { toast("Sample data removed"); })
+      .catch(function () { toast("Could not remove it — try again"); });
+  }
 
   document.addEventListener("keydown", function (ev) {
     if (ev.key !== "Enter") return;
