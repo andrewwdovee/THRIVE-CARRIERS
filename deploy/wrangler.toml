@@ -12,7 +12,11 @@ id = "cc65589c8dfe4579b355f3804db2fb65"
 # Every origin allowed to call this relay, comma separated, no trailing
 # slashes. A wildcard is deliberately not supported: this API accepts
 # credentials, so any page you list here can drive it as you.
-ALLOWED_ORIGINS = "https://thrive-command.pages.dev"
+#
+# Pages gives each deployment its own https://<hash>.thrive-command.pages.dev
+# URL, which changes every time and is not listed here. Use the branch alias
+# below, or add a custom domain and list that instead.
+ALLOWED_ORIGINS = "https://thrive-command.pages.dev,https://claude-admin-portal-data-syn.thrive-command.pages.dev"
 
 OWNER_EMAIL = "you@example.com"
 OWNER_PASSWORD_ITER = "210000"
