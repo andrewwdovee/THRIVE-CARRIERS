@@ -68,15 +68,18 @@
         return r;
       }),
       refunds: arr(b.refunds).map(function (r) {
-        return pick(r, ["id", "customer", "typeId", "typeName", "amount", "status", "createdAt"]);
+        return pick(r, ["id", "customer", "name", "typeId", "typeName", "productId",
+          "amount", "currency", "status", "at", "createdAt"]);
       }),
       /* Wiped wallets are money the company gave back outside a refund, so
          the console's call P&L needs the records, not just a count. */
       wipes: arr(b.wipes).map(function (x) {
-        return pick(x, ["id", "customer", "amount", "reason", "note", "createdAt", "date"]);
+        return pick(x, ["id", "userId", "name", "customer", "amount", "reason", "note", "at", "recordedAt"]);
       }),
+      /* One row a day from the Calls tab: `billable` is what Lead Tech had
+         to pay for, `sold` is what went out to agents. */
       calls: arr(b.calls).map(function (c) {
-        return pick(c, ["id", "date", "calls", "count", "qty", "amount", "agent", "agentId", "createdAt"]);
+        return pick(c, ["id", "day", "billable", "sold", "at"]);
       }),
       counts: {
         orders: arr(b.orders).length, refunds: arr(b.refunds).length,

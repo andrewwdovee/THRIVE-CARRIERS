@@ -274,6 +274,9 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 .tile.is-bad::before  { background: var(--bad); }
 .tile.is-key::before  { background: var(--sky); }
 @media (min-width: 1060px) { .tiles.t3 { grid-template-columns: repeat(3, 1fr); } }
+/* Five ledger tiles that reconcile to one another belong on one line,
+   not three-and-a-ragged-two. */
+@media (min-width: 1200px) { .tiles.t5 { grid-template-columns: repeat(5, 1fr); } }
 .tile .v { display: block; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-size: 23px; font-weight: 600; letter-spacing: -.02em; margin-top: 5px; line-height: 1.15; }
 .tile .v.neg { color: var(--bad); }
 .tile .v.pos { color: var(--good); }
@@ -714,19 +717,27 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       };
     });
   }
+  /* The board writes a refund as {typeId, amount in cents, at}. A refund
+     carries no call count, so calls refunded is the amount over the call
+     price — a $105 credit is three calls, not one. */
   function ltRefunds() {
     var raw = (ui.lt && Array.isArray(ui.lt.refunds)) ? ui.lt.refunds : [];
     var types = (ui.lt && Array.isArray(ui.lt.refundTypes)) ? ui.lt.refundTypes : [];
+    var price = ltSettings().callPrice;
     return raw.map(function (r) {
       var t = types.filter(function (x) { return x.id === (r.typeId || r.type); })[0];
+      var amount = num(r.amount) / 100;
+      var isCall = /call/i.test((t && t.name) || r.typeName || "");
       return {
         id: r.id,
-        customer: r.customer || r.customerName || "—",
+        customer: r.customer || r.customerName || r.name || "—",
         type: r.typeName || (t && t.name) || "Refund",
-        amount: num(r.amount) / 100,
+        isCall: isCall,
+        calls: (isCall && price > 0) ? Math.max(1, Math.round(amount / price)) : 0,
+        amount: amount,
         status: r.status || "",
-        date: toISODate(r.createdAt || r.refundedAt || r.date),
-        createdAt: toMillis(r.createdAt || r.refundedAt || r.date)
+        date: toISODate(r.at || r.createdAt || r.refundedAt || r.date),
+        createdAt: toMillis(r.at || r.createdAt || r.refundedAt || r.date)
       };
     });
   }
@@ -738,27 +749,29 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     return raw.map(function (x) {
       return {
         id: x.id,
-        customer: x.customer || x.customerName || "—",
+        customer: x.name || x.customer || x.customerName || "—",
         reason: x.reason || x.note || "",
         amount: num(x.amount != null ? x.amount : x.value) / 100,
-        date: toISODate(x.createdAt || x.date || x.wipedAt)
+        date: toISODate(x.at || x.createdAt || x.recordedAt || x.date)
       };
     });
   }
-  function ltCallCount() {
+  /* The Calls tab records one row a day: `billable` is what Lead Tech had
+     to pay for, `sold` is what went out to agents. The gap between them
+     is the whole business. */
+  function ltCalls() {
     var raw = (ui.lt && Array.isArray(ui.lt.calls)) ? ui.lt.calls : [];
     return raw.map(function (c) {
-      return {
-        date: toISODate(c.date || c.createdAt),
-        count: num(c.calls != null ? c.calls : (c.count != null ? c.count : (c.qty != null ? c.qty : 1)))
-      };
-    });
+      var bought = c.billable != null ? num(c.billable) : (c.bought != null ? num(c.bought) : num(c.calls));
+      var sold = c.sold != null ? num(c.sold) : num(c.calls);
+      return { id: c.id, date: toISODate(c.day || c.date || c.at), bought: bought, sold: sold };
+    }).filter(function (c) { return !!c.date; });
   }
 
   function ltMetrics(from, to) {
     var orders = ltOrders().filter(function (o) { return inRange(o.date, from, to); });
     var refunds = ltRefunds().filter(function (r) { return inRange(r.date, from, to); });
-    var calls = ltCallCount().filter(function (c) { return inRange(c.date, from, to); });
+    var calls = ltCalls().filter(function (c) { return inRange(c.date, from, to); });
     var set = ltSettings();
 
     var m = { orders: orders, refunds: refunds, callRows: calls };
@@ -767,18 +780,21 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     m.failed = orders.filter(function (o) { return !o.paid; });
     m.failedValue = m.failed.reduce(function (t, o) { return t + o.amount; }, 0);
     m.refunded = refunds.reduce(function (t, r) { return t + r.amount; }, 0);
-    m.callsTaken = calls.reduce(function (t, c) { return t + c.count; }, 0);
-    m.callCost = m.callsTaken * set.callCost;
-    m.net = m.collected - m.refunded - m.callCost;
+    /* Mirrors the board's own arithmetic exactly: spend is billable calls
+       at cost, revenue is sold calls at price. */
+    m.callsBought = calls.reduce(function (t, c) { return t + c.bought; }, 0);
+    m.callsSold = calls.reduce(function (t, c) { return t + c.sold; }, 0);
+    m.callsTaken = m.callsBought;
+    m.callSpend = m.callsBought * set.callCost;
+    m.callRevenue = m.callsSold * set.callPrice;
+    m.callCost = m.callSpend;
+    m.callsRefunded = refunds.reduce(function (t, r) { return t + r.calls; }, 0);
 
-    /* The call ledger stands on its own: calls bought at cost, sold at
-       price, less everything handed back. Product and subscription
-       revenue is the fulfillment side and is reported separately. */
     m.wipeRows = ltWipes().filter(function (x) { return inRange(x.date, from, to); });
     m.wiped = m.wipeRows.reduce(function (t, x) { return t + x.amount; }, 0);
-    m.callRevenue = m.callsTaken * set.callPrice;
-    m.callSpend = m.callCost;
     m.pnl = m.callRevenue - m.callSpend - m.refunded - m.wiped;
+    m.margin = m.callRevenue > 0 ? ratio(m.pnl, m.callRevenue) : null;
+    m.net = m.pnl;
 
     m.done = orders.filter(function (o) { return o.status === "done"; });
     m.open = orders.filter(function (o) { return o.status !== "done"; });
@@ -1210,10 +1226,11 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       out += notSynced("lt");
     } else {
       out += '<div class="tiles t3">';
-      out += tile("src-lt", "Inbound calls taken", intf(tm.callsTaken), intf(tm.callRows.length) + " days logged");
-      out += tile("src-lt", "Total spent on calls", money(tm.callSpend), intf(tm.callsTaken) + " at " + money(set.callCost));
-      out += tile("src-lt", "Total cash collected", money(tm.callRevenue), intf(tm.callsTaken) + " at " + money(set.callPrice));
-      out += tile("is-warn", "Total refunds", money(tm.refunded), intf(tm.refunds.length) + " refunds");
+      out += tile("src-lt", "Inbound calls taken", intf(tm.callsBought), intf(tm.callsSold) + " of them sold on to agents");
+      out += tile("src-lt", "Total spent on calls", money(tm.callSpend), intf(tm.callsBought) + " bought at " + money(set.callCost));
+      out += tile("src-lt", "Total cash collected", money(tm.callRevenue), intf(tm.callsSold) + " sold at " + money(set.callPrice));
+      out += tile("is-warn", "Total refunds", money(tm.refunded),
+        tm.callsRefunded ? intf(tm.callsRefunded) + " calls refunded" : intf(tm.refunds.length) + " refunds");
       out += tile("is-warn", "Total wiped wallet", money(tm.wiped), intf(tm.wipeRows.length) + " wipes");
       out += tile(tm.pnl >= 0 ? "is-good" : "is-bad", "Lead Tech profit & loss", money(tm.pnl), "collected less spend, refunds and wipes", tm.pnl < 0 ? "neg" : "pos");
       out += "</div>";
@@ -1414,23 +1431,77 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     if (!hasLT()) return pageHead("Lead Tech Fulfillment", "Orders, delivery and refunds.") + notSynced("lt");
     var w = rangeWindow(), m = ltMetrics(w.from, w.to), set = ltSettings();
 
-    var out = pageHead("Lead Tech Fulfillment", "Order flow, delivery against SLA and money back out the door. " + w.label + ".", rangePicker());
+    var out = pageHead("Lead Tech", "Calls bought, calls sold, and what came back. " + w.label + ".", rangePicker());
 
-    out += '<div class="tiles">';
-    out += tile("src-lt", "Collected", money(m.collected), intf(m.count) + " orders");
-    out += tile("src-lt", "Refunded", money(m.refunded), intf(m.refunds.length) + " refunds");
-    /* Named for what it is, so it is never mistaken for the call-ledger
-       P&L on the Overview — different inputs, different question. */
-    out += tile(m.net >= 0 ? "is-good" : "is-bad", "Fulfillment net", money(m.net), "order revenue after refunds and call cost", m.net < 0 ? "neg" : "pos");
-    out += tile("src-lt", "Recurring revenue", money(m.mrr), intf(m.subs) + " live subscriptions");
-    out += tile(m.onTimePct == null ? "src-lt" : (m.onTimePct >= 90 ? "is-good" : "is-warn"),
-      "Delivered on time", m.onTimePct == null ? "—" : pct(m.onTimePct), intf(m.done.length) + " completed in range");
-    out += tile(m.overdue.length ? "is-bad" : "is-good", "Past due now", intf(m.overdue.length), "open orders past their window");
-    out += tile("src-lt", "Average turnaround", m.avgTurnaround == null ? "—" : m.avgTurnaround.toFixed(1) + "h", "order paid to order delivered");
-    out += tile(m.failed.length ? "is-warn" : "src-lt", "Failed payments", intf(m.failed.length), money(m.failedValue) + " not collected");
+    /* The bottom line first — this business lives or dies on the gap
+       between what a call costs and what it sells for. */
+    out += '<div class="hero" style="margin-bottom:14px"><p class="eyebrow">Lead Tech net profit · ' + esc(w.label) + "</p>" +
+      '<span class="v' + (m.pnl < 0 ? " neg" : "") + '">' + esc(money(m.pnl)) + "</span>" +
+      '<span class="foot">Calls sold, less calls bought, refunds and wiped wallets.</span>' +
+      '<div class="split">' +
+        "<div>Calls sold<b>" + esc(intf(m.callsSold)) + "</b></div>" +
+        "<div>Calls bought<b>" + esc(intf(m.callsBought)) + "</b></div>" +
+        "<div>Margin<b>" + esc(m.margin == null ? "—" : pct(m.margin, 0)) + "</b></div>" +
+      "</div></div>";
+
+    out += '<div class="tiles t5">';
+    out += tile("src-lt", "Collected", money(m.callRevenue), intf(m.callsSold) + " calls sold at " + money(set.callPrice));
+    out += tile("src-lt", "Calls bought", intf(m.callsBought), money(m.callSpend) + " at " + money(set.callCost) + " a call");
+    out += tile(m.refunded > 0 ? "is-warn" : "src-lt", "Refunded", money(m.refunded),
+      (m.callsRefunded ? intf(m.callsRefunded) + " calls refunded" : intf(m.refunds.length) + " refunds"));
+    out += tile(m.wiped > 0 ? "is-warn" : "src-lt", "Wiped wallets", money(m.wiped), intf(m.wipeRows.length) + " wipes");
+    out += tile(m.pnl >= 0 ? "is-good" : "is-bad", "Fulfillment net", money(m.pnl), "collected less bought, refunds and wipes", m.pnl < 0 ? "neg" : "pos");
     out += "</div>";
 
-    /* revenue by product */
+    /* ---- the daily call ledger ---- */
+    out += '<div class="section-head"><p class="eyebrow">Call ledger</p><h3>Day by day</h3>' +
+      '<p class="sub">Straight from the Calls tab on the board. The gap column is calls sold less calls bought — ' +
+      "sell more than you buy and the day pays for itself.</p></div>";
+
+    if (!m.callRows.length) {
+      out += '<div class="panel"><div class="empty"><strong>No call days logged in this range</strong>' +
+        "<p>Nothing has been entered on the board's Calls tab for these dates.</p></div></div>";
+    } else {
+      var days = m.callRows.slice().sort(function (a, b) { return b.date.localeCompare(a.date); });
+      out += '<div class="panel"><div class="panel-body flush"><div class="tblwrap"><table class="data"><thead><tr>' +
+        '<th>Day</th><th class="n">Bought</th><th class="n">Sold</th><th class="n">Gap</th>' +
+        '<th class="n">Spent</th><th class="n">Collected</th><th class="n">Profit</th>' +
+        "</tr></thead><tbody>";
+      days.slice(0, 120).forEach(function (c) {
+        var spend = c.bought * set.callCost, rev = c.sold * set.callPrice, p = rev - spend;
+        var gap = c.sold - c.bought;
+        out += "<tr><td class=\"nowrap dim\">" + esc(prettyDate(c.date)) + "</td>" +
+          '<td class="n">' + esc(intf(c.bought)) + '</td><td class="n">' + esc(intf(c.sold)) + "</td>" +
+          '<td class="n" style="color:' + (gap >= 0 ? "var(--good)" : "var(--bad)") + '">' + (gap > 0 ? "+" : "") + esc(intf(gap)) + "</td>" +
+          '<td class="n">' + esc(money(spend)) + '</td><td class="n">' + esc(money(rev)) + "</td>" +
+          '<td class="n"><b>' + esc(money(p)) + "</b></td></tr>";
+      });
+      out += '<tr class="total"><td>' + esc(intf(m.callRows.length)) + " days</td>" +
+        '<td class="n">' + esc(intf(m.callsBought)) + '</td><td class="n">' + esc(intf(m.callsSold)) + "</td>" +
+        '<td class="n">' + ((m.callsSold - m.callsBought) > 0 ? "+" : "") + esc(intf(m.callsSold - m.callsBought)) + "</td>" +
+        '<td class="n">' + esc(money(m.callSpend)) + '</td><td class="n">' + esc(money(m.callRevenue)) + "</td>" +
+        '<td class="n">' + esc(money(m.callRevenue - m.callSpend)) + "</td></tr>";
+      out += "</tbody></table></div>";
+      if (days.length > 120) out += '<div class="panel-body" style="border-top:1px solid var(--line)"><span style="color:var(--muted);font-size:12px">The 120 most recent of ' + esc(intf(days.length)) + " days.</span></div>";
+      out += "</div></div>";
+    }
+
+    /* ---- wiped wallets ---- */
+    if (m.wipeRows.length) {
+      out += '<div class="section-head"><p class="eyebrow">Wiped wallets</p><h3>Credit handed back</h3>' +
+        '<p class="sub">Money returned outside the refund flow. It leaves the P&amp;L the same way a refund does.</p></div>';
+      out += '<div class="panel"><div class="panel-body flush"><div class="tblwrap"><table class="data">' +
+        '<thead><tr><th>Date</th><th>Who</th><th>Reason</th><th class="n">Amount</th></tr></thead><tbody>';
+      m.wipeRows.slice().sort(function (a, b) { return (b.date || "").localeCompare(a.date || ""); }).forEach(function (x) {
+        out += "<tr><td class=\"nowrap dim\">" + esc(prettyDate(x.date)) + "</td>" +
+          '<td class="who">' + esc(x.customer) + "</td><td>" + esc(x.reason || "—") + "</td>" +
+          '<td class="n">' + esc(money(x.amount, 2)) + "</td></tr>";
+      });
+      out += '<tr class="total"><td colspan="3">All wipes</td><td class="n">' + esc(money(m.wiped, 2)) + "</td></tr>";
+      out += "</tbody></table></div></div></div>";
+    }
+
+    /* ---- fulfillment orders (the other side of the board) ---- */
     var byProd = {};
     m.orders.forEach(function (o) {
       if (!o.paid) return;
@@ -1443,18 +1514,13 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       return { label: k + "  ·  " + byProd[k].n + " orders", value: byProd[k].value };
     }).sort(function (a, b) { return b.value - a.value; });
 
-    var deliv = [
-      { label: "Delivered on time", value: m.done.filter(function (o) { return o.onTime === true; }).length, color: "var(--paid)", display: null },
-      { label: "Delivered late", value: m.done.filter(function (o) { return o.onTime === false; }).length, color: "var(--pipe)", display: null },
-      { label: "Still open", value: m.open.length, color: "var(--fell)", display: null }
-    ].map(function (s) { s.display = intf(s.value); return s; });
-
-    out += '<div class="charts c2" style="margin-top:18px">';
-    out += '<section class="panel"><div class="panel-head"><h3>Revenue by product</h3><span class="note">Collected in range</span></div>' +
-      '<div class="panel-body">' + barRows(prodRows, "var(--s-lt)") + "</div></section>";
-    out += '<section class="panel"><div class="panel-head"><h3>Delivery</h3><span class="note">Orders in range</span></div>' +
-      '<div class="panel-body">' + donut(deliv, intf(m.count), "orders") + "</div></section>";
-    out += "</div>";
+    if (prodRows.length) {
+      out += '<div class="section-head"><p class="eyebrow">Fulfillment orders</p><h3>Products and subscriptions</h3>' +
+        '<p class="sub">The other half of the board — campaigns, subscriptions and software, kept out of the call ledger above so neither figure absorbs the other.</p></div>';
+      out += '<div class="panel"><div class="panel-head"><h3>Revenue by product</h3><span class="note">' +
+        esc(money(m.collected)) + " collected across " + esc(intf(m.count)) + ' orders</span></div>' +
+        '<div class="panel-body">' + barRows(prodRows, "var(--s-lt)") + "</div></div>";
+    }
 
     /* orders */
     out += '<div class="section-head"><p class="eyebrow">Order ledger</p><h3>Every order in the range</h3>' +
