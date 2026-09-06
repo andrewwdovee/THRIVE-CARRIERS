@@ -238,7 +238,14 @@ a { color: var(--sky); }
 .field { display: flex; flex-direction: column; gap: 5px; }
 .field > label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
 .field .hint { font-size: 11.5px; color: var(--muted); }
-input[type=text], input[type=password], input[type=search], select, textarea {
+/* The range control and its custom dates, right-aligned in the page head
+   so it sits in the same place on every tab. */
+.rangebox { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.daterow { display: flex; gap: 8px; flex-wrap: wrap; }
+.daterow label { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted); }
+.daterow input { padding: 5px 8px; font-size: 12.5px; width: auto; }
+
+input[type=text], input[type=password], input[type=search], input[type=date], select, textarea {
   padding: 8px 10px; border: 1px solid var(--line-2); border-radius: 6px;
   background: var(--paper); color: var(--ink); width: 100%; font-size: 13.5px;
 }
@@ -246,6 +253,9 @@ textarea { resize: vertical; min-height: 120px; font-family: 'IBM Plex Mono', mo
 select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: right 14px top 50%, right 9px top 50%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 30px; }
 .filters { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 14px; }
 .filters .field { min-width: 140px; }
+/* When one field carries a hint under its input, align the tops so the
+   button sits beside the input and the hint hangs below its own field. */
+.filters.top { align-items: flex-start; }
 .filters .field.searchbox { flex: 1 1 300px; min-width: 220px; max-width: 460px; }
 
 /* ---------- panels ---------- */
@@ -284,6 +294,12 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 
 /* The headline pair on Overview: company net gets the weight, the two
    business lines sit beside it at tile scale. */
+/* Hero beside its history. They stay the same height so the pair reads
+   as one band across the top of the page. */
+.headline { display: grid; gap: 12px; grid-template-columns: 1fr; margin-bottom: 12px; align-items: stretch; }
+@media (min-width: 1000px) { .headline { grid-template-columns: 1.05fr 1fr; } }
+.headline .panel { margin-top: 0; display: flex; flex-direction: column; }
+.headline .panel-body { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; }
 .hero {
   background: var(--navy-2); color: #fff; border-radius: 10px; padding: 18px 20px 19px;
   border: 1px solid var(--navy-2); box-shadow: var(--shadow);
@@ -292,12 +308,33 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 .hero .v { display: block; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-size: 38px; font-weight: 600; letter-spacing: -.03em; line-height: 1.05; margin-top: 7px; }
 .hero .v.neg { color: #F08276; }
 .hero .foot { display: block; margin-top: 7px; font-size: 12px; color: #A9BDD4; }
-.hero .split { display: flex; gap: 16px; margin-top: 13px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.13); flex-wrap: wrap; }
+/* When the hero is stretched to match a chart beside it, the supporting
+   figures drop to the bottom rather than leaving a hole under them. */
+.hero { display: flex; flex-direction: column; }
+.hero .split { display: flex; gap: 18px; margin-top: auto; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.13); flex-wrap: wrap; }
+.hero .foot { margin-bottom: 13px; }
 .hero .split div { font-size: 11.5px; color: #A9BDD4; }
 .hero .split b { display: block; font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600; color: #fff; margin-top: 2px; }
 
 /* ---------- tables ---------- */
 .tblwrap { overflow-x: auto; }
+/* A long table scrolls inside its panel rather than pushing the page
+   down forever. The cap is measured in rows, not pixels, so it lands on
+   the same row count whether the rows are one line or two. */
+.tblwrap.capped { overflow-y: auto; }
+.tblwrap.capped table.data th {
+  position: sticky; top: 0; z-index: 2;
+  box-shadow: inset 0 -1px 0 var(--line);
+}
+/* The totals stay in view while the rows scroll under them — a total you
+   have to scroll to find is a total nobody reads. */
+.tblwrap.capped table.data tr.total td {
+  position: sticky; bottom: 0; z-index: 1;
+  box-shadow: inset 0 1px 0 var(--line-2);
+}
+.tblwrap.capped table.data tr.total td:first-child::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+}
 table.data { width: 100%; border-collapse: collapse; font-size: 13px; }
 table.data th {
   text-align: left; padding: 9px 12px; background: var(--mist-2); color: var(--muted);
@@ -487,6 +524,12 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
   };
 
   var OWNER_DOC = "config/owner";
+  var SETTINGS_DOC = "config/settings";
+  /* The brokerage's blended spread. Per-deal spread is computed exactly
+     from each carrier's schedule; this is the house's own average rate
+     applied to everything written, which is how the brokerage side is
+     actually quoted. The owner sets it under Sync & sources. */
+  var DEFAULT_SPREAD_PCT = 10;
   var PW_ITER = 210000;
   var UNLOCK_KEY = "thrive_command_unlock";
   var UNLOCK_HOURS = 12;
@@ -505,22 +548,23 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
   var LOA_ALIAS = { submitted: "underwriting", not_taken: "declined", withdrawn: "declined", lapsed: "chargeback" };
 
   var RANGES = [
-    { k: "d30",  label: "30 days" },
-    { k: "d90",  label: "90 days" },
-    { k: "mtd",  label: "Month" },
-    { k: "ytd",  label: "Year" },
-    { k: "all",  label: "All time" }
+    { k: "d7",     label: "7 days" },
+    { k: "d30",    label: "30 days" },
+    { k: "custom", label: "Custom" }
   ];
 
   var app = document.getElementById("app");
   var db = null, downloads = null;
   var ui = {
     tab: "overview",
-    range: "d90",
+    range: "d30",
+    customFrom: "",
+    customTo: "",
     unlocked: false,
     booting: true,
     dbError: null,
     owner: null,          /* {salt, hash, iter} or null before it is set */
+    settings: null,       /* {brokerageSpreadPct} — owner-editable */
     loa: null,            /* snapshot document body */
     lt: null,
     filters: { dealStatus: "", dealAgent: "", dealQuery: "", orderStatus: "", orderProduct: "", orderQuery: "" },
@@ -589,11 +633,14 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
   }
   function rangeWindow() {
     var t = todayISO();
-    if (ui.range === "d30") return { from: addDays(t, -29), to: t, label: "Last 30 days" };
-    if (ui.range === "d90") return { from: addDays(t, -89), to: t, label: "Last 90 days" };
-    if (ui.range === "mtd") return { from: t.slice(0, 8) + "01", to: t, label: "Month to date" };
-    if (ui.range === "ytd") return { from: t.slice(0, 4) + "-01-01", to: t, label: "Year to date" };
-    return { from: "0000-01-01", to: "9999-12-31", label: "All time" };
+    if (ui.range === "d7") return { from: addDays(t, -6), to: t, label: "Last 7 days" };
+    if (ui.range === "custom") {
+      var f = ui.customFrom || addDays(t, -89);
+      var to = ui.customTo || t;
+      if (f > to) { var s = f; f = to; to = s; }
+      return { from: f, to: to, label: prettyDate(f) + " to " + prettyDate(to) };
+    }
+    return { from: addDays(t, -29), to: t, label: "Last 30 days" };
   }
   function toast(text) {
     ui.toast = text;
@@ -615,6 +662,19 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     };
   }
   function statusOf(k) { return LOA_STATUS[k] || LOA_STATUS[LOA_ALIAS[k]] || LOA_STATUS.underwriting; }
+  function spreadPct() {
+    var v = ui.settings && ui.settings.brokerageSpreadPct;
+    return (v == null || !isFinite(num(v))) ? DEFAULT_SPREAD_PCT : num(v);
+  }
+  /* The brokerage's blended take on everything written, at the house
+     rate — not the per-deal spread, which each carrier's schedule
+     decides. */
+  function brokerageSpread(apWritten) { return num(apWritten) * spreadPct() / 100; }
+  /* 10, not 10.0 — but 12.5 keeps its half. */
+  function spreadLabel() {
+    var v = spreadPct();
+    return (v % 1 ? v.toFixed(1) : String(Math.round(v))) + "%";
+  }
   function advancedAP(d) { return num(d.ap) * loaOrg().advanceRate; }
   function agentCommOn(d) { return advancedAP(d) * num(d.agentPct) / 100; }
   function houseCommOn(d) { return advancedAP(d) * num(d.housePct) / 100; }
@@ -834,27 +894,35 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
   /* One shared dollar scale, two series — never two y-axes. Both series
      are money, so they belong on one chart; anything in other units gets
      its own. */
-  function lineChart(buckets, series) {
-    var W = 760, H = 250, L = 60, R = 74, T = 16, B = 28;
+  function lineChart(buckets, series, opts) {
+    opts = opts || {};
+    var W = 760, H = opts.height || 250, L = 60, R = 74, T = 16, B = 28;
     var iw = W - L - R, ih = H - T - B;
-    var max = 0;
-    series.forEach(function (s) { s.values.forEach(function (v) { if (v > max) max = v; }); });
-    if (max <= 0) max = 100;
-    var top = niceCeil(max);
+    var max = 0, min = 0;
+    series.forEach(function (s) {
+      s.values.forEach(function (v) { if (v > max) max = v; if (v < min) min = v; });
+    });
+    if (max <= 0 && min >= 0) max = 100;
+    /* A series that dips below the line needs a real floor and a marked
+       zero, or a loss reads as a small profit. */
+    var top = niceCeil(max || 1);
+    var bot = min < 0 ? -niceCeil(-min) : 0;
     var n = buckets.length;
     function x(i) { return n <= 1 ? L + iw / 2 : L + (i / (n - 1)) * iw; }
-    function y(v) { return T + ih - (v / top) * ih; }
+    function y(v) { return T + ih - ((v - bot) / (top - bot)) * ih; }
 
     var out = '<div class="chart" data-chart="line" data-cid="' + chartId({ buckets: buckets, series: series }) + '">';
-    out += '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Contribution by business line over time">';
+    out += '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' +
+      esc(series.length === 1 ? series[0].label + " over time" : "Contribution by business line over time") + '">';
 
     /* grid + y ticks */
     for (var g = 0; g <= 4; g++) {
-      var yv = top * g / 4, yy = y(yv);
+      var yv = bot + (top - bot) * g / 4, yy = y(yv);
       out += '<line class="gridline" x1="' + L + '" y1="' + yy + '" x2="' + (L + iw) + '" y2="' + yy + '"></line>';
       out += '<text class="tick" x="' + (L - 8) + '" y="' + (yy + 3.5) + '" text-anchor="end">' + esc(shortMoney(yv)) + '</text>';
     }
-    out += '<line class="axisline" x1="' + L + '" y1="' + (T + ih) + '" x2="' + (L + iw) + '" y2="' + (T + ih) + '"></line>';
+    var zeroY = y(0);
+    out += '<line class="axisline" x1="' + L + '" y1="' + zeroY + '" x2="' + (L + iw) + '" y2="' + zeroY + '"></line>';
 
     /* x ticks: first, middle, last only — a dense axis is unreadable */
     [0, Math.floor((n - 1) / 2), n - 1].filter(function (v, i, a) { return n > 0 && a.indexOf(v) === i; })
@@ -869,7 +937,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       /* One series gets an area to read as a magnitude; two overlapping
          fills just muddy each other, so a pair stays as lines. */
       if (series.length === 1) {
-        var area = d + " L" + x(n - 1).toFixed(1) + " " + (T + ih) + " L" + x(0).toFixed(1) + " " + (T + ih) + " Z";
+        var area = d + " L" + x(n - 1).toFixed(1) + " " + zeroY.toFixed(1) + " L" + x(0).toFixed(1) + " " + zeroY.toFixed(1) + " Z";
         out += '<path d="' + area + '" fill="' + s.fill + '" stroke="none"></path>';
       }
       out += '<path class="mark" d="' + d + '" stroke="' + s.color + '"></path>';
@@ -886,9 +954,13 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     }
     out += "</svg>" + chartTip() + "</div>";
 
-    out += '<div class="viz-legend">';
-    series.forEach(function (s) { out += '<span><i style="background:' + s.color + '"></i>' + esc(s.label) + "</span>"; });
-    out += "</div>";
+    /* One series is named by the panel title — a legend box for it is
+       furniture, not information. */
+    if (opts.legend !== false && series.length > 1) {
+      out += '<div class="viz-legend">';
+      series.forEach(function (s) { out += '<span><i style="background:' + s.color + '"></i>' + esc(s.label) + "</span>"; });
+      out += "</div>";
+    }
     return out;
   }
   function niceCeil(v) {
@@ -964,40 +1036,6 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     return out + "</div>";
   }
 
-  /* Group a window into daily or weekly buckets — 90 daily points is
-     noise, so anything over six weeks steps up to weeks. */
-  function buildBuckets(from, to) {
-    var days = Math.round((new Date(to + "T12:00:00") - new Date(from + "T12:00:00")) / 86400000) + 1;
-    if (!isFinite(days) || days < 1) days = 1;
-    if (days > 400) { from = addDays(to, -399); days = 400; }
-    var weekly = days > 45;
-    var buckets = [], cur = from, idx = {};
-    while (cur <= to) {
-      var end = weekly ? minDate(addDays(cur, 6), to) : cur;
-      var b = { from: cur, to: end, label: bucketLabel(cur, weekly), loa: 0, lt: 0 };
-      buckets.push(b);
-      var d = cur;
-      while (d <= end) { idx[d] = buckets.length - 1; d = addDays(d, 1); }
-      cur = addDays(end, 1);
-    }
-    return { buckets: buckets, index: idx };
-  }
-  function minDate(a, b) { return a < b ? a : b; }
-  /* "All time" has no real start date, so plotting it literally would run
-     the axis back to the year zero. Start the chart at the first day the
-     company actually has a record for. */
-  function chartStart(w) {
-    if (w.from !== "0000-01-01") return w.from;
-    var earliest = "";
-    loaDeals().forEach(function (d) { var x = toISODate(d.date); if (x && (!earliest || x < earliest)) earliest = x; });
-    ltOrders().forEach(function (o) { if (o.date && (!earliest || o.date < earliest)) earliest = o.date; });
-    return earliest || addDays(w.to, -89);
-  }
-  function bucketLabel(iso, weekly) {
-    var d = new Date(iso + "T12:00:00");
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  }
-
   /* ------------------------------------------------------------ shell */
   function render() {
     chartData = {}; chartSeq = 0;
@@ -1015,6 +1053,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     app.innerHTML = masthead() + syncStrip() + rail() + sampleBanner() + '<div class="wrap">' + body + "</div>" +
       (ui.toast ? '<div class="toast">' + esc(ui.toast) + "</div>" : "");
     wireCharts();
+    capTables();
   }
   function focusFirst() {
     var el = app.querySelector("input");
@@ -1111,11 +1150,24 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     return out + "</div></nav>";
   }
 
+  /* Every page carries this control, in the same place, so switching tabs
+     never moves the thing you were just using. */
   function rangePicker() {
-    var out = '<div class="seg" role="group" aria-label="Date range">';
+    var out = '<div class="rangebox">';
+    out += '<div class="seg" role="group" aria-label="Date range">';
     RANGES.forEach(function (r) {
       out += '<button data-act="range" data-range="' + r.k + '" aria-pressed="' + (ui.range === r.k) + '">' + esc(r.label) + "</button>";
     });
+    out += "</div>";
+    if (ui.range === "custom") {
+      var t = todayISO();
+      out += '<div class="daterow">' +
+        '<label><span>From</span><input type="date" data-act="customdate" data-which="from" value="' +
+          esc(ui.customFrom || addDays(t, -89)) + '" max="' + esc(t) + '"></label>' +
+        '<label><span>To</span><input type="date" data-act="customdate" data-which="to" value="' +
+          esc(ui.customTo || t) + '" max="' + esc(t) + '"></label>' +
+        "</div>";
+    }
     return out + "</div>";
   }
 
@@ -1185,14 +1237,15 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
 
     var out = pageHead("Overview", "Both businesses, three sections, one bottom line. " + w.label + ".", rangePicker());
 
-    /* One figure at the top, the two businesses under it. */
-    out += '<div class="hero" style="margin-bottom:6px"><p class="eyebrow">Company net · ' + esc(w.label) + "</p>" +
-      '<span class="v' + (companyNet < 0 ? " neg" : "") + '">' + esc(money(companyNet)) + "</span>" +
-      '<span class="foot">LOA profit plus the Lead Tech call ledger.</span>' +
-      '<div class="split">' +
-        "<div>LOA profit<b>" + esc(lm ? money(loaProfit) : "—") + "</b></div>" +
-        "<div>Lead Tech P&amp;L<b>" + esc(tm ? money(ltPnl) : "—") + "</b></div>" +
-      "</div></div>";
+    /* The period's bottom line, and beside it the whole history it came
+       from — the tiles below answer "how", this answers "which way". */
+    out += '<div class="headline">';
+    out += hero("Company net · " + w.label, money(companyNet), "LOA profit plus the Lead Tech call ledger.", [
+      { k: "LOA profit", v: lm ? money(loaProfit) : "—" },
+      { k: "Lead Tech P&L", v: tm ? money(ltPnl) : "—" }
+    ], companyNet < 0);
+    out += lifetimePanel();
+    out += "</div>";
 
     /* ---- 1. LOA ---- */
     out += sectionHead("LOA", "What the agency wrote", "Written business and what it cost to feed the producers.");
@@ -1212,11 +1265,13 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     if (!lm) {
       out += '<div class="panel"><div class="empty"><p>Nothing to show until the Producer Desk syncs.</p></div></div>';
     } else {
-      out += '<div class="tiles">';
+      out += '<div class="tiles t5">';
       out += tile("src-loa", "Annual premium written per day", money(lm.apWritten / days), money(lm.apWritten) + " over " + intf(days) + " days");
       out += tile("src-loa", "Commission paid out to agents", money(lm.agentCommPaid), "the producers' side of the split");
       out += tile("src-loa", "Thrive upfront commission", money(lm.houseGrossPaid), "on the " + Math.round(org.advanceRate * 100) + "% advance");
       out += tile("is-key", "Thrive total commission", money(lm.houseFullPaid), "full first year, advance plus as-earned");
+      out += tile("is-good", "Thrive commission spread", money(brokerageSpread(lm.apWritten)),
+        spreadLabel() + " of written premium");
       out += "</div>";
     }
 
@@ -1252,7 +1307,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
         '<button class="linkbtn" data-act="tab" data-tab="lt">Lead Tech</button> tabs.</p></div>';
       out += '<div class="panel"><div class="panel-body flush"><div class="tblwrap"><table class="data">' +
         "<thead><tr><th>Date</th><th>Source</th><th>What</th><th>Who</th><th class=\"n\">At stake</th></tr></thead><tbody>";
-      items.slice(0, 8).forEach(function (it) {
+      items.slice(0, 60).forEach(function (it) {
         out += "<tr><td class=\"nowrap dim\">" + esc(prettyDate(it.when)) + "</td>" +
           '<td><span class="pill ' + (it.source === "LOA" ? "key" : "") + '">' + esc(it.source) + "</span></td>" +
           '<td><span class="pill ' + it.tone + '">' + esc(it.what) + "</span></td>" +
@@ -1260,12 +1315,73 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
           '<td class="n">' + esc(money(Math.abs(it.value))) + "</td></tr>";
       });
       out += "</tbody></table></div>";
-      if (items.length > 8) {
-        out += '<div class="panel-body" style="border-top:1px solid var(--line)"><span style="color:var(--muted);font-size:12px">The 8 most recent of ' + esc(intf(items.length)) + ".</span></div>";
+      if (items.length > 60) {
+        out += '<div class="panel-body" style="border-top:1px solid var(--line)"><span style="color:var(--muted);font-size:12px">The 60 most recent of ' + esc(intf(items.length)) + ".</span></div>";
       }
       out += "</div></div>";
     }
     return out;
+  }
+
+  /* Company profit for every day on record, ignoring the range picker —
+     the point of it is the shape of the whole run, not the window. */
+  function lifetimeProfitByDay() {
+    var first = "";
+    loaDeals().forEach(function (d) { var x = toISODate(d.date); if (x && (!first || x < first)) first = x; });
+    loaCalls().forEach(function (c) { var x = toISODate(c.date); if (x && (!first || x < first)) first = x; });
+    ltCalls().forEach(function (c) { if (c.date && (!first || c.date < first)) first = c.date; });
+    if (!first) return null;
+
+    var to = todayISO();
+    if (first > to) first = to;
+    /* Keep the series to a length a small chart can actually draw. */
+    var span = Math.round((new Date(to + "T12:00:00") - new Date(first + "T12:00:00")) / 86400000);
+    if (span > 365) first = addDays(to, -365);
+
+    var days = [], index = {}, cur = first;
+    while (cur <= to) {
+      index[cur] = days.length;
+      days.push({ date: cur, label: prettyDate(cur), value: 0 });
+      cur = addDays(cur, 1);
+    }
+
+    var org = loaOrg(), set = ltSettings();
+    loaDeals().forEach(function (d) {
+      if (statusOf(d.status).group !== "paid") return;
+      var i = index[toISODate(d.date)];
+      if (i != null) days[i].value += spreadOn(d);
+    });
+    loaCalls().forEach(function (c) {
+      var i = index[toISODate(c.date)];
+      if (i != null) days[i].value -= num(c.calls) * org.costPerCall;
+    });
+    ltCalls().forEach(function (c) {
+      var i = index[c.date];
+      if (i != null) days[i].value += c.sold * set.callPrice - c.bought * set.callCost;
+    });
+    ltRefunds().forEach(function (r) { var i = index[r.date]; if (i != null) days[i].value -= r.amount; });
+    ltWipes().forEach(function (x) { var i = index[x.date]; if (i != null) days[i].value -= x.amount; });
+    return days;
+  }
+
+  function lifetimePanel() {
+    var days = lifetimeProfitByDay();
+    if (!days || days.length < 2) {
+      return '<section class="panel"><div class="panel-head"><h3>Company profit, day by day</h3></div>' +
+        '<div class="empty"><p>Not enough history yet to draw a line.</p></div></section>';
+    }
+    var total = days.reduce(function (t, d) { return t + d.value; }, 0);
+    var best = days.reduce(function (a, b) { return b.value > a.value ? b : a; });
+    return '<section class="panel"><div class="panel-head"><h3>Company profit, day by day</h3>' +
+      '<span class="note">' + esc(intf(days.length)) + " days on record</span></div>" +
+      '<div class="panel-body">' +
+      lineChart(days, [{
+        label: "Company profit", color: "var(--s-loa)", fill: "var(--loa-fill)",
+        values: days.map(function (d) { return d.value; })
+      }], { legend: false, height: 168, zero: true }) +
+      '<p style="margin:10px 0 0;font-size:12px;color:var(--muted)">' +
+        esc(money(total)) + " all in · best day " + esc(prettyDate(best.date)) + " at " + esc(money(best.value)) +
+      "</p></div></section>";
   }
 
   function sectionHead(eyebrow, title, sub) {
@@ -1278,6 +1394,23 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       "<h2>" + esc(title) + '</h2><p class="sub">' + esc(sub) + "</p></div>" +
       (right ? "<div>" + right + "</div>" : "") + "</div>";
   }
+  /* Every dashboard opens the same way: the period's bottom line, big,
+     with two or three supporting figures under a rule. Same shape on
+     Overview, LOA, Lead Tech and Thrive Companies, so the eye lands in
+     the same place whichever tab you open. */
+  function hero(label, value, foot, splits, negative, style) {
+    var out = '<div class="hero"' + (style ? ' style="' + style + '"' : "") + '>' +
+      '<p class="eyebrow">' + esc(label) + "</p>" +
+      '<span class="v' + (negative ? " neg" : "") + '">' + esc(value) + "</span>" +
+      '<span class="foot">' + esc(foot) + "</span>";
+    if (splits && splits.length) {
+      out += '<div class="split">';
+      splits.forEach(function (s) { out += "<div>" + esc(s.k) + "<b>" + esc(s.v) + "</b></div>"; });
+      out += "</div>";
+    }
+    return out + "</div>";
+  }
+
   function tile(cls, label, value, foot, tone) {
     return '<div class="tile ' + cls + '"><p class="eyebrow">' + esc(label) + "</p>" +
       '<span class="v' + (tone ? " " + tone : "") + '">' + esc(value) + "</span>" +
@@ -1290,6 +1423,12 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     var w = rangeWindow(), m = loaMetrics(w.from, w.to), org = loaOrg();
 
     var out = pageHead("LOA Production", org.name + " · house contract at " + org.houseLevel + "%. " + w.label + ".", rangePicker());
+
+    out += hero("LOA profit · " + w.label, money(m.net), "Commission spread the house kept, less what the calls cost.", [
+      { k: "Written premium", v: money(m.apWritten) },
+      { k: "Policies", v: intf(m.written) },
+      { k: "Placement", v: pct(m.placement, 0) }
+    ], m.net < 0, "margin-bottom:14px");
 
     out += '<div class="tiles">';
     out += tile("src-loa", "Written premium", money(m.apWritten), intf(m.written) + " policies · " + money(m.mpWritten) + "/mo");
@@ -1435,14 +1574,12 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
 
     /* The bottom line first — this business lives or dies on the gap
        between what a call costs and what it sells for. */
-    out += '<div class="hero" style="margin-bottom:14px"><p class="eyebrow">Lead Tech net profit · ' + esc(w.label) + "</p>" +
-      '<span class="v' + (m.pnl < 0 ? " neg" : "") + '">' + esc(money(m.pnl)) + "</span>" +
-      '<span class="foot">Calls sold, less calls bought, refunds and wiped wallets.</span>' +
-      '<div class="split">' +
-        "<div>Calls sold<b>" + esc(intf(m.callsSold)) + "</b></div>" +
-        "<div>Calls bought<b>" + esc(intf(m.callsBought)) + "</b></div>" +
-        "<div>Margin<b>" + esc(m.margin == null ? "—" : pct(m.margin, 0)) + "</b></div>" +
-      "</div></div>";
+    out += hero("Lead Tech net profit · " + w.label, money(m.pnl),
+      "Calls sold, less calls bought, refunds and wiped wallets.", [
+        { k: "Calls sold", v: intf(m.callsSold) },
+        { k: "Calls bought", v: intf(m.callsBought) },
+        { k: "Margin", v: m.margin == null ? "—" : pct(m.margin, 0) }
+      ], m.pnl < 0, "margin-bottom:14px");
 
     out += '<div class="tiles t5">';
     out += tile("src-lt", "Collected", money(m.callRevenue), intf(m.callsSold) + " calls sold at " + money(set.callPrice));
@@ -1656,11 +1793,18 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
        in the bank — so it is a memo line, never in the net. */
     var tail = lm ? (lm.houseFullPaid - lm.houseGrossPaid) : 0;
 
+    out += hero("Company net · " + w.label, money(companyNet),
+      "Both businesses, after everything paid out.", [
+        { k: "LOA profit", v: lm ? money(loaProfit) : "—" },
+        { k: "Lead Tech P&L", v: tm ? money(ltPnl) : "—" },
+        { k: "Still to come", v: lm ? money(tail) : "—" }
+      ], companyNet < 0, "margin-bottom:14px");
+
     out += '<div class="tiles">';
-    out += tile(companyNet >= 0 ? "is-good" : "is-bad", "Company net", money(companyNet), "both businesses, " + w.label.toLowerCase(), companyNet < 0 ? "neg" : "pos");
     out += tile("src-loa", "LOA profit", lm ? money(loaProfit) : "—", "brokerage after agent splits and calls");
     out += tile("src-lt", "Lead Tech P&L", tm ? money(ltPnl) : "—", tm ? "call ledger" : "not synced");
     out += tile("is-key", "Commission still to come", lm ? money(tail) : "—", "as-earned tail on business already written");
+    out += tile("is-good", "Brokerage spread at " + spreadLabel(), lm ? money(brokerageSpread(lm.apWritten)) : "—", "house rate on all written premium");
     out += "</div>";
 
     /* ---- the P&L itself ---- */
@@ -1687,6 +1831,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       out += plRow("Inbound call spend", intf(lm.callsTaken) + " calls at " + money(loaOrg().costPerCall), -lm.marketingCost, "out");
       out += plRow("LOA profit", "", loaProfit, "total");
       out += plRow("First-year commission still to be earned", "paid by the carrier as the policy earns", tail, "memo");
+      out += plRow("Brokerage spread at the house rate", spreadLabel() + " of written premium — the blended figure, not the per-deal maths above", brokerageSpread(lm.apWritten), "memo");
     }
     if (tm) {
       var set = ltSettings();
@@ -1780,6 +1925,22 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     out += srcCard(SOURCES.lt, ui.lt, ltCounts(), "The board keeps its data in the browser it was worked in. It mirrors a scrubbed copy into its own database whenever it is open, and a sync run copies that across. Open the board once after a busy day and the numbers here catch up.");
     out += "</div>";
 
+    out += '<div class="section-head"><p class="eyebrow">House rates</p><h3>Brokerage settings</h3>' +
+      '<p class="sub">The blended rate Thrive takes on the brokerage side. It drives the ' +
+      "<b>Thrive commission spread</b> figure on the Overview and the Thrive Companies tab. " +
+      "Per-deal commission is untouched by this — that always comes from each carrier's own schedule.</p></div>";
+    out += '<div class="panel"><div class="panel-body">' +
+      '<div class="filters top" style="margin-bottom:0">' +
+        '<div class="field" style="max-width:220px"><label for="spreadpct">Commission spread</label>' +
+          '<input type="text" inputmode="decimal" id="spreadpct" value="' + esc(spreadPct()) + '" aria-describedby="spreadhint">' +
+          '<span class="hint" id="spreadhint">Percent of annual premium written. Default ' + DEFAULT_SPREAD_PCT + '%.</span></div>' +
+        '<div class="field"><label>&nbsp;</label><button class="btn accent" data-act="savespread">Save rate</button></div>' +
+      "</div>" +
+      '<div id="spreadmsg" style="margin-top:12px"></div>' +
+      (ui.settings && ui.settings.updatedAt ?
+        '<p style="margin:10px 0 0;font-size:12px;color:var(--muted)">Last changed ' + esc(agoLabel(ui.settings.updatedAt)) + ".</p>" : "") +
+      "</div></div>";
+
     out += '<div class="section-head"><p class="eyebrow">Top it up by hand</p><h3>Paste a snapshot</h3>' +
       '<p class="sub">Export from either portal and drop the JSON here. The console works out which source it came from. This overwrites that source’s snapshot; it never touches the portal it came from.</p></div>';
     out += '<div class="panel"><div class="panel-body stack">' +
@@ -1828,6 +1989,47 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       (isSample(snap) ? '<button class="btn ghost sm" data-act="clearsample">Remove sample data</button>' : "") + "</div>";
     return out + "</div></div>";
   }
+
+  /* ----------------------------------------------------- table row cap */
+  /* Every table on the platform shows at most this many rows and then
+     scrolls. Measured from the real rendered rows rather than a fixed
+     pixel height, so a table of two-line rows caps at the same count as
+     a table of one-line rows. */
+  var ROW_CAP = 15;
+  function capTables() {
+    Array.prototype.forEach.call(app.querySelectorAll(".tblwrap"), function (box) {
+      var tbl = box.querySelector("table.data");
+      box.classList.remove("capped");
+      box.style.maxHeight = "";
+      if (!tbl || !tbl.tBodies.length) return;
+
+      var all = Array.prototype.slice.call(tbl.tBodies[0].rows);
+      var totalRow = all.filter(function (r) { return r.className.indexOf("total") >= 0; })[0] || null;
+      var body = all.filter(function (r) { return r !== totalRow; });
+      if (body.length <= ROW_CAP) return;
+
+      var top = tbl.getBoundingClientRect().top;
+      var cut = body[ROW_CAP - 1].getBoundingClientRect().bottom;
+      var h = cut - top;
+      if (totalRow) h += totalRow.getBoundingClientRect().height;
+      /* Fifteen two-line rows can run past the bottom of the screen,
+         which defeats the point. Never let a table box outgrow most of
+         the viewport, but never squeeze it below a readable few rows
+         either. */
+      var ceiling = Math.max(320, window.innerHeight * 0.7);
+      if (h > ceiling) h = ceiling;
+      if (h > 0) {
+        box.style.maxHeight = Math.ceil(h) + "px";
+        box.classList.add("capped");
+      }
+    });
+  }
+
+  var resizeTimer = null;
+  window.addEventListener("resize", function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(capTables, 150);
+  });
 
   /* -------------------------------------------------------- chart hover */
   function wireCharts() {
@@ -1946,8 +2148,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     };
   }
   function windowDays(w) {
-    var from = w.from === "0000-01-01" ? chartStart(w) : w.from;
-    var d = Math.round((new Date(w.to + "T12:00:00") - new Date(from + "T12:00:00")) / 86400000) + 1;
+    var d = Math.round((new Date(w.to + "T12:00:00") - new Date(w.from + "T12:00:00")) / 86400000) + 1;
     return d > 0 ? d : 1;
   }
 
@@ -2004,7 +2205,25 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     else if (act === "unlock") { tryUnlock(); }
     else if (act === "changepw") { changePasscode(); }
     else if (act === "clearsample") { clearSample(); }
+    else if (act === "savespread") { saveSpread(); }
   });
+
+  function saveSpread() {
+    var el = document.getElementById("spreadpct");
+    var msg = document.getElementById("spreadmsg");
+    var raw = el ? el.value.trim().replace(/%$/, "") : "";
+    var v = parseFloat(raw);
+    if (!isFinite(v) || v < 0 || v > 100) {
+      msg.innerHTML = '<div class="msg err">Enter a percentage between 0 and 100 — for example 10, or 12.5.</div>';
+      return;
+    }
+    msg.innerHTML = '<div class="msg info">Saving…</div>';
+    db.doc(SETTINGS_DOC).set({ brokerageSpreadPct: v, updatedAt: new Date().toISOString() })
+      .then(function () { toast("Commission spread set to " + v + "%"); })
+      .catch(function (e) {
+        msg.innerHTML = '<div class="msg err">' + esc((e && e.message) || "Could not save the rate.") + "</div>";
+      });
+  }
 
   function clearSample() {
     var jobs = [];
@@ -2018,16 +2237,27 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
   document.addEventListener("keydown", function (ev) {
     if (ev.key !== "Enter") return;
     var el = ev.target;
-    if (el && el.id === "pw1" || el && el.id === "pw2") {
+    if (!el || !el.id) return;
+    if (el.id === "pw1" || el.id === "pw2") {
       ev.preventDefault();
       if (ui.owner) tryUnlock(); else setPasscode();
+    } else if (el.id === "spreadpct") {
+      ev.preventDefault();
+      saveSpread();
     }
   });
 
   document.addEventListener("change", function (ev) {
-    var f = ev.target.getAttribute && ev.target.getAttribute("data-filter");
+    var el = ev.target;
+    if (el.getAttribute && el.getAttribute("data-act") === "customdate") {
+      var which = el.getAttribute("data-which");
+      if (which === "from") ui.customFrom = el.value; else ui.customTo = el.value;
+      render();
+      return;
+    }
+    var f = el.getAttribute && el.getAttribute("data-filter");
     if (!f) return;
-    ui.filters[f] = ev.target.value;
+    ui.filters[f] = el.value;
     render();
   });
   var searchTimer = null;
@@ -2141,6 +2371,10 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     }, function () {});
     db.doc(OWNER_DOC).onSnapshot(function (s) {
       if (s.exists) ui.owner = s.data();
+    }, function () {});
+    db.doc(SETTINGS_DOC).onSnapshot(function (s) {
+      ui.settings = s.exists ? s.data() : null;
+      render();
     }, function () {});
   }
 })();
