@@ -317,15 +317,16 @@ The y-scale ladder is deliberately fine (1, 1.25, 1.5, 2, 2.5, …): jumping
 
 ### Branding
 
-`src/components/Logo.jsx` holds the LeadTech mark and wordmark. Everything is
-stroked in `currentColor` rather than a fixed white, so one file serves the
-dark header, the light one and the sign-in screen — set the colour on the
-parent and it follows. `<Mark/>` is the symbol alone, for the header and the
-favicon; `<Logo/>` adds the wordmark.
+The artwork lives in `public/brand/` as `logo.svg` (or `logo.png`). Drop the
+file in and it is used everywhere the logo appears — header, sign-in, nothing
+else to change. `src/components/Logo.jsx` walks the candidates and falls back
+to a plain drawn placeholder only when no file is there.
 
-The mark is a recreation from the supplied artwork. To use the original file
-instead, drop it in `public/` and swap `<Mark/>` for an `<img>` — the sizes
-and placements stay as they are.
+That direction matters. A logo redrawn by hand from a screenshot is never
+quite the logo, and every place it appears inherits the error. The file is
+the source of truth; the placeholder exists so the layout does not collapse
+while it is missing, and is deliberately plain rather than a passable
+imitation.
 
 ### Knowing which build you are looking at
 
