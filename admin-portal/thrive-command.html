@@ -622,11 +622,31 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     };
   }
 
+  /* When the fulfillment board syncs straight to the relay it writes its
+     own record under its own key, in its own shape — which is the shape
+     the Lead Tech pages already read. So if no digest has been written,
+     read the board itself. */
+  var LT_BOARD_KEY = "fulfillment_board_v3";
+
   function makeRelayStore() {
     return {
       mode: "relay",
       get: function (path) {
-        return relayFetch("/kv/" + encodeURIComponent(relayKey(path))).then(function (res) {
+        var self = this;
+        return this.raw(relayKey(path)).then(function (v) {
+          if (v || path !== SOURCES.lt.doc) return v;
+          return self.raw(LT_BOARD_KEY).then(function (board) {
+            if (!board || typeof board !== "object") return null;
+            board.syncedBy = "the board itself";
+            board.syncedAt = board.updatedAt
+              ? new Date(board.updatedAt).toISOString()
+              : new Date().toISOString();
+            return board;
+          });
+        });
+      },
+      raw: function (key) {
+        return relayFetch("/kv/" + encodeURIComponent(key)).then(function (res) {
           if (res.status === 404) return null;
           if (!res.ok) throw { code: "read_failed", message: "Could not read " + path + " (" + res.status + ")." };
           return res.json();
@@ -1238,7 +1258,12 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
      console reloads its own data on a timer, so an owner should never
      have to read a freshness stamp to trust the page. The Sync & sources
      tab still shows exactly when each portal last landed. */
-  var REFRESH_MS = 15 * 60 * 1000;
+  /* The artifact pushes changes live, so a slow backstop is enough. The
+     relay has no push channel, so the poll IS the sync — keep it short
+     enough that a portal write shows up while you are still looking. */
+  var REFRESH_ARTIFACT_MS = 15 * 60 * 1000;
+  var REFRESH_RELAY_MS = 60 * 1000;
+  function refreshInterval() { return store && store.mode === "relay" ? REFRESH_RELAY_MS : REFRESH_ARTIFACT_MS; }
   function refreshData() {
     if (!db) return;
     store.get(SOURCES.loa.doc).then(function (d) { ui.loa = d; render(); }).catch(function () {});
@@ -2394,7 +2419,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       ui.booting = false;
       render();
       subscribe();
-      setInterval(refreshData, REFRESH_MS);
+      setInterval(refreshData, refreshInterval());
     }).catch(function (ex) {
       var msg = (ex && ex.message) || "Could not sign in.";
       if (/failed to fetch|networkerror/i.test(msg)) {
@@ -2448,7 +2473,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     /* The backstop that guarantees a page left open overnight is never
        showing yesterday's numbers. On the relay it is the only refresh
        there is. */
-    setInterval(refreshData, REFRESH_MS);
+    setInterval(refreshData, refreshInterval());
   }
 
   function bootArtifact(d) {

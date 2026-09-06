@@ -16,7 +16,7 @@ id = "cc65589c8dfe4579b355f3804db2fb65"
 # An entry may start with "https://*." to match subdomains of one domain —
 # Pages gives every deployment its own hostname, and they are all yours.
 # It still never matches another domain, and never plain http.
-ALLOWED_ORIGINS = "https://thrive-command.pages.dev,https://*.thrive-command.pages.dev"
+ALLOWED_ORIGINS = "https://thrive-command.pages.dev,https://*.thrive-command.pages.dev,https://thrive-leadtech.pages.dev,https://*.thrive-leadtech.pages.dev"
 
 OWNER_EMAIL = "andrew.davidson.zenith@gmail.com"
 # 100000 is the ceiling Cloudflare Workers allow for PBKDF2.
