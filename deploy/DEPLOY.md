@@ -58,14 +58,42 @@ string in the built bundle. Step 6 covers both.
 ### What you need
 
 - A Cloudflare account (free tier is enough).
-- Node 18+ and `npm i -g wrangler`, then `wrangler login`.
-- Your repo, with the `deploy/` folder.
+- Node 18 or newer. `node -v` will tell you.
+
+Everything below uses `npx wrangler` rather than a global install, so there is
+nothing to install first and no permission errors to fight.
+
+### 0. Get the files on your machine
+
+Skip this only if you already have the repo cloned and are standing in it.
+
+```sh
+cd ~
+git clone https://github.com/andrewwdovee/THRIVE-CARRIERS.git
+cd THRIVE-CARRIERS
+git checkout claude/admin-portal-data-sync-zt258v
+cd deploy
+```
+
+Check you are in the right place before going on:
+
+```sh
+pwd     # .../THRIVE-CARRIERS/deploy
+ls      # DEPLOY.md  build-pages.mjs  make-credentials.mjs  worker.js  wrangler.toml
+```
+
+Every command from here runs from that `deploy` folder.
+
+Then connect the CLI to your Cloudflare account — this opens a browser:
+
+```sh
+npx wrangler login
+```
 
 ### 1. Create the KV namespace
 
 ```sh
-cd deploy
-wrangler kv namespace create THRIVE_KV
+npx wrangler kv namespace create THRIVE_KV
 ```
 
 It prints an `id`. Paste it into `wrangler.toml`, replacing
@@ -77,13 +105,14 @@ It prints an `id`. Paste it into `wrangler.toml`, replacing
 node make-credentials.mjs "a long owner password you will remember"
 ```
 
-It prints three values. Set each as a secret — they are never written to
-`wrangler.toml`, so reading your repo does not get anyone in:
+It prints three values. Set each as a secret. They never get written to
+`wrangler.toml` — which matters, because **this repository is public**, so anything
+committed to it is readable by anyone. Secrets live only on the worker:
 
 ```sh
-wrangler secret put OWNER_PASSWORD_SALT
-wrangler secret put OWNER_PASSWORD_HASH
-wrangler secret put TOKEN_SECRET
+npx wrangler secret put OWNER_PASSWORD_SALT
+npx wrangler secret put OWNER_PASSWORD_HASH
+npx wrangler secret put TOKEN_SECRET
 ```
 
 Then edit `wrangler.toml` and set `OWNER_EMAIL` to the address you will sign in with.
@@ -91,7 +120,7 @@ Then edit `wrangler.toml` and set `OWNER_EMAIL` to the address you will sign in 
 ### 3. Deploy the relay
 
 ```sh
-wrangler deploy
+npx wrangler deploy
 ```
 
 It prints a URL like `https://thrive-relay.<your-subdomain>.workers.dev`. Keep it.
@@ -128,14 +157,14 @@ instead. Nothing forks, and both paths are tested.
 
 ```sh
 node build-pages.mjs https://thrive-relay.<your-subdomain>.workers.dev
-wrangler pages project create thrive-command
-wrangler pages deploy ./dist --project-name thrive-command
+npx wrangler pages project create thrive-command
+npx wrangler pages deploy ./dist --project-name thrive-command
 ```
 
 Pages prints your URL, something like `https://thrive-command.pages.dev`.
 
 **Now go back and allow that origin**, or the browser's calls will all be refused:
-put it in `ALLOWED_ORIGINS` in `wrangler.toml` and run `wrangler deploy` again. If
+put it in `ALLOWED_ORIGINS` in `wrangler.toml` and run `npx wrangler deploy` again. If
 you attach a custom domain later, add that too — the list takes several, comma
 separated.
 
@@ -197,6 +226,22 @@ platform onto infrastructure you control — which also removes my ability to be
 bottleneck on syncing.
 
 If you want a URL to show someone this week and nothing more, **Route A**.
+
+## If something goes wrong
+
+**`cd: no such file or directory: deploy`** — you are not in the repo. Run step 0.
+
+**`zsh: command not found: wrangler`** — use `npx wrangler ...` as written above. A
+global install is not needed.
+
+**`Cannot find module '.../make-credentials.mjs'`** — you are not in the `deploy`
+folder. `cd` there and check with `ls`.
+
+**Sign-in says it cannot reach the relay** — the Pages origin is not in
+`ALLOWED_ORIGINS`. Add it and redeploy the worker.
+
+**`wrangler login` opens a browser that does nothing** — you are signed into the
+wrong Cloudflare account, or none. Sign in at dash.cloudflare.com first, then retry.
 
 ## What is tested and what is not
 
