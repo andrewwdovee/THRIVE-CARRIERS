@@ -267,6 +267,34 @@ export function useTheme() {
   return [pick, setPick];
 }
 
+/* The Stripe product id for an order, wherever it ended up.
+
+   Orders saved before the price and product ids were split kept only one of
+   them — but the line items were stored whole, and they carry the product id
+   too. So an existing board can show it without re-syncing anything. */
+export function productIdOf(o) {
+  if (o?.stripeProductId) return o.stripeProductId;
+  if (String(o?.stripePriceId || "").startsWith("prod_")) return o.stripePriceId;
+  return (o?.items || []).map((i) => i.productId).find(Boolean) || "";
+}
+
+/* And the price id, which must not report a product id as one. */
+export const priceIdOf = (o) => {
+  const p = String(o?.stripePriceId || "");
+  return p.startsWith("prod_") ? "" : p;
+};
+
+/* Which build this is. Injected by vite at build time — see vite.config.js.
+   The fallbacks are for the test bundles, which compile these files without
+   going through vite. */
+export const VERSION = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "dev";
+export const BUILT_AT = typeof __BUILD_TIME__ === "string" ? __BUILD_TIME__ : "";
+export const buildStamp = () => {
+  const when = BUILT_AT ? new Date(BUILT_AT) : null;
+  return `v${VERSION}${when && !isNaN(when) ? ` · built ${when.toLocaleString(undefined,
+    { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : ""}`;
+};
+
 export const KEY = "fulfillment_board_v3", HOUR = 36e5, DAY = 864e5;
 export const uid = (p = "o") => `${p}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
 export const paidOk = (o) => (o.paymentStatus || "succeeded") === "succeeded";

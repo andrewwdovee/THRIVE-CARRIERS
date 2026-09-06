@@ -315,6 +315,17 @@ that are easy to get wrong:
 The y-scale ladder is deliberately fine (1, 1.25, 1.5, 2, 2.5, …): jumping
 1000 → 2000 for a peak of 1050 throws away half the height of the chart.
 
+### Knowing which build you are looking at
+
+`vite.config.js` stamps the package version and the build time into the
+bundle, and the sign-in screen prints both under the form — Settings ->
+Appearance repeats it for anyone already signed in. Without it a deploy that
+landed and one that silently didn't look identical, which is a bad way to
+spend an evening.
+
+Bump `version` in `package.json` for a change worth naming; the build time
+moves on every build regardless.
+
 ### Price id vs product id
 
 They are different things and both are kept. `normalize` used to write
@@ -324,8 +335,11 @@ field the card labels "Price ID". An order matches a product on either, so
 losing one halves the matching.
 
 Orders saved before the split hold whichever id Stripe sent under
-`stripePriceId`; the drawer checks for a `prod_` prefix and shows it as what
-it actually is rather than as a price.
+`stripePriceId`. `productIdOf()` finds the product id wherever it ended up:
+the field, a `prod_`-prefixed price field, or the line items — which were
+stored whole and carry it too. So an existing board shows product ids without
+re-syncing anything. `priceIdOf()` is its counterpart, and never reports a
+product id as a price.
 
 ### What counts as a duplicate
 

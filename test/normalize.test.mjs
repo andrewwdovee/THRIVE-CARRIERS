@@ -9,7 +9,7 @@ const out = await build({
 });
 const tmp = new URL("../.shared.built.mjs", import.meta.url).pathname;
 writeFileSync(tmp, out.outputFiles[0].text);
-const { normalize, match, SEED, COLS, effHours, dueOf, DEF, HOUR, custName, findCustomers, blockHits, blockedBy, opsFor, describeBlock, satOf, walletTotals, walletWeeks } = await import(tmp);
+const { normalize, match, SEED, COLS, effHours, dueOf, DEF, HOUR, custName, findCustomers, productIdOf, priceIdOf, blockHits, blockedBy, opsFor, describeBlock, satOf, walletTotals, walletWeeks } = await import(tmp);
 
 
 let pass = 0, fail = 0;
@@ -251,6 +251,19 @@ ok("and on its price id",
 
 ok("csv carries the product id",
    COLS.some(([label]) => label === "Stripe product ID"), COLS.map((c) => c[0]).slice(-4));
+
+/* An order saved before the split still has to show its product id. */
+console.log("\nrecovering a product id from an older order:");
+ok("a stored product id is used as-is", productIdOf({ stripeProductId: "prod_a" }) === "prod_a");
+ok("a prod_ filed under the price field is recognised",
+   productIdOf({ stripePriceId: "prod_b" }) === "prod_b");
+/* The one that matters: the ids were folded, the price won, and the product
+   id survived only inside the line items. */
+ok("otherwise it comes from the line items",
+   productIdOf({ stripePriceId: "price_c", items: [{ productId: "prod_c" }] }) === "prod_c");
+ok("nothing anywhere is empty, not undefined", productIdOf({}) === "" && productIdOf(null) === "");
+ok("the price field never reports a product id as a price",
+   priceIdOf({ stripePriceId: "prod_b" }) === "" && priceIdOf({ stripePriceId: "price_c" }) === "price_c");
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

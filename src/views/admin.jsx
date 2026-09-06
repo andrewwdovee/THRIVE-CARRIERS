@@ -6,7 +6,7 @@ import {
 import {
   BD, CARD, PANEL, IN, BTN, PRI, M, F, W, TD, P, c, sm, DEF, DAY,
   uid, paidOk, brief, dk, dl, sod, cash, L, Field, Confirm, grab, grabTrouble, dump, SCROLL, STICKY,
-  THEMES, useTheme, custName, findCustomers, walletTotals, walletWeeks, weekLabel,
+  THEMES, useTheme, custName, findCustomers, walletTotals, walletWeeks, weekLabel, buildStamp,
   BLOCK_FIELDS, BLOCK_OPS, bf, opsFor, blockHits, blockedBy, describeBlock,
 } from "../lib/shared";
 import { buildSamples } from "../lib/samples";
@@ -864,6 +864,7 @@ export function Settings({ cfg, products, orders, customers, blocks, hidden, sav
       <aside className="space-y-4">
         <div className={`${CARD} p-4`}>
           <h3 className={`flex items-center gap-2 text-sm font-semibold ${W}`}><Sun className="h-4 w-4 text-blue-600 dark:text-blue-400" /> Appearance</h3>
+          <p className={`mt-1 font-mono text-[11px] ${F}`}>{buildStamp()}</p>
           <p className={`mt-1 text-sm ${M}`}>Applies to this browser only — everyone signing in picks their own.</p>
           <div className="mt-3 grid grid-cols-3 gap-2">
             {THEMES.map(([id, label]) => {

@@ -33,7 +33,7 @@ export default function App() {
   const out = useCallback(async () => { await signOut(); setUser(null); }, []);
 
   if (gated && checking) return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-400">
+    <div className="flex min-h-screen items-center justify-center bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400">
       <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Checking your session…
     </div>
   );

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { LogIn, Loader2 } from "lucide-react";
-import { BD, CARD, IN, PRI, M, F, W, L, Field } from "./lib/shared";
+import { BD, CARD, IN, PRI, M, F, W, L, Field, buildStamp } from "./lib/shared";
 import { signIn } from "./lib/auth";
 
 /* The way in.
@@ -31,11 +31,11 @@ export default function Login({ onSignedIn }) {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-slate-100 dark:bg-slate-950 px-4">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
           <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600">
-            <LogIn className="h-5 w-5 text-white" />
+            <LogIn className="h-5 w-5 text-slate-900 dark:text-white" />
           </div>
           <h1 className={`mt-3 text-lg font-bold tracking-tight ${W}`}>Lead Tech Fulfillment</h1>
           <L className="mt-1">Sign in to see today's orders</L>
@@ -51,7 +51,7 @@ export default function Login({ onSignedIn }) {
               autoComplete="current-password" required className={IN} />
           </Field>
 
-          {err && <p role="alert" className="rounded-md border border-rose-900 bg-rose-950/50 px-3 py-2 text-sm text-rose-200">{err}</p>}
+          {err && <p role="alert" className="rounded-md border border-rose-300 dark:border-rose-900 bg-rose-100 dark:bg-rose-950/50 px-3 py-2 text-sm text-rose-800 dark:text-rose-200">{err}</p>}
 
           <button type="submit" disabled={busy || !email || !password} className={`w-full ${PRI} disabled:opacity-50`}>
             {busy ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Signing in</span> : "Sign in"}
@@ -61,6 +61,9 @@ export default function Login({ onSignedIn }) {
         <p className={`mt-4 text-center text-xs ${F}`}>
           Need an account? Whoever set this up creates one for you.
         </p>
+        {/* So a deploy that landed can be told apart from one that didn't.
+            The page looks identical either way without it. */}
+        <p className={`mt-1 text-center font-mono text-[11px] ${F}`}>{buildStamp()}</p>
       </div>
     </div>
   );
