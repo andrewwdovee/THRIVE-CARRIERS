@@ -572,7 +572,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     settings: null,       /* {brokerageSpreadPct} — owner-editable */
     loa: null,            /* snapshot document body */
     lt: null,
-    filters: { dealStatus: "", dealAgent: "", dealQuery: "", orderStatus: "", orderProduct: "", orderQuery: "" },
+    filters: { dealStatus: "", dealAgent: "", dealQuery: "" },
     toast: null
   };
 
@@ -1221,7 +1221,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
   /* ---------------------------------------------------------- Overview */
   function pageOverview() {
     if (!hasLOA() && !hasLT()) {
-      return pageHead("Overview", "Both businesses, one set of numbers.") +
+      return pageHead("Overview") +
         '<div class="panel"><div class="empty">' +
         "<strong>Nothing has synced into this console yet</strong>" +
         "<p>Thrive Command mirrors the LOA Producer Desk and the Lead Tech Fulfillment board. Once either one syncs, the company-wide numbers appear here.</p>" +
@@ -1239,7 +1239,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     var org = loaOrg();
     var set = ltSettings();
 
-    var out = pageHead("Overview", "Both businesses, three sections, one bottom line. " + w.label + ".", rangePicker());
+    var out = pageHead("Overview", rangePicker());
 
     /* The period's bottom line, and beside it the whole history it came
        from — the tiles below answer "how", this answers "which way". */
@@ -1248,7 +1248,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       { k: "LOA profit", v: lm ? money(loaProfit) : "—" },
       { k: "Lead Tech P&L", v: tm ? money(ltPnl) : "—" }
     ], companyNet < 0);
-    out += lifetimePanel();
+    out += lifetimePanel("company", "Company profit, day by day");
     out += "</div>";
 
     /* ---- 1. LOA ---- */
@@ -1329,7 +1329,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
 
   /* Company profit for every day on record, ignoring the range picker —
      the point of it is the shape of the whole run, not the window. */
-  function lifetimeProfitByDay() {
+  function lifetimeProfitByDay(scope) {
     var first = "";
     loaDeals().forEach(function (d) { var x = toISODate(d.date); if (x && (!first || x < first)) first = x; });
     loaCalls().forEach(function (c) { var x = toISODate(c.date); if (x && (!first || x < first)) first = x; });
@@ -1350,39 +1350,50 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     }
 
     var org = loaOrg(), set = ltSettings();
-    loaDeals().forEach(function (d) {
-      if (statusOf(d.status).group !== "paid") return;
-      var i = index[toISODate(d.date)];
-      if (i != null) days[i].value += spreadOn(d);
-    });
-    loaCalls().forEach(function (c) {
-      var i = index[toISODate(c.date)];
-      if (i != null) days[i].value -= num(c.calls) * org.costPerCall;
-    });
-    ltCalls().forEach(function (c) {
-      var i = index[c.date];
-      if (i != null) days[i].value += c.sold * set.callPrice - c.bought * set.callCost;
-    });
-    ltRefunds().forEach(function (r) { var i = index[r.date]; if (i != null) days[i].value -= r.amount; });
-    ltWipes().forEach(function (x) { var i = index[x.date]; if (i != null) days[i].value -= x.amount; });
+    var wantLOA = scope !== "lt", wantLT = scope !== "loa";
+
+    if (wantLOA) {
+      loaDeals().forEach(function (d) {
+        if (statusOf(d.status).group !== "paid") return;
+        var i = index[toISODate(d.date)];
+        if (i != null) days[i].value += spreadOn(d);
+      });
+      loaCalls().forEach(function (c) {
+        var i = index[toISODate(c.date)];
+        if (i != null) days[i].value -= num(c.calls) * org.costPerCall;
+      });
+    }
+    if (wantLT) {
+      ltCalls().forEach(function (c) {
+        var i = index[c.date];
+        if (i != null) days[i].value += c.sold * set.callPrice - c.bought * set.callCost;
+      });
+      ltRefunds().forEach(function (r) { var i = index[r.date]; if (i != null) days[i].value -= r.amount; });
+      ltWipes().forEach(function (x) { var i = index[x.date]; if (i != null) days[i].value -= x.amount; });
+    }
     return days;
   }
 
-  function lifetimePanel() {
-    var days = lifetimeProfitByDay();
+  /* The same chart sits beside the hero on every dashboard, scoped to
+     whatever that page is about: the tiles say how the period went, this
+     says which way the whole thing has been running. */
+  function lifetimePanel(scope, title) {
+    var days = lifetimeProfitByDay(scope);
     if (!days || days.length < 2) {
-      return '<section class="panel"><div class="panel-head"><h3>Company profit, day by day</h3></div>' +
+      return '<section class="panel"><div class="panel-head"><h3>' + esc(title) + "</h3></div>" +
         '<div class="empty"><p>Not enough history yet to draw a line.</p></div></section>';
     }
+    var color = scope === "lt" ? "var(--s-lt)" : "var(--s-loa)";
+    var fill = scope === "lt" ? "var(--lt-fill)" : "var(--loa-fill)";
     var total = days.reduce(function (t, d) { return t + d.value; }, 0);
     var best = days.reduce(function (a, b) { return b.value > a.value ? b : a; });
-    return '<section class="panel"><div class="panel-head"><h3>Company profit, day by day</h3>' +
+    return '<section class="panel"><div class="panel-head"><h3>' + esc(title) + "</h3>" +
       '<span class="note">' + esc(intf(days.length)) + " days on record</span></div>" +
       '<div class="panel-body">' +
       lineChart(days, [{
-        label: "Company profit", color: "var(--s-loa)", fill: "var(--loa-fill)",
+        label: title, color: color, fill: fill,
         values: days.map(function (d) { return d.value; })
-      }], { legend: false, height: 168, zero: true }) +
+      }], { legend: false, height: 168 }) +
       '<p style="margin:10px 0 0;font-size:12px;color:var(--muted)">' +
         esc(money(total)) + " all in · best day " + esc(prettyDate(best.date)) + " at " + esc(money(best.value)) +
       "</p></div></section>";
@@ -1393,9 +1404,12 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       "<h3>" + esc(title) + '</h3><p class="sub">' + sub + "</p></div>";
   }
 
-  function pageHead(title, sub, right) {
+  /* Title and range control only. The explanatory sentence that used to
+     sit under each title is gone — an owner who opens this every day
+     does not need the page explained to them again. */
+  function pageHead(title, right) {
     return '<div class="page-head"><div><p class="eyebrow">Thrive Companies</p>' +
-      "<h2>" + esc(title) + '</h2><p class="sub">' + esc(sub) + "</p></div>" +
+      "<h2>" + esc(title) + "</h2></div>" +
       (right ? "<div>" + right + "</div>" : "") + "</div>";
   }
   /* Every dashboard opens the same way: the period's bottom line, big,
@@ -1423,16 +1437,19 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
 
   /* ------------------------------------------------------ LOA production */
   function pageLOA() {
-    if (!hasLOA()) return pageHead("LOA Program", "Everything written through the LOA agent portal.") + notSynced("loa");
+    if (!hasLOA()) return pageHead("LOA Program") + notSynced("loa");
     var w = rangeWindow(), m = loaMetrics(w.from, w.to), org = loaOrg();
 
-    var out = pageHead("LOA Program", org.name + " · house contract at " + org.houseLevel + "%. " + w.label + ".", rangePicker());
+    var out = pageHead("LOA Program", rangePicker());
 
+    out += '<div class="headline">';
     out += hero("LOA profit · " + w.label, money(m.net), "Commission spread the house kept, less what the calls cost.", [
       { k: "Written premium", v: money(m.apWritten) },
       { k: "Policies", v: intf(m.written) },
       { k: "Placement", v: pct(m.placement, 0) }
-    ], m.net < 0, "margin-bottom:14px");
+    ], m.net < 0);
+    out += lifetimePanel("loa", "LOA profit, day by day");
+    out += "</div>";
 
     out += '<div class="tiles">';
     out += tile("src-loa", "Written premium", money(m.apWritten), intf(m.written) + " policies · " + money(m.mpWritten) + "/mo");
@@ -1571,19 +1588,22 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
 
   /* -------------------------------------------------------- Lead Tech */
   function pageLT() {
-    if (!hasLT()) return pageHead("Lead Tech Fulfillment", "Orders, delivery and refunds.") + notSynced("lt");
+    if (!hasLT()) return pageHead("Lead Tech") + notSynced("lt");
     var w = rangeWindow(), m = ltMetrics(w.from, w.to), set = ltSettings();
 
-    var out = pageHead("Lead Tech", "Calls bought, calls sold, and what came back. " + w.label + ".", rangePicker());
+    var out = pageHead("Lead Tech", rangePicker());
 
     /* The bottom line first — this business lives or dies on the gap
        between what a call costs and what it sells for. */
+    out += '<div class="headline">';
     out += hero("Lead Tech net profit · " + w.label, money(m.pnl),
       "Calls sold, less calls bought, refunds and wiped wallets.", [
         { k: "Calls sold", v: intf(m.callsSold) },
         { k: "Calls bought", v: intf(m.callsBought) },
         { k: "Margin", v: m.margin == null ? "—" : pct(m.margin, 0) }
-      ], m.pnl < 0, "margin-bottom:14px");
+      ], m.pnl < 0);
+    out += lifetimePanel("lt", "Lead Tech profit, day by day");
+    out += "</div>";
 
     /* Money in on the left, money out on the right, the call counts
        under the figures they explain, and the net across the bottom —
@@ -1671,64 +1691,6 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
         '<div class="panel-body">' + barRows(prodRows, "var(--s-lt)") + "</div></div>";
     }
 
-    /* orders */
-    out += '<div class="section-head"><p class="eyebrow">Order ledger</p><h3>Every order in the range</h3>' +
-      '<p class="sub">Read-only. The board itself is where orders get worked.</p></div>';
-
-    var products = ltProducts();
-    out += '<div class="filters">' +
-      '<div class="field"><label for="o-status">Status</label><select id="o-status" data-filter="orderStatus">' +
-        '<option value="">Any status</option>' +
-        ["open", "done", "overdue", "failed"].map(function (k) {
-          var lbl = k === "open" ? "Open" : k === "done" ? "Delivered" : k === "overdue" ? "Past due" : "Payment failed";
-          return '<option value="' + k + '"' + (ui.filters.orderStatus === k ? " selected" : "") + ">" + lbl + "</option>";
-        }).join("") + "</select></div>" +
-      '<div class="field"><label for="o-prod">Product</label><select id="o-prod" data-filter="orderProduct">' +
-        '<option value="">Every product</option>' +
-        products.map(function (p) {
-          return '<option value="' + esc(p.id) + '"' + (ui.filters.orderProduct === p.id ? " selected" : "") + ">" + esc(p.name) + "</option>";
-        }).join("") + "</select></div>" +
-      '<div class="field searchbox"><label for="o-q">Search</label>' +
-        '<input type="search" id="o-q" data-filter="orderQuery" value="' + esc(ui.filters.orderQuery) + '" placeholder="Customer, email or product"></div>' +
-      "</div>";
-
-    var oq = ui.filters.orderQuery.trim().toLowerCase();
-    var list = m.orders.filter(function (o) {
-      var f = ui.filters.orderStatus;
-      if (f === "open" && o.status !== "open") return false;
-      if (f === "done" && o.status !== "done") return false;
-      if (f === "overdue" && !o.overdue) return false;
-      if (f === "failed" && o.paid) return false;
-      if (ui.filters.orderProduct && o.productId !== ui.filters.orderProduct) return false;
-      if (oq && (o.customer + " " + o.email + " " + o.product).toLowerCase().indexOf(oq) < 0) return false;
-      return true;
-    }).sort(function (a, b) { return b.createdAt - a.createdAt; });
-
-    if (!list.length) {
-      out += '<div class="panel"><div class="empty"><strong>No orders match</strong><p>Clear a filter or widen the range.</p></div></div>';
-    } else {
-      out += '<div class="panel"><div class="panel-body flush"><div class="tblwrap"><table class="data"><thead><tr>' +
-        "<th>Ordered</th><th>Customer</th><th>Product</th><th class=\"n\">Amount</th><th>Payment</th>" +
-        "<th>Delivery</th><th class=\"n\">Turnaround</th><th>Worked by</th>" +
-        "</tr></thead><tbody>";
-      list.slice(0, 200).forEach(function (o) {
-        var dl = o.status === "done"
-          ? '<span class="pill ' + (o.onTime === false ? "warn" : "good") + '">' + (o.onTime === false ? "Late" : "Delivered") + "</span>"
-          : '<span class="pill ' + (o.overdue ? "bad" : "") + '">' + (o.overdue ? "Past due" : "Open") + "</span>";
-        out += "<tr><td class=\"nowrap dim\">" + esc(prettyDate(o.date)) + "</td>" +
-          '<td class="who">' + esc(o.customer) + (o.email ? '<div class="dim">' + esc(o.email) + "</div>" : "") + "</td>" +
-          "<td>" + esc(o.product) + '<div class="dim">' + esc(o.kind === "subscription" ? "Subscription" : "One-time") + "</div></td>" +
-          '<td class="n">' + esc(money(o.amount, 2)) + "</td>" +
-          '<td><span class="pill ' + (o.paid ? "good" : "bad") + '">' + esc(o.paid ? "Paid" : "Failed") + "</span></td>" +
-          "<td>" + dl + "</td>" +
-          '<td class="n">' + esc(o.turnaround == null ? "—" : o.turnaround.toFixed(1) + "h") + "</td>" +
-          "<td>" + esc(o.assignee || "—") + "</td></tr>";
-      });
-      out += "</tbody></table></div>";
-      if (list.length > 200) out += '<div class="panel-body" style="border-top:1px solid var(--line)"><span style="color:var(--muted);font-size:12px">Showing the 200 most recent of ' + esc(intf(list.length)) + ".</span></div>";
-      out += "</div></div>";
-    }
-
     /* refunds */
     if (m.refunds.length) {
       out += '<div class="section-head"><p class="eyebrow">Money back out</p><h3>Refunds in the range</h3>' +
@@ -1762,7 +1724,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     var w = rangeWindow();
     var lm = hasLOA() ? loaMetrics(w.from, w.to) : null;
     var tm = hasLT() ? ltMetrics(w.from, w.to) : null;
-    var out = pageHead("Thrive Companies", "The holding company's profit and loss, and where the commission came from. " + w.label + ".", rangePicker());
+    var out = pageHead("Thrive Companies", rangePicker());
 
     if (!lm && !tm) return out + notSynced("loa");
 
@@ -1774,18 +1736,21 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
        in the bank — so it is a memo line, never in the net. */
     var tail = lm ? (lm.houseFullPaid - lm.houseGrossPaid) : 0;
 
+    out += '<div class="headline">';
     out += hero("Company net · " + w.label, money(companyNet),
       "Both businesses, after everything paid out.", [
         { k: "LOA profit", v: lm ? money(loaProfit) : "—" },
         { k: "Lead Tech P&L", v: tm ? money(ltPnl) : "—" },
         { k: "Still to come", v: lm ? money(tail) : "—" }
-      ], companyNet < 0, "margin-bottom:14px");
+      ], companyNet < 0);
+    out += lifetimePanel("company", "Company profit, day by day");
+    out += "</div>";
 
     out += '<div class="tiles">';
-    out += tile("src-loa", "LOA profit", lm ? money(loaProfit) : "—", "brokerage after agent splits and calls");
-    out += tile("src-lt", "Lead Tech P&L", tm ? money(ltPnl) : "—", tm ? "call ledger" : "not synced");
-    out += tile("is-key", "Commission still to come", lm ? money(tail) : "—", "as-earned tail on business already written");
-    out += tile("is-good", "Brokerage spread at " + spreadLabel(), lm ? money(brokerageSpread(lm.apWritten)) : "—", "house rate on all written premium");
+    out += tile("src-loa", "Brokerage annual premium", lm ? money(lm.apWritten) : "—", lm ? intf(lm.written) + " policies written" : "—");
+    out += tile("is-good", "Brokerage spread", lm ? money(brokerageSpread(lm.apWritten)) : "—", spreadLabel() + " house rate on written premium");
+    out += tile("is-key", "Total commissions", lm ? money(lm.houseFullPaid) : "—", "full first year, advance plus as-earned");
+    out += tile("src-loa", "Upfront commissions", lm ? money(lm.houseGrossPaid) : "—", "the share the carrier has already advanced");
     out += "</div>";
 
     /* ---- the P&L itself ---- */
@@ -1899,7 +1864,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
 
   /* -------------------------------------------------------------- Sync */
   function pageSync() {
-    var out = pageHead("Sync & sources", "Where these numbers come from, how fresh they are, and how to top them up.");
+    var out = pageHead("Sync & sources");
 
     out += '<div class="srcgrid">';
     out += srcCard(SOURCES.loa, ui.loa, loaCounts(), "The desk keeps its state inside its own published page, so a sync run reads it straight from the artifact and writes it here. Nothing needs to be open for that to work.");
