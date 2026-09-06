@@ -1,2 +1,7 @@
 _leadtech-content.html
 leadtech-fulfillment.published.html
+
+# Data exports: real client names, policy numbers and premiums.
+# This repository is public — snapshots never belong in it.
+*-snapshot-for-import.json
+*.snapshot.json
