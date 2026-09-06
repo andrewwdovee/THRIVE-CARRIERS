@@ -1252,7 +1252,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     out += "</div>";
 
     /* ---- 1. LOA ---- */
-    out += sectionHead("LOA", "What the agency wrote", "Written business and what it cost to feed the producers.");
+    out += sectionHead("LOA", "Thrive Companies LOA", "Written business and what it cost to feed the producers.");
     if (!lm) {
       out += notSynced("loa");
     } else {
@@ -1280,7 +1280,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     }
 
     /* ---- 3. Lead Tech ---- */
-    out += sectionHead("Lead Tech", "Lead Tech call ledger", "Calls bought at " + money(set.callCost) + ", sold at " + money(set.callPrice) + ", less everything handed back.");
+    out += sectionHead("Lead Tech", "Lead Tech Google Calls", "Calls bought at " + money(set.callCost) + ", sold at " + money(set.callPrice) + ", less everything handed back.");
     if (!tm) {
       out += notSynced("lt");
     } else {
