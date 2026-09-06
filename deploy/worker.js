@@ -32,15 +32,37 @@ function json(body, status = 200, extra = {}) {
   });
 }
 
-/* The board sends credentials, so the allow-list is explicit: a wildcard
-   here would let any page on the internet drive this API as your browser. */
+/* The board sends credentials, so the allow-list is explicit: a bare
+   wildcard would let any page on the internet drive this API as your
+   browser. One narrow exception — an entry like
+   "https://*.thrive-command.pages.dev" matches subdomains of that one
+   domain, because Pages gives every deployment its own hostname and they
+   are all yours. It never matches a different domain, and never http. */
+function originAllowed(origin, allowed) {
+  if (!origin) return false;
+  let host;
+  try {
+    const u = new URL(origin);
+    if (u.protocol !== "https:") return false;
+    host = u.hostname;
+  } catch {
+    return false;
+  }
+  return allowed.some((entry) => {
+    if (entry === origin) return true;
+    if (!entry.startsWith("https://*.")) return false;
+    const base = entry.slice("https://*.".length);
+    return base.length > 0 && (host === base || host.endsWith("." + base));
+  });
+}
+
 function corsHeaders(request, env) {
   const origin = request.headers.get("Origin") || "";
   const allowed = (env.ALLOWED_ORIGINS || "")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
-  if (!allowed.includes(origin)) return null;
+  if (!originAllowed(origin, allowed)) return null;
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET,PUT,POST,OPTIONS",
