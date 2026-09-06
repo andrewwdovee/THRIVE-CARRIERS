@@ -287,6 +287,11 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 /* Five ledger tiles that reconcile to one another belong on one line,
    not three-and-a-ragged-two. */
 @media (min-width: 1200px) { .tiles.t5 { grid-template-columns: repeat(5, 1fr); } }
+/* Two columns — in on the left, out on the right — with the net across
+   the foot, the way a ledger is actually read. */
+.ledger { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 700px) { .ledger { grid-template-columns: 1fr 1fr; } }
+.ledger .span2 { grid-column: 1 / -1; }
 .tile .v { display: block; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-size: 23px; font-weight: 600; letter-spacing: -.02em; margin-top: 5px; line-height: 1.15; }
 .tile .v.neg { color: var(--bad); }
 .tile .v.pos { color: var(--good); }
@@ -1050,7 +1055,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     else if (ui.tab === "sync") body = pageSync();
     else body = pageOverview();
 
-    app.innerHTML = masthead() + syncStrip() + rail() + sampleBanner() + '<div class="wrap">' + body + "</div>" +
+    app.innerHTML = masthead() + rail() + sampleBanner() + '<div class="wrap">' + body + "</div>" +
       (ui.toast ? '<div class="toast">' + esc(ui.toast) + "</div>" : "");
     wireCharts();
     capTables();
@@ -1113,29 +1118,28 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       "</div></div>";
   }
 
-  function syncStrip() {
-    function cell(src, snap) {
-      var when = snap && snap.syncedAt;
-      if (isSample(snap)) {
-        return '<span class="src ' + src.cls + ' stale"><i></i>' + esc(src.name) + " <b>sample data</b></span>";
-      }
-      var stale = !when ? "none" : (hoursSince(when) > STALE_HOURS ? "stale" : "");
-      return '<span class="src ' + src.cls + " " + stale + '">' +
-        "<i></i>" + esc(src.name) + " <b>" + esc(when ? agoLabel(when) : "not synced") + "</b></span>";
-    }
-    return '<div class="syncstrip"><div class="syncstrip-in">' +
-      '<span style="letter-spacing:.14em;color:#7B93B0">LAST SYNC</span>' +
-      cell(SOURCES.loa, ui.loa) + cell(SOURCES.lt, ui.lt) +
-      '<span class="spacer"></span>' +
-      '<button class="linkish" data-act="tab" data-tab="sync">Sync &amp; sources →</button>' +
-      "</div></div>";
+  /* The strip that used to carry per-source sync times is gone: the
+     console reloads its own data on a timer, so an owner should never
+     have to read a freshness stamp to trust the page. The Sync & sources
+     tab still shows exactly when each portal last landed. */
+  var REFRESH_MS = 15 * 60 * 1000;
+  function refreshData() {
+    if (!db) return;
+    db.doc(SOURCES.loa.doc).get().then(function (s) {
+      ui.loa = s.exists ? s.data() : null;
+      render();
+    }).catch(function () {});
+    db.doc(SOURCES.lt.doc).get().then(function (s) {
+      ui.lt = s.exists ? s.data() : null;
+      render();
+    }).catch(function () {});
   }
 
   function rail() {
     var alerts = attentionItems().length;
     var tabs = [
       { k: "overview", label: "Overview" },
-      { k: "loa", label: "LOA Production" },
+      { k: "loa", label: "LOA Program" },
       { k: "lt", label: "Lead Tech" },
       { k: "company", label: "Thrive Companies" },
       { k: "sync", label: "Sync & sources" }
@@ -1303,7 +1307,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       out += '<div class="section-head"><p class="eyebrow">Needs a look</p><h3>' +
         esc(intf(items.length)) + " open item" + (items.length === 1 ? "" : "s") + "</h3>" +
         '<p class="sub">Chargebacks and failed payments, orders past their window, and drafts landing in the next seven days — itemised on the ' +
-        '<button class="linkbtn" data-act="tab" data-tab="loa">LOA Production</button> and ' +
+        '<button class="linkbtn" data-act="tab" data-tab="loa">LOA Program</button> and ' +
         '<button class="linkbtn" data-act="tab" data-tab="lt">Lead Tech</button> tabs.</p></div>';
       out += '<div class="panel"><div class="panel-body flush"><div class="tblwrap"><table class="data">' +
         "<thead><tr><th>Date</th><th>Source</th><th>What</th><th>Who</th><th class=\"n\">At stake</th></tr></thead><tbody>";
@@ -1419,10 +1423,10 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
 
   /* ------------------------------------------------------ LOA production */
   function pageLOA() {
-    if (!hasLOA()) return pageHead("LOA Production", "Written business, commissions and call spend.") + notSynced("loa");
+    if (!hasLOA()) return pageHead("LOA Program", "Everything written through the LOA agent portal.") + notSynced("loa");
     var w = rangeWindow(), m = loaMetrics(w.from, w.to), org = loaOrg();
 
-    var out = pageHead("LOA Production", org.name + " · house contract at " + org.houseLevel + "%. " + w.label + ".", rangePicker());
+    var out = pageHead("LOA Program", org.name + " · house contract at " + org.houseLevel + "%. " + w.label + ".", rangePicker());
 
     out += hero("LOA profit · " + w.label, money(m.net), "Commission spread the house kept, less what the calls cost.", [
       { k: "Written premium", v: money(m.apWritten) },
@@ -1581,13 +1585,21 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
         { k: "Margin", v: m.margin == null ? "—" : pct(m.margin, 0) }
       ], m.pnl < 0, "margin-bottom:14px");
 
-    out += '<div class="tiles t5">';
-    out += tile("src-lt", "Collected", money(m.callRevenue), intf(m.callsSold) + " calls sold at " + money(set.callPrice));
-    out += tile("src-lt", "Calls bought", intf(m.callsBought), money(m.callSpend) + " at " + money(set.callCost) + " a call");
-    out += tile(m.refunded > 0 ? "is-warn" : "src-lt", "Refunded", money(m.refunded),
+    /* Money in on the left, money out on the right, the call counts
+       under the figures they explain, and the net across the bottom —
+       read it down a column or across a row and it still adds up. */
+    out += '<div class="ledger">';
+    out += tile("src-lt", "Collected", money(m.callRevenue), "cash in from calls sold");
+    out += tile("src-lt", "Spent", money(m.callSpend), "cash out buying calls");
+    out += tile("src-lt", "Calls sold", intf(m.callsSold), "agents bought these at " + money(set.callPrice));
+    out += tile("src-lt", "Calls purchased", intf(m.callsBought), "Lead Tech bought these at " + money(set.callCost));
+    out += tile(m.refunded > 0 ? "is-warn" : "src-lt", "Total refunds", money(m.refunded),
       (m.callsRefunded ? intf(m.callsRefunded) + " calls refunded" : intf(m.refunds.length) + " refunds"));
-    out += tile(m.wiped > 0 ? "is-warn" : "src-lt", "Wiped wallets", money(m.wiped), intf(m.wipeRows.length) + " wipes");
-    out += tile(m.pnl >= 0 ? "is-good" : "is-bad", "Fulfillment net", money(m.pnl), "collected less bought, refunds and wipes", m.pnl < 0 ? "neg" : "pos");
+    out += tile(m.wiped > 0 ? "is-warn" : "src-lt", "Wallet wipes", money(m.wiped), intf(m.wipeRows.length) + " wipes");
+    out += '<div class="span2">' +
+      tile(m.pnl >= 0 ? "is-good" : "is-bad", "Fulfillment net", money(m.pnl),
+        "collected less spent, refunds and wallet wipes", m.pnl < 0 ? "neg" : "pos") +
+      "</div>";
     out += "</div>";
 
     /* ---- the daily call ledger ---- */
@@ -1740,37 +1752,6 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       out += "</tbody></table></div></div></div>";
     }
 
-    /* who worked the board */
-    var byWho = {};
-    m.orders.forEach(function (o) {
-      var k = o.assignee || "Unassigned";
-      byWho[k] = byWho[k] || { n: 0, done: 0, onTime: 0, rated: 0, value: 0 };
-      byWho[k].n += 1;
-      byWho[k].value += o.paid ? o.amount : 0;
-      if (o.status === "done") {
-        byWho[k].done += 1;
-        if (o.onTime !== null) { byWho[k].rated += 1; if (o.onTime) byWho[k].onTime += 1; }
-      }
-    });
-    var whoKeys = Object.keys(byWho);
-    if (whoKeys.length) {
-      out += '<div class="section-head"><p class="eyebrow">Who worked it</p><h3>Fulfillment team</h3>' +
-        '<p class="sub">Orders handled and how often they landed inside the delivery window.</p></div>';
-      out += '<div class="panel"><div class="panel-body flush"><div class="tblwrap"><table class="data"><thead><tr>' +
-        '<th>Name</th><th class="n">Orders</th><th class="n">Delivered</th><th>On time</th><th class="n">Order value</th>' +
-        "</tr></thead><tbody>";
-      whoKeys.sort(function (a, b) { return byWho[b].n - byWho[a].n; }).forEach(function (k) {
-        var r = byWho[k], p = r.rated ? ratio(r.onTime, r.rated) : null;
-        out += "<tr><td class=\"who\">" + esc(k) + "</td>" +
-          '<td class="n">' + esc(intf(r.n)) + '</td><td class="n">' + esc(intf(r.done)) + "</td>" +
-          "<td>" + (p == null ? '<span class="dim">—</span>' :
-            '<div class="row" style="gap:8px;flex-wrap:nowrap"><div class="bar-mini" style="flex:1 1 54px"><i class="' +
-            (p >= 90 ? "good" : p < 70 ? "bad" : "") + '" style="width:' + p.toFixed(0) + '%"></i></div>' +
-            '<span class="num" style="font-size:12px">' + esc(pct(p, 0)) + "</span></div>") + "</td>" +
-          '<td class="n">' + esc(money(r.value)) + "</td></tr>";
-      });
-      out += "</tbody></table></div></div></div>";
-    }
     return out;
   }
 
@@ -2352,6 +2333,10 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
         ui.booting = false;
         render();
         subscribe();
+        /* Live snapshots already push most changes; this is the backstop
+           that guarantees a page left open overnight is never showing
+           yesterday's numbers. */
+        setInterval(refreshData, REFRESH_MS);
       });
     }).catch(function (e) {
       ui.booting = false;
