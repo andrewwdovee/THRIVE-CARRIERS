@@ -84,7 +84,7 @@ const PAYMENT_FACTS = ["paymentStatus", "declineCode", "declineReason", "refunde
 /* What a payment was for, as opposed to what happened to it. These travel
    together: taking the product from one record and the price id from another
    describes something nobody sold. */
-const PRODUCT_FACTS = ["productId", "productName", "stripePriceId", "items", "interval", "intervalCount", "quantity"];
+const PRODUCT_FACTS = ["productId", "productName", "stripePriceId", "stripeProductId", "items", "interval", "intervalCount", "quantity"];
 
 /* What makes two records the same money.
 

@@ -315,6 +315,18 @@ that are easy to get wrong:
 The y-scale ladder is deliberately fine (1, 1.25, 1.5, 2, 2.5, …): jumping
 1000 → 2000 for a peak of 1050 throws away half the height of the chart.
 
+### Price id vs product id
+
+They are different things and both are kept. `normalize` used to write
+`stripePriceId: priceId || productId`, which threw the product id away
+whenever a price id existed, and when it didn't, filed a `prod_` id under a
+field the card labels "Price ID". An order matches a product on either, so
+losing one halves the matching.
+
+Orders saved before the split hold whichever id Stripe sent under
+`stripePriceId`; the drawer checks for a `prod_` prefix and shows it as what
+it actually is rather than as a price.
+
 ### What counts as a duplicate
 
 The payment id, and nothing else — `identity()` in `useBoard.js`.

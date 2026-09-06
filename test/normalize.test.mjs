@@ -85,9 +85,9 @@ ok("nulls dropped", normalize([null, undefined, 5, { id: "ch_z", created: 175630
 ok("empty payload", normalize([], SEED).length === 0);
 
 // 8. CSV covers what the board holds
-ok("csv has 33 columns", COLS.length === 33, COLS.length);
+ok("csv has 34 columns", COLS.length === 34, COLS.length);
 const row = COLS.map(([, g]) => g({ ...n, status: "done", assignee: "Alex", notes: "", completedAt: n.receivedAt + 3600000, dueAt: n.receivedAt }));
-ok("csv row renders without throwing", row.length === 33);
+ok("csv row renders without throwing", row.length === 34);
 ok("csv minutes-to-fulfill", row[COLS.findIndex(c => c[0] === "Minutes to fulfill")] === 60, row);
 
 
@@ -219,6 +219,38 @@ ok("a Sunday entry joins its Saturday",
    walletWeeks([{ id: "a", userId: "u1", amount: 100, at: satOf(sat) },
                 { id: "b", userId: "u2", amount: 100, at: day("2026-08-30") }]).length === 1);
 ok("no wipes, no weeks", walletWeeks([]).length === 0 && walletWeeks(undefined).length === 0);
+
+// 13. The price id and the product id are different things
+console.log("\nprice id and product id are kept apart:");
+const both = normalize([{ id: "ch_p", created: 1756300000, amount: 49700,
+  lines: { data: [{ description: "Google Calls Subscription", price: { id: "price_gc", product: "prod_gc" } }] } }], SEED)[0];
+ok("the price id is the price id", both.stripePriceId === "price_gc", both.stripePriceId);
+ok("the product id is kept too", both.stripeProductId === "prod_gc", both.stripeProductId);
+/* Folding them lost this one whenever a price existed. */
+ok("a price no longer swallows the product", both.stripePriceId !== both.stripeProductId);
+
+const priceOnly = normalize([{ id: "ch_q", created: 1756300000,
+  lines: { data: [{ description: "x", price: { id: "price_only" } }] } }], SEED)[0];
+ok("no product id means empty, not the price", priceOnly.stripeProductId === "", priceOnly.stripeProductId);
+
+/* A charge that carries only a product id must not have it filed as a price. */
+const prodOnly = normalize([{ id: "ch_r", created: 1756300000,
+  lines: { data: [{ description: "x", price: { product: "prod_only" } }] } }], SEED)[0];
+ok("a lone product id is not called a price", prodOnly.stripePriceId === "", prodOnly.stripePriceId);
+ok("and is kept as the product id", prodOnly.stripeProductId === "prod_only", prodOnly.stripeProductId);
+
+/* Matching still works from either id, which is the whole point of keeping them. */
+const CAT = [{ id: "p_x", name: "Thing", slaHours: 24, color: "blue", stripeIds: ["prod_gc"] }];
+ok("an order matches on its product id",
+   normalize([{ id: "ch_s", created: 1756300000,
+     lines: { data: [{ price: { id: "price_zz", product: "prod_gc" } }] } }], CAT)[0].productId === "p_x");
+const CAT2 = [{ id: "p_y", name: "Thing", slaHours: 24, color: "blue", stripeIds: ["price_gc"] }];
+ok("and on its price id",
+   normalize([{ id: "ch_t", created: 1756300000,
+     lines: { data: [{ price: { id: "price_gc", product: "prod_zz" } }] } }], CAT2)[0].productId === "p_y");
+
+ok("csv carries the product id",
+   COLS.some(([label]) => label === "Stripe product ID"), COLS.map((c) => c[0]).slice(-4));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

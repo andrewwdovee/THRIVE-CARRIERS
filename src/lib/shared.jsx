@@ -154,7 +154,8 @@ export const BLOCK_FIELDS = [
   ["paymentId", "Payment ID", "text"],
   ["chargeId", "Charge ID", "text"],
   ["customerId", "Stripe customer ID", "text"],
-  ["stripePriceId", "Price or product ID", "text"],
+  ["stripePriceId", "Price ID", "text"],
+  ["stripeProductId", "Stripe product ID", "text"],
   ["customer", "Customer name", "text"],
   ["email", "Email", "text"],
   ["productName", "Product name", "text"],
@@ -378,7 +379,12 @@ export function normalize(payload, ps) {
       subscriptionId: o.subscriptionId || o.subscription || "", subscriptionStatus: o.subscriptionStatus || "",
       interval: o.interval || f.interval || "", intervalCount: o.intervalCount || f.intervalCount || 1,
       quantity: o.quantity ?? f.quantity ?? 1, items,
-      productName: text || "Needs triage", stripePriceId: pid || prid || "", productId: match(ps, [pid, prid], text),
+      productName: text || "Needs triage",
+      /* Kept apart. Folding them into one field lost the product id whenever
+         a price id existed, and when it didn't, labelled a prod_ id "Price
+         ID" on the card. Both are how orders get matched, so both are shown. */
+      stripePriceId: pid || "", stripeProductId: prid || "",
+      productId: match(ps, [pid, prid], text),
     };
   }).filter(Boolean);
 }
@@ -393,6 +399,7 @@ export const COLS = [
   ["Card expiry", (o) => o.cardExp], ["Subscription ID", (o) => o.subscriptionId], ["Subscription status", (o) => o.subscriptionStatus],
   ["Disputed", (o) => (o.disputed ? "yes" : "")],
   ["Frequency", freq], ["Quantity", (o) => o.quantity ?? 1], ["Product", (o) => o.productName], ["Price ID", (o) => o.stripePriceId],
+  ["Stripe product ID", (o) => o.stripeProductId],
   ["Items", (o) => (o.items || []).map((i) => `${i.quantity || 1}x ${i.description}`).join(" | ")],
   ["Invoice ID", (o) => o.invoiceId], ["Receipt URL", (o) => o.receiptUrl], ["Fulfillment status", (o) => sm(o.status)[1]],
   ["Owner", (o) => o.assignee], ["Due", (o) => (o.dueAt ? new Date(o.dueAt).toISOString() : "")],

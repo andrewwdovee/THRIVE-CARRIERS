@@ -815,7 +815,12 @@ function Drawer({ o, products, now, me, people, onClose, onPatch, onMove, onSett
             <Row label="Charge ID"><span className="font-mono text-xs">{o.chargeId}</span></Row>
             <Row label="Subscription"><span className="font-mono text-xs">{o.subscriptionId}</span></Row>
             <Row label="Invoice"><span className="font-mono text-xs">{o.invoiceId}</span></Row>
-            <Row label="Price ID"><span className="font-mono text-xs">{o.stripePriceId}</span></Row>
+            {/* Orders saved before these were split hold whichever id Stripe
+                sent under the price field; show it as what it actually is. */}
+            <Row label="Price ID"><span className="font-mono text-xs">{String(o.stripePriceId || "").startsWith("prod_") ? "" : o.stripePriceId}</span></Row>
+            <Row label="Product ID"><span className="font-mono text-xs">
+              {o.stripeProductId || (String(o.stripePriceId || "").startsWith("prod_") ? o.stripePriceId : "")}
+            </span></Row>
             {o.receiptUrl && <a href={o.receiptUrl} target="_blank" rel="noreferrer"
               className={`mt-3 inline-flex items-center gap-1.5 ${BTN}`}><Receipt className="h-4 w-4" /> Receipt</a>}
           </div>
