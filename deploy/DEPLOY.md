@@ -1,0 +1,184 @@
+# Publishing Thrive Command on Cloudflare
+
+## Read this first
+
+The console currently stores its data in a **claude.ai artifact database**, reached
+through `window.claude.use("db")`. That object only exists inside a claude.ai
+artifact. Copy the HTML to Cloudflare as-is and the page will load, look right for a
+moment, and then tell you it cannot reach the company database — because on
+`*.pages.dev` there is no `window.claude` at all.
+
+So "publish it on Cloudflare" is really two jobs: host a static page (ten minutes),
+and give it a backend (the rest of this document).
+
+There are two honest routes.
+
+---
+
+## Route A — static snapshot, no backend
+
+Ten minutes, no Cloudflare Worker, no KV, no login. I bake the current numbers into
+the HTML as a frozen copy and you publish that.
+
+**What you get:** a real URL, on your own domain, that looks and reads exactly like
+the console.
+
+**What you give up:** it is a photograph. The numbers are correct as of the moment I
+built it and never change again. No passcode gate (the page has no database to keep
+the hash in), no sync, no settings — the brokerage-spread box would do nothing.
+Refreshing the data means asking me to rebuild and you redeploying.
+
+Worth it only if what you want is a shareable snapshot for a specific conversation —
+a board meeting, an investor call. It is not a dashboard.
+
+Say the word and I will produce the file.
+
+---
+
+## Route B — Cloudflare Pages + a relay Worker
+
+This is the real thing, and it solves a problem you have been stuck on.
+
+Your **Lead Tech Fulfillment board already contains a relay client**. Its bundle
+reads `VITE_RELAY_URL` at build time and, when that is set, stores its whole record
+through `GET|PUT /kv/:key` with a bearer token instead of browser storage. It is
+inert today only because that variable was empty when the app was built.
+
+`deploy/worker.js` implements exactly that protocol. Which means:
+
+- The console gets a real database it can read and write.
+- **The Lead Tech board syncs natively** — no bridge script, and the artifact
+  republish that keeps getting blocked stops mattering.
+- Both portals and the console end up on one store you own.
+
+The catch: pointing the board at the relay needs its `VITE_RELAY_URL` set, which
+means either rebuilding it from source (if you have the Vite project) or patching one
+string in the built bundle. Step 6 covers both.
+
+### What you need
+
+- A Cloudflare account (free tier is enough).
+- Node 18+ and `npm i -g wrangler`, then `wrangler login`.
+- Your repo, with the `deploy/` folder.
+
+### 1. Create the KV namespace
+
+```sh
+cd deploy
+wrangler kv namespace create THRIVE_KV
+```
+
+It prints an `id`. Paste it into `wrangler.toml`, replacing
+`PASTE_YOUR_KV_NAMESPACE_ID_HERE`.
+
+### 2. Generate your credentials
+
+```sh
+node make-credentials.mjs "a long owner password you will remember"
+```
+
+It prints three values. Set each as a secret — they are never written to
+`wrangler.toml`, so reading your repo does not get anyone in:
+
+```sh
+wrangler secret put OWNER_PASSWORD_SALT
+wrangler secret put OWNER_PASSWORD_HASH
+wrangler secret put TOKEN_SECRET
+```
+
+Then edit `wrangler.toml` and set `OWNER_EMAIL` to the address you will sign in with.
+
+### 3. Deploy the relay
+
+```sh
+wrangler deploy
+```
+
+It prints a URL like `https://thrive-relay.<your-subdomain>.workers.dev`. Keep it.
+
+### 4. Smoke-test it before trusting it
+
+```sh
+RELAY=https://thrive-relay.<your-subdomain>.workers.dev
+
+# should print {"ok":true,...}
+curl -s $RELAY/health
+
+# should print a token
+TOKEN=$(curl -s -X POST $RELAY/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"you@example.com","password":"your password"}' \
+  | sed 's/.*"token":"\([^"]*\)".*/\1/')
+echo "$TOKEN"
+
+# write and read a value back
+curl -s -X PUT $RELAY/kv/smoke -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' -d '{"value":"hello"}'
+curl -s $RELAY/kv/smoke -H "Authorization: Bearer $TOKEN"
+```
+
+The last call should return `{"value":"hello","key":"smoke"}`. A wrong password must
+return 401 — check that too, then delete the smoke key.
+
+### 5. Publish the console on Pages
+
+The console needs its data layer swapped from `claude.use("db")` to `fetch` against
+the relay, plus a real sign-in form in place of the passcode gate. **That change is
+not written yet** — ask me and I will do it; it is the one piece of Route B that is
+code rather than configuration.
+
+Once you have that build:
+
+```sh
+wrangler pages project create thrive-command
+wrangler pages deploy ./dist --project-name thrive-command
+```
+
+Then add the Pages URL to `ALLOWED_ORIGINS` in `wrangler.toml` and `wrangler deploy`
+again. The relay refuses browser requests from origins it does not know, so this step
+is not optional — skip it and the console will load but every call will fail.
+
+### 6. Point the Lead Tech board at the relay
+
+**If you have the Vite source:** set `VITE_RELAY_URL=<your relay URL>` in `.env`,
+rebuild, redeploy. Done — the board's own sign-in now authenticates against the relay
+and its record lives in KV.
+
+**If you only have the built bundle:** find this in the JavaScript
+
+```js
+fn=String((Fn==null?void 0:Fn.VITE_RELAY_URL)||(Fn==null?void 0:Fn.VITE_STORAGE_URL)||"")
+```
+
+and replace it with
+
+```js
+fn=String("https://thrive-relay.<your-subdomain>.workers.dev")
+```
+
+Keep the `.replace(/\/+$/...)` that follows it intact. Test in a private window
+before replacing the live copy: sign in, add a call row, reload, confirm it persisted.
+
+### 7. Move the existing data across
+
+Your LOA history and the current snapshots are in the artifact database today. Ask me
+and I will export both and `PUT` them to the relay under the keys the console reads,
+so nothing starts from zero.
+
+---
+
+## Which one
+
+If you want a live dashboard your team uses, **Route B**. It is a couple of hours of
+setup, it costs nothing at your volume, and it takes both portals off the artifact
+platform onto infrastructure you control — which also removes my ability to be the
+bottleneck on syncing.
+
+If you want a URL to show someone this week and nothing more, **Route A**.
+
+## What I have not done
+
+I have no Cloudflare account here, so `worker.js` has never run against real KV. Its
+crypto is tested — the password hashing and token signing round-trip correctly — but
+the routing, CORS and KV calls are unverified. Deploy it to a throwaway worker name
+first and run step 4 before pointing the board at it.
