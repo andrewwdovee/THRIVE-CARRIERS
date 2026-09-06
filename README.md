@@ -390,6 +390,24 @@ second. An order already sitting under "Needs triage" is upgraded when a
 later event finally names the product; an order that already knows what it is
 is never renamed by a vaguer one.
 
+### Calls
+
+Two numbers at the end of the day — calls Lead Tech was billed for, and calls
+sold on — and everything else on the tab is arithmetic on them. The entry sits
+at the top and takes two keystrokes and a click: a number that is a chore to
+log stops being logged, and a gap in the record is worse than a rough figure
+in it. The day's profit shows before you commit to it.
+
+- **The rates are settings**, not constants (`callCost`, `callPrice`). They are
+  prices, and prices move; changing one re-prices every day already logged.
+- **One record per day.** Logging the same day again corrects it rather than
+  stacking a second entry nobody would spot.
+- **Margin is on revenue, never on spend** — dividing by spend reads as
+  infinity on a day nothing was bought.
+- **Week-on-week compares equal days.** Two days into a week against a full
+  seven is always a collapse, so it measures against the same number of days
+  of the week before. Otherwise every Monday shows a fake catastrophe.
+
 ### Blocked payments
 
 Settings -> Blocked payments hides charges that aren't work: a test card, a

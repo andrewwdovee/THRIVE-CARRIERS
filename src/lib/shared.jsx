@@ -85,7 +85,10 @@ export const SEED = [
     cancelSteps: ["Disable the account", "Email the client about the failed payment", "Cancel the subscription in Stripe"] },
 ];
 export const DEF = { syncUrl: "", syncToken: "", autoSyncMinutes: 5, notifyWebhook: "", notifyEmail: "", notifyPhone: "",
-  notifyBrowser: true, notifySound: true, notifyOverdue: true, archiveAfterDays: 14, pastDueHours: 12 };
+  notifyBrowser: true, notifySound: true, notifyOverdue: true, archiveAfterDays: 14, pastDueHours: 12,
+  /* What a call costs and what it sells for, in cents. Settings rather than
+     constants: these are prices, and prices move. */
+  callCost: 3000, callPrice: 3500 };
 
 /* ── wallets ──
    Agents hold a balance they spend on calls, and every Saturday whatever is
@@ -138,6 +141,57 @@ export function walletWeeks(wipes, from = 0, to = Infinity) {
     by.set(k, cur);
   }
   return [...by.values()].sort((a, b) => a.week - b.week);
+}
+
+/* ── calls ──
+   Two numbers a day: how many calls Lead Tech was billed for, and how many
+   were sold on. The gap between them, priced, is the day's profit — which is
+   the whole reason anybody logs this.
+
+   Held per day as `{ day: "YYYY-MM-DD", billable, sold }`, one record per
+   day: logging the same day twice corrects it rather than adding a second
+   nobody can see. */
+export function callMath(row, settings) {
+  const cost = Number(settings?.callCost) || 0;
+  const price = Number(settings?.callPrice) || 0;
+  const billable = Math.max(0, Number(row?.billable) || 0);
+  const sold = Math.max(0, Number(row?.sold) || 0);
+  const spend = billable * cost;
+  const revenue = sold * price;
+  const profit = revenue - spend;
+  return {
+    billable, sold, spend, revenue, profit,
+    /* Margin on what was sold. Dividing by spend instead would read as
+       infinity on a day nothing was bought, which is not a useful number. */
+    margin: revenue ? Math.round((profit / revenue) * 100) : null,
+    /* Sold but not billed for is the gap worth watching: calls delivered
+       from stock rather than bought in. */
+    gap: sold - billable,
+  };
+}
+
+export const callTotals = (rows, settings) =>
+  (rows || []).reduce((a, r) => {
+    const m = callMath(r, settings);
+    a.billable += m.billable; a.sold += m.sold;
+    a.spend += m.spend; a.revenue += m.revenue; a.profit += m.profit;
+    return a;
+  }, { billable: 0, sold: 0, spend: 0, revenue: 0, profit: 0, days: (rows || []).length });
+
+/* Days grouped into the Saturday-to-Saturday weeks the business already
+   runs on, oldest first, so "is it growing?" is one glance down the list. */
+export function callWeeks(rows, settings) {
+  const by = new Map();
+  for (const r of rows || []) {
+    const t = Date.parse(r.day + "T12:00:00");
+    if (isNaN(t)) continue;
+    const k = satOf(t);
+    if (!by.has(k)) by.set(k, { week: k, rows: [] });
+    by.get(k).rows.push(r);
+  }
+  return [...by.values()]
+    .sort((a, b) => a.week - b.week)
+    .map((w) => ({ week: w.week, ...callTotals(w.rows, settings) }));
 }
 
 /* ── blocked payments ──

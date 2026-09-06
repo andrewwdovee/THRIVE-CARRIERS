@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Plus, RefreshCw, Download, X, Package, Bell, Link2, Users, Sun, Moon, Monitor,
-  ArrowUpDown, FlaskConical, Settings as GearIcon, AlarmClock, Ban, Eye, Undo2, Wallet,
+  ArrowUpDown, FlaskConical, Settings as GearIcon, AlarmClock, Ban, Eye, Undo2, Wallet, PhoneCall,
 } from "lucide-react";
 import {
   BD, CARD, PANEL, IN, BTN, PRI, M, F, W, TD, P, c, sm, DEF, DAY,
@@ -775,7 +775,7 @@ function BlockForm({ draft, orders, onCancel, onSave }) {
 export function Settings({ cfg, products, orders, customers, blocks, hidden, saveCfg, commit, sync, onSync, addOrders, flash, live }) {
   const [theme, setTheme] = useTheme();
   const [l, setL] = useState(cfg);
-  useEffect(() => setL(cfg), [cfg.syncUrl, cfg.autoSyncMinutes, cfg.archiveAfterDays, cfg.pastDueHours]);
+  useEffect(() => setL(cfg), [cfg.syncUrl, cfg.autoSyncMinutes, cfg.archiveAfterDays, cfg.pastDueHours, cfg.callCost, cfg.callPrice]);
   const set = (p) => setL((x) => ({ ...x, ...p }));
   const T = ({ label, k }) => <button onClick={() => { set({ [k]: !l[k] }); saveCfg({ [k]: !l[k] }); }} className="flex w-full items-center gap-3 text-left">
     <span className={`relative h-5 w-9 shrink-0 rounded-full ${l[k] ? "bg-blue-600" : "bg-slate-300 dark:bg-slate-700"}`}>
@@ -880,6 +880,32 @@ export function Settings({ cfg, products, orders, customers, blocks, hidden, sav
               );
             })}
           </div>
+        </div>
+
+        <div className={`${CARD} p-4`}>
+          <h3 className={`flex items-center gap-2 text-sm font-semibold ${W}`}><PhoneCall className="h-4 w-4 text-blue-600 dark:text-blue-400" /> Call rates</h3>
+          <p className={`mt-1 text-sm ${M}`}>What the Calls tab prices each side at. Changing these re-prices every day already logged.</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <Field label="You pay, per call">
+              <input type="number" min="0" step="0.01" className={IN}
+                value={(Number(l.callCost) || 0) / 100}
+                onChange={(e) => set({ callCost: Math.max(0, Math.round(Number(e.target.value) * 100) || 0) })}
+                onBlur={() => saveCfg({ callCost: Math.max(0, Number(l.callCost) || 0) })} />
+            </Field>
+            <Field label="Agents pay, per call">
+              <input type="number" min="0" step="0.01" className={IN}
+                value={(Number(l.callPrice) || 0) / 100}
+                onChange={(e) => set({ callPrice: Math.max(0, Math.round(Number(e.target.value) * 100) || 0) })}
+                onBlur={() => saveCfg({ callPrice: Math.max(0, Number(l.callPrice) || 0) })} />
+            </Field>
+          </div>
+          <p className={`mt-2 text-xs ${F}`}>
+            {cash(Number(l.callPrice) || 0)} in less {cash(Number(l.callCost) || 0)} out ={" "}
+            <span className={(Number(l.callPrice) || 0) - (Number(l.callCost) || 0) >= 0
+              ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}>
+              {cash((Number(l.callPrice) || 0) - (Number(l.callCost) || 0))}
+            </span> a call
+          </p>
         </div>
 
         <div className={`${CARD} p-4`}>

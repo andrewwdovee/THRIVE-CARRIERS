@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   RefreshCw, Inbox, Clock, AlertTriangle, X, Mail, Phone,
-  CreditCard, Receipt, CheckCircle2, Bell, BellOff, RotateCcw, User, PackageOpen, Wallet,
+  CreditCard, Receipt, CheckCircle2, Bell, BellOff, RotateCcw, User, PackageOpen, Wallet, PhoneCall,
   Package, BarChart3, Settings as GearIcon, Layers, LogOut, Undo2,
 } from "lucide-react";
 import {
@@ -19,6 +19,7 @@ import { Reports, Products, Settings as SettingsView } from "./views/admin";
 import Refunds from "./views/Refunds";
 import Logo from "./components/Logo";
 import Wallets from "./views/Wallets";
+import Calls from "./views/Calls";
 
 /* The dashboard.
 
@@ -36,6 +37,7 @@ const TABS = [
   ["refunds", "Refunds", Undo2],
   ["completed", "Completed", CheckCircle2],
   ["wallets", "Wallets", Wallet],
+  ["calls", "Calls", PhoneCall],
   ["products-view", "By product", Layers],
   ["catalog", "Products", Package],
   ["reports", "Reports", BarChart3],
@@ -311,6 +313,18 @@ export default function Dashboard({ me: account, onSignOut }) {
     commit((x) => ({ ...x, wipes: (x.wipes || []).filter((w) => w.id !== id) }), "Figure removed");
   }, [commit]);
 
+  /* One record per day: logging the same day again corrects it rather than
+     stacking a second entry nobody would spot. */
+  const saveCallDay = useCallback((row) => {
+    commit((x) => ({
+      ...x,
+      calls: [row, ...(x.calls || []).filter((c) => c.day !== row.day)],
+    }), `Logged ${row.day}`);
+  }, [commit]);
+  const removeCallDay = useCallback((id) => {
+    commit((x) => ({ ...x, calls: (x.calls || []).filter((c) => c.id !== id) }), "Day removed");
+  }, [commit]);
+
   const addCustomer = useCallback((cst) => {
     commit((x) => ({ ...x, customers: [...(x.customers || []), cst] }), "Customer added");
   }, [commit]);
@@ -459,6 +473,8 @@ export default function Dashboard({ me: account, onSignOut }) {
                 onRecord={recordWipes} onRemove={removeWipe}
                 onAddCustomer={addCustomer} onRemoveCustomer={removeCustomer}
                 orphans={orphanWipes} onDropOrphans={dropOrphans} />
+          : tab === "calls"
+            ? <Calls calls={st.calls} settings={cfg} onSave={saveCallDay} onRemove={removeCallDay} />
           : tab === "products-view" ? <ByProduct products={products} orders={grouped} now={now} onOpen={setOpen} onMove={move} Card={Card} settings={cfg} />
           : tab === "catalog" ? <Products products={products} orders={orders} commit={commit} house={cfg.pastDueHours}
                 refundTypes={st.refundTypes} refunds={refunds} />

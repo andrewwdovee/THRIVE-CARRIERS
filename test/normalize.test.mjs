@@ -9,7 +9,7 @@ const out = await build({
 });
 const tmp = new URL("../.shared.built.mjs", import.meta.url).pathname;
 writeFileSync(tmp, out.outputFiles[0].text);
-const { normalize, match, SEED, COLS, effHours, dueOf, DEF, HOUR, custName, findCustomers, productIdOf, priceIdOf, blockHits, blockedBy, opsFor, describeBlock, satOf, walletTotals, walletWeeks } = await import(tmp);
+const { normalize, match, SEED, COLS, effHours, dueOf, DEF, HOUR, custName, findCustomers, productIdOf, priceIdOf, callMath, callTotals, callWeeks, blockHits, blockedBy, opsFor, describeBlock, satOf, walletTotals, walletWeeks } = await import(tmp);
 
 
 let pass = 0, fail = 0;
@@ -264,6 +264,52 @@ ok("otherwise it comes from the line items",
 ok("nothing anywhere is empty, not undefined", productIdOf({}) === "" && productIdOf(null) === "");
 ok("the price field never reports a product id as a price",
    priceIdOf({ stripePriceId: "prod_b" }) === "" && priceIdOf({ stripePriceId: "price_c" }) === "price_c");
+
+// 14. Calls — bought against sold
+console.log("\ncall profitability:");
+const RATE = { callCost: 3000, callPrice: 3500 };
+const d1 = callMath({ billable: 10, sold: 12 }, RATE);
+ok("spend is billed x cost", d1.spend === 30000, d1.spend);
+ok("revenue is sold x price", d1.revenue === 42000, d1.revenue);
+ok("profit is the difference", d1.profit === 12000, d1.profit);
+ok("margin is on what was sold", d1.margin === 29, d1.margin);
+ok("the gap is sold less billed", d1.gap === 2, d1.gap);
+
+/* Buying more than was sold is a loss, and has to read as one. */
+const bad = callMath({ billable: 20, sold: 5 }, RATE);
+ok("buying more than you sell is negative", bad.profit === -42500, bad.profit);
+
+/* A day with nothing sold must not divide by zero. */
+const none = callMath({ billable: 4, sold: 0 }, RATE);
+ok("no sales means no margin, not NaN", none.margin === null, none.margin);
+ok("but the spend still counts", none.profit === -12000, none.profit);
+ok("an empty day is all zeroes", callMath({}, RATE).profit === 0);
+ok("negative counts are floored at zero", callMath({ billable: -5, sold: -2 }, RATE).profit === 0);
+ok("junk in the boxes is zero, not NaN", callMath({ billable: "x", sold: null }, RATE).profit === 0);
+
+/* Rates are settings, so a change re-prices everything already logged. */
+ok("changing the rate re-prices the day",
+   callMath({ billable: 10, sold: 12 }, { callCost: 2500, callPrice: 4000 }).profit === 23000);
+
+const DAYS = [
+  { day: "2026-08-31", billable: 10, sold: 12 },
+  { day: "2026-09-01", billable: 8, sold: 9 },
+  { day: "2026-09-05", billable: 6, sold: 6 },
+];
+const tot = callTotals(DAYS, RATE);
+ok("totals add the days up", tot.billable === 24 && tot.sold === 27, JSON.stringify(tot));
+ok("and the money with them", tot.profit === (27 * 3500) - (24 * 3000), tot.profit);
+ok("no days, no totals", callTotals([], RATE).profit === 0 && callTotals(undefined, RATE).days === 0);
+
+const wks = callWeeks(DAYS, RATE);
+/* Aug 31 and Sep 1 fall in the week beginning Saturday Aug 29; Sep 5 is a
+   Saturday and opens the next one. */
+ok("days group into Saturday weeks", wks.length === 2, wks.map((w) => w.days));
+ok("oldest week first", wks[0].week < wks[1].week);
+ok("the first week holds two days", wks[0].days === 2, wks[0].days);
+ok("and sums them", wks[0].profit === (21 * 3500) - (18 * 3000), wks[0].profit);
+ok("a bad date is skipped, not counted",
+   callWeeks([...DAYS, { day: "not-a-date", billable: 9, sold: 9 }], RATE).length === 2);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
