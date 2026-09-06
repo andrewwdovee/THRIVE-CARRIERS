@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { Plus, Wallet, TrendingDown, Check, X, ArrowUpDown } from "lucide-react";
 import {
   BD, CARD, PANEL, IN, BTN, PRI, M, F, W, TD, cash, uid, L, Field, Confirm,
-  custName, findCustomers, satOf, weekLabel, walletTotals, walletWeeks, DAY, SCROLL, STICKY,
+  custName, findCustomers, satOf, weekLabel, walletTotals, walletWeeks, DAY, SCROLL, STICKY, dk,
 } from "../lib/shared";
 import { CustomerForm } from "./admin";
 import WipeLine from "./WipeLine";
@@ -14,6 +14,8 @@ import WipeLine from "./WipeLine";
    worth watching per person is not one week's wipe but the pattern: somebody
    wiped for a lot every week is being sold more than they can use, which is
    a conversation to have before they work it out themselves. */
+const WALLET_RANGES = [["4", "Last 4 weeks"], ["12", "Last 12 weeks"], ["26", "Last 26 weeks"], ["all", "All time"], ["custom", "Custom"]];
+
 /* Click to sort, click again to flip it. */
 function SortTh({ label, k, sort, set, right }) {
   const on = sort.k === k;
@@ -27,13 +29,15 @@ function SortTh({ label, k, sort, set, right }) {
   );
 }
 
-export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAddCustomer, onRemoveCustomer }) {
+export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAddCustomer, onRemoveCustomer, orphans = [], onDropOrphans }) {
   /* Two boxes, not one. The weekly table and the totals table are different
      jobs — filtering one from a box sitting in the other card is a search
      nobody would think to look for. */
   const [wq, setWq] = useState("");
   const [q, setQ] = useState("");
   const [sort, setSort] = useState({ k: "total", d: "desc" });
+  const [range, setRange] = useState("all");
+  const [ra, setRa] = useState(dk(Date.now() - 84 * DAY)), [rb, setRb] = useState(dk(Date.now()));
   const [adding, setAdding] = useState(null);
   const [week, setWeek] = useState(() => satOf(Date.now()));
   const [entry, setEntry] = useState({});
@@ -51,7 +55,20 @@ export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAdd
   }, [rows, week]);
 
   const forWeek = useMemo(() => findCustomers(users, wq), [users, wq]);
-  const totals = useMemo(() => walletTotals(users, rows), [users, rows]);
+  /* Scopes the analysis below — who is being wiped, and the shape over time.
+     The headline tiles stay lifetime and current-week, so the two big numbers
+     never quietly change meaning under a filter. */
+  const [from, to] = useMemo(() => {
+    if (range === "all") return [0, Infinity];
+    if (range === "custom") {
+      const f = Date.parse(ra + "T00:00:00"), t = Date.parse(rb + "T23:59:59");
+      return [isNaN(f) ? 0 : f, isNaN(t) ? Infinity : t];
+    }
+    return [satOf(Date.now() - (Number(range) - 1) * 7 * DAY), Infinity];
+  }, [range, ra, rb]);
+  const scoped = useMemo(() => rows.filter((w) => w.at >= from && w.at <= to), [rows, from, to]);
+
+  const totals = useMemo(() => walletTotals(users, scoped), [users, scoped]);
   /* The actual current Saturday, not the one being edited. Navigating back to
      fill in a past week used to silently repoint this tile at that week, so
      the headline said "this week" and showed something else. */
@@ -73,7 +90,7 @@ export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAdd
     });
   }, [totals, users, q, sort]);
 
-  const weeks = useMemo(() => walletWeeks(rows), [rows]);
+  const weeks = useMemo(() => walletWeeks(scoped), [scoped]);
   const wipedAllTime = rows.reduce((s, w) => s + (w.amount || 0), 0);
   const wipedThisWeek = [...thisWeek.values()].reduce((s, w) => s + (w.amount || 0), 0);
   const perWeek = weeks.length ? Math.round(wipedAllTime / weeks.length) : 0;
@@ -113,6 +130,47 @@ export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAdd
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className={`flex flex-wrap gap-1 rounded-lg border ${BD} bg-white p-1 dark:bg-slate-900`}>
+          {WALLET_RANGES.map(([id, label]) => (
+            <button key={id} onClick={() => setRange(id)}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium ${range === id
+                ? "bg-blue-600 text-white" : `${M} hover:bg-slate-200 dark:hover:bg-slate-800`}`}>{label}</button>
+          ))}
+        </div>
+        {range === "custom" && (
+          <div className={`flex items-center gap-2 rounded-lg border ${BD} bg-white px-3 py-1.5 dark:bg-slate-900`}>
+            <div className="w-40"><input type="date" value={ra} onChange={(e) => setRa(e.target.value)} className={IN} /></div>
+            <span className={`text-sm ${F}`}>to</span>
+            <div className="w-40"><input type="date" value={rb} onChange={(e) => setRb(e.target.value)} className={IN} /></div>
+          </div>
+        )}
+        <span className={`text-xs ${F}`}>scopes “By person” and the chart below</span>
+      </div>
+
+      {!!orphans.length && (
+        <div className={`rounded-xl border-l-4 border-amber-500 ${PANEL} px-4 py-3`}>
+          <h3 className={`text-sm font-semibold ${W}`}>
+            {cash(orphans.reduce((s2, w) => s2 + (w.amount || 0), 0))} is recorded against{" "}
+            {new Set(orphans.map((w) => w.userId)).size} {new Set(orphans.map((w) => w.userId)).size === 1 ? "person" : "people"} who
+            {new Set(orphans.map((w) => w.userId)).size === 1 ? " is" : " are"} no longer on the board
+          </h3>
+          <p className={`mt-0.5 text-sm ${M}`}>
+            It counts in the totals above but appears in none of the lists, which is why they don't add up.
+            Removing somebody now takes their figures with them; this is what earlier removals left behind.
+          </p>
+          <ul className={`mt-2 max-h-32 space-y-0.5 overflow-auto text-xs ${F}`}>
+            {orphans.slice(0, 20).map((w) => (
+              <li key={w.id}>{w.name || "Removed person"} · {cash(w.amount)} · {weekLabel(satOf(w.at))}</li>
+            ))}
+            {orphans.length > 20 && <li>and {orphans.length - 20} more</li>}
+          </ul>
+          <button onClick={onDropOrphans} className={`mt-3 ${BTN}`}>
+            Remove these {orphans.length} figure{orphans.length === 1 ? "" : "s"}
+          </button>
+        </div>
+      )}
+
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Tile label="Wiped all time" value={cash(wipedAllTime)} note={`${weeks.length} week${weeks.length === 1 ? "" : "s"} recorded`} />
         {/* Follows the week being looked at, and names it. A tile that says
@@ -248,6 +306,9 @@ export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAdd
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className={`flex items-center gap-2 text-sm font-semibold ${W}`}>
             <TrendingDown className="h-4 w-4 text-blue-600 dark:text-blue-400" /> By person
+            <span className={`font-normal ${F}`}>
+              {range === "all" ? "all time" : range === "custom" ? `${ra} to ${rb}` : `last ${range} weeks`}
+            </span>
           </h3>
           <button onClick={() => setAdding({})} className={`${BTN} flex items-center gap-1.5`}>
             <Plus className="h-3.5 w-3.5" /> Add person
@@ -258,8 +319,8 @@ export default function Wallets({ customers, wipes, n, onRecord, onRemove, onAdd
         )}
 
         <p className={`mt-2 text-xs ${F}`}>
-          Removing somebody takes them off this list and out of Customers. Money already recorded stays on the week
-          it was wiped, so past totals don't change underneath you.
+          Removing somebody takes them off this list, out of Customers, and takes their recorded figures with them —
+          so the totals above always match what you can see here.
         </p>
 
         <div className={`mt-3 overflow-hidden rounded-lg border ${BD}`}>

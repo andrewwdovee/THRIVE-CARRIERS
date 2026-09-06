@@ -314,11 +314,33 @@ export default function Dashboard({ me: account, onSignOut }) {
   const addCustomer = useCallback((cst) => {
     commit((x) => ({ ...x, customers: [...(x.customers || []), cst] }), "Customer added");
   }, [commit]);
-  /* The person goes; the money they were wiped for stays on the week it
-     happened. A past weekly total that changes because of something done
-     today is a number nobody can trust. */
+  /* The person goes and their wipes go with them.
+
+     Keeping the money "so past totals don't change" sounded careful and was
+     worse: the figures stayed in the totals while vanishing from every list,
+     so the headline counted dollars nobody could find on the screen. A total
+     that cannot be reconciled against what is in front of you is not a total
+     anybody can act on. */
   const removeCustomer = useCallback((id) => {
-    commit((x) => ({ ...x, customers: (x.customers || []).filter((c) => c.id !== id) }), "Person removed");
+    commit((x) => ({
+      ...x,
+      customers: (x.customers || []).filter((c) => c.id !== id),
+      wipes: (x.wipes || []).filter((w) => w.userId !== id),
+    }), "Person removed");
+  }, [commit]);
+
+  /* Money recorded against somebody who is no longer on the board — left by
+     the old behaviour. Surfaced rather than silently dropped: it is real
+     money that was really wiped, and deleting it is the owner's call. */
+  const orphanWipes = useMemo(() => {
+    const live = new Set((st.customers || []).map((c) => c.id));
+    return (st.wipes || []).filter((w) => !live.has(w.userId));
+  }, [st.customers, st.wipes]);
+  const dropOrphans = useCallback(() => {
+    commit((x) => {
+      const live = new Set((x.customers || []).map((c) => c.id));
+      return { ...x, wipes: (x.wipes || []).filter((w) => live.has(w.userId)) };
+    }, "Removed figures with no one attached");
   }, [commit]);
   const recordRefund = useCallback((r) => {
     commit((x) => ({ ...x, refunds: [{ ...r, source: "manual" }, ...(x.refunds || [])] }), "Refund recorded");
@@ -435,7 +457,8 @@ export default function Dashboard({ me: account, onSignOut }) {
           : tab === "wallets"
             ? <Wallets customers={st.customers} wipes={st.wipes} n={now}
                 onRecord={recordWipes} onRemove={removeWipe}
-                onAddCustomer={addCustomer} onRemoveCustomer={removeCustomer} />
+                onAddCustomer={addCustomer} onRemoveCustomer={removeCustomer}
+                orphans={orphanWipes} onDropOrphans={dropOrphans} />
           : tab === "products-view" ? <ByProduct products={products} orders={grouped} now={now} onOpen={setOpen} onMove={move} Card={Card} settings={cfg} />
           : tab === "catalog" ? <Products products={products} orders={orders} commit={commit} house={cfg.pastDueHours}
                 refundTypes={st.refundTypes} refunds={refunds} />
