@@ -322,11 +322,15 @@ file in and it is used everywhere the logo appears — header, sign-in, nothing
 else to change. `src/components/Logo.jsx` walks the candidates and falls back
 to a plain drawn placeholder only when no file is there.
 
-That direction matters. A logo redrawn by hand from a screenshot is never
-quite the logo, and every place it appears inherits the error. The file is
-the source of truth; the placeholder exists so the layout does not collapse
-while it is missing, and is deliberately plain rather than a passable
-imitation.
+With no file there, the wordmark is set in type and **no mark is drawn**.
+Redrawing somebody's logo by hand from a screenshot produces something that
+is not their logo, and putting that in the code spreads the error to every
+screen at once. Type is honest: the company's name, correctly spelled,
+claiming to be nothing else.
+
+The published preview inlines only the JS and CSS, so files under `public/`
+are never part of it and it always shows the type. The real site serves them
+normally — check the logo there, not in the preview.
 
 ### Knowing which build you are looking at
 

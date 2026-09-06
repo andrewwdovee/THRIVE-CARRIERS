@@ -1,0 +1,28 @@
+{
+  "name": "thrive-fulfillment",
+  "private": true,
+  "version": "1.2.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint src --ext .js,.jsx",
+    "test": "node test/run.mjs",
+    "artifact": "vite build && node scripts/inline.mjs",
+    "deploy": "vite build && npx wrangler pages deploy dist --project-name lead-tech-fulfillment --branch LeadTechBackend",
+    "setup": "node scripts/setup-stripe.mjs"
+  },
+  "dependencies": {
+    "lucide-react": "^0.454.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.3",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.14",
+    "vite": "^5.4.10"
+  }
+}
