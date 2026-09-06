@@ -2,11 +2,11 @@ name = "thrive-relay"
 main = "worker.js"
 compatibility_date = "2026-09-01"
 
-# Created by: wrangler kv namespace create THRIVE_KV
-# Paste the id it prints into the line below.
+# Created with: npx wrangler kv namespace create THRIVE_KV
+# A namespace id is an identifier, not a credential — it is safe here.
 [[kv_namespaces]]
 binding = "THRIVE_KV"
-id = "PASTE_YOUR_KV_NAMESPACE_ID_HERE"
+id = "cc65589c8dfe4579b355f3804db2fb65"
 
 [vars]
 # Every origin allowed to call this relay, comma separated, no trailing
