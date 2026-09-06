@@ -228,5 +228,56 @@ ok("a disabled rule lets it in", appendOrders(off, [junk]).next.orders.length ==
 const none = appendOrders({ ...base, blocks: [] }, [wanted, junk]);
 ok("no rules, nothing blocked", none.next.orders.length === 2 && none.blocked === 0);
 
+/* ── one payment, one order ── */
+console.log("\nthe payment id is what makes a duplicate:");
+const base2 = { orders: [], products: SEED, refunds: [], customers: [], blocks: [], settings: {} };
+const mk = (o) => ({ productId: "p_gc", amount: 49700, receivedAt: Date.now(), ...o });
+
+/* The same payment arriving twice — a Stripe retry, or a second poll. */
+const twice = appendOrders(base2, [
+  mk({ paymentId: "pi_1", externalId: "ch_1" }),
+  mk({ paymentId: "pi_1", externalId: "ch_1" }),
+]);
+ok("the same payment twice is one order", twice.next.orders.length === 1, twice.next.orders.length);
+
+/* A decline and the retry that succeeds: two charge ids, one payment intent.
+   This is the case the old charge-id keying got wrong. */
+const retry = appendOrders(base2, [
+  mk({ paymentId: "pi_2", externalId: "ch_a", paymentStatus: "failed" }),
+  mk({ paymentId: "pi_2", externalId: "ch_b", paymentStatus: "succeeded" }),
+]);
+ok("a decline and its retry are one order", retry.next.orders.length === 1, retry.next.orders.length);
+
+/* Two renewals of one subscription are two separate sales, each to fulfil. */
+const renewals = appendOrders(base2, [
+  mk({ paymentId: "pi_jan", externalId: "ch_jan", subscriptionId: "sub_1" }),
+  mk({ paymentId: "pi_feb", externalId: "ch_feb", subscriptionId: "sub_1" }),
+]);
+ok("one subscription, two payments, two orders", renewals.next.orders.length === 2, renewals.next.orders.length);
+
+/* Arriving in separate polls rather than one batch. */
+const first = appendOrders(base2, [mk({ paymentId: "pi_3", externalId: "ch_3" })]);
+const second = appendOrders(first.next, [mk({ paymentId: "pi_3", externalId: "ch_3" })]);
+ok("a later poll doesn't re-add it", second.next.orders.length === 1, second.next.orders.length);
+
+/* An order already on the board under its charge id must still be found when
+   the draft identifies itself by payment id — otherwise upgrading duplicates
+   every open order exactly once. */
+const legacy = { ...base2, orders: [{ id: "o1", externalId: "ch_old", paymentId: "pi_old", status: "active" }] };
+const back = appendOrders(legacy, [mk({ paymentId: "pi_old", externalId: "ch_old" })]);
+ok("an order already on the board is recognised", back.next.orders.length === 1, back.next.orders.length);
+ok("and the work on it is untouched", back.next.orders[0].status === "active");
+
+/* A record with no payment id at all still dedupes on what it does have. */
+const manual = appendOrders(base2, [
+  mk({ externalId: "manual_1" }), mk({ externalId: "manual_1" }),
+]);
+ok("no payment id falls back to externalId", manual.next.orders.length === 1, manual.next.orders.length);
+
+/* A subscription cancellation carries no payment; it must not collide with
+   the payments made under that same subscription. */
+const cancel = appendOrders(renewals.next, [mk({ paymentId: "sub_1", externalId: "sub_1", paymentStatus: "failed" })]);
+ok("a cancellation is its own row, not a duplicate renewal", cancel.next.orders.length === 3, cancel.next.orders.length);
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

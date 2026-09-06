@@ -81,16 +81,29 @@ const PAYMENT_FACTS = ["paymentStatus", "declineCode", "declineReason", "refunde
   "amountRefunded", "refundedAt", "receiptUrl", "subscriptionStatus", "cardBrand", "cardLast4", "cardExp",
   "disputed", "disputeStatus"];
 
+/* What makes two records the same money.
+
+   The payment id, and nothing else. A charge id is not enough: a declined
+   charge and the retry that succeeds carry different charge ids under one
+   payment intent, and filing those as two orders means the same sale is
+   worked twice. A subscription id is far too much — every monthly renewal
+   shares one, and they are separate payments that each need fulfilling.
+
+   externalId is the fallback for records that predate this or never had a
+   payment id (samples, hand-entered rows), so an existing board keeps
+   matching the way it always did. */
+export const identity = (o) => o?.paymentId || o?.externalId || "";
+
 /* Two events about one payment can arrive in the same poll — a charge and its
    invoice, or a charge and the dispute that later reverses it. Left alone,
-   each becomes its own order and the same money is worked twice. Folded here
-   on the Stripe id, with a failure winning: a chargeback must never be filed
-   under a payment the board still shows as collected. */
+   each becomes its own order and the same money is worked twice. Folded here,
+   with a failure winning: a chargeback must never be filed under a payment
+   the board still shows as collected. */
 function fold(drafts) {
   const out = [];
   const at = new Map();
   for (const d of drafts) {
-    const key = d.externalId;
+    const key = identity(d);
     if (!key || !at.has(key)) { if (key) at.set(key, out.length); out.push(d); continue; }
     const i = at.get(key), prev = out[i], next = { ...prev };
     for (const [k, v] of Object.entries(d)) {
@@ -124,10 +137,23 @@ export function appendOrders(x, all) {
     if (r) caught.set(r.id, (caught.get(r.id) || 0) + 1);
     return !r;
   });
-  const byExternal = new Map(x.orders.map((o) => [o.externalId, o]).filter(([k]) => k));
+  /* Indexed both ways. An order already on the board was filed under its
+     charge id; a draft arriving now is identified by its payment id. Looking
+     up only one of the two would treat a payment we already have as new. */
+  const byPayment = new Map(), byExternal = new Map();
+  for (const o of x.orders) {
+    if (o.paymentId && !byPayment.has(o.paymentId)) byPayment.set(o.paymentId, o);
+    if (o.externalId && !byExternal.has(o.externalId)) byExternal.set(o.externalId, o);
+  }
+  /* Payment id first: it is the identity, externalId only the filing name. */
+  const already = (d) =>
+    (d.paymentId && byPayment.get(d.paymentId))
+    || (d.externalId && byExternal.get(d.externalId))
+    || null;
+
   const updates = new Map();
   for (const d of drafts) {
-    const prior = d.externalId && byExternal.get(d.externalId);
+    const prior = already(d);
     if (!prior) continue;
     const patch = {};
     for (const k of PAYMENT_FACTS) {
@@ -137,8 +163,7 @@ export function appendOrders(x, all) {
     if (Object.keys(patch).length) updates.set(prior.id, patch);
   }
 
-  const seen = new Set(byExternal.keys());
-  const added = drafts.filter((d) => !d.externalId || !seen.has(d.externalId)).map((d) => {
+  const added = drafts.filter((d) => !already(d)).map((d) => {
     const at = d.receivedAt || Date.now();
     /* A renewal of a subscription already on the board is not a new signup.
        Marked so the board can say so, rather than sending someone off to

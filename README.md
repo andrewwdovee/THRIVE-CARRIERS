@@ -315,6 +315,25 @@ that are easy to get wrong:
 The y-scale ladder is deliberately fine (1, 1.25, 1.5, 2, 2.5, …): jumping
 1000 → 2000 for a peak of 1050 throws away half the height of the chart.
 
+### What counts as a duplicate
+
+The payment id, and nothing else — `identity()` in `useBoard.js`.
+
+A **charge id is not enough**: a declined charge and the retry that succeeds
+carry different charge ids under one payment intent, and filing those as two
+orders means the same sale gets worked twice. A **subscription id is far too
+much**: every monthly renewal shares one, and each is a separate payment that
+needs fulfilling.
+
+`appendOrders` indexes existing orders by payment id *and* by `externalId`,
+and matches on either. An order already on the board was filed under its
+charge id, while a draft arriving now identifies itself by payment id —
+looking up only one of the two would treat a payment already on the board as
+new, duplicating every open order exactly once on the next sync.
+
+Records with no payment id (samples, hand-entered rows) fall back to
+`externalId`, so nothing that worked before stops working.
+
 ### Blocked payments
 
 Settings -> Blocked payments hides charges that aren't work: a test card, a
