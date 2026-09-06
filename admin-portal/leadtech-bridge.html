@@ -70,7 +70,14 @@
       refunds: arr(b.refunds).map(function (r) {
         return pick(r, ["id", "customer", "typeId", "typeName", "amount", "status", "createdAt"]);
       }),
-      calls: arr(b.calls).map(function (c) { return pick(c, ["date", "calls", "count"]); }),
+      /* Wiped wallets are money the company gave back outside a refund, so
+         the console's call P&L needs the records, not just a count. */
+      wipes: arr(b.wipes).map(function (x) {
+        return pick(x, ["id", "customer", "amount", "reason", "note", "createdAt", "date"]);
+      }),
+      calls: arr(b.calls).map(function (c) {
+        return pick(c, ["id", "date", "calls", "count", "qty", "amount", "agent", "agentId", "createdAt"]);
+      }),
       counts: {
         orders: arr(b.orders).length, refunds: arr(b.refunds).length,
         customers: arr(b.customers).length, blocks: arr(b.blocks).length, wipes: arr(b.wipes).length

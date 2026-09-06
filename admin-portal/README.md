@@ -93,3 +93,44 @@ net         = spread − (calls × costPerCall)
 
 Deal statuses bucket the same way too: `issued_paid` is paid; `underwriting` and
 `approved` are pending; `nsf`, `declined` and `chargeback` fell off.
+
+## Overview sections
+
+The Overview is deliberately three flat sections of tiles under one company figure —
+no charts. Every tile below is defined over the selected date range.
+
+**LOA — what the agency wrote**
+
+| Tile | Definition |
+|---|---|
+| LOA written premium | Σ `ap` over all deals written |
+| LOA marketing cost | inbound calls × `costPerCall` |
+| LOA agent commission | Σ agent commission on issued & paid deals |
+| LOA profit | commission spread − marketing cost |
+
+**Thrive Companies brokerage** — the house's own cut of that same business
+
+| Tile | Definition |
+|---|---|
+| Annual premium written per day | written AP ÷ days in range |
+| Commission paid out to agents | same figure as LOA agent commission |
+| Thrive upfront commission | Σ `ap × 0.75 × housePct` — the house's cut of the advance |
+| Thrive total commission | Σ `ap × housePct` — full first year, advance plus the as-earned tail |
+
+**Lead Tech call ledger** — buys calls at `callCost`, sells at `callPrice`
+
+| Tile | Definition |
+|---|---|
+| Inbound calls taken | Σ call counts |
+| Total spent on calls | calls × `callCost` ($30) |
+| Total cash collected | calls × `callPrice` ($35) |
+| Total refunds | Σ refund amounts |
+| Total wiped wallet | Σ wipe amounts |
+| Lead Tech profit & loss | collected − spent − refunds − wipes |
+
+Company net = LOA profit + Lead Tech P&L.
+
+Note that product and subscription orders are **not** in the call ledger — that is the
+fulfillment side of the board and it is reported on the Lead Tech tab as "Fulfillment
+net". The two are kept apart on purpose so neither bottom line quietly absorbs the
+other.

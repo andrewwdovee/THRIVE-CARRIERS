@@ -272,6 +272,8 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 .tile.is-good::before { background: var(--good); }
 .tile.is-warn::before { background: var(--warn); }
 .tile.is-bad::before  { background: var(--bad); }
+.tile.is-key::before  { background: var(--sky); }
+@media (min-width: 1060px) { .tiles.t3 { grid-template-columns: repeat(3, 1fr); } }
 .tile .v { display: block; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-size: 23px; font-weight: 600; letter-spacing: -.02em; margin-top: 5px; line-height: 1.15; }
 .tile .v.neg { color: var(--bad); }
 .tile .v.pos { color: var(--good); }
@@ -279,16 +281,6 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 
 /* The headline pair on Overview: company net gets the weight, the two
    business lines sit beside it at tile scale. */
-.headline { display: grid; gap: 12px; grid-template-columns: 1fr; margin-bottom: 12px; }
-.headline-side { display: grid; gap: 12px; grid-template-columns: 1fr; }
-@media (min-width: 640px) { .headline-side { grid-template-columns: 1fr 1fr; } }
-/* The two business-line tiles stack beside the hero rather than
-   stretching to its height — a tile with 90px of empty air under its
-   number reads as a mistake. */
-@media (min-width: 900px) {
-  .headline { grid-template-columns: 1.2fr 1fr; }
-  .headline-side { grid-template-columns: 1fr; grid-auto-rows: 1fr; }
-}
 .hero {
   background: var(--navy-2); color: #fff; border-radius: 10px; padding: 18px 20px 19px;
   border: 1px solid var(--navy-2); box-shadow: var(--shadow);
@@ -407,6 +399,11 @@ table.data tr:last-child td { border-bottom: 0; }
 .auth-body { padding: 24px; display: grid; gap: 15px; }
 .auth-body p.lede { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.6; }
 
+.linkbtn {
+  padding: 0; background: none; border: 0; color: var(--sky);
+  font-size: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 2px;
+}
+.linkbtn:hover { filter: brightness(1.15); }
 .codebox { font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: var(--mist-2); border: 1px dashed var(--line-2); border-radius: 6px; padding: 8px 10px; word-break: break-all; }
 .bar-mini { height: 5px; border-radius: 3px; background: var(--mist-2); overflow: hidden; min-width: 54px; }
 .bar-mini i { display: block; height: 100%; background: var(--s-loa); }
@@ -616,6 +613,10 @@ table.data tr:last-child td { border-bottom: 0; }
   function agentCommOn(d) { return advancedAP(d) * num(d.agentPct) / 100; }
   function houseCommOn(d) { return advancedAP(d) * num(d.housePct) / 100; }
   function spreadOn(d) { return houseCommOn(d) - agentCommOn(d); }
+  /* The carrier advances 75% of the first year and pays the rest as it is
+     earned. Upfront commission is the house's cut of the advance; total
+     commission is its cut of the whole first year, tail included. */
+  function houseCommFullOn(d) { return num(d.ap) * num(d.housePct) / 100; }
 
   function loaDeals() { return (ui.loa && Array.isArray(ui.loa.deals)) ? ui.loa.deals : []; }
   function loaAgents() { return (ui.loa && Array.isArray(ui.loa.agents)) ? ui.loa.agents : []; }
@@ -655,6 +656,7 @@ table.data tr:last-child td { border-bottom: 0; }
     m.advPaid = paid.reduce(function (t, d) { return t + advancedAP(d); }, 0);
     m.agentCommPaid = paid.reduce(function (t, d) { return t + agentCommOn(d); }, 0);
     m.houseGrossPaid = paid.reduce(function (t, d) { return t + houseCommOn(d); }, 0);
+    m.houseFullPaid = paid.reduce(function (t, d) { return t + houseCommFullOn(d); }, 0);
     m.spreadPaid = m.houseGrossPaid - m.agentCommPaid;
     m.net = m.spreadPaid - m.marketingCost;
     m.placement = ratio(m.apPaid, m.apPaid + m.apLost);
@@ -725,6 +727,21 @@ table.data tr:last-child td { border-bottom: 0; }
       };
     });
   }
+  /* A wiped wallet is credit handed back outside the refund flow — it
+     leaves the P&L the same way a refund does, so it is counted, not
+     folded into refunds where it would hide. */
+  function ltWipes() {
+    var raw = (ui.lt && Array.isArray(ui.lt.wipes)) ? ui.lt.wipes : [];
+    return raw.map(function (x) {
+      return {
+        id: x.id,
+        customer: x.customer || x.customerName || "—",
+        reason: x.reason || x.note || "",
+        amount: num(x.amount != null ? x.amount : x.value) / 100,
+        date: toISODate(x.createdAt || x.date || x.wipedAt)
+      };
+    });
+  }
   function ltCallCount() {
     var raw = (ui.lt && Array.isArray(ui.lt.calls)) ? ui.lt.calls : [];
     return raw.map(function (c) {
@@ -750,6 +767,15 @@ table.data tr:last-child td { border-bottom: 0; }
     m.callsTaken = calls.reduce(function (t, c) { return t + c.count; }, 0);
     m.callCost = m.callsTaken * set.callCost;
     m.net = m.collected - m.refunded - m.callCost;
+
+    /* The call ledger stands on its own: calls bought at cost, sold at
+       price, less everything handed back. Product and subscription
+       revenue is the fulfillment side and is reported separately. */
+    m.wipeRows = ltWipes().filter(function (x) { return inRange(x.date, from, to); });
+    m.wiped = m.wipeRows.reduce(function (t, x) { return t + x.amount; }, 0);
+    m.callRevenue = m.callsTaken * set.callPrice;
+    m.callSpend = m.callCost;
+    m.pnl = m.callRevenue - m.callSpend - m.refunded - m.wiped;
 
     m.done = orders.filter(function (o) { return o.status === "done"; });
     m.open = orders.filter(function (o) { return o.status !== "done"; });
@@ -1110,78 +1136,82 @@ table.data tr:last-child td { border-bottom: 0; }
     var w = rangeWindow();
     var lm = hasLOA() ? loaMetrics(w.from, w.to) : null;
     var tm = hasLT() ? ltMetrics(w.from, w.to) : null;
-    var loaNet = lm ? lm.net : 0, ltNet = tm ? tm.net : 0;
-    var companyNet = loaNet + ltNet;
+    var loaProfit = lm ? lm.net : 0;
+    var ltPnl = tm ? tm.pnl : 0;
+    var companyNet = loaProfit + ltPnl;
+    var days = windowDays(w);
+    var org = loaOrg();
+    var set = ltSettings();
 
-    var out = pageHead("Overview", "Everything the two portals wrote, added up. " + w.label + ".", rangePicker());
+    var out = pageHead("Overview", "Both businesses, three sections, one bottom line. " + w.label + ".", rangePicker());
 
-    /* headline */
-    out += '<div class="headline">';
-    out += '<div class="hero"><p class="eyebrow">Company net · ' + esc(w.label) + "</p>" +
+    /* One figure at the top, the two businesses under it. */
+    out += '<div class="hero" style="margin-bottom:6px"><p class="eyebrow">Company net · ' + esc(w.label) + "</p>" +
       '<span class="v' + (companyNet < 0 ? " neg" : "") + '">' + esc(money(companyNet)) + "</span>" +
-      '<span class="foot">Commission spread and fulfillment revenue, after marketing and refunds.</span>' +
+      '<span class="foot">LOA profit plus the Lead Tech call ledger.</span>' +
       '<div class="split">' +
-        "<div>LOA spread after call spend<b>" + esc(money(loaNet)) + "</b></div>" +
-        "<div>Lead Tech after refunds<b>" + esc(money(ltNet)) + "</b></div>" +
+        "<div>LOA profit<b>" + esc(lm ? money(loaProfit) : "—") + "</b></div>" +
+        "<div>Lead Tech P&amp;L<b>" + esc(tm ? money(ltPnl) : "—") + "</b></div>" +
       "</div></div>";
 
-    out += '<div class="headline-side">';
-    out += tile("src-loa", "LOA written premium", money(lm ? lm.apWritten : 0),
-      lm ? (intf(lm.written) + " policies · " + money(lm.mpWritten) + "/mo") : "not synced");
-    out += tile("src-lt", "Lead Tech collected", money(tm ? tm.collected : 0),
-      tm ? (intf(tm.count) + " orders · " + money(tm.refunded) + " refunded") : "not synced");
-    out += "</div></div>";
-
-    /* second tile row */
-    out += '<div class="tiles">';
-    out += tile("src-loa", "House commission paid", money(lm ? lm.houseGrossPaid : 0), lm ? "on " + money(lm.advPaid) + " advanced" : "—");
-    out += tile("src-loa", "Paid out to agents", money(lm ? lm.agentCommPaid : 0), lm ? intf(lm.paid.length) + " issued & paid" : "—");
-    out += tile("src-loa", "Inbound call spend", money(lm ? lm.marketingCost : 0), lm ? intf(lm.callsTaken) + " calls at " + money(loaOrg().costPerCall) : "—");
-    out += tile("src-lt", "Recurring revenue", money(tm ? tm.mrr : 0), tm ? intf(tm.subs) + " live subscriptions" : "—");
-    out += "</div>";
-
-    /* charts */
-    var b = buildBuckets(chartStart(w), w.to);
-    if (lm) lm.paid.forEach(function (d) { var i = b.index[toISODate(d.date)]; if (i != null) b.buckets[i].loa += spreadOn(d); });
-    if (tm) tm.orders.forEach(function (o) { var i = b.index[o.date]; if (i != null && o.paid) b.buckets[i].lt += o.amount; });
-    if (tm) tm.refunds.forEach(function (r) { var i = b.index[r.date]; if (i != null) b.buckets[i].lt -= r.amount; });
-
-    var series = [];
-    if (lm) series.push({ label: "LOA commission spread", color: "var(--s-loa)", fill: "var(--loa-fill)", values: b.buckets.map(function (x) { return Math.max(0, x.loa); }) });
-    if (tm) series.push({ label: "Lead Tech net revenue", color: "var(--s-lt)", fill: "var(--lt-fill)", values: b.buckets.map(function (x) { return Math.max(0, x.lt); }) });
-
-    out += '<div class="charts c2" style="margin-top:18px">';
-    out += '<section class="panel"><div class="panel-head"><h3>Where the money came from</h3>' +
-      '<span class="note">Both lines are dollars on one scale</span></div><div class="panel-body">' +
-      lineChart(b.buckets, series) + "</div></section>";
-
-    if (lm) {
-      var slices = [
-        { label: "Issued & paid", value: lm.apPaid, color: "var(--paid)" },
-        { label: "Still pending", value: lm.apPending, color: "var(--pipe)" },
-        { label: "Fell off", value: lm.apLost, color: "var(--fell)" }
-      ];
-      out += '<section class="panel"><div class="panel-head"><h3>Written business, by outcome</h3>' +
-        '<span class="note">Annualized premium</span></div><div class="panel-body">' +
-        donut(slices, shortMoney(lm.apWritten), "written AP") +
-        '<p class="hint" style="margin:14px 0 0;font-size:12px;color:var(--muted);text-align:center">Placement rate ' +
-        esc(pct(lm.placement)) + " of everything that settled.</p></div></section>";
-    } else {
+    /* ---- 1. LOA ---- */
+    out += sectionHead("LOA", "What the agency wrote", "Written business and what it cost to feed the producers.");
+    if (!lm) {
       out += notSynced("loa");
-    }
-    out += "</div>";
-
-    /* attention */
-    var items = attentionItems();
-    out += '<div class="section-head"><p class="eyebrow">Needs a look</p><h3>' +
-      (items.length ? esc(intf(items.length)) + " open item" + (items.length === 1 ? "" : "s") : "Nothing needs attention") +
-      "</h3><p class=\"sub\">Money that fell off, payments that failed, orders past their window, and drafts landing in the next seven days.</p></div>";
-    if (!items.length) {
-      out += '<div class="panel"><div class="empty"><strong>All clear</strong><p>No chargebacks, failed payments or overdue deliveries in this range.</p></div></div>';
     } else {
+      out += '<div class="tiles">';
+      out += tile("src-loa", "LOA written premium", money(lm.apWritten), intf(lm.written) + " policies · " + money(lm.mpWritten) + "/mo");
+      out += tile("src-loa", "LOA marketing cost", money(lm.marketingCost), intf(lm.callsTaken) + " inbound calls at " + money(org.costPerCall));
+      out += tile("src-loa", "LOA agent commission", money(lm.agentCommPaid), "paid out on " + intf(lm.paid.length) + " issued policies");
+      out += tile(lm.net >= 0 ? "is-good" : "is-bad", "LOA profit", money(lm.net), "commission spread less marketing", lm.net < 0 ? "neg" : "pos");
+      out += "</div>";
+    }
+
+    /* ---- 2. Brokerage ---- */
+    out += sectionHead("Brokerage", "Thrive Companies brokerage", "The house's own economics on that same business, at the " + esc(org.houseLevel) + "% contract.");
+    if (!lm) {
+      out += '<div class="panel"><div class="empty"><p>Nothing to show until the Producer Desk syncs.</p></div></div>';
+    } else {
+      out += '<div class="tiles">';
+      out += tile("src-loa", "Annual premium written per day", money(lm.apWritten / days), money(lm.apWritten) + " over " + intf(days) + " days");
+      out += tile("src-loa", "Commission paid out to agents", money(lm.agentCommPaid), "the producers' side of the split");
+      out += tile("src-loa", "Thrive upfront commission", money(lm.houseGrossPaid), "on the " + Math.round(org.advanceRate * 100) + "% advance");
+      out += tile("is-key", "Thrive total commission", money(lm.houseFullPaid), "full first year, advance plus as-earned");
+      out += "</div>";
+    }
+
+    /* ---- 3. Lead Tech ---- */
+    out += sectionHead("Lead Tech", "Lead Tech call ledger", "Calls bought at " + money(set.callCost) + ", sold at " + money(set.callPrice) + ", less everything handed back.");
+    if (!tm) {
+      out += notSynced("lt");
+    } else {
+      out += '<div class="tiles t3">';
+      out += tile("src-lt", "Inbound calls taken", intf(tm.callsTaken), intf(tm.callRows.length) + " days logged");
+      out += tile("src-lt", "Total spent on calls", money(tm.callSpend), intf(tm.callsTaken) + " at " + money(set.callCost));
+      out += tile("src-lt", "Total cash collected", money(tm.callRevenue), intf(tm.callsTaken) + " at " + money(set.callPrice));
+      out += tile("is-warn", "Total refunds", money(tm.refunded), intf(tm.refunds.length) + " refunds");
+      out += tile("is-warn", "Total wiped wallet", money(tm.wiped), intf(tm.wipeRows.length) + " wipes");
+      out += tile(tm.pnl >= 0 ? "is-good" : "is-bad", "Lead Tech profit & loss", money(tm.pnl), "collected less spend, refunds and wipes", tm.pnl < 0 ? "neg" : "pos");
+      out += "</div>";
+      if (tm.collected > 0) {
+        out += '<p style="margin:12px 0 0;font-size:12.5px;color:var(--muted);max-width:70ch">' +
+          "Product and subscription orders are the fulfillment side and are not in this ledger — " +
+          esc(money(tm.collected)) + ' collected across ' + esc(intf(tm.count)) + ' orders sits on the ' +
+          '<button class="linkbtn" data-act="tab" data-tab="lt">Lead Tech</button> tab.</p>';
+      }
+    }
+
+    /* ---- what needs a look ---- */
+    var items = attentionItems();
+    if (items.length) {
+      out += '<div class="section-head"><p class="eyebrow">Needs a look</p><h3>' +
+        esc(intf(items.length)) + " open item" + (items.length === 1 ? "" : "s") + "</h3>" +
+        '<p class="sub">Chargebacks and failed payments, orders past their window, and drafts landing in the next seven days — itemised on the ' +
+        '<button class="linkbtn" data-act="tab" data-tab="loa">LOA Production</button> and ' +
+        '<button class="linkbtn" data-act="tab" data-tab="lt">Lead Tech</button> tabs.</p></div>';
       out += '<div class="panel"><div class="panel-body flush"><div class="tblwrap"><table class="data">' +
         "<thead><tr><th>Date</th><th>Source</th><th>What</th><th>Who</th><th class=\"n\">At stake</th></tr></thead><tbody>";
-      items.slice(0, 25).forEach(function (it) {
+      items.slice(0, 8).forEach(function (it) {
         out += "<tr><td class=\"nowrap dim\">" + esc(prettyDate(it.when)) + "</td>" +
           '<td><span class="pill ' + (it.source === "LOA" ? "key" : "") + '">' + esc(it.source) + "</span></td>" +
           '<td><span class="pill ' + it.tone + '">' + esc(it.what) + "</span></td>" +
@@ -1189,10 +1219,17 @@ table.data tr:last-child td { border-bottom: 0; }
           '<td class="n">' + esc(money(Math.abs(it.value))) + "</td></tr>";
       });
       out += "</tbody></table></div>";
-      if (items.length > 25) out += '<div class="panel-body" style="border-top:1px solid var(--line)"><span class="note" style="color:var(--muted);font-size:12px">Showing the 25 most recent of ' + esc(intf(items.length)) + ".</span></div>";
+      if (items.length > 8) {
+        out += '<div class="panel-body" style="border-top:1px solid var(--line)"><span style="color:var(--muted);font-size:12px">The 8 most recent of ' + esc(intf(items.length)) + ".</span></div>";
+      }
       out += "</div></div>";
     }
     return out;
+  }
+
+  function sectionHead(eyebrow, title, sub) {
+    return '<div class="section-head"><p class="eyebrow">' + esc(eyebrow) + "</p>" +
+      "<h3>" + esc(title) + '</h3><p class="sub">' + sub + "</p></div>";
   }
 
   function pageHead(title, sub, right) {
@@ -1358,7 +1395,9 @@ table.data tr:last-child td { border-bottom: 0; }
     out += '<div class="tiles">';
     out += tile("src-lt", "Collected", money(m.collected), intf(m.count) + " orders");
     out += tile("src-lt", "Refunded", money(m.refunded), intf(m.refunds.length) + " refunds");
-    out += tile(m.net >= 0 ? "is-good" : "is-bad", "Net revenue", money(m.net), "after refunds and call cost", m.net < 0 ? "neg" : "pos");
+    /* Named for what it is, so it is never mistaken for the call-ledger
+       P&L on the Overview — different inputs, different question. */
+    out += tile(m.net >= 0 ? "is-good" : "is-bad", "Fulfillment net", money(m.net), "order revenue after refunds and call cost", m.net < 0 ? "neg" : "pos");
     out += tile("src-lt", "Recurring revenue", money(m.mrr), intf(m.subs) + " live subscriptions");
     out += tile(m.onTimePct == null ? "src-lt" : (m.onTimePct >= 90 ? "is-good" : "is-warn"),
       "Delivered on time", m.onTimePct == null ? "—" : pct(m.onTimePct), intf(m.done.length) + " completed in range");
@@ -1705,8 +1744,13 @@ table.data tr:last-child td { border-bottom: 0; }
       settings: { callCost: s.callCost, callPrice: s.callPrice, pastDueHours: s.pastDueHours, archiveAfterDays: s.archiveAfterDays },
       products: o.products || [], refundTypes: o.refundTypes || [],
       orders: o.orders || [], refunds: o.refunds || [],
-      customers: o.customers || [], calls: o.calls || []
+      customers: o.customers || [], calls: o.calls || [], wipes: o.wipes || []
     };
+  }
+  function windowDays(w) {
+    var from = w.from === "0000-01-01" ? chartStart(w) : w.from;
+    var d = Math.round((new Date(w.to + "T12:00:00") - new Date(from + "T12:00:00")) / 86400000) + 1;
+    return d > 0 ? d : 1;
   }
 
   function doImport() {
