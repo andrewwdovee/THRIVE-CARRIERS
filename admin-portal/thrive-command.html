@@ -1473,10 +1473,10 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       out += '<div class="tiles t5">';
       out += tile("src-loa", "Annual premium written per day", money(lm.apWritten / days), money(lm.apWritten) + " over " + intf(days) + " days");
       out += tile("src-loa", "Commission paid out to agents", money(lm.agentCommPaid), "the producers' side of the split");
-      out += tile("is-good", "Thrive upfront commission", money(lm.houseGrossPaid), "on the " + Math.round(org.advanceRate * 100) + "% advance", "pos");
+      out += tile("src-loa", "Thrive upfront commission", money(lm.houseGrossPaid), "on the " + Math.round(org.advanceRate * 100) + "% advance");
       out += tile("is-key", "Thrive total commission", money(lm.houseFullPaid), "full first year, advance plus as-earned");
       out += tile("is-good", "Thrive commission spread", money(brokerageSpread(lm.apWritten)),
-        spreadLabel() + " of written premium");
+        spreadLabel() + " of written premium", "pos");
       out += "</div>";
     }
 
@@ -1492,7 +1492,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       out += tile("src-lt", "Total cash collected", money(tm.callRevenue), intf(tm.callsSold) + " sold at " + money(set.callPrice));
       out += tile("is-warn", "Total refunds", money(tm.refunded),
         tm.callsRefunded ? intf(tm.callsRefunded) + " calls refunded" : intf(tm.refunds.length) + " refunds");
-      out += tile("is-good", "Total wiped wallet", money(tm.wiped), intf(tm.wipeRows.length) + " wipes — credit kept, no calls owed");
+      out += tile("is-good", "Total wiped wallet", money(tm.wiped), intf(tm.wipeRows.length) + " wipes — unspent balance Lead Tech keeps", tm.wiped > 0 ? "pos" : "");
       out += tile(tm.pnl >= 0 ? "is-good" : "is-bad", "Lead Tech profit & loss", money(tm.pnl), "collected and wipes, less spend and refunds", tm.pnl < 0 ? "neg" : "pos");
       out += "</div>";
       if (tm.collected > 0) {
@@ -1797,9 +1797,10 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     out += tile("src-lt", "Spent", money(m.callSpend), "cash out buying calls");
     out += tile("src-lt", "Calls sold", intf(m.callsSold), "agents bought these at " + money(set.callPrice));
     out += tile("src-lt", "Calls purchased", intf(m.callsBought), "Lead Tech bought these at " + money(set.callCost));
+    out += tile(m.wiped > 0 ? "is-good" : "src-lt", "Wallet wipes", money(m.wiped),
+      intf(m.wipeRows.length) + " wipes — unspent balance kept", m.wiped > 0 ? "pos" : "");
     out += tile(m.refunded > 0 ? "is-warn" : "src-lt", "Total refunds", money(m.refunded),
       (m.callsRefunded ? intf(m.callsRefunded) + " calls refunded" : intf(m.refunds.length) + " refunds"));
-    out += tile(m.wiped > 0 ? "is-good" : "src-lt", "Wallet wipes", money(m.wiped), intf(m.wipeRows.length) + " wipes — credit kept");
     out += '<div class="span2">' +
       tile(m.pnl >= 0 ? "is-good" : "is-bad", "Fulfillment net", money(m.pnl),
         "collected and wallet wipes, less spent and refunds", m.pnl < 0 ? "neg" : "pos") +
@@ -1932,9 +1933,9 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
 
     out += '<div class="tiles">';
     out += tile("src-loa", "Brokerage annual premium", lm ? money(lm.apWritten) : "—", lm ? intf(lm.written) + " policies written" : "—");
-    out += tile("is-good", "Brokerage spread", lm ? money(brokerageSpread(lm.apWritten)) : "—", spreadLabel() + " house rate on written premium");
+    out += tile("is-good", "Brokerage spread", lm ? money(brokerageSpread(lm.apWritten)) : "—", spreadLabel() + " house rate on written premium", lm ? "pos" : "");
     out += tile("is-key", "Total commissions", lm ? money(lm.houseFullPaid) : "—", "full first year, advance plus as-earned");
-    out += tile("is-good", "Upfront commissions", lm ? money(lm.houseGrossPaid) : "—", "the share the carrier has already advanced", lm ? "pos" : "");
+    out += tile("src-loa", "Upfront commissions", lm ? money(lm.houseGrossPaid) : "—", "the share the carrier has already advanced");
     out += "</div>";
 
     /* ---- the P&L itself ---- */
