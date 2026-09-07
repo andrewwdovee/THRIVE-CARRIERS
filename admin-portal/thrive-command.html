@@ -1005,8 +1005,36 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     return raw.map(function (c) {
       var bought = c.billable != null ? num(c.billable) : (c.bought != null ? num(c.bought) : num(c.calls));
       var sold = c.sold != null ? num(c.sold) : num(c.calls);
-      return { id: c.id, date: toISODate(c.day || c.date || c.at), bought: bought, sold: sold };
+      return {
+        id: c.id,
+        date: toISODate(c.day || c.date || c.at),
+        bought: bought,
+        sold: sold,
+        /* Thrive Companies production, logged on the same daily row. Money
+           comes across in cents like everything else the board stores. */
+        deals: num(c.deals),
+        avgMp: num(c.avgMp) / 100
+      };
     }).filter(function (c) { return !!c.date; });
+  }
+
+  /* Thrive Companies, from the daily log: how many deals were sold and
+     what the average one was worth a month. The average is weighted by
+     the deals behind it — a day with one deal and a day with twenty are
+     not two numbers to be averaged together. */
+  function brokerageMetrics(from, to) {
+    var rows = ltCalls().filter(function (c) { return inRange(c.date, from, to) && c.deals > 0; });
+    var m = { rows: rows };
+    m.deals = rows.reduce(function (t, c) { return t + c.deals; }, 0);
+    m.mpTotal = rows.reduce(function (t, c) { return t + c.deals * c.avgMp; }, 0);
+    m.avgMp = m.deals > 0 ? m.mpTotal / m.deals : 0;
+    m.apTotal = m.mpTotal * 12;
+    return m;
+  }
+
+  /* Nothing has been logged for it yet if no day carries a deal count. */
+  function hasBrokerage() {
+    return ltCalls().some(function (c) { return c.deals > 0; });
   }
 
   function ltMetrics(from, to) {
@@ -1480,8 +1508,20 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     }
 
     /* ---- 2. Brokerage ---- */
-    out += sectionHead("Brokerage", "Thrive Companies brokerage", "Its own book, once it has a source here.");
-    out += brokerageNotConnected();
+    if (!hasBrokerage()) {
+      out += sectionHead("Brokerage", "Thrive Companies brokerage", "Its own book, once it has a source here.");
+      out += brokerageNotConnected();
+    } else {
+      var bm = brokerageMetrics(w.from, w.to);
+      var pbm = brokerageMetrics(pw.from, pw.to);
+      out += sectionHead("Brokerage", "Thrive Companies brokerage", "Deals sold and what the average one is worth, logged day by day.",
+        growthChip(bm.deals, pbm.deals, "deals sold", pw.label));
+      out += '<div class="tiles t3">';
+      out += tile("src-loa", "Total deals sold", intf(bm.deals), bm.rows.length + " day" + (bm.rows.length === 1 ? "" : "s") + " logged \u00b7 " + w.label.toLowerCase());
+      out += tile("src-loa", "Average deal monthly premium", money(bm.avgMp, 2), "weighted across those deals");
+      out += tile("is-good", "Annual premium written", money(bm.apTotal), money(bm.mpTotal) + "/mo \u00d7 12", "pos");
+      out += "</div>";
+    }
 
     /* ---- 3. Lead Tech ---- */
     out += sectionHead("Lead Tech", "Lead Tech Google Calls", "Calls bought at " + money(set.callCost) + ", sold at " + money(set.callPrice) + ", less everything handed back.",
@@ -1911,9 +1951,20 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     out += lifetimePanel("company", "Company profit, day by day");
     out += "</div>";
 
-    out += '<div class="section-head"><div><p class="eyebrow">Brokerage</p><h3>The brokerage book</h3>' +
-      '<p class="sub">Its own numbers, once it has a source here.</p></div></div>';
-    out += brokerageNotConnected();
+    if (!hasBrokerage()) {
+      out += '<div class="section-head"><div><p class="eyebrow">Brokerage</p><h3>The brokerage book</h3>' +
+        '<p class="sub">Its own numbers, once it has a source here.</p></div></div>';
+      out += brokerageNotConnected();
+    } else {
+      var bm = brokerageMetrics(w.from, w.to);
+      out += '<div class="section-head"><div><p class="eyebrow">Brokerage</p><h3>The brokerage book</h3>' +
+        '<p class="sub">Deals sold and the average monthly premium behind them, logged day by day.</p></div></div>';
+      out += '<div class="tiles t3">';
+      out += tile("src-loa", "Total deals sold", intf(bm.deals), bm.rows.length + " day" + (bm.rows.length === 1 ? "" : "s") + " logged");
+      out += tile("src-loa", "Average deal monthly premium", money(bm.avgMp, 2), "weighted across those deals");
+      out += tile("is-good", "Annual premium written", money(bm.apTotal), money(bm.mpTotal) + "/mo \u00d7 12", "pos");
+      out += "</div>";
+    }
 
     /* ---- the P&L itself ---- */
     out += '<div class="section-head"><p class="eyebrow">Profit and loss</p><h3>Where the money went</h3>' +
