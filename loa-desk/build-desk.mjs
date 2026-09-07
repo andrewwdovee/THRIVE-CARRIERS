@@ -35,9 +35,14 @@ if (!/^https:\/\//.test(relay)) {
   process.exit(1);
 }
 
-const contentPath = join(here, "_desk-content.html");
+/* desk-app.html ships in git with an empty state — the live record comes
+   from the relay, so nothing about a real book of business needs to be in
+   a public repository. _desk-content.html, if present, is a local copy
+   that still has its baked-in state and wins. */
+let contentPath = join(here, "_desk-content.html");
+if (!existsSync(contentPath)) contentPath = join(here, "desk-app.html");
 if (!existsSync(contentPath)) {
-  console.error(`Missing ${contentPath} — that is the desk's own content, kept out of git.`);
+  console.error(`Missing both _desk-content.html and desk-app.html in ${here}.`);
   process.exit(1);
 }
 
