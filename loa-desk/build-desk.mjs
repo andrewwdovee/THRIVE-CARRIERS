@@ -49,6 +49,11 @@ if (!existsSync(contentPath)) {
 const content = readFileSync(contentPath, "utf8");
 const storage = readFileSync(join(here, "relay-storage.js"), "utf8");
 
+/* The desk's stylesheet. It lived in the artifact's <head>, so lifting the
+   body out on its own left the page unstyled — and the desk's own
+   republish path reads this element by id, so it has to keep that id. */
+const style = readFileSync(join(here, "desk-style.css"), "utf8");
+
 /* The storage layer must be defined before the desk's own code runs, and
    the desk reads its state from a script block that has to survive. */
 const html = `<!doctype html>
@@ -60,7 +65,7 @@ const html = `<!doctype html>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<style>html,body{margin:0;padding:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<style id="tc-style">${style}</style>
 <script>
 window.THRIVE_RELAY = ${JSON.stringify(relay)};
 window.THRIVE_DESK_TOKEN = ${JSON.stringify(token)};
