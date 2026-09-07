@@ -20,14 +20,29 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const relay = (process.argv[2] || "").replace(/\/+$/, "");
-const token = process.argv[3] || "";
+
+/* Rebuilding is the common case — a fix to the page, not a change of
+   relay — so when the arguments are left off, take them from the last
+   build. It saves hunting down the token, and a token retyped from
+   memory is a token typed wrong. */
+function fromLastBuild(name) {
+  const built = join(here, "dist", "index.html");
+  if (!existsSync(built)) return "";
+  const m = readFileSync(built, "utf8").match(new RegExp(`window\\.${name} = ("(?:[^"\\\\]|\\\\.)*")`));
+  try { return m ? JSON.parse(m[1]) : ""; } catch { return ""; }
+}
+
+const relay = (process.argv[2] || fromLastBuild("THRIVE_RELAY")).replace(/\/+$/, "");
+const token = process.argv[3] || fromLastBuild("THRIVE_DESK_TOKEN");
 
 if (!relay || !token) {
-  console.error(`Usage: node build-desk.mjs <relay-url> <desk-token>
+  console.error(`Usage: node build-desk.mjs [relay-url] [desk-token]
 
   relay-url    https://stripe-sync.<subdomain>.workers.dev
-  desk-token   the value you set with: wrangler secret put DESK_TOKEN`);
+  desk-token   the value you set with: wrangler secret put DESK_TOKEN
+
+Both are optional once you have built here before — they are read back
+from dist/index.html. There is no previous build to read them from.`);
   process.exit(1);
 }
 if (!/^https:\/\//.test(relay)) {
