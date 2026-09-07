@@ -1429,7 +1429,6 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     var loaProfit = lm ? lm.net : 0;
     var ltPnl = tm ? tm.pnl : 0;
     var companyNet = loaProfit + ltPnl;
-    var days = windowDays(w);
     /* The same three figures over the period before this one, so each
        section can say which way it is moving. */
     var pw = priorWindow(w);
@@ -1471,7 +1470,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       out += '<div class="panel"><div class="empty"><p>Nothing to show until the Producer Desk syncs.</p></div></div>';
     } else {
       out += '<div class="tiles t5">';
-      out += tile("src-loa", "Annual premium written per day", money(lm.apWritten / days), money(lm.apWritten) + " over " + intf(days) + " days");
+      out += tile("src-loa", "Total annual premium", money(lm.apWritten), intf(lm.written) + " policies written \u00b7 " + w.label.toLowerCase());
       out += tile("src-loa", "Commission paid out to agents", money(lm.agentCommPaid), "the producers' side of the split");
       out += tile("src-loa", "Thrive upfront commission", money(lm.houseGrossPaid), "on the " + Math.round(org.advanceRate * 100) + "% advance");
       out += tile("is-key", "Thrive total commission", money(lm.houseFullPaid), "full first year, advance plus as-earned");
