@@ -844,6 +844,10 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
   /* The brokerage's blended take on everything written, at the house
      rate — not the per-deal spread, which each carrier's schedule
      decides. */
+  /* Unused while Thrive Companies is unconnected — the brokerage figures
+     it fed were estimates drawn from LOA production, and are blank until
+     that business has a source here. The setting it reads is still on the
+     Sync tab, so this is waiting rather than dead. */
   function brokerageSpread(apWritten) { return num(apWritten) * spreadPct() / 100; }
   /* 10, not 10.0 — but 12.5 keeps its half. */
   function spreadLabel() {
@@ -1412,6 +1416,18 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       "</div></div>";
   }
 
+  /* Thrive Companies is its own business with its own books. What used to
+     stand in for it here was LOA production re-costed at the house
+     contract — an estimate of one business from another's numbers, which
+     is not the same thing and read as though it were measured. It stays
+     blank until its own source is connected. */
+  function brokerageNotConnected() {
+    return '<div class="panel"><div class="empty">' +
+      "<strong>Thrive Companies is not connected yet</strong>" +
+      "<p>These figures were being estimated from LOA production at the house contract, which is a different business. They will appear here once Thrive Companies has a source of its own.</p>" +
+      "</div></div>";
+  }
+
   /* ---------------------------------------------------------- Overview */
   function pageOverview() {
     if (!hasLOA() && !hasLT()) {
@@ -1464,20 +1480,8 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     }
 
     /* ---- 2. Brokerage ---- */
-    out += sectionHead("Brokerage", "Thrive Companies brokerage", "The house's own economics on that same business, at the " + esc(org.houseLevel) + "% contract.",
-      lm ? growthChip(lm.apWritten, plm ? plm.apWritten : 0, "written premium", pw.label) : "");
-    if (!lm) {
-      out += '<div class="panel"><div class="empty"><p>Nothing to show until the Producer Desk syncs.</p></div></div>';
-    } else {
-      out += '<div class="tiles t5">';
-      out += tile("src-loa", "Total annual premium", money(lm.apWritten), intf(lm.written) + " policies written \u00b7 " + w.label.toLowerCase());
-      out += tile("src-loa", "Commission paid out to agents", money(lm.agentCommPaid), "the producers' side of the split");
-      out += tile("src-loa", "Thrive upfront commission", money(lm.houseGrossPaid), "on the " + Math.round(org.advanceRate * 100) + "% advance");
-      out += tile("is-key", "Thrive total commission", money(lm.houseFullPaid), "full first year, advance plus as-earned");
-      out += tile("is-good", "Thrive commission spread", money(brokerageSpread(lm.apWritten)),
-        spreadLabel() + " of written premium", "pos");
-      out += "</div>";
-    }
+    out += sectionHead("Brokerage", "Thrive Companies brokerage", "Its own book, once it has a source here.");
+    out += brokerageNotConnected();
 
     /* ---- 3. Lead Tech ---- */
     out += sectionHead("Lead Tech", "Lead Tech Google Calls", "Calls bought at " + money(set.callCost) + ", sold at " + money(set.callPrice) + ", less everything handed back.",
@@ -1907,12 +1911,9 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     out += lifetimePanel("company", "Company profit, day by day");
     out += "</div>";
 
-    out += '<div class="tiles">';
-    out += tile("src-loa", "Brokerage annual premium", lm ? money(lm.apWritten) : "—", lm ? intf(lm.written) + " policies written" : "—");
-    out += tile("is-good", "Brokerage spread", lm ? money(brokerageSpread(lm.apWritten)) : "—", spreadLabel() + " house rate on written premium", lm ? "pos" : "");
-    out += tile("is-key", "Total commissions", lm ? money(lm.houseFullPaid) : "—", "full first year, advance plus as-earned");
-    out += tile("src-loa", "Upfront commissions", lm ? money(lm.houseGrossPaid) : "—", "the share the carrier has already advanced");
-    out += "</div>";
+    out += '<div class="section-head"><div><p class="eyebrow">Brokerage</p><h3>The brokerage book</h3>' +
+      '<p class="sub">Its own numbers, once it has a source here.</p></div></div>';
+    out += brokerageNotConnected();
 
     /* ---- the P&L itself ---- */
     out += '<div class="section-head"><p class="eyebrow">Profit and loss</p><h3>Where the money went</h3>' +
@@ -1931,14 +1932,13 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       '<thead><tr><th>Line</th><th class="n">Amount</th><th></th></tr></thead><tbody>';
 
     if (lm) {
-      out += '<tr><td colspan="3" style="background:var(--mist);font-family:\'IBM Plex Mono\',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)">LOA brokerage</td></tr>';
+      out += '<tr><td colspan="3" style="background:var(--mist);font-family:\'IBM Plex Mono\',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)">LOA program</td></tr>';
       out += plRow("Written premium", intf(lm.written) + " policies written", lm.apWritten, "memo");
       out += plRow("Thrive upfront commission", "house cut of the " + Math.round(loaOrg().advanceRate * 100) + "% advance", lm.houseGrossPaid, "in");
       out += plRow("Agent commission", "paid out to producers", -lm.agentCommPaid, "out");
       out += plRow("Inbound call spend", intf(lm.callsTaken) + " calls at " + money(loaOrg().costPerCall), -lm.marketingCost, "out");
       out += plRow("LOA profit", "", loaProfit, "total");
       out += plRow("First-year commission still to be earned", "paid by the carrier as the policy earns", tail, "memo");
-      out += plRow("Brokerage spread at the house rate", spreadLabel() + " of written premium — the blended figure, not the per-deal maths above", brokerageSpread(lm.apWritten), "memo");
     }
     if (tm) {
       var set = ltSettings();
@@ -2033,9 +2033,8 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     out += "</div>";
 
     out += '<div class="section-head"><p class="eyebrow">House rates</p><h3>Brokerage settings</h3>' +
-      '<p class="sub">The blended rate Thrive takes on the brokerage side. It drives the ' +
-      "<b>Thrive commission spread</b> figure on the Overview and the Thrive Companies tab. " +
-      "Per-deal commission is untouched by this — that always comes from each carrier's own schedule.</p></div>";
+      '<p class="sub">The blended rate Thrive takes on the brokerage side. It is kept here for when Thrive Companies has a source of its own — nothing on the dashboards reads it yet, because those figures are blank until then. ' +
+      "Per-deal commission is untouched by this either way — that always comes from each carrier's own schedule.</p></div>";
     out += '<div class="panel"><div class="panel-body">' +
       '<div class="filters top" style="margin-bottom:0">' +
         '<div class="field" style="max-width:220px"><label for="spreadpct">Commission spread</label>' +
