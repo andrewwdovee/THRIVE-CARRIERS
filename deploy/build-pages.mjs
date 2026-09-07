@@ -11,15 +11,29 @@
  * Writes deploy/dist/index.html.
  */
 
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const relay = (process.argv[2] || "").replace(/\/+$/, "");
+
+/* Rebuilding to pick up a change to the console is the common case, and
+   the relay is the same one as last time. Read it back rather than make
+   someone find the URL again. */
+function relayFromLastBuild() {
+  const built = join(here, "dist", "index.html");
+  if (!existsSync(built)) return "";
+  const m = readFileSync(built, "utf8").match(/window\.THRIVE_RELAY = ("(?:[^"\\]|\\.)*")/);
+  try { return m ? JSON.parse(m[1]) : ""; } catch { return ""; }
+}
+
+const relay = (process.argv[2] || relayFromLastBuild()).replace(/\/+$/, "");
 
 if (!relay) {
-  console.error("Usage: node build-pages.mjs https://thrive-relay.<subdomain>.workers.dev");
+  console.error(`Usage: node build-pages.mjs [relay-url]
+
+The URL is optional once you have built here before — it is read back
+from dist/index.html. There is no previous build to read it from.`);
   process.exit(1);
 }
 if (!/^https:\/\//.test(relay)) {

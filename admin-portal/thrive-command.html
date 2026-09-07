@@ -207,9 +207,20 @@ a { color: var(--sky); }
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; flex-wrap: wrap; margin-bottom: 18px; }
 .page-head h2 { margin: 3px 0 0; font-size: 22px; font-weight: 700; letter-spacing: -.015em; text-wrap: balance; }
 .page-head .sub { margin: 4px 0 0; color: var(--muted); font-size: 13px; max-width: 66ch; }
-.section-head { margin: 34px 0 16px; padding-top: 26px; border-top: 1px solid var(--line); }
+.section-head { margin: 34px 0 16px; padding-top: 26px; border-top: 1px solid var(--line);
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
 .section-head h3 { margin: 3px 0 0; font-size: 17px; font-weight: 700; letter-spacing: -.012em; }
 .section-head .sub { margin: 4px 0 0; color: var(--muted); font-size: 13px; max-width: 70ch; line-height: 1.6; }
+/* Period-on-period change, at the right-hand end of a section head. The
+   figure carries the colour; the line under it says what it measures,
+   because a bare percentage beside a title invites the wrong reading. */
+.growth { text-align: right; flex: none; }
+.growth .g { display: block; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums;
+  font-size: 19px; font-weight: 600; letter-spacing: -.02em; line-height: 1.15; }
+.growth .g.up { color: var(--good); }
+.growth .g.down { color: var(--bad); }
+.growth .g.flat { color: var(--muted); }
+.growth .gn { display: block; margin-top: 2px; font-size: 11px; color: var(--muted); white-space: nowrap; }
 
 /* ---------- controls ---------- */
 .btn {
@@ -226,7 +237,9 @@ a { color: var(--sky); }
 
 /* The range picker is a segmented control, not five loose buttons —
    it is one setting with five positions. */
-.seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: 7px; overflow: hidden; background: var(--paper); }
+/* Five options now rather than three, so it has to be allowed to wrap on
+   a narrow screen instead of being clipped by the rounded corners. */
+.seg { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; border: 1px solid var(--line-2); border-radius: 7px; overflow: hidden; background: var(--paper); }
 .seg button {
   padding: 6px 12px 7px; font-size: 12px; font-weight: 600; color: var(--muted);
   border-right: 1px solid var(--line);
@@ -241,6 +254,10 @@ a { color: var(--sky); }
 /* The range control and its custom dates, right-aligned in the page head
    so it sits in the same place on every tab. */
 .rangebox { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+/* Refresh and the range control share the right-hand end of the page
+   head; the button aligns to the top so it sits level with the range
+   buttons rather than with the date inputs under them. */
+.headtools { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 .daterow { display: flex; gap: 8px; flex-wrap: wrap; }
 .daterow label { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted); }
 .daterow input { padding: 5px 8px; font-size: 12.5px; width: auto; }
@@ -312,6 +329,9 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 .hero .eyebrow { color: #8FA8C4; }
 .hero .v { display: block; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-size: 38px; font-weight: 600; letter-spacing: -.03em; line-height: 1.05; margin-top: 7px; }
 .hero .v.neg { color: #F08276; }
+/* Sits on the navy card, so it has to be lighter than the tile green to
+   hold its contrast against that background. */
+.hero .v.pos { color: #67DDAF; }
 .hero .foot { display: block; margin-top: 7px; font-size: 12px; color: #A9BDD4; }
 /* When the hero is stretched to match a chart beside it, the supporting
    figures drop to the bottom rather than leaving a hole under them. */
@@ -552,9 +572,14 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
   };
   var LOA_ALIAS = { submitted: "underwriting", not_taken: "declined", withdrawn: "declined", lapsed: "chargeback" };
 
+  /* The Producer Desk offers month-to-date and all time; without the same
+     two here the two apps can never be pointed at the same window, and
+     the totals disagree for no better reason than that. */
   var RANGES = [
     { k: "d7",     label: "7 days" },
     { k: "d30",    label: "30 days" },
+    { k: "mtd",    label: "Month to date" },
+    { k: "all",    label: "All time" },
     { k: "custom", label: "Custom" }
   ];
 
@@ -686,6 +711,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     signedIn: false,      /* relay mode only — the relay's own session */
     relayUser: "",
     booting: true,
+    refreshing: false,
     dbError: null,
     owner: null,          /* {salt, hash, iter} or null before it is set */
     settings: null,       /* {brokerageSpreadPct} — owner-editable */
@@ -755,9 +781,34 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     if (h < 48) return Math.round(h) + "h ago";
     return Math.round(h / 24) + "d ago";
   }
+  /* The earliest and latest dates on record across both portals. "All
+     time" resolves to these rather than to sentinel dates, because a
+     window of 0000 to 9999 is not a window anything can divide by: it
+     turned "premium written per day" into $0. */
+  function recordSpan() {
+    var first = "", last = "";
+    function seen(x) {
+      if (!x) return;
+      if (!first || x < first) first = x;
+      if (!last || x > last) last = x;
+    }
+    loaDeals().forEach(function (d) { seen(toISODate(d.date)); });
+    loaCalls().forEach(function (c) { seen(toISODate(c.date)); });
+    ltCalls().forEach(function (c) { seen(c.date); });
+    ltRefunds().forEach(function (r) { seen(r.date); });
+    ltWipes().forEach(function (x) { seen(x.date); });
+    ltOrders().forEach(function (o) { seen(o.date); });
+    return { first: first, last: last };
+  }
+
   function rangeWindow() {
     var t = todayISO();
     if (ui.range === "d7") return { from: addDays(t, -6), to: t, label: "Last 7 days" };
+    if (ui.range === "mtd") return { from: t.slice(0, 8) + "01", to: t, label: "Month to date" };
+      if (ui.range === "all") {
+      var span = recordSpan();
+      return { from: span.first || addDays(t, -29), to: span.last > t ? span.last : t, label: "All time" };
+    }
     if (ui.range === "custom") {
       var f = ui.customFrom || addDays(t, -89);
       var to = ui.customTo || t;
@@ -925,9 +976,11 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       };
     });
   }
-  /* A wiped wallet is credit handed back outside the refund flow — it
-     leaves the P&L the same way a refund does, so it is counted, not
-     folded into refunds where it would hide. */
+  /* A wiped wallet is unspent credit cleared off a customer's balance.
+     Unlike a refund, the cash was collected and stays collected — what
+     ends is the obligation to deliver calls against it. So it lands on
+     the profit side of the P&L, kept separate from call revenue rather
+     than folded into it, because it is money earned without a call. */
   function ltWipes() {
     var raw = (ui.lt && Array.isArray(ui.lt.wipes)) ? ui.lt.wipes : [];
     return raw.map(function (x) {
@@ -976,7 +1029,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
 
     m.wipeRows = ltWipes().filter(function (x) { return inRange(x.date, from, to); });
     m.wiped = m.wipeRows.reduce(function (t, x) { return t + x.amount; }, 0);
-    m.pnl = m.callRevenue - m.callSpend - m.refunded - m.wiped;
+    m.pnl = m.callRevenue + m.wiped - m.callSpend - m.refunded;
     m.margin = m.callRevenue > 0 ? ratio(m.pnl, m.callRevenue) : null;
     m.net = m.pnl;
 
@@ -1001,7 +1054,13 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
   }
 
   function hasLOA() { return !!(ui.loa && loaDeals().length + loaAgents().length > 0); }
-  function hasLT()  { return !!(ui.lt && (ltOrders().length + ltProducts().length) > 0); }
+  /* The call ledger is the whole Lead Tech P&L, and a board can carry one
+     without a single fulfillment order — so counting only orders and
+     products reported a live board as never synced. */
+  function hasLT()  {
+    return !!(ui.lt && (ltOrders().length + ltProducts().length +
+      ltCalls().length + ltRefunds().length + ltWipes().length) > 0);
+  }
 
   /* ------------------------------------------------------------- charts */
   /* Charts are emitted as HTML strings, so their data cannot ride on the
@@ -1265,13 +1324,49 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
   var REFRESH_RELAY_MS = 60 * 1000;
   function refreshInterval() { return store && store.mode === "relay" ? REFRESH_RELAY_MS : REFRESH_ARTIFACT_MS; }
   function refreshData() {
-    if (!db) return;
-    store.get(SOURCES.loa.doc).then(function (d) { ui.loa = d; render(); }).catch(function () {});
-    store.get(SOURCES.lt.doc).then(function (d) { ui.lt = d; render(); }).catch(function () {});
+    /* `db` is the artifact database and is null on the relay build, so
+       gating on it here meant the poll did nothing on the deployed
+       console — it only ever picked up changes on a page reload. The
+       store is what both homes have. */
+    if (!store) return Promise.resolve();
+    /* One render once both have landed, rather than one each: the two
+       arriving a moment apart made the page jump twice. */
+    return Promise.all([
+      store.get(SOURCES.loa.doc).then(function (d) { ui.loa = d; }).catch(function () {}),
+      store.get(SOURCES.lt.doc).then(function (d) { ui.lt = d; }).catch(function () {})
+    ]).then(function () { render(); });
+  }
+
+  /* The poll is every minute on the relay and every fifteen on the
+     artifact, which is fine for watching and too slow for checking. This
+     is for the moment you have just saved something in a portal and want
+     to see it here now. */
+  function refreshNow() {
+    if (ui.refreshing || !store) return;
+    ui.refreshing = true;
+    render();
+    var startedAt = Date.now();
+    refreshData().then(function () {
+      /* A label that appears and vanishes inside 50ms reads as nothing
+         having happened at all, so let it be seen. */
+      setTimeout(function () {
+        ui.refreshing = false;
+        render();
+        toast("Refreshed");
+      }, Math.max(0, 450 - (Date.now() - startedAt)));
+    });
+  }
+
+  function refreshButton() {
+    /* Nothing to refresh from before a store is open — offering a button
+       that silently does nothing is worse than not offering one. */
+    if (!store) return "";
+    return '<button class="btn ghost sm" data-act="refresh"' +
+      (ui.refreshing ? ' disabled aria-busy="true"' : "") + '>' +
+      (ui.refreshing ? "Refreshing\u2026" : "Refresh") + "</button>";
   }
 
   function rail() {
-    var alerts = attentionItems().length;
     var tabs = [
       { k: "overview", label: "Overview" },
       { k: "loa", label: "LOA Program" },
@@ -1282,9 +1377,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     var out = '<nav class="rail"><div class="rail-in">';
     tabs.forEach(function (t) {
       out += '<button data-act="tab" data-tab="' + t.k + '"' + (ui.tab === t.k ? ' aria-current="page"' : "") + ">" +
-        esc(t.label) +
-        (t.k === "overview" && alerts ? '<span class="tab-badge">' + alerts + "</span>" : "") +
-        "</button>";
+        esc(t.label) + "</button>";
     });
     return out + "</div></nav>";
   }
@@ -1319,40 +1412,6 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       "</div></div>";
   }
 
-  /* ---------------------------------------------------------- attention */
-  function attentionItems() {
-    var w = rangeWindow(), items = [];
-    if (hasLOA()) {
-      var lm = loaMetrics(w.from, w.to);
-      lm.lost.forEach(function (d) {
-        items.push({
-          when: toISODate(d.date), tone: "bad", source: "LOA",
-          what: statusOf(d.status).label,
-          who: d.client + " · " + agentName(d.agentId),
-          value: -spreadOn(d)
-        });
-      });
-      var soon = addDays(todayISO(), 7);
-      loaDeals().forEach(function (d) {
-        var g = statusOf(d.status).group, dd = toISODate(d.draftDate);
-        if (g === "pending" && dd && dd >= todayISO() && dd <= soon) {
-          items.push({
-            when: dd, tone: "warn", source: "LOA", what: "Draft date due",
-            who: d.client + " · " + agentName(d.agentId), value: spreadOn(d)
-          });
-        }
-      });
-    }
-    if (hasLT()) {
-      ltOrders().forEach(function (o) {
-        if (o.overdue) items.push({ when: toISODate(o.dueAt), tone: "bad", source: "Lead Tech", what: "Past its delivery window", who: o.customer + " · " + o.product, value: o.amount });
-        else if (!o.paid) items.push({ when: o.date, tone: "warn", source: "Lead Tech", what: "Payment failed", who: o.customer + " · " + o.product, value: o.amount });
-      });
-    }
-    items.sort(function (a, b) { return (b.when || "").localeCompare(a.when || ""); });
-    return items;
-  }
-
   /* ---------------------------------------------------------- Overview */
   function pageOverview() {
     if (!hasLOA() && !hasLT()) {
@@ -1371,6 +1430,11 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     var ltPnl = tm ? tm.pnl : 0;
     var companyNet = loaProfit + ltPnl;
     var days = windowDays(w);
+    /* The same three figures over the period before this one, so each
+       section can say which way it is moving. */
+    var pw = priorWindow(w);
+    var plm = hasLOA() ? loaMetrics(pw.from, pw.to) : null;
+    var ptm = hasLT() ? ltMetrics(pw.from, pw.to) : null;
     var org = loaOrg();
     var set = ltSettings();
 
@@ -1387,7 +1451,8 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     out += "</div>";
 
     /* ---- 1. LOA ---- */
-    out += sectionHead("LOA", "Thrive Companies LOA", "Written business and what it cost to feed the producers.");
+    out += sectionHead("LOA", "Thrive Companies LOA", "Written business and what it cost to feed the producers.",
+      lm ? growthChip(lm.net, plm ? plm.net : 0, "profit", pw.label) : "");
     if (!lm) {
       out += notSynced("loa");
     } else {
@@ -1400,14 +1465,15 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     }
 
     /* ---- 2. Brokerage ---- */
-    out += sectionHead("Brokerage", "Thrive Companies brokerage", "The house's own economics on that same business, at the " + esc(org.houseLevel) + "% contract.");
+    out += sectionHead("Brokerage", "Thrive Companies brokerage", "The house's own economics on that same business, at the " + esc(org.houseLevel) + "% contract.",
+      lm ? growthChip(lm.apWritten, plm ? plm.apWritten : 0, "written premium", pw.label) : "");
     if (!lm) {
       out += '<div class="panel"><div class="empty"><p>Nothing to show until the Producer Desk syncs.</p></div></div>';
     } else {
       out += '<div class="tiles t5">';
       out += tile("src-loa", "Annual premium written per day", money(lm.apWritten / days), money(lm.apWritten) + " over " + intf(days) + " days");
       out += tile("src-loa", "Commission paid out to agents", money(lm.agentCommPaid), "the producers' side of the split");
-      out += tile("src-loa", "Thrive upfront commission", money(lm.houseGrossPaid), "on the " + Math.round(org.advanceRate * 100) + "% advance");
+      out += tile("is-good", "Thrive upfront commission", money(lm.houseGrossPaid), "on the " + Math.round(org.advanceRate * 100) + "% advance", "pos");
       out += tile("is-key", "Thrive total commission", money(lm.houseFullPaid), "full first year, advance plus as-earned");
       out += tile("is-good", "Thrive commission spread", money(brokerageSpread(lm.apWritten)),
         spreadLabel() + " of written premium");
@@ -1415,7 +1481,8 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     }
 
     /* ---- 3. Lead Tech ---- */
-    out += sectionHead("Lead Tech", "Lead Tech Google Calls", "Calls bought at " + money(set.callCost) + ", sold at " + money(set.callPrice) + ", less everything handed back.");
+    out += sectionHead("Lead Tech", "Lead Tech Google Calls", "Calls bought at " + money(set.callCost) + ", sold at " + money(set.callPrice) + ", less everything handed back.",
+      tm ? growthChip(tm.pnl, ptm ? ptm.pnl : 0, "profit", pw.label) : "");
     if (!tm) {
       out += notSynced("lt");
     } else {
@@ -1425,8 +1492,8 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       out += tile("src-lt", "Total cash collected", money(tm.callRevenue), intf(tm.callsSold) + " sold at " + money(set.callPrice));
       out += tile("is-warn", "Total refunds", money(tm.refunded),
         tm.callsRefunded ? intf(tm.callsRefunded) + " calls refunded" : intf(tm.refunds.length) + " refunds");
-      out += tile("is-warn", "Total wiped wallet", money(tm.wiped), intf(tm.wipeRows.length) + " wipes");
-      out += tile(tm.pnl >= 0 ? "is-good" : "is-bad", "Lead Tech profit & loss", money(tm.pnl), "collected less spend, refunds and wipes", tm.pnl < 0 ? "neg" : "pos");
+      out += tile("is-good", "Total wiped wallet", money(tm.wiped), intf(tm.wipeRows.length) + " wipes — credit kept, no calls owed");
+      out += tile(tm.pnl >= 0 ? "is-good" : "is-bad", "Lead Tech profit & loss", money(tm.pnl), "collected and wipes, less spend and refunds", tm.pnl < 0 ? "neg" : "pos");
       out += "</div>";
       if (tm.collected > 0) {
         out += '<p style="margin:12px 0 0;font-size:12.5px;color:var(--muted);max-width:70ch">' +
@@ -1436,29 +1503,6 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       }
     }
 
-    /* ---- what needs a look ---- */
-    var items = attentionItems();
-    if (items.length) {
-      out += '<div class="section-head"><p class="eyebrow">Needs a look</p><h3>' +
-        esc(intf(items.length)) + " open item" + (items.length === 1 ? "" : "s") + "</h3>" +
-        '<p class="sub">Chargebacks and failed payments, orders past their window, and drafts landing in the next seven days — itemised on the ' +
-        '<button class="linkbtn" data-act="tab" data-tab="loa">LOA Program</button> and ' +
-        '<button class="linkbtn" data-act="tab" data-tab="lt">Lead Tech</button> tabs.</p></div>';
-      out += '<div class="panel"><div class="panel-body flush"><div class="tblwrap"><table class="data">' +
-        "<thead><tr><th>Date</th><th>Source</th><th>What</th><th>Who</th><th class=\"n\">At stake</th></tr></thead><tbody>";
-      items.slice(0, 60).forEach(function (it) {
-        out += "<tr><td class=\"nowrap dim\">" + esc(prettyDate(it.when)) + "</td>" +
-          '<td><span class="pill ' + (it.source === "LOA" ? "key" : "") + '">' + esc(it.source) + "</span></td>" +
-          '<td><span class="pill ' + it.tone + '">' + esc(it.what) + "</span></td>" +
-          '<td class="who">' + esc(it.who) + "</td>" +
-          '<td class="n">' + esc(money(Math.abs(it.value))) + "</td></tr>";
-      });
-      out += "</tbody></table></div>";
-      if (items.length > 60) {
-        out += '<div class="panel-body" style="border-top:1px solid var(--line)"><span style="color:var(--muted);font-size:12px">The 60 most recent of ' + esc(intf(items.length)) + ".</span></div>";
-      }
-      out += "</div></div>";
-    }
     return out;
   }
 
@@ -1504,7 +1548,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
         if (i != null) days[i].value += c.sold * set.callPrice - c.bought * set.callCost;
       });
       ltRefunds().forEach(function (r) { var i = index[r.date]; if (i != null) days[i].value -= r.amount; });
-      ltWipes().forEach(function (x) { var i = index[x.date]; if (i != null) days[i].value -= x.amount; });
+      ltWipes().forEach(function (x) { var i = index[x.date]; if (i != null) days[i].value += x.amount; });
     }
     return days;
   }
@@ -1534,9 +1578,10 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       "</p></div></section>";
   }
 
-  function sectionHead(eyebrow, title, sub) {
-    return '<div class="section-head"><p class="eyebrow">' + esc(eyebrow) + "</p>" +
-      "<h3>" + esc(title) + '</h3><p class="sub">' + sub + "</p></div>";
+  function sectionHead(eyebrow, title, sub, right) {
+    return '<div class="section-head"><div><p class="eyebrow">' + esc(eyebrow) + "</p>" +
+      "<h3>" + esc(title) + '</h3><p class="sub">' + sub + "</p></div>" +
+      (right || "") + "</div>";
   }
 
   /* Title and range control only. The explanatory sentence that used to
@@ -1545,16 +1590,20 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
   function pageHead(title, right) {
     return '<div class="page-head"><div><p class="eyebrow">Thrive Companies</p>' +
       "<h2>" + esc(title) + "</h2></div>" +
-      (right ? "<div>" + right + "</div>" : "") + "</div>";
+      '<div class="headtools">' + refreshButton() + (right || "") + "</div></div>";
   }
   /* Every dashboard opens the same way: the period's bottom line, big,
      with two or three supporting figures under a rule. Same shape on
      Overview, LOA, Lead Tech and Thrive Companies, so the eye lands in
      the same place whichever tab you open. */
+  /* `negative` is deliberately three-valued: true is red, false is green,
+     and leaving it off keeps the figure white — a hero that is not a
+     profit should not be coloured as though it were one. */
   function hero(label, value, foot, splits, negative, style) {
+    var tone = negative === true ? " neg" : negative === false ? " pos" : "";
     var out = '<div class="hero"' + (style ? ' style="' + style + '"' : "") + '>' +
       '<p class="eyebrow">' + esc(label) + "</p>" +
-      '<span class="v' + (negative ? " neg" : "") + '">' + esc(value) + "</span>" +
+      '<span class="v' + tone + '">' + esc(value) + "</span>" +
       '<span class="foot">' + esc(foot) + "</span>";
     if (splits && splits.length) {
       out += '<div class="split">';
@@ -1593,8 +1642,8 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     out += tile("src-loa", "Agent commission", money(m.agentCommPaid), "paid out on issued business");
     out += tile("is-good", "Commission spread", money(m.spreadPaid), "house keeps this");
     out += tile("src-loa", "Call spend", money(m.marketingCost), intf(m.callsTaken) + " calls at " + money(org.costPerCall));
-    out += tile(m.net >= 0 ? "is-good" : "is-bad", "Net after marketing", money(m.net), "spread minus call spend", m.net < 0 ? "neg" : "pos");
     out += tile(m.placement >= 70 ? "is-good" : "is-warn", "Placement rate", pct(m.placement), "of settled premium stuck");
+    out += tile(m.net >= 0 ? "is-good" : "is-bad", "Net after marketing", money(m.net), "spread minus call spend", m.net < 0 ? "neg" : "pos");
     out += "</div>";
 
     /* agents */
@@ -1732,7 +1781,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
        between what a call costs and what it sells for. */
     out += '<div class="headline">';
     out += hero("Lead Tech net profit · " + w.label, money(m.pnl),
-      "Calls sold, less calls bought, refunds and wiped wallets.", [
+      "Calls sold and wiped wallets, less calls bought and refunds.", [
         { k: "Calls sold", v: intf(m.callsSold) },
         { k: "Calls bought", v: intf(m.callsBought) },
         { k: "Margin", v: m.margin == null ? "—" : pct(m.margin, 0) }
@@ -1750,10 +1799,10 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     out += tile("src-lt", "Calls purchased", intf(m.callsBought), "Lead Tech bought these at " + money(set.callCost));
     out += tile(m.refunded > 0 ? "is-warn" : "src-lt", "Total refunds", money(m.refunded),
       (m.callsRefunded ? intf(m.callsRefunded) + " calls refunded" : intf(m.refunds.length) + " refunds"));
-    out += tile(m.wiped > 0 ? "is-warn" : "src-lt", "Wallet wipes", money(m.wiped), intf(m.wipeRows.length) + " wipes");
+    out += tile(m.wiped > 0 ? "is-good" : "src-lt", "Wallet wipes", money(m.wiped), intf(m.wipeRows.length) + " wipes — credit kept");
     out += '<div class="span2">' +
       tile(m.pnl >= 0 ? "is-good" : "is-bad", "Fulfillment net", money(m.pnl),
-        "collected less spent, refunds and wallet wipes", m.pnl < 0 ? "neg" : "pos") +
+        "collected and wallet wipes, less spent and refunds", m.pnl < 0 ? "neg" : "pos") +
       "</div>";
     out += "</div>";
 
@@ -1792,8 +1841,8 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
 
     /* ---- wiped wallets ---- */
     if (m.wipeRows.length) {
-      out += '<div class="section-head"><p class="eyebrow">Wiped wallets</p><h3>Credit handed back</h3>' +
-        '<p class="sub">Money returned outside the refund flow. It leaves the P&amp;L the same way a refund does.</p></div>';
+      out += '<div class="section-head"><p class="eyebrow">Wiped wallets</p><h3>Credit cleared, cash kept</h3>' +
+        '<p class="sub">Unspent balance written off a customer\'s wallet. The money was collected and stays collected — what ends is the obligation to deliver calls against it — so it counts as profit, not as a refund.</p></div>';
       out += '<div class="panel"><div class="panel-body flush"><div class="tblwrap"><table class="data">' +
         '<thead><tr><th>Date</th><th>Who</th><th>Reason</th><th class="n">Amount</th></tr></thead><tbody>';
       m.wipeRows.slice().sort(function (a, b) { return (b.date || "").localeCompare(a.date || ""); }).forEach(function (x) {
@@ -1885,7 +1934,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     out += tile("src-loa", "Brokerage annual premium", lm ? money(lm.apWritten) : "—", lm ? intf(lm.written) + " policies written" : "—");
     out += tile("is-good", "Brokerage spread", lm ? money(brokerageSpread(lm.apWritten)) : "—", spreadLabel() + " house rate on written premium");
     out += tile("is-key", "Total commissions", lm ? money(lm.houseFullPaid) : "—", "full first year, advance plus as-earned");
-    out += tile("src-loa", "Upfront commissions", lm ? money(lm.houseGrossPaid) : "—", "the share the carrier has already advanced");
+    out += tile("is-good", "Upfront commissions", lm ? money(lm.houseGrossPaid) : "—", "the share the carrier has already advanced", lm ? "pos" : "");
     out += "</div>";
 
     /* ---- the P&L itself ---- */
@@ -1920,7 +1969,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       out += plRow("Cash collected on calls", intf(tm.callsTaken) + " at " + money(set.callPrice), tm.callRevenue, "in");
       out += plRow("Spent on calls", intf(tm.callsTaken) + " at " + money(set.callCost), -tm.callSpend, "out");
       out += plRow("Refunds", intf(tm.refunds.length) + " refunds", -tm.refunded, "out");
-      out += plRow("Wiped wallets", intf(tm.wipeRows.length) + " wipes", -tm.wiped, "out");
+      out += plRow("Wiped wallets", intf(tm.wipeRows.length) + " wipes — credit kept, no calls owed against it", tm.wiped, "in");
       out += plRow("Lead Tech profit & loss", "", ltPnl, "total");
       if (tm.collected > 0) out += plRow("Product & subscription orders", intf(tm.count) + " orders — fulfillment side, not in this ledger", tm.collected, "memo");
     }
@@ -2232,6 +2281,38 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       customers: o.customers || [], calls: o.calls || [], wipes: o.wipes || []
     };
   }
+  /* The window of the same length immediately before this one, so "last
+     30 days" is compared against the 30 before that. */
+  function priorWindow(w) {
+    var len = windowDays(w);
+    var to = addDays(w.from, -1);
+    return { from: addDays(to, -(len - 1)), to: to, label: "prior " + len + " day" + (len === 1 ? "" : "s") };
+  }
+
+  /* Percentage change, measured against the size of the earlier figure so
+     that a period which lost money and then made money reads as a gain
+     rather than as a nonsense negative. Null where no honest percentage
+     exists: nothing to grow from, or no earlier period to compare with. */
+  function growthPct(cur, prior) {
+    if (!isFinite(cur) || !isFinite(prior)) return null;
+    if (prior === 0) return null;
+    return ((cur - prior) / Math.abs(prior)) * 100;
+  }
+
+  function growthChip(cur, prior, what, priorLabel) {
+    /* All time has nothing before it to compare against. */
+    if (ui.range === "all") return "";
+    var g = growthPct(cur, prior);
+    if (g === null) {
+      var note = prior === 0 && cur !== 0 ? "no " + esc(what) + " in the " + esc(priorLabel) : "vs the " + esc(priorLabel);
+      return '<div class="growth"><span class="g flat">\u2014</span><span class="gn">' + note + "</span></div>";
+    }
+    var cls = Math.abs(g) < 0.05 ? "flat" : g > 0 ? "up" : "down";
+    var arrow = cls === "flat" ? "" : g > 0 ? "\u25B2 " : "\u25BC ";
+    return '<div class="growth"><span class="g ' + cls + '">' + arrow + esc(pct(Math.abs(g), 1)) + "</span>" +
+      '<span class="gn">' + esc(what) + " vs the " + esc(priorLabel) + "</span></div>";
+  }
+
   function windowDays(w) {
     var d = Math.round((new Date(w.to + "T12:00:00") - new Date(w.from + "T12:00:00")) / 86400000) + 1;
     return d > 0 ? d : 1;
@@ -2283,6 +2364,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
 
     if (act === "tab") { ui.tab = t.getAttribute("data-tab"); window.scrollTo(0, 0); render(); }
     else if (act === "range") { ui.range = t.getAttribute("data-range"); render(); }
+    else if (act === "refresh") { refreshNow(); }
     else if (act === "lock") {
       if (store && store.mode === "relay") {
         relayFetch("/auth/logout", { method: "POST" }).catch(function () {});
