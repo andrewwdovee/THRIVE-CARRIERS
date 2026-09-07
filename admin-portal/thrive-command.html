@@ -1876,29 +1876,6 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
         '<div class="panel-body">' + barRows(prodRows, "var(--s-lt)") + "</div></div>";
     }
 
-    /* refunds */
-    if (m.refunds.length) {
-      out += '<div class="section-head"><p class="eyebrow">Money back out</p><h3>Refunds in the range</h3>' +
-        '<p class="sub">Grouped by reason, so a pattern shows up before it becomes a habit.</p></div>';
-      var byType = {};
-      m.refunds.forEach(function (r) {
-        byType[r.type] = byType[r.type] || { n: 0, value: 0 };
-        byType[r.type].n += 1;
-        byType[r.type].value += r.amount;
-      });
-      out += '<div class="panel"><div class="panel-body flush"><div class="tblwrap"><table class="data">' +
-        "<thead><tr><th>Reason</th><th class=\"n\">Count</th><th class=\"n\">Amount</th><th class=\"n\">Share of collected</th></tr></thead><tbody>";
-      Object.keys(byType).sort(function (a, b) { return byType[b].value - byType[a].value; }).forEach(function (k) {
-        out += "<tr><td class=\"who\">" + esc(k) + "</td>" +
-          '<td class="n">' + esc(intf(byType[k].n)) + "</td>" +
-          '<td class="n">' + esc(money(byType[k].value, 2)) + "</td>" +
-          '<td class="n">' + esc(pct(ratio(byType[k].value, m.collected))) + "</td></tr>";
-      });
-      out += '<tr class="total"><td>All refunds</td><td class="n">' + esc(intf(m.refunds.length)) + "</td>" +
-        '<td class="n">' + esc(money(m.refunded, 2)) + '</td><td class="n">' + esc(pct(ratio(m.refunded, m.collected))) + "</td></tr>";
-      out += "</tbody></table></div></div></div>";
-    }
-
     return out;
   }
 
