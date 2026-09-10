@@ -1744,10 +1744,10 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     out += tile("src-loa", "Written premium", money(m.apWritten), intf(m.written) + " policies · " + money(m.mpWritten) + "/mo");
     out += tile("src-loa", "Issued \u0026 paid business", money(m.apPaid),
       intf(m.paid.length) + " polic" + (m.paid.length === 1 ? "y" : "ies") + " \u00b7 " + money(m.mpPaid) + "/mo");
-    out += tile("src-loa", "Thrive commission", money(m.houseGrossPaid), "earned on issued \u0026 paid business", "",
-      { value: money(m.houseGrossWritten), label: "projected on all written" });
-    out += tile("src-loa", "Agent commission", money(m.agentCommPaid), "paid out on issued \u0026 paid business", "",
-      { value: money(m.agentCommWritten), label: "projected on all written" });
+    out += tile("src-loa", "Thrive commission", money(m.houseGrossPaid), "", "",
+      { value: money(m.houseGrossWritten), label: "projected commissions" });
+    out += tile("src-loa", "Agent commission", money(m.agentCommPaid), "", "",
+      { value: money(m.agentCommWritten), label: "projected agent commissions" });
     out += tile("is-good", "Commission spread", money(m.spreadPaid), "house keeps this");
     out += tile("src-loa", "Call spend", money(m.marketingCost), intf(m.callsTaken) + " calls at " + money(org.costPerCall));
     out += tile(m.placement >= 70 ? "is-good" : "is-warn", "Placement rate", pct(m.placement), "of settled premium stuck");
