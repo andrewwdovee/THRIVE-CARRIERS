@@ -99,6 +99,25 @@
   function agentCommOn(d) { return advancedAP(d) * num(d.agentPct) / 100; }
   function houseCommOn(d) { return advancedAP(d) * num(d.housePct) / 100; }
   function spreadOn(d) { return advancedAP(d) * (num(d.housePct) - num(d.agentPct)) / 100; }
+  /* How the business was written. Deals recorded before this field
+     existed are read as agent splits, which is what every one of them
+     was — the desk had no other arrangement in it. */
+  var DEAL_TYPES = [
+    { k: "agent_split",  label: "Agent split" },
+    { k: "loa_contract", label: "LOA contract" }
+  ];
+  function dealTypeOf(d) {
+    var k = d && d.dealType;
+    for (var i = 0; i < DEAL_TYPES.length; i++) if (DEAL_TYPES[i].k === k) return DEAL_TYPES[i];
+    return DEAL_TYPES[0];
+  }
+  function dealTypeOptions(sel) {
+    var cur = sel || DEAL_TYPES[0].k;
+    return DEAL_TYPES.map(function (t) {
+      return '<option value="' + esc(t.k) + '"' + (t.k === cur ? " selected" : "") + ">" + esc(t.label) + "</option>";
+    }).join("");
+  }
+
   /** A call count is a whole number — no 5.7 calls. */
   function wholeCalls(v) { return Math.max(0, Math.floor(num(v))); }
 
@@ -1109,7 +1128,7 @@
     var m = me(), owner = isOwner();
     var d = deal || {
       id: "", agentId: owner ? "" : m.id, date: todayISO(), client: "", carrierId: "", product: "",
-      mp: "", faceAmount: "", status: "underwriting", policyNo: "", notes: "",
+      mp: "", dealType: DEAL_TYPES[0].k, status: "underwriting", policyNo: "", notes: "",
       agentPct: "", housePct: "", paidOut: false, draftDate: ""
     };
     var prods = productsOf(d.carrierId);
@@ -1126,7 +1145,7 @@
       + '<div class="field"><label for="d-carrier">Carrier</label><select id="d-carrier" data-act="carrier" required>' + carrierOptions(d.carrierId) + "</select></div>"
       + '<div class="field"><label for="d-product">Product</label>' + prodSel + "</div>"
       + '<div class="field"><label for="d-mp">Monthly premium</label><input type="number" id="d-mp" min="0" step="0.01" data-act="recalc" value="' + esc(d.mp) + '" required></div>'
-      + '<div class="field"><label for="d-face">Base amount</label><input type="number" id="d-face" min="0" step="1" value="' + esc(d.faceAmount) + '"></div>'
+      + '<div class="field"><label for="d-type">Type of deal</label><select id="d-type">' + dealTypeOptions(d.dealType) + '</select></div>'
       + '<div class="field"><label for="d-status">Status</label><select id="d-status">' + statusOptions(d.status) + "</select></div>"
       + '<div class="field"><label for="d-policy">Policy number</label><input type="text" id="d-policy" value="' + esc(d.policyNo) + '"></div>'
       + '<div class="field"><label for="d-draft">Policy draft date</label><input type="date" id="d-draft" value="' + esc(d.draftDate || "") + '"><span class="hint">The day the carrier pulls first premium.</span></div>'
@@ -2303,13 +2322,13 @@
     var filename, data;
     if (what === "deals") {
       filename = "thrive-loa-deals-" + todayISO() + ".csv";
-      var rows = [["Date", "Producer", "Level", "Client", "Carrier", "Product", "Monthly premium", "Annualized premium", "Advance %", "Advanced premium", "Base amount", "Producer comp %", "Producer commission", "Agency comp %", "Agency commission", "House spread", "Status", "Policy draft date", "Commission paid out", "Paid out on", "Policy number", "Notes"]];
+      var rows = [["Date", "Producer", "Level", "Client", "Carrier", "Product", "Monthly premium", "Annualized premium", "Advance %", "Advanced premium", "Type of deal", "Producer comp %", "Producer commission", "Agency comp %", "Agency commission", "House spread", "Status", "Policy draft date", "Commission paid out", "Paid out on", "Policy number", "Notes"]];
       state.deals.slice().sort(function (a, b) { return a.date < b.date ? -1 : 1; }).forEach(function (d) {
         var a = agentById(d.agentId) || {};
         var adv = advancedAP(d);
         var ac = adv * num(d.agentPct) / 100, hc = adv * num(d.housePct) / 100;
         rows.push([d.date, a.name || "", a.level || "", d.client, (CARRIER_BY_ID[d.carrierId] || {}).name || d.carrierId, d.product,
-          num(d.mp).toFixed(2), num(d.ap).toFixed(2), (advanceRate() * 100).toFixed(0), adv.toFixed(2), d.faceAmount, d.agentPct, ac.toFixed(2), d.housePct, hc.toFixed(2), (hc - ac).toFixed(2),
+          num(d.mp).toFixed(2), num(d.ap).toFixed(2), (advanceRate() * 100).toFixed(0), adv.toFixed(2), dealTypeOf(d).label, d.agentPct, ac.toFixed(2), d.housePct, hc.toFixed(2), (hc - ac).toFixed(2),
           statusOf(d.status).label, d.draftDate || "", d.paidOut ? "Yes" : "No", d.paidOutOn || "", d.policyNo, d.notes]);
       });
       data = toCSV(rows);
@@ -2364,7 +2383,7 @@
     var deal = {
       agentId: agentId, date: val("d-date"), client: val("d-client"),
       carrierId: carrierId, product: product,
-      mp: mp, ap: mp * 12, faceAmount: num(val("d-face")),
+      mp: mp, ap: mp * 12, dealType: val("d-type") || DEAL_TYPES[0].k,
       status: val("d-status"), draftDate: val("d-draft"),
       policyNo: val("d-policy"), notes: val("d-notes"),
       agentPct: apct, housePct: hpct,
