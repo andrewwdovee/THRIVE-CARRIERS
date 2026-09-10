@@ -41,6 +41,9 @@ for (const a of state.agents || []) {
 
 const content = readFileSync(join(here, "desk-app.html"), "utf8");
 const style = readFileSync(join(here, "desk-style.css"), "utf8");
+const favicon = existsSync(join(here, "favicon.png"))
+  ? "data:image/png;base64," + readFileSync(join(here, "favicon.png")).toString("base64")
+  : "";
 const version = existsSync(join(here, "VERSION"))
   ? "v" + readFileSync(join(here, "VERSION"), "utf8").trim()
   : "";
@@ -58,6 +61,7 @@ const html = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LOA Producer Desk</title>
+${favicon ? `<link rel="icon" type="image/png" href="${favicon}">` : ""}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">

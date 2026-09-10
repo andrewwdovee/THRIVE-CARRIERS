@@ -41,6 +41,10 @@ if (!/^https:\/\//.test(relay)) {
   process.exit(1);
 }
 
+const favicon = existsSync(join(here, "favicon.png"))
+  ? "data:image/png;base64," + readFileSync(join(here, "favicon.png")).toString("base64")
+  : "";
+
 const source = readFileSync(join(here, "..", "admin-portal", "thrive-command.html"), "utf8");
 
 /* Mirrors the head the artifact runtime supplies, so the page renders the
@@ -51,6 +55,7 @@ const html = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+${favicon ? `<link rel="icon" type="image/png" href="${favicon}">` : ""}
 <style>
   :root { color-scheme: light dark; }
   html, body { margin: 0; padding: 0; }

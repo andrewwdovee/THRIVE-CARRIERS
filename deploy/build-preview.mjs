@@ -26,6 +26,10 @@ if (!loaFile || !existsSync(loaFile)) {
 const data = { "snapshots/loa": JSON.parse(readFileSync(loaFile, "utf8")) };
 if (ltFile && existsSync(ltFile)) data["snapshots/leadtech"] = JSON.parse(readFileSync(ltFile, "utf8"));
 
+const favicon = existsSync(join(here, "favicon.png"))
+  ? "data:image/png;base64," + readFileSync(join(here, "favicon.png")).toString("base64")
+  : "";
+
 const source = readFileSync(join(here, "..", "admin-portal", "thrive-command.html"), "utf8");
 
 const html = `<!doctype html>
@@ -34,6 +38,7 @@ const html = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Thrive Command</title>
+${favicon ? `<link rel="icon" type="image/png" href="${favicon}">` : ""}
 <style>
   :root { color-scheme: light dark; }
   html, body { margin: 0; padding: 0; }

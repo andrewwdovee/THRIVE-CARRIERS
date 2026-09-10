@@ -68,6 +68,12 @@ const storage = readFileSync(join(here, "relay-storage.js"), "utf8");
    body out on its own left the page unstyled — and the desk's own
    republish path reads this element by id, so it has to keep that id. */
 const style = readFileSync(join(here, "desk-style.css"), "utf8");
+/* The Thrive mark, cropped out of the same logo the sign-in page uses so
+   the tab icon is the real one rather than a redrawn approximation. */
+const favicon = existsSync(join(here, "favicon.png"))
+  ? "data:image/png;base64," + readFileSync(join(here, "favicon.png")).toString("base64")
+  : "";
+
 
 /* Bumped in loa-desk/VERSION whenever the desk changes, and shown under
    the sign-in card. It is there so that "it still looks wrong" can be
@@ -84,6 +90,7 @@ const html = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Thrive LOA Producer Desk</title>
+${favicon ? `<link rel="icon" type="image/png" href="${favicon}">` : ""}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
