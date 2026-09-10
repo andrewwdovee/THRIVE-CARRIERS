@@ -47,6 +47,9 @@
      from; the live record lives in the relay. Boot is deferred until that
      is read, so nobody ever sees stale numbers flash up first. */
   var RELAY = window.TC_RELAY || null;
+  /* Stamped in by the build from loa-desk/VERSION, so what is on screen
+     names the build it came from. Empty on an unbuilt copy. */
+  var VERSION = String(window.THRIVE_VERSION || "");
 
   /* ------------------------------------------------------------- helpers */
   function esc(v) {
@@ -155,7 +158,7 @@
   /** An account still holding a plaintext password is upgraded the first time
       its owner signs in — that is the only moment the password is in hand. */
   function upgradePw(agent, pw) {
-    if (!agent.password || !subtle() || !artifactApi) return Promise.resolve(false);
+    if (!agent.password || !subtle() || (!artifactApi && !RELAY)) return Promise.resolve(false);
     return setPw(agent, pw).then(function (ok) {
       if (ok) commit(null);
       return ok;
@@ -357,7 +360,12 @@
     if (fn) fn(state);
     state.updatedAt = new Date().toISOString();
     render();
-    if (!artifactApi) {
+    /* The relay is checked first, and must be. artifactApi is only ever
+       set inside claude.ai, so on the Cloudflare build it stays null —
+       and with the artifact check above this one, every save fell into
+       "saved in this browser only" and returned, leaving the relay
+       branch below unreachable. The desk could read and never write. */
+    if (!RELAY && !artifactApi) {
       session.notice = { type: "warnbar", text: "Saved in this browser only — this view cannot publish, so your team will not see the change." };
       render();
       if (done) done({ code: "not_writer" });
@@ -492,6 +500,20 @@
     }).sort(function (a, b) { return a.draftDate < b.draftDate ? -1 : 1; });
   }
 
+  /* Everything that would go with a producer. Counted before anything is
+     removed, because "delete this user" quietly meaning "and their whole
+     book" is the kind of surprise there is no undo for. */
+  function agentFootprint(id) {
+    var deals = state.deals.filter(function (d) { return d.agentId === id; });
+    var calls = state.calls.filter(function (c) { return c.agentId === id; });
+    return {
+      deals: deals.length,
+      calls: calls.reduce(function (t, c) { return t + num(c.calls); }, 0),
+      callDays: calls.length,
+      ap: deals.reduce(function (t, d) { return t + num(d.ap); }, 0)
+    };
+  }
+
   function activeAgents() { return state.agents.filter(function (a) { return a.status === "active"; }); }
   function producerIds() { return state.agents.map(function (a) { return a.id; }); }
 
@@ -580,9 +602,9 @@
     var tab = getUI("authTab", "signin");
     if (setup) tab = "setup";
 
-    var top = '<div class="auth-top"><div class="wordmark"><div class="bar"></div><div class="lock">'
-      + "<h1>" + esc(state.org.name) + "</h1><p>LOA Producer Desk</p>"
-      + "</div></div></div>";
+    var top = '<div class="auth-top">'
+      + '<span class="mark" role="img" aria-label="' + esc(state.org.name) + '"></span>'
+      + "<p>LOA Producer Desk</p></div>";
 
     var body;
     if (setup) {
@@ -647,7 +669,10 @@
       + '<button data-act="auth-tab" data-tab="signup"' + (tab === "signup" ? ' aria-current="page"' : "") + ">Create an account</button>"
       + "</div>";
 
-    root.innerHTML = '<div class="auth-shell"><div class="auth-card">' + top + tabs + body + "</div></div>";
+    root.innerHTML = '<div class="auth-shell"><div>'
+      + '<div class="auth-card">' + top + tabs + body + "</div>"
+      + (VERSION ? '<p class="auth-ver">' + esc(VERSION) + "</p>" : "")
+      + "</div></div>";
   }
 
   function authMsg(text, kind) {
@@ -825,8 +850,37 @@
       : view === "mycalls" ? viewMyCalls()
       : view === "mydeals" ? viewMyDeals()
       : viewMyDesk();
-    root.innerHTML = masthead() + navTabs() + '<main class="wrap">' + noticeBar() + inner + "</main>";
+    root.innerHTML = masthead() + navTabs() + '<main class="wrap">' + noticeBar() + inner + "</main>"
+      + deleteDialog();
     refreshCalc();
+  }
+
+  /* The second of the two confirmations. The first arms the button in
+     place; this one names the person and spells out what leaves with
+     them, because a roster row and a book of business look the same from
+     a button that only says "Delete". */
+  function deleteDialog() {
+    var id = session.delAgent;
+    if (!id) return "";
+    var a = agentById(id);
+    if (!a) return "";
+    var f = agentFootprint(id);
+    var loses = [];
+    if (f.deals) loses.push(f.deals + " deal" + (f.deals === 1 ? "" : "s") + " worth " + money(f.ap) + " in written premium");
+    if (f.callDays) loses.push(f.calls + " inbound call" + (f.calls === 1 ? "" : "s") + " across " + f.callDays + " logged day" + (f.callDays === 1 ? "" : "s"));
+
+    return '<div class="modal-shade"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="del-h">'
+      + '<h3 id="del-h">Are you sure you want to delete this user?</h3>'
+      + '<p class="who">' + esc(a.name) + '<span>' + esc(a.email) + "</span></p>"
+      + (loses.length
+        ? '<p class="warn">Deleting ' + esc(a.name.split(" ")[0]) + " also removes:</p><ul>"
+          + loses.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ul>"
+          + '<p class="warn">That business disappears from every total on this desk and from the owner console. It cannot be undone.</p>'
+        : '<p class="warn">They have logged nothing yet, so only the account itself goes. It cannot be undone.</p>')
+      + '<div class="row end">'
+      + '<button class="btn ghost" data-act="del-agent-cancel">Cancel</button>'
+      + '<button class="btn danger" data-act="del-agent-confirm" data-id="' + esc(id) + '">Yes, delete ' + esc(a.name.split(" ")[0]) + " and their data</button>"
+      + "</div></div></div>";
   }
 
   /* ==================================================================== */
@@ -1475,7 +1529,8 @@
               + "<td>" + pill + "</td>"
               + '<td class="mono">' + esc(a.startedOn ? prettyDate(a.startedOn) : "\u2014") + "</td>"
               + '<td class="n">' + money(life.apPaid) + "</td>"
-              + '<td class="n"><button class="btn ghost sm" data-act="toggle-agent" data-id="' + esc(a.id) + '">' + (a.status === "active" ? "Deactivate" : "Reactivate") + "</button></td></tr>";
+              + '<td class="n nowrap"><button class="btn ghost sm" data-act="toggle-agent" data-id="' + esc(a.id) + '">' + (a.status === "active" ? "Deactivate" : "Reactivate") + "</button> "
+              + '<button class="btn danger sm" data-act="del-agent" data-id="' + esc(a.id) + '">Delete</button></td></tr>';
           }).join("")
           + "</tbody></table></div>"
         : emptyState("Nobody on the roster yet", "Approved accounts show up here."))
@@ -1523,6 +1578,9 @@
         + (showAgent ? '<td class="who">' + esc((agentById(d.agentId) || {}).name || "\u2014") + "</td>" : "")
         + '<td class="who">' + esc(d.client || "\u2014") + "</td>"
         + "<td>" + esc(c ? c.name : d.carrierId) + '<div class="dim">' + esc(d.product || "") + "</div></td>"
+        /* Chasing a carrier means quoting this number, so it belongs on
+           the row you are chasing from rather than one click away. */
+        + '<td class="mono nowrap">' + (d.policyNo ? esc(d.policyNo) : '<span class="dim">\u2014</span>') + "</td>"
         + '<td class="n">' + money(d.mp, 2) + "</td>"
         + '<td><select data-act="notif-status" data-id="' + esc(d.id) + '" style="min-width:170px">'
         + statusOptions(d.status) + "</select></td>"
@@ -1540,7 +1598,7 @@
       + (owner ? " You are seeing the whole floor." : "") + "</p></div></div>";
 
     var head = "<tr><th>Draft date</th><th>Due</th>" + (owner ? "<th>Producer</th>" : "")
-      + "<th>Client</th><th>Carrier &amp; product</th>"
+      + "<th>Client</th><th>Carrier &amp; product</th><th>Policy #</th>"
       + '<th class="n">Monthly</th><th>Status</th><th class="n"></th></tr>';
 
     h += '<div class="panel"><div class="panel-head"><h3>Needs a status</h3>'
@@ -2515,6 +2573,35 @@
       commit(function (s) {
         s.agents.forEach(function (a) { if (a.id === dcId) { a.status = "declined"; a.approvedBy = session.agentId; } });
       });
+      return;
+    }
+    /* First confirmation: the button arms itself in place. */
+    if (act === "del-agent") {
+      if (!armConfirm(el, "Confirm delete")) return;
+      session.delAgent = el.getAttribute("data-id");
+      render();
+      return;
+    }
+    if (act === "del-agent-cancel") { session.delAgent = null; render(); return; }
+    /* Second confirmation. The account and everything it wrote go in one
+       commit, so the desk is never left holding deals with no producer. */
+    if (act === "del-agent-confirm") {
+      var delId = el.getAttribute("data-id");
+      session.delAgent = null;
+      if (delId === session.agentId) {
+        session.notice = { type: "err", text: "You cannot delete the account you are signed in with." };
+        render();
+        return;
+      }
+      var gone = agentById(delId);
+      commit(function (s) {
+        s.agents = s.agents.filter(function (a) { return a.id !== delId; });
+        s.deals = s.deals.filter(function (d) { return d.agentId !== delId; });
+        s.calls = s.calls.filter(function (c) { return c.agentId !== delId; });
+        if (s.goals && s.goals.byAgent) delete s.goals.byAgent[delId];
+      });
+      session.notice = { type: "ok", text: (gone ? gone.name : "That producer") + " and everything they logged have been deleted." };
+      render();
       return;
     }
     if (act === "toggle-agent") {

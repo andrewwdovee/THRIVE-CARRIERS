@@ -69,6 +69,13 @@ const storage = readFileSync(join(here, "relay-storage.js"), "utf8");
    republish path reads this element by id, so it has to keep that id. */
 const style = readFileSync(join(here, "desk-style.css"), "utf8");
 
+/* Bumped in loa-desk/VERSION whenever the desk changes, and shown under
+   the sign-in card. It is there so that "it still looks wrong" can be
+   answered with "which version are you on" instead of a guess. */
+const version = existsSync(join(here, "VERSION"))
+  ? "v" + readFileSync(join(here, "VERSION"), "utf8").trim()
+  : "";
+
 /* The storage layer must be defined before the desk's own code runs, and
    the desk reads its state from a script block that has to survive. */
 const html = `<!doctype html>
@@ -84,6 +91,7 @@ const html = `<!doctype html>
 <script>
 window.THRIVE_RELAY = ${JSON.stringify(relay)};
 window.THRIVE_DESK_TOKEN = ${JSON.stringify(token)};
+window.THRIVE_VERSION = ${JSON.stringify(version)};
 </script>
 <script>
 ${storage}
@@ -100,6 +108,7 @@ writeFileSync(join(here, "dist", "index.html"), html);
 
 console.log(`Wrote loa-desk/dist/index.html  (${(html.length / 1024).toFixed(0)} KB)
 Relay: ${relay}
+Version: ${version || "(no VERSION file)"}
 
 Next:
   npx wrangler pages deploy ./dist --project-name thrive-loa --branch main
