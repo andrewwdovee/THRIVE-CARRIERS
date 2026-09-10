@@ -635,7 +635,7 @@
         + '<div class="field"><label for="s-org">Agency name</label><input type="text" id="s-org" value="' + esc(state.org.name) + '"></div>'
         + '<div class="field"><label for="s-name">Your name</label><input type="text" id="s-name" placeholder="Andrew Davidson"></div>'
         + '<div class="field"><label for="s-email">Your email</label><input type="email" id="s-email" placeholder="you@thrive.com"></div>'
-        + '<div class="field"><label for="s-pw">Choose a password</label><input type="password" id="s-pw" placeholder="At least 8 characters"><span class="hint">Read the security note in Settings before this holds real client data.</span></div>'
+        + '<div class="field"><label for="s-pw">Choose a password</label>' + pwInput("s-pw", 'placeholder="At least 8 characters"') + '<span class="hint">Read the security note in Settings before this holds real client data.</span></div>'
         + '<div class="grid g2">'
         + '<div class="field"><label for="s-house">Agency contract level</label><select id="s-house">' + houseLevelOptions(state.org.houseLevel) + '</select><span class="hint">Thrive\u2019s own contract with the carriers.</span></div>'
         + '<div class="field"><label for="s-cpc">Cost per inbound call</label><input type="number" id="s-cpc" min="0" step="1" value="' + esc(state.org.costPerCall) + '"></div>'
@@ -671,8 +671,8 @@
         + "If you have not been added yet, ask them first \u2014 otherwise this will not go through.</div>"
         + '<div class="field"><label for="u-name">Full name</label><input type="text" id="u-name" placeholder="Jordan Reyes" autocomplete="name"></div>'
         + '<div class="field"><label for="u-email">Email</label><input type="email" id="u-email" placeholder="jordan@example.com" autocomplete="email"></div>'
-        + '<div class="field"><label for="u-pw">Password</label><input type="password" id="u-pw" placeholder="At least 8 characters" autocomplete="new-password"></div>'
-        + '<div class="field"><label for="u-pw2">Confirm password</label><input type="password" id="u-pw2" autocomplete="new-password"></div>'
+        + '<div class="field"><label for="u-pw">Password</label>' + pwInput("u-pw", 'placeholder="At least 8 characters" autocomplete="new-password"') + '</div>'
+        + '<div class="field"><label for="u-pw2">Confirm password</label>' + pwInput("u-pw2", 'autocomplete="new-password"') + '</div>'
         + '<div id="auth-msg"></div>'
         + '<button class="btn accent" data-act="do-signup">Create account</button>'
         + "</div>";
@@ -685,7 +685,7 @@
             + "</b>. Nothing you do here is saved, and the live desk is untouched.</div>"
           : "")
         + '<div class="field"><label for="l-email">Email</label><input type="email" id="l-email" autocomplete="username"></div>'
-        + '<div class="field"><label for="l-pw">Password</label><input type="password" id="l-pw" autocomplete="current-password"></div>'
+        + '<div class="field"><label for="l-pw">Password</label>' + pwInput("l-pw", 'autocomplete="current-password"') + '</div>'
         + '<div id="auth-msg"></div>'
         + '<button class="btn accent" data-act="do-signin">Sign in</button>'
         + "</div>";
@@ -708,6 +708,22 @@
   }
 
   var PW_MIN = 8;
+
+  /* Typing a password you cannot see, into a desk whose only reset is
+     asking the owner, is how people end up locked out. Every password
+     box here can be revealed. */
+  var EYE_SHOW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+    + '<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.7"/></svg>';
+  var EYE_HIDE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+    + '<path d="M2 12s3.6-6.5 10-6.5c2 0 3.7.6 5.1 1.4M22 12s-3.6 6.5-10 6.5c-2 0-3.7-.6-5.1-1.4"/>'
+    + '<path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="M3 3l18 18"/></svg>';
+
+  /** A password input with a reveal toggle beside it. */
+  function pwInput(id, attrs) {
+    return '<div class="pwbox"><input type="password" id="' + esc(id) + '"' + (attrs ? " " + attrs : "") + ">"
+      + '<button type="button" class="pw-eye" data-act="pw-eye" data-for="' + esc(id) + '"'
+      + ' aria-label="Show password" title="Show password">' + EYE_SHOW + "</button></div>";
+  }
 
   function doSetup() {
     var name = val("s-name"), email = normEmail(val("s-email")), pw = val("s-pw"), org = val("s-org");
@@ -1772,9 +1788,9 @@
     h += '<div class="panel"><div class="panel-head"><h3>Change your password</h3>'
       + '<span class="note">You will stay signed in</span></div><div class="panel-body">'
       + '<form data-act="save-password"><div class="grid g2">'
-      + '<div class="field"><label for="pw-old">Current password</label><input type="password" id="pw-old" autocomplete="current-password" required></div>'
-      + '<div class="field"><label for="pw-new">New password</label><input type="password" id="pw-new" autocomplete="new-password" required><span class="hint">At least ' + PW_MIN + ' characters. Use one you use nowhere else.</span></div>'
-      + '<div class="field"><label for="pw-new2">Confirm new password</label><input type="password" id="pw-new2" autocomplete="new-password" required></div>'
+      + '<div class="field"><label for="pw-old">Current password</label>' + pwInput("pw-old", 'autocomplete="current-password" required') + '</div>'
+      + '<div class="field"><label for="pw-new">New password</label>' + pwInput("pw-new", 'autocomplete="new-password" required') + '<span class="hint">At least ' + PW_MIN + ' characters. Use one you use nowhere else.</span></div>'
+      + '<div class="field"><label for="pw-new2">Confirm new password</label>' + pwInput("pw-new2", 'autocomplete="new-password" required') + '</div>'
       + "</div>"
       + '<div id="pw-msg" style="margin-top:14px"></div>'
       + '<div class="row end" style="margin-top:14px"><button class="btn accent" type="submit">Change password</button></div>'
@@ -2639,6 +2655,17 @@
       commit(function (s) {
         s.agents.forEach(function (a) { if (a.id === dcId) { a.status = "declined"; a.approvedBy = session.agentId; } });
       });
+      return;
+    }
+    if (act === "pw-eye") {
+      var pf = byId(el.getAttribute("data-for"));
+      if (!pf) return;
+      var reveal = pf.type === "password";
+      pf.type = reveal ? "text" : "password";
+      el.innerHTML = reveal ? EYE_HIDE : EYE_SHOW;
+      el.setAttribute("aria-label", reveal ? "Hide password" : "Show password");
+      el.setAttribute("title", reveal ? "Hide password" : "Show password");
+      pf.focus();
       return;
     }
     if (act === "agent-pw") { session.pwAgent = el.getAttribute("data-id"); render(); return; }

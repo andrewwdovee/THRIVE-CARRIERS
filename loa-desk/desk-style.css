@@ -294,12 +294,13 @@ table.data .nowrap { white-space: nowrap; }
 }
 .auth-shell > * { position: relative; z-index: 1; }
 .auth-card { width: 100%; max-width: 430px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,.28), 0 24px 60px rgba(0,0,0,.34); overflow: hidden; }
-.auth-top { background: var(--navy-2); padding: 22px 24px; }
+.auth-top { background: var(--navy-2); padding: 24px 24px 20px; text-align: center; }
 /* The mark itself, drawn as a background so the same data URI serves the
-   card and the tile behind it. */
+   card and the tile behind it. Centred over the card rather than hung
+   off the left edge, which left it looking dropped rather than placed. */
 .auth-top .mark {
-  display: block; width: 176px; height: 73px;
-  background: var(--thrive-logo) no-repeat left center / contain;
+  display: block; width: 176px; height: 73px; margin: 0 auto;
+  background: var(--thrive-logo) no-repeat center / contain;
 }
 .auth-top .mark span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .auth-top p { margin: 9px 0 0; font-size: 12px; letter-spacing: .05em; color: #93AAC6; }
@@ -314,6 +315,19 @@ table.data .nowrap { white-space: nowrap; }
 .auth-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); padding: 0 24px; background: var(--mist); }
 .auth-tabs button { padding: 11px 12px; font-size: 12.5px; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; }
 .auth-tabs button[aria-current="page"] { color: var(--ink); border-bottom-color: var(--sky); }
+
+/* ---------- password reveal ---------- */
+.pwbox { position: relative; display: block; }
+/* Room for the button, so a long password never runs under it. */
+.pwbox input { padding-right: 42px; }
+.pw-eye {
+  position: absolute; top: 50%; right: 5px; transform: translateY(-50%);
+  display: grid; place-items: center; width: 30px; height: 30px;
+  padding: 0; border: 0; border-radius: 6px;
+  background: none; color: var(--muted); cursor: pointer;
+}
+.pw-eye:hover { color: var(--ink); background: var(--mist-2); }
+.pw-eye svg { width: 17px; height: 17px; display: block; }
 
 /* ---------- the delete confirmation ---------- */
 /* Deliberately not a browser confirm(): that dialog cannot say what is
