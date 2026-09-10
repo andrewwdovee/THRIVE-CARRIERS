@@ -653,6 +653,24 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
      read the board itself. */
   var LT_BOARD_KEY = "fulfillment_board_v3";
 
+  /* A third home, for the preview copy published to review a change
+     before it ships. It holds its data in the page and writes nowhere,
+     so the preview can be clicked through freely without reaching the
+     relay or the live console. */
+  function makePreviewStore(seed) {
+    var mem = JSON.parse(JSON.stringify(seed || {}));
+    return {
+      mode: "preview",
+      get: function (path) { return Promise.resolve(mem[path] || null); },
+      set: function (path, data) { mem[path] = data; return Promise.resolve(true); },
+      del: function (path) { mem[path] = null; return Promise.resolve(true); },
+      watch: function (path, cb) {
+        this.get(path).then(cb).catch(function () {});
+        return function () {};
+      }
+    };
+  }
+
   function makeRelayStore() {
     return {
       mode: "relay",
@@ -2614,7 +2632,13 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     });
   }
 
-  if (window.claude && typeof window.claude.use === "function") {
+  if (window.THRIVE_PREVIEW_DATA) {
+    /* No gate on a preview: the passcode and the relay sign-in both
+       guard real data, and there is none of it here. */
+    store = makePreviewStore(window.THRIVE_PREVIEW_DATA);
+    ui.unlocked = true;
+    ready();
+  } else if (window.claude && typeof window.claude.use === "function") {
     window.claude.use("downloads").then(function (d) { downloads = d; }).catch(function () {});
     window.claude.use("db").then(function (d) {
       if (d) return bootArtifact(d);

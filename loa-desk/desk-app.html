@@ -366,7 +366,9 @@
        "saved in this browser only" and returned, leaving the relay
        branch below unreachable. The desk could read and never write. */
     if (!RELAY && !artifactApi) {
-      session.notice = { type: "warnbar", text: "Saved in this browser only — this view cannot publish, so your team will not see the change." };
+      session.notice = { type: "warnbar", text: window.THRIVE_PREVIEW
+        ? "Preview copy — nothing here is saved, and the live desk is untouched. Reload to start over."
+        : "Saved in this browser only — this view cannot publish, so your team will not see the change." };
       render();
       if (done) done({ code: "not_writer" });
       return;
