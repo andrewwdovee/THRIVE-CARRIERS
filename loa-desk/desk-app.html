@@ -813,7 +813,10 @@
     ["notifications", "Notifications"], ["settings", "Settings"]
   ];
   var AGENT_TABS = [["mydesk", "My desk"], ["myanalytics", "Analytics"], ["mycalls", "Daily calls"],
-    ["mydeals", "My deals"], ["notifications", "Notifications"]];
+    ["mydeals", "My deals"], ["notifications", "Notifications"],
+    /* Changing your own password lived only behind your name in the
+       masthead, where nobody looked for it. */
+    ["account", "Settings"]];
 
   function tabsFor() { return isOwner() ? OWNER_TABS : AGENT_TABS; }
   /* Reached from the masthead rather than the rail — everyone needs it, but
@@ -878,8 +881,36 @@
       : view === "mydeals" ? viewMyDeals()
       : viewMyDesk();
     root.innerHTML = masthead() + navTabs() + '<main class="wrap">' + noticeBar() + inner + "</main>"
-      + deleteDialog();
+      + deleteDialog() + passwordDialog();
     refreshCalc();
+  }
+
+  /* Setting a producer's password for them. There is no email out of
+     this desk to send a reset link through, so the owner types the new
+     password and hands it over — which is also how a producer who is
+     locked out actually gets back in today. The old password is not
+     needed: the owner is not proving they are that person. */
+  function passwordDialog() {
+    var id = session.pwAgent;
+    if (!id) return "";
+    var a = agentById(id);
+    if (!a) return "";
+    return '<div class="modal-shade"><div class="modal" style="border-top-color:var(--sky)" role="dialog" aria-modal="true" aria-labelledby="ap-h">'
+      + '<h3 id="ap-h">Set a new password</h3>'
+      + '<p class="who">' + esc(a.name) + "<span>" + esc(a.email) + "</span></p>"
+      + '<div class="grid" style="margin-top:14px">'
+      + '<div class="field"><label for="ap-pw">New password</label>'
+      + '<input type="text" id="ap-pw" autocomplete="off" placeholder="At least ' + PW_MIN + ' characters">'
+      /* Shown rather than masked: the owner has to read it back to the
+         person before it is any use to them. */
+      + '<span class="hint">Visible so you can pass it on. They can change it themselves under Settings.</span></div>'
+      + '<div class="field"><label for="ap-pw2">Confirm</label><input type="text" id="ap-pw2" autocomplete="off"></div>'
+      + "</div>"
+      + '<div id="ap-msg" style="margin-top:12px"></div>'
+      + '<div class="row end">'
+      + '<button class="btn ghost" data-act="agent-pw-cancel">Cancel</button>'
+      + '<button class="btn accent" data-act="agent-pw-save" data-id="' + esc(id) + '">Set password</button>'
+      + "</div></div></div>";
   }
 
   /* The second of the two confirmations. The first arms the button in
@@ -1564,6 +1595,7 @@
               + '<td class="mono">' + esc(a.startedOn ? prettyDate(a.startedOn) : "\u2014") + "</td>"
               + '<td class="n">' + money(life.apPaid) + "</td>"
               + '<td class="n nowrap"><button class="btn ghost sm" data-act="toggle-agent" data-id="' + esc(a.id) + '">' + (a.status === "active" ? "Deactivate" : "Reactivate") + "</button> "
+              + '<button class="btn ghost sm" data-act="agent-pw" data-id="' + esc(a.id) + '">Password</button> '
               + '<button class="btn danger sm" data-act="del-agent" data-id="' + esc(a.id) + '">Delete</button></td></tr>';
           }).join("")
           + "</tbody></table></div>"
@@ -2609,6 +2641,27 @@
       });
       return;
     }
+    if (act === "agent-pw") { session.pwAgent = el.getAttribute("data-id"); render(); return; }
+    if (act === "agent-pw-cancel") { session.pwAgent = null; render(); return; }
+    if (act === "agent-pw-save") {
+      var pwId = el.getAttribute("data-id");
+      var np = val("ap-pw"), np2 = val("ap-pw2"), pbox = byId("ap-msg");
+      var pfail = function (t) { if (pbox) pbox.innerHTML = '<div class="msg err">' + esc(t) + "</div>"; };
+      if (np.length < PW_MIN) return pfail("Use at least " + PW_MIN + " characters.");
+      if (np !== np2) return pfail("Those two do not match.");
+      var who = agentById(pwId);
+      if (!who) { session.pwAgent = null; render(); return; }
+      if (pbox) pbox.innerHTML = '<div class="msg info">Securing it\u2026</div>';
+      /* setPw writes onto the agent in state, so committing after it
+         resolves is what persists the new hash. */
+      setPw(who, np).then(function () {
+        session.pwAgent = null;
+        session.notice = { type: "ok", text: "New password set for " + who.name + ". Give it to them \u2014 they can change it under Settings." };
+        commit(null);
+      }).catch(function () { pfail("That did not save. Try again."); });
+      return;
+    }
+
     /* First confirmation: the button arms itself in place. */
     if (act === "del-agent") {
       if (!armConfirm(el, "Confirm delete")) return;
