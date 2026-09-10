@@ -35,7 +35,7 @@
   /* The top close-rate band. Filled rather than tinted like the other
      three, because a slightly brighter tint sitting next to three tints
      is not what "easier to spot" means. */
-  --hot:      #0B8A54;
+  --hot:      #0A7F4D;
   --hot-fg:   #FFFFFF;
   --warn:     #9A6100;
   --warn-bg:  #FBEFD9;
@@ -311,6 +311,7 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 .tile.is-warn::before { background: var(--warn); }
 .tile.is-bad::before  { background: var(--bad); }
 .tile.is-key::before  { background: var(--sky); }
+.tile.is-hot::before  { background: var(--hot); }
 @media (min-width: 1060px) { .tiles.t3 { grid-template-columns: repeat(3, 1fr); } }
 /* Five ledger tiles that reconcile to one another belong on one line,
    not three-and-a-ragged-two. */
@@ -321,8 +322,17 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 @media (min-width: 700px) { .ledger { grid-template-columns: 1fr 1fr; } }
 .ledger .span2 { grid-column: 1 / -1; }
 .tile .v { display: block; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; font-size: 23px; font-weight: 600; letter-spacing: -.02em; margin-top: 5px; line-height: 1.15; }
-.tile .v.neg { color: var(--bad); }
-.tile .v.pos { color: var(--good); }
+.tile .v.neg  { color: var(--bad); }
+.tile .v.pos  { color: var(--good); }
+.tile .v.warn { color: var(--warn); }
+/* The top band is filled rather than coloured, for the same reason the
+   top pill is: two greens that both need contrast on a light card can
+   only differ so much, and a filled chip differs completely. */
+.tile .v.hot {
+  color: var(--hot-fg); background: var(--hot);
+  display: inline-block;              /* shrink to the number, not the card */
+  padding: 1px 12px 3px; border-radius: 9px;
+}
 .tile .v2 {
   display: block; margin-top: 5px; font-size: 12.5px; color: var(--muted); line-height: 1.35;
 }
@@ -1386,6 +1396,20 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     return "bad";
   }
 
+  /* Placement bands, on the same scheme as the close rate: red under
+     70, amber to 80, green to 90, filled green above. */
+  function placementTone(r) {
+    if (!isFinite(r)) return "";
+    if (r >= 90) return "hot";
+    if (r >= 80) return "good";
+    if (r >= 70) return "warn";
+    return "bad";
+  }
+  /* One band name, two places it has to be spelled: the stripe down the
+     side of a tile, and the colour of the figure on it. */
+  var TONE_STRIPE = { hot: "is-hot", good: "is-good", warn: "is-warn", bad: "is-bad" };
+  var TONE_VALUE  = { hot: "hot",    good: "pos",     warn: "warn",    bad: "neg" };
+
   function isSample(snap) { return !!(snap && snap.isSample); }
 
   /* Sample figures sitting in a console full of real ones is how someone
@@ -1750,13 +1774,15 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       { value: money(m.agentCommWritten), label: "projected agent commissions" });
     out += tile("is-good", "Commission spread", money(m.spreadPaid), "house keeps this");
     out += tile("src-loa", "Call spend", money(m.marketingCost), intf(m.callsTaken) + " calls at " + money(org.costPerCall));
-    out += tile(m.placement >= 70 ? "is-good" : "is-warn", "Placement rate", pct(m.placement), "of settled premium stuck");
+    var pTone = placementTone(m.placement);
+    out += tile(TONE_STRIPE[pTone] || "src-loa", "Placement rate", pct(m.placement),
+      "of settled premium stuck", TONE_VALUE[pTone] || "");
     out += tile(m.net >= 0 ? "is-good" : "is-bad", "Net after marketing", money(m.net), "spread minus call spend", m.net < 0 ? "neg" : "pos");
     out += "</div>";
 
     /* agents */
     out += '<div class="section-head"><p class="eyebrow">By producer</p><h3>Who wrote what</h3>' +
-      '<p class="sub">Ranked by the commission Thrive kept after their split. Close rate is deals written against calls taken — green from 20%, filled green from 21%, amber from 15%, red below.</p></div>';
+      '<p class="sub">Ranked by the commission Thrive kept after their split. Close rate is deals written against calls taken: green from 20%, filled from 21%, amber from 15%, red below. Placement uses the same scale at 90 / 80 / 70.</p></div>';
     var rows = loaAgents().map(function (a) {
       var am = loaMetrics(w.from, w.to, [a.id]);
       return { agent: a, m: am };
@@ -1769,7 +1795,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       out += '<div class="panel"><div class="panel-body flush"><div class="tblwrap"><table class="data"><thead><tr>' +
         "<th>Producer</th><th>Contract</th><th class=\"n\">Calls</th><th class=\"n\">Written</th><th class=\"n\">Written AP</th>" +
         "<th class=\"n\">Paid AP</th><th class=\"n\">Agent comm</th><th class=\"n\">Thrive comm</th>" +
-        "<th class=\"n\">ROI</th><th>Placement</th><th class=\"ctr\">Close rate</th>" +
+        "<th class=\"n\">ROI</th><th class=\"ctr\">Placement</th><th class=\"ctr\">Close rate</th>" +
         "</tr></thead><tbody>";
       rows.forEach(function (r) {
         var p = r.m.placement;
@@ -1782,8 +1808,9 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
           '<td class="n">' + esc(money(r.m.agentCommPaid)) + "</td>" +
           '<td class="n">' + esc(money(r.m.spreadPaid)) + "</td>" +
           '<td class="n">' + (r.m.marketingCost > 0 ? esc(pct(r.m.roi, 0)) : '<span class="dim">—</span>') + "</td>" +
-          '<td><div class="row" style="gap:8px;flex-wrap:nowrap"><div class="bar-mini" style="flex:1 1 54px"><i class="' + (p >= 70 ? "good" : p < 50 ? "bad" : "") + '" style="width:' + Math.min(100, p).toFixed(0) + '%"></i></div>' +
-          '<span class="num" style="font-size:12px">' + esc(pct(p, 0)) + "</span></div></td>" +
+          '<td class="ctr">' + (r.m.apPaid + r.m.apLost > 0
+            ? '<span class="pill ' + placementTone(p) + '">' + esc(pct(p, 1)) + "</span>"
+            : '<span class="dim">nothing settled</span>') + "</td>" +
           '<td class="ctr">' + (r.m.callsTaken > 0
             ? '<span class="pill ' + closeRateTone(r.m.closeRate) + '">' + esc(pct(r.m.closeRate, 1)) + "</span>"
             : '<span class="dim">no calls</span>') + "</td></tr>";
@@ -1794,7 +1821,9 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
         '<td class="n">' + esc(money(tot.apWritten)) + '</td><td class="n">' + esc(money(tot.apPaid)) + "</td>" +
         '<td class="n">' + esc(money(tot.agentCommPaid)) + '</td><td class="n">' + esc(money(tot.spreadPaid)) + "</td>" +
         '<td class="n">' + (tot.marketingCost > 0 ? esc(pct(tot.roi, 0)) : "—") + "</td>" +
-        "<td>" + esc(pct(tot.placement, 0)) + "</td>" +
+        '<td class="ctr">' + (tot.apPaid + tot.apLost > 0
+          ? '<span class="pill ' + placementTone(tot.placement) + '">' + esc(pct(tot.placement, 1)) + "</span>"
+          : "—") + "</td>" +
         '<td class="ctr">' + (tot.callsTaken > 0
           ? '<span class="pill ' + closeRateTone(tot.closeRate) + '">' + esc(pct(tot.closeRate, 1)) + "</span>"
           : "—") + "</td></tr>";
