@@ -32,6 +32,11 @@
   --muted:    #64717F;
   --good:     #0F7A57;
   --good-bg:  #E2F4EC;
+  /* The top close-rate band. Filled rather than tinted like the other
+     three, because a slightly brighter tint sitting next to three tints
+     is not what "easier to spot" means. */
+  --hot:      #0B8A54;
+  --hot-fg:   #FFFFFF;
   --warn:     #9A6100;
   --warn-bg:  #FBEFD9;
   --bad:      #B8362B;
@@ -73,6 +78,8 @@
     --muted:    #8A99AB;
     --good:     #45C79B;
     --good-bg:  #0E2A22;
+    --hot:      #2FBE85;
+    --hot-fg:   #05231A;
     --warn:     #E0A44A;
     --warn-bg:  #2C2114;
     --bad:      #F08276;
@@ -108,6 +115,8 @@
   --muted:    #8A99AB;
   --good:     #45C79B;
   --good-bg:  #0E2A22;
+  --hot:      #2FBE85;
+  --hot-fg:   #05231A;
   --warn:     #E0A44A;
   --warn-bg:  #2C2114;
   --bad:      #F08276;
@@ -207,8 +216,10 @@ a { color: var(--sky); }
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; flex-wrap: wrap; margin-bottom: 18px; }
 .page-head h2 { margin: 3px 0 0; font-size: 22px; font-weight: 700; letter-spacing: -.015em; text-wrap: balance; }
 .page-head .sub { margin: 4px 0 0; color: var(--muted); font-size: 13px; max-width: 66ch; }
-.section-head { margin: 34px 0 16px; padding-top: 26px; border-top: 1px solid var(--line);
-  display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.section-head { margin: 34px 0 16px; padding-top: 26px; border-top: 1px solid var(--line); }
+/* Only the two-column form spreads its children. Making every section
+   head a flex row put each title beside its own description. */
+.section-head.split { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
 .section-head h3 { margin: 3px 0 0; font-size: 17px; font-weight: 700; letter-spacing: -.012em; }
 .section-head .sub { margin: 4px 0 0; color: var(--muted); font-size: 13px; max-width: 70ch; line-height: 1.6; }
 /* Period-on-period change, at the right-hand end of a section head. The
@@ -388,6 +399,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
 .pill.warn { background: var(--warn-bg); color: var(--warn); border-color: transparent; }
 .pill.bad  { background: var(--bad-bg);  color: var(--bad);  border-color: transparent; }
 .pill.key  { background: var(--sky-soft); color: var(--sky); border-color: transparent; }
+.pill.hot  { background: var(--hot); color: var(--hot-fg); border-color: transparent; font-weight: 700; }
 
 /* ---------- messages / empties ---------- */
 .msg { padding: 10px 12px; border-radius: 6px; font-size: 12.5px; border: 1px solid transparent; }
@@ -924,6 +936,11 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     m.net = m.spreadPaid - m.marketingCost;
     m.placement = ratio(m.apPaid, m.apPaid + m.apLost);
     m.callsPerPaid = paid.length ? m.callsTaken / paid.length : 0;
+    /* Both defined exactly as the Producer Desk defines them, so a
+       producer reading their own desk and the owner reading this table
+       are looking at the same number. */
+    m.closeRate = ratio(m.written, m.callsTaken);
+    m.roi = m.marketingCost > 0 ? ratio(m.net, m.marketingCost) : 0;
     return m;
   }
 
@@ -1345,6 +1362,17 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       "</div></div></header>";
   }
 
+  /* Close-rate bands, as the owner set them: under 15 is red, 15 to 20
+     amber, 20 to 21 green, and 21 and up the filled green that is meant
+     to be findable from across the room. */
+  function closeRateTone(r) {
+    if (!isFinite(r)) return "";
+    if (r >= 21) return "hot";
+    if (r >= 20) return "good";
+    if (r >= 15) return "warn";
+    return "bad";
+  }
+
   function isSample(snap) { return !!(snap && snap.isSample); }
 
   /* Sample figures sitting in a console full of real ones is how someone
@@ -1640,7 +1668,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
   }
 
   function sectionHead(eyebrow, title, sub, right) {
-    return '<div class="section-head"><div><p class="eyebrow">' + esc(eyebrow) + "</p>" +
+    return '<div class="section-head split"><div><p class="eyebrow">' + esc(eyebrow) + "</p>" +
       "<h3>" + esc(title) + '</h3><p class="sub">' + sub + "</p></div>" +
       (right || "") + "</div>";
   }
@@ -1709,7 +1737,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
 
     /* agents */
     out += '<div class="section-head"><p class="eyebrow">By producer</p><h3>Who wrote what</h3>' +
-      '<p class="sub">Ranked by the spread the house kept after their split.</p></div>';
+      '<p class="sub">Ranked by the commission Thrive kept after their split. Close rate is deals written against calls taken — green from 20%, filled green from 21%, amber from 15%, red below.</p></div>';
     var rows = loaAgents().map(function (a) {
       var am = loaMetrics(w.from, w.to, [a.id]);
       return { agent: a, m: am };
@@ -1721,7 +1749,8 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     } else {
       out += '<div class="panel"><div class="panel-body flush"><div class="tblwrap"><table class="data"><thead><tr>' +
         "<th>Producer</th><th>Contract</th><th class=\"n\">Calls</th><th class=\"n\">Written</th><th class=\"n\">Written AP</th>" +
-        "<th class=\"n\">Paid AP</th><th class=\"n\">Agent comm</th><th class=\"n\">Spread</th><th>Placement</th>" +
+        "<th class=\"n\">Paid AP</th><th class=\"n\">Agent comm</th><th class=\"n\">Thrive comm</th>" +
+        "<th class=\"n\">ROI</th><th>Placement</th><th class=\"ctr\">Close rate</th>" +
         "</tr></thead><tbody>";
       rows.forEach(function (r) {
         var p = r.m.placement;
@@ -1733,15 +1762,23 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
           '<td class="n">' + esc(money(r.m.apPaid)) + "</td>" +
           '<td class="n">' + esc(money(r.m.agentCommPaid)) + "</td>" +
           '<td class="n">' + esc(money(r.m.spreadPaid)) + "</td>" +
+          '<td class="n">' + (r.m.marketingCost > 0 ? esc(pct(r.m.roi, 0)) : '<span class="dim">—</span>') + "</td>" +
           '<td><div class="row" style="gap:8px;flex-wrap:nowrap"><div class="bar-mini" style="flex:1 1 54px"><i class="' + (p >= 70 ? "good" : p < 50 ? "bad" : "") + '" style="width:' + Math.min(100, p).toFixed(0) + '%"></i></div>' +
-          '<span class="num" style="font-size:12px">' + esc(pct(p, 0)) + "</span></div></td></tr>";
+          '<span class="num" style="font-size:12px">' + esc(pct(p, 0)) + "</span></div></td>" +
+          '<td class="ctr">' + (r.m.callsTaken > 0
+            ? '<span class="pill ' + closeRateTone(r.m.closeRate) + '">' + esc(pct(r.m.closeRate, 1)) + "</span>"
+            : '<span class="dim">no calls</span>') + "</td></tr>";
       });
       var tot = m;
       out += '<tr class="total"><td>All producers</td><td class="num">—</td>' +
         '<td class="n">' + esc(intf(tot.callsTaken)) + '</td><td class="n">' + esc(intf(tot.written)) + "</td>" +
         '<td class="n">' + esc(money(tot.apWritten)) + '</td><td class="n">' + esc(money(tot.apPaid)) + "</td>" +
         '<td class="n">' + esc(money(tot.agentCommPaid)) + '</td><td class="n">' + esc(money(tot.spreadPaid)) + "</td>" +
-        "<td>" + esc(pct(tot.placement, 0)) + "</td></tr>";
+        '<td class="n">' + (tot.marketingCost > 0 ? esc(pct(tot.roi, 0)) : "—") + "</td>" +
+        "<td>" + esc(pct(tot.placement, 0)) + "</td>" +
+        '<td class="ctr">' + (tot.callsTaken > 0
+          ? '<span class="pill ' + closeRateTone(tot.closeRate) + '">' + esc(pct(tot.closeRate, 1)) + "</span>"
+          : "—") + "</td></tr>";
       out += "</tbody></table></div></div></div>";
     }
 
@@ -1970,12 +2007,12 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     out += "</div>";
 
     if (!hasBrokerage()) {
-      out += '<div class="section-head"><div><p class="eyebrow">Brokerage</p><h3>The brokerage book</h3>' +
+      out += '<div class="section-head split"><div><p class="eyebrow">Brokerage</p><h3>The brokerage book</h3>' +
         '<p class="sub">Its own numbers, once it has a source here.</p></div></div>';
       out += brokerageNotConnected();
     } else {
       var bm = brokerageMetrics(w.from, w.to);
-      out += '<div class="section-head"><div><p class="eyebrow">Brokerage</p><h3>The brokerage book</h3>' +
+      out += '<div class="section-head split"><div><p class="eyebrow">Brokerage</p><h3>The brokerage book</h3>' +
         '<p class="sub">Deals sold and the average monthly premium behind them, logged day by day.</p></div></div>';
       out += '<div class="tiles t3">';
       out += tile("src-loa", "Total deals sold", intf(bm.deals), bm.rows.length + " day" + (bm.rows.length === 1 ? "" : "s") + " logged");
