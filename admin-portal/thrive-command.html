@@ -952,6 +952,15 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
        pipeline behaves, against what it has actually earned. */
     m.houseGrossWritten = deals.reduce(function (t, d) { return t + houseCommOn(d); }, 0);
     m.agentCommWritten = deals.reduce(function (t, d) { return t + agentCommOn(d); }, 0);
+    /* The whole first year at the carrier's own rate — monthly premium
+       x 12 x the rate on that product — rather than the nine months the
+       carrier advances against. */
+    m.houseFullWritten = deals.reduce(function (t, d) { return t + houseCommFullOn(d); }, 0);
+    /* What is left once the producer and the calls are paid for, on each
+       basis. The producer's share is the advance either way: they are
+       paid on nine months whether or not the house counts twelve. */
+    m.netWritten = (m.houseGrossWritten - m.agentCommWritten) - m.marketingCost;
+    m.netFullWritten = m.houseFullWritten - m.agentCommWritten - m.marketingCost;
     m.agentCommPaid = paid.reduce(function (t, d) { return t + agentCommOn(d); }, 0);
     m.houseGrossPaid = paid.reduce(function (t, d) { return t + houseCommOn(d); }, 0);
     m.houseFullPaid = paid.reduce(function (t, d) { return t + houseCommFullOn(d); }, 0);
@@ -1772,12 +1781,14 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       { value: money(m.houseGrossWritten), label: "projected commissions" });
     out += tile("src-loa", "Agent commission", money(m.agentCommPaid), "", "",
       { value: money(m.agentCommWritten), label: "projected agent commissions" });
-    out += tile("is-good", "Commission spread", money(m.spreadPaid), "house keeps this");
+    out += tile("src-loa", "12-month commissions", money(m.houseFullPaid), "", "",
+      { value: money(m.netFullWritten), label: "projected 12-month net" });
     out += tile("src-loa", "Call spend", money(m.marketingCost), intf(m.callsTaken) + " calls at " + money(org.costPerCall));
     var pTone = placementTone(m.placement);
     out += tile(TONE_STRIPE[pTone] || "src-loa", "Placement rate", pct(m.placement),
       "of settled premium stuck", TONE_VALUE[pTone] || "");
-    out += tile(m.net >= 0 ? "is-good" : "is-bad", "Net after marketing", money(m.net), "spread minus call spend", m.net < 0 ? "neg" : "pos");
+    out += tile(m.net >= 0 ? "is-good" : "is-bad", "Net after marketing", money(m.net), "", m.net < 0 ? "neg" : "pos",
+      { value: money(m.netWritten), label: "projected net profit" });
     out += "</div>";
 
     /* agents */
