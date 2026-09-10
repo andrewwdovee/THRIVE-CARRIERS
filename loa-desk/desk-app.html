@@ -659,6 +659,12 @@
         + "</div>";
     } else {
       body = '<div class="auth-body">'
+        /* A preview nobody can get into is not a preview. */
+        + (window.THRIVE_PREVIEW && state.agents.length
+          ? '<div class="msg info" style="line-height:1.6">Preview copy \u2014 sign in with <b>'
+            + esc(state.agents[0].email) + '</b> and <b>' + esc(state.agents[0].password || "")
+            + "</b>. Nothing you do here is saved, and the live desk is untouched.</div>"
+          : "")
         + '<div class="field"><label for="l-email">Email</label><input type="email" id="l-email" autocomplete="username"></div>'
         + '<div class="field"><label for="l-pw">Password</label><input type="password" id="l-pw" autocomplete="current-password"></div>'
         + '<div id="auth-msg"></div>'

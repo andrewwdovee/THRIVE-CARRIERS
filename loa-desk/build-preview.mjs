@@ -9,8 +9,11 @@
  * cannot touch what producers are using. Click anything, delete anyone —
  * reloading puts it all back.
  *
- * Passwords are re-hashed to one preview password, because the real
- * hashes have no business in a copy that exists to be looked at.
+ * The real password hashes are stripped — they have no business in a
+ * copy that exists to be looked at — and replaced with one throwaway
+ * password the desk can check without WebCrypto. It has to be that way
+ * round: an artifact can run on an opaque origin, where crypto.subtle
+ * is undefined, hashing returns null and every password is refused.
  *
  * Output: loa-desk/preview.html
  */
@@ -18,12 +21,9 @@
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { webcrypto as crypto } from "node:crypto";
-
 const here = dirname(fileURLToPath(import.meta.url));
 const file = process.argv[2];
 const PREVIEW_PW = "preview123";
-const PW_ITER = 210000;          /* what the desk itself uses */
 
 if (!file || !existsSync(file)) {
   console.error(`Usage: node build-preview.mjs <state.json>
@@ -32,19 +32,11 @@ A state file is the desk record: { org, agents, deals, calls, goals }.`);
   process.exit(1);
 }
 
-const enc = new TextEncoder();
-const hex = (b) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
-async function hashPw(pw, saltHex) {
-  const salt = new Uint8Array(saltHex.match(/../g).map((h) => parseInt(h, 16)));
-  const key = await crypto.subtle.importKey("raw", enc.encode(pw), { name: "PBKDF2" }, false, ["deriveBits"]);
-  return hex(await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: PW_ITER, hash: "SHA-256" }, key, 256));
-}
-
 const state = JSON.parse(readFileSync(file, "utf8"));
 for (const a of state.agents || []) {
-  a.pwSalt = hex(crypto.getRandomValues(new Uint8Array(16)));
-  a.pwHash = await hashPw(PREVIEW_PW, a.pwSalt);
-  delete a.password;
+  delete a.pwSalt;
+  delete a.pwHash;
+  a.password = PREVIEW_PW;
 }
 
 const content = readFileSync(join(here, "desk-app.html"), "utf8");
