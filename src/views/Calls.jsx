@@ -136,11 +136,16 @@ export default function Calls({ calls, settings, onSave, onRemove }) {
         {/* ── what the calls cost ── */}
         <div className={`mt-4 rounded-lg border ${BD} p-3`}>
           <L>Calls bought</L>
-          <div className="mt-2 grid gap-3 sm:grid-cols-3">
+          {/* One fixed-price source on its own line, then the variable-price
+              one below it — the two Google boxes only mean anything together,
+              and sitting all three in a row read as three unrelated numbers. */}
+          <div className="mt-2">
             <Field label="Billable calls" hint={`Ringba + Call Grid · ${cash(fixed)} each`}>
               <input inputMode="numeric" className={`${IN} text-lg`} placeholder="0"
                 value={draft.billable} onChange={set("billable")} />
             </Field>
+          </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <Field label="Google ad account calls" hint="From the ad account">
               <input inputMode="numeric" className={`${IN} text-lg`} placeholder="0"
                 value={draft.googleCalls} onChange={set("googleCalls")} />
