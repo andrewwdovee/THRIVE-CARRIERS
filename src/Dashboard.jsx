@@ -34,8 +34,8 @@ import Calls from "./views/Calls";
 const TABS = [
   ["inbox", "New orders", Inbox],
   ["missed", "Missed payments", CreditCard],
-  ["refunds", "Refunds", Undo2],
   ["completed", "Completed", CheckCircle2],
+  ["refunds", "Refunds", Undo2],
   ["wallets", "Wallets", Wallet],
   ["calls", "Calls", PhoneCall],
   ["products-view", "By product", Layers],
@@ -339,6 +339,15 @@ export default function Dashboard({ me: account, onSignOut }) {
 
   /* A request is done when somebody says so; the board remembers that. */
   const settleRequest = useCallback((id, how) => {
+    /* No `how` means put it back: the request returns to the queue rather
+       than sitting in a third, unnameable state. */
+    if (!how) {
+      return commit((x) => {
+        const next = { ...(x.handledRequests || {}) };
+        delete next[id];
+        return { ...x, handledRequests: next };
+      }, "Back in the queue");
+    }
     commit((x) => ({ ...x, handledRequests: { ...(x.handledRequests || {}), [id]: { how, at: Date.now() } } }),
       how === "credited" ? "Marked credited" : "Marked declined");
   }, [commit]);

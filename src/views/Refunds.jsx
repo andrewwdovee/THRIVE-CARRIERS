@@ -5,6 +5,9 @@ import {
   custName, findCustomers, SCROLL, DAY, dk, satOf, weekLabel,
 } from "../lib/shared";
 import WipeLine from "./WipeLine";
+
+/* Six rows and a bit, then it scrolls inside itself. */
+const SCROLL_BOX = "max-h-[23rem] overflow-y-auto";
 import { CheckCircle2, Circle } from "lucide-react";
 import { CustomerForm } from "./admin";
 
@@ -125,86 +128,124 @@ function CreditForm({ req, owed, types, price, onCancel, onSave }) {
 /* What agents sent through the public form, newest first. Two calls earn one
    refund, so the count of refunds owed is shown rather than the count of
    calls — that is the number somebody has to act on. */
+/* One request, closed to a line and open to its calls. The same row serves
+   all three boxes; what changes is which buttons it offers. */
+function RequestRow({ r, state, open, onToggle, onRecord, onSettle }) {
+  const owed = Math.floor((r.calls?.length || 0) / 2);
+  return (
+    <div className={state ? "opacity-70" : ""}>
+      <button onClick={onToggle}
+        className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-900">
+        <div className="min-w-[170px] flex-1">
+          <div className={`text-sm font-semibold ${W}`}>{r.first} {r.last}</div>
+          <div className={`truncate text-xs ${F}`}>{r.email}</div>
+        </div>
+        <span className={`text-xs ${M}`}>{r.calls?.length || 0} calls · {owed} refund{owed === 1 ? "" : "s"} owed</span>
+        <span className={`w-28 text-right text-xs ${F}`}>{r.day}</span>
+        <span className={`w-24 shrink-0 rounded px-1.5 py-0.5 text-center text-xs ${
+          !state ? "bg-amber-500/15 text-amber-700 dark:text-amber-300"
+            : state.how === "credited" ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+            : "bg-slate-500/15 text-slate-600 dark:text-slate-300"}`}>
+          {!state ? "Waiting" : state.how === "credited" ? "Credited" : "Declined"}
+        </span>
+      </button>
+
+      {open && (
+        <div className={`border-t ${BD} bg-slate-50 px-4 py-3 dark:bg-slate-900/40`}>
+          <L>The calls</L>
+          <ul className="mt-1 space-y-1">
+            {(r.calls || []).map((c, i) => (
+              <li key={i} className="flex flex-wrap items-baseline gap-x-3 text-sm">
+                <span className={`font-mono ${W}`}>{c.phone}</span>
+                <span className={M}>{REQUEST_REASONS[c.reason] || c.reason}</span>
+              </li>
+            ))}
+          </ul>
+          <p className={`mt-2 text-xs ${F}`}>
+            Sent {new Date(r.at).toLocaleString()}
+            {state ? ` · ${state.how === "credited" ? "credited" : "declined"} ${new Date(state.at).toLocaleString()}` : ""}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {!state && (
+              <>
+                {/* Nothing is settled here. The amount comes next, and a
+                    request only counts as credited once that is saved —
+                    backing out of the amount leaves it waiting. */}
+                <button onClick={() => onRecord(r, owed)} className={`inline-flex items-center gap-1.5 ${PRI}`}>
+                  <Check className="h-4 w-4" /> Record {owed} refund{owed === 1 ? "" : "s"}
+                </button>
+                <button onClick={() => onSettle(r.id, "declined")} className={BTN}>Doesn't meet the criteria</button>
+              </>
+            )}
+            {/* Declining is a judgement, and judgements get revisited. */}
+            {state?.how === "declined" && (
+              <button onClick={() => onSettle(r.id, null)} className={`inline-flex items-center gap-1.5 ${BTN}`}>
+                <Undo2 className="h-3.5 w-3.5" /> Put it back in the queue
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* A box of requests. Capped in height on purpose: a long tail of declined
+   requests is worth keeping and not worth pushing the page down. */
+function RequestBox({ title, note, rows, handled, open, setOpen, onRecord, onSettle, empty, tone }) {
+  return (
+    <div className={`overflow-hidden rounded-xl border ${BD} ${tone || ""}`}>
+      <div className={`border-b ${BD} bg-white px-4 py-3 dark:bg-slate-900`}>
+        <h3 className={`text-sm font-semibold ${W}`}>{title}</h3>
+        <p className={`text-xs ${F}`}>{note}</p>
+      </div>
+      {!rows.length
+        ? <p className={`px-4 py-6 text-sm ${M}`}>{empty}</p>
+        : (
+          <div className={`divide-y divide-slate-200 dark:divide-slate-800 ${SCROLL_BOX}`}>
+            {rows.map((r) => (
+              <RequestRow key={r.id} r={r} state={handled?.[r.id]}
+                open={open === r.id} onToggle={() => setOpen(open === r.id ? null : r.id)}
+                onRecord={onRecord} onSettle={onSettle} />
+            ))}
+          </div>
+        )}
+    </div>
+  );
+}
+
+/* What agents sent through the public form, in three boxes: what is waiting,
+   what was turned down, and what was paid. Nothing is ever thrown away —
+   a request turned down in March is still readable in December. */
 function RequestList({ rows, handled, onSettle, onRecord }) {
   const [open, setOpen] = useState(null);
-  const [showDone, setShowDone] = useState(false);
-  const waiting = rows.filter((r) => !handled?.[r.id]);
-  const done = rows.filter((r) => handled?.[r.id]);
-  const shown = showDone ? [...waiting, ...done] : waiting;
+  /* Settling a request moves it to another box, so leaving it expanded there
+     is just a panel hanging open somewhere the eye isn't. */
+  const settle = (id, how) => { setOpen(null); onSettle(id, how); };
+  const by = (how) => rows
+    .filter((r) => (how ? handled?.[r.id]?.how === how : !handled?.[r.id]))
+    .sort((a, b) => (b.at || 0) - (a.at || 0));
+  const waiting = by(null), declined = by("declined"), credited = by("credited");
 
   return (
-    <div className={`overflow-hidden rounded-xl border ${BD}`}>
-      <div className={`flex flex-wrap items-center justify-between gap-2 border-b ${BD} bg-white px-4 py-3 dark:bg-slate-900`}>
-        <div>
-          <h3 className={`text-sm font-semibold ${W}`}>Refund requests</h3>
-          <p className={`text-xs ${F}`}>
-            {waiting.length} waiting{done.length ? ` · ${done.length} dealt with` : ""} · credited the following Saturday
-          </p>
-        </div>
-        {!!done.length && (
-          <button onClick={() => setShowDone((v) => !v)} className={`text-xs ${F} hover:underline`}>
-            {showDone ? "Hide" : "Show"} the ones dealt with
-          </button>
-        )}
-      </div>
+    <div className="space-y-3">
+      <RequestBox title="Refund requests" rows={waiting} handled={handled}
+        note={`${waiting.length} waiting · credited the following Saturday`}
+        empty="Nothing waiting. Requests appear here the moment somebody submits the form."
+        open={open} setOpen={setOpen} onRecord={onRecord} onSettle={settle} />
 
-      {!shown.length && (
-        <p className={`px-4 py-8 text-sm ${M}`}>
-          Nothing waiting. Requests appear here the moment somebody submits the form.
-        </p>
+      <RequestBox title="Didn't meet the criteria" rows={declined} handled={handled}
+        note={declined.length
+          ? `${declined.length} turned down · kept here so it can be checked later`
+          : "Requests you turn down are kept here, not deleted."}
+        empty="Nothing turned down yet."
+        open={open} setOpen={setOpen} onRecord={onRecord} onSettle={settle} />
+
+      {!!credited.length && (
+        <RequestBox title="Credited" rows={credited} handled={handled}
+          note={`${credited.length} paid out · the refunds are on this page above`}
+          empty="" open={open} setOpen={setOpen} onRecord={onRecord} onSettle={settle} />
       )}
-
-      <div className="divide-y divide-slate-200 dark:divide-slate-800">
-        {shown.map((r) => {
-          const owed = Math.floor((r.calls?.length || 0) / 2);
-          const state = handled?.[r.id];
-          const on = open === r.id;
-          return (
-            <div key={r.id} className={state ? "opacity-60" : ""}>
-              <button onClick={() => setOpen(on ? null : r.id)}
-                className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-900">
-                <div className="min-w-[170px] flex-1">
-                  <div className={`text-sm font-semibold ${W}`}>{r.first} {r.last}</div>
-                  <div className={`truncate text-xs ${F}`}>{r.email}</div>
-                </div>
-                <span className={`text-xs ${M}`}>{r.calls?.length || 0} calls · {owed} refund{owed === 1 ? "" : "s"} owed</span>
-                <span className={`w-28 text-right text-xs ${F}`}>{r.day}</span>
-                <span className={`w-24 shrink-0 rounded px-1.5 py-0.5 text-center text-xs ${
-                  state ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : "bg-amber-500/15 text-amber-700 dark:text-amber-300"}`}>
-                  {state ? (state.how === "credited" ? "Credited" : "Declined") : "Waiting"}
-                </span>
-              </button>
-
-              {on && (
-                <div className={`border-t ${BD} bg-slate-50 px-4 py-3 dark:bg-slate-900/40`}>
-                  <L>The calls</L>
-                  <ul className="mt-1 space-y-1">
-                    {(r.calls || []).map((c, i) => (
-                      <li key={i} className="flex flex-wrap items-baseline gap-x-3 text-sm">
-                        <span className={`font-mono ${W}`}>{c.phone}</span>
-                        <span className={M}>{REQUEST_REASONS[c.reason] || c.reason}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <p className={`mt-2 text-xs ${F}`}>Sent {new Date(r.at).toLocaleString()}</p>
-                  {!state && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {/* Nothing is settled here. The amount comes next, and a
-                          request only counts as credited once that is saved —
-                          backing out of the amount leaves it waiting. */}
-                      <button onClick={() => onRecord(r, owed)}
-                        className={`inline-flex items-center gap-1.5 ${PRI}`}>
-                        <Check className="h-4 w-4" /> Record {owed} refund{owed === 1 ? "" : "s"}
-                      </button>
-                      <button onClick={() => onSettle(r.id, "declined")} className={BTN}>Doesn't meet the criteria</button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 }
