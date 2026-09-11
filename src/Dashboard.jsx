@@ -11,7 +11,7 @@ import {
 } from "./lib/shared";
 import { useBoard, appendOrders } from "./lib/useBoard";
 import { pullStripe, pullRequests, relayHealth, syncEndpoint } from "./lib/sync";
-import { buildSamples } from "./lib/samples";
+import { buildSamples, buildSampleRefunds, buildSampleRequests } from "./lib/samples";
 import { chime, desktop, askPermission, hook } from "./lib/notify";
 import { Stopwatch } from "./components/Elapsed";
 import ByProduct from "./views/ByProduct";
@@ -20,6 +20,9 @@ import Refunds from "./views/Refunds";
 import Logo from "./components/Logo";
 import Wallets from "./views/Wallets";
 import Calls from "./views/Calls";
+
+/* True only in the shareable preview build; see vite.config.js. */
+const DEMO = typeof __DEMO__ === "boolean" ? __DEMO__ : false;
 
 /* The dashboard.
 
@@ -250,8 +253,28 @@ export default function Dashboard({ me: account, onSignOut }) {
   }, [cfg.syncUrl, cfg.autoSyncMinutes, live, runSync]);
 
   const loadSamples = useCallback(() => {
-    commit((x) => appendOrders(x, buildSamples(x.products)).next, "Sample orders loaded");
+    commit((x) => {
+      const withOrders = appendOrders(x, buildSamples(x.products)).next;
+      const req = buildSampleRequests();
+      return {
+        ...withOrders,
+        refunds: [...buildSampleRefunds(x.products || []), ...(x.refunds || [])],
+        sampleRequests: req.rows,
+        handledRequests: { ...req.handled, ...(x.handledRequests || {}) },
+      };
+    }, "Sample data loaded");
   }, [commit]);
+
+  /* The shareable preview page has nobody to set it up, so it sets itself
+     up once: made-up orders, refunds and requests, written like any other
+     change so it behaves exactly as a used portal does. Anything already on
+     the board is left alone, and only the artifact build turns this on. */
+  const seeded = useRef(false);
+  useEffect(() => {
+    if (!DEMO || loading || seeded.current) return;
+    seeded.current = true;
+    if (!orders.length && !(st.refunds || []).length) loadSamples();
+  }, [loading, orders.length, st.refunds, loadSamples]);
 
   /* ── what each view shows ── */
   /* By product drops long-delivered orders so the groups stay readable;
@@ -328,6 +351,12 @@ export default function Dashboard({ me: account, onSignOut }) {
      orders; the board keeps which ones have been dealt with, so the relay
      stays a plain inbox. */
   const [requests, setRequests] = useState([]);
+  /* With no relay to ask, the sample data stands in — that is the only way
+     the demo has anything in these boxes. A configured portal ignores it. */
+  useEffect(() => {
+    if (syncEndpoint(cfg)) return;
+    setRequests(st.sampleRequests || []);
+  }, [st.sampleRequests, cfg.syncUrl]);
   useEffect(() => {
     if (!syncEndpoint(cfg)) return;
     let gone = false;

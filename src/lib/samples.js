@@ -1,4 +1,4 @@
-import { DAY, HOUR, uid } from "./shared";
+import { DAY, HOUR, uid, dk } from "./shared";
 
 /* Fake orders that exercise the whole app: a week of delivered history so
    every report has numbers in it, plus a few live orders — one deliberately
@@ -43,4 +43,62 @@ export function buildSamples(products) {
       productId: p.id, productName: p.name, stripePriceId: `price_s_${p.id}`,
       items: [{ description: p.name, quantity: 1, amount: amt, priceId: `price_s_${p.id}`, interval: sub ? "month" : null, intervalCount: 1 }] };
   });
+}
+
+/* Agents who ask for call credits. Kept apart from the order names so the
+   refunds page reads like a different part of the business, which it is. */
+const AGENTS = [
+  ["Dana", "Whitlock", "dana.whitlock@agency.example"],
+  ["Curtis", "Mbeki", "curtis.mbeki@agency.example"],
+  ["Rosa", "Lindqvist", "rosa.lindqvist@agency.example"],
+  ["Tim", "Ferraro", "tim.ferraro@agency.example"],
+  ["Yvonne", "Adeyemi", "yvonne.adeyemi@agency.example"],
+  ["Blake", "Sorensen", "blake.sorensen@agency.example"],
+  ["Priscilla", "Nowak", "priscilla.nowak@agency.example"],
+  ["Hector", "Ramos", "hector.ramos@agency.example"],
+  ["Maeve", "Donnelly", "maeve.donnelly@agency.example"],
+];
+const REASONS = ["dead_air", "agent", "non_consumer", "other"];
+
+/* Refunds spread over six weeks so the weekly line has a shape, and across
+   several kinds so the reports break down into more than one bar. */
+export function buildSampleRefunds(products) {
+  const now = Date.now();
+  const kinds = ["rt_call", "rt_quality", "rt_goodwill", "rt_duplicate", "rt_membership"];
+  const amounts = [3500, 7000, 3500, 12500, 4000, 3500, 8000, 19900, 3500, 6500, 4000, 15000, 3500, 7000];
+  return amounts.map((amount, i) => {
+    const a = AGENTS[i % AGENTS.length];
+    const p = products.length ? products[i % products.length] : null;
+    return {
+      id: uid("rf"), source: "manual", at: now - (i * 3 + (i % 4)) * DAY,
+      amount, currency: "USD", customer: `${a[0]} ${a[1]}`, email: a[2],
+      productId: i % 3 === 0 && p ? p.id : undefined,
+      typeId: kinds[i % kinds.length],
+      note: i % 5 === 0 ? "Credited on the agent's Saturday statement" : "",
+    };
+  });
+}
+
+/* Requests in all three states, so the boxes on the refunds page each have
+   something in them: some waiting, some turned down, some already paid. */
+export function buildSampleRequests() {
+  const now = Date.now();
+  const rows = [], handled = {};
+  AGENTS.forEach((a, i) => {
+    const calls = 2 + (i % 3) * 2;
+    const id = `rr_s_${i}`;
+    rows.push({
+      id, first: a[0], last: a[1], email: a[2],
+      day: dk(now - (i + 1) * DAY),
+      at: now - (i + 1) * DAY - i * HOUR,
+      calls: Array.from({ length: calls }, (_, k) => ({
+        phone: `(727) 555-${String(1200 + i * 17 + k * 3).slice(-4)}`,
+        reason: REASONS[(i + k) % REASONS.length],
+      })),
+    });
+    /* Four waiting, three turned down, two already credited. */
+    if (i >= 4 && i <= 6) handled[id] = { how: "declined", at: now - i * HOUR };
+    if (i >= 7) handled[id] = { how: "credited", at: now - i * HOUR };
+  });
+  return { rows, handled };
 }

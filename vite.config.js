@@ -12,6 +12,10 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+    /* The shareable preview page fills itself with made-up orders, refunds
+       and requests on first open, so it shows what the portal looks like in
+       use. Only `npm run artifact` sets this; a deployed build never does. */
+    __DEMO__: JSON.stringify(process.env.LTF_DEMO === "1"),
   },
   server: { port: 5173 },
   build: { outDir: "dist" },

@@ -1,7 +1,7 @@
 {
   "name": "thrive-fulfillment",
   "private": true,
-  "version": "1.8.4",
+  "version": "1.8.5",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "lint": "eslint src --ext .js,.jsx",
     "test": "node test/run.mjs",
-    "artifact": "vite build && node scripts/inline.mjs",
+    "artifact": "LTF_DEMO=1 vite build && node scripts/inline.mjs",
     "deploy": "vite build && npx wrangler pages deploy dist --project-name lead-tech-fulfillment --branch LeadTechBackend",
     "setup": "node scripts/setup-stripe.mjs"
   },
