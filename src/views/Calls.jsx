@@ -18,33 +18,45 @@ const RANGES = [["14", "Last 14 days"], ["30", "Last 30 days"], ["90", "Last 90 
 export default function Calls({ calls, settings, onSave, onRemove }) {
   const rows = calls || [];
   const [day, setDay] = useState(() => dk(Date.now()));
-  const [billable, setBillable] = useState("");
-  const [sold, setSold] = useState("");
+  const [f, setF] = useState({});
   const [saved, setSaved] = useState(false);
   const [range, setRange] = useState("30");
   const [grain, setGrain] = useState("day");
 
-  const cost = Number(settings?.callCost) || 0;
-  const price = Number(settings?.callPrice) || 0;
+  const fixed = Number(settings?.callCost) || 0;
+  const p1 = Number(settings?.callPrice) || 0;
+  const p2 = Number(settings?.callPriceHigh) || 0;
 
   const existing = useMemo(() => rows.find((r) => r.day === day), [rows, day]);
-  /* What is typed wins; what is already logged fills the gaps. Editing one of
-     the two numbers must not blank the other. */
+  /* What is typed wins; what is already logged fills the rest. Editing one
+     box must not blank the other four. */
+  const val = (k, fallback = "") => (f[k] !== undefined ? f[k] : (existing?.[k] ?? fallback));
+  const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
+
   const draft = {
-    billable: billable === "" ? (existing?.billable ?? "") : billable,
-    sold: sold === "" ? (existing?.sold ?? "") : sold,
+    billable: val("billable"),
+    googleCalls: val("googleCalls"),
+    /* Held in cents on the record, typed in dollars. */
+    googleRate: f.googleRate !== undefined
+      ? Math.round(Number(f.googleRate) * 100) || 0
+      : (existing?.googleRate ?? 0),
+    sold35: val("sold35", existing?.sold ?? ""),
+    sold40: val("sold40"),
   };
-  const preview = callMath({ billable: draft.billable || 0, sold: draft.sold || 0 }, settings);
-  const dirty = billable !== "" || sold !== "";
+  const preview = callMath(draft, settings);
+  const dirty = Object.keys(f).length > 0;
 
   const save = () => {
     onSave({
       id: existing?.id || uid("cl"), day,
       billable: Math.max(0, Number(draft.billable) || 0),
-      sold: Math.max(0, Number(draft.sold) || 0),
+      googleCalls: Math.max(0, Number(draft.googleCalls) || 0),
+      googleRate: Math.max(0, draft.googleRate || 0),
+      sold35: Math.max(0, Number(draft.sold35) || 0),
+      sold40: Math.max(0, Number(draft.sold40) || 0),
       at: Date.now(),
     });
-    setBillable(""); setSold("");
+    setF({});
     setSaved(true); setTimeout(() => setSaved(false), 2500);
   };
 
@@ -110,38 +122,73 @@ export default function Calls({ calls, settings, onSave, onRemove }) {
               <PhoneCall className="h-4 w-4 text-blue-600 dark:text-blue-400" /> Log the day
             </h3>
             <p className={`mt-0.5 text-sm ${M}`}>
-              Two numbers. Logging a day again corrects it rather than adding a second entry.
+              Logging a day again corrects it rather than adding a second entry.
             </p>
           </div>
           <div className="w-44">
             <Field label="Day">
               <input type="date" className={IN} value={day}
-                onChange={(e) => { setDay(e.target.value || dk(Date.now())); setBillable(""); setSold(""); }} />
+                onChange={(e) => { setDay(e.target.value || dk(Date.now())); setF({}); }} />
             </Field>
           </div>
         </div>
 
-        <div className="mt-4 grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Field label="Lead Tech billable calls" hint={`What you pay for, at ${cash(cost)} each`}>
-            <input inputMode="numeric" className={`${IN} text-lg`} placeholder="0"
-              value={draft.billable} onChange={(e) => setBillable(e.target.value)} />
-          </Field>
-          <Field label="Calls sold" hint={`What agents bought, at ${cash(price)} each`}>
-            <input inputMode="numeric" className={`${IN} text-lg`} placeholder="0"
-              value={draft.sold} onChange={(e) => setSold(e.target.value)} />
-          </Field>
+        {/* ── what the calls cost ── */}
+        <div className={`mt-4 rounded-lg border ${BD} p-3`}>
+          <L>Calls bought</L>
+          <div className="mt-2 grid gap-3 sm:grid-cols-3">
+            <Field label="Billable calls" hint={`Ringba + Call Grid · ${cash(fixed)} each`}>
+              <input inputMode="numeric" className={`${IN} text-lg`} placeholder="0"
+                value={draft.billable} onChange={set("billable")} />
+            </Field>
+            <Field label="Google ad account calls" hint="From the ad account">
+              <input inputMode="numeric" className={`${IN} text-lg`} placeholder="0"
+                value={draft.googleCalls} onChange={set("googleCalls")} />
+            </Field>
+            <Field label="Price per call" hint="What those cost today, in dollars">
+              <input inputMode="decimal" className={`${IN} text-lg`} placeholder="0.00"
+                value={f.googleRate !== undefined ? f.googleRate : (existing?.googleRate ? (existing.googleRate / 100).toFixed(2) : "")}
+                onChange={set("googleRate")} />
+            </Field>
+          </div>
+          {(preview.billable > 0 || preview.google > 0) && (
+            <p className={`mt-2 text-xs ${F}`}>
+              {preview.billable} × {cash(fixed)} = {cash(preview.spendBillable)}
+              {preview.google > 0 && <> · {preview.google} × {cash(preview.googleRate)} = {cash(preview.spendGoogle)}</>}
+              {" · "}<span className={M}>{cash(preview.spend)} out</span>
+              {preview.costPerCall != null && <> · {cash(preview.costPerCall)} a call blended</>}
+            </p>
+          )}
+        </div>
 
-          {/* The answer, before you commit to it. */}
-          <div className={`rounded-lg border-l-4 ${preview.profit >= 0 ? "border-emerald-500" : "border-rose-500"} ${PANEL} px-3 py-2 sm:col-span-2`}>
-            <L>That day</L>
-            <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-              <span className={`font-mono text-xl font-bold ${tone(preview.profit)}`}>{money(preview.profit)}</span>
-              <span className={`text-xs ${F}`}>
+        {/* ── what they sold for ── */}
+        <div className={`mt-3 rounded-lg border ${BD} p-3`}>
+          <L>Calls sold</L>
+          <div className="mt-2 grid gap-3 sm:grid-cols-3">
+            <Field label={`Calls sold at ${cash(p1)}`} hint="The standard rate">
+              <input inputMode="numeric" className={`${IN} text-lg`} placeholder="0"
+                value={draft.sold35} onChange={set("sold35")} />
+            </Field>
+            <Field label={`Calls sold at ${cash(p2)}`} hint="The higher rate">
+              <input inputMode="numeric" className={`${IN} text-lg`} placeholder="0"
+                value={draft.sold40} onChange={set("sold40")} />
+            </Field>
+            <div className={`self-end rounded-lg border-l-4 ${preview.profit >= 0 ? "border-emerald-500" : "border-rose-500"} ${PANEL} px-3 py-2`}>
+              <L>That day</L>
+              <div className={`mt-1 font-mono text-xl font-bold ${tone(preview.profit)}`}>{money(preview.profit)}</div>
+              <div className={`text-xs ${F}`}>
                 {cash(preview.revenue)} in · {cash(preview.spend)} out
-                {preview.margin != null ? ` · ${preview.margin}% margin` : ""}
-              </span>
+                {preview.margin != null ? ` · ${preview.margin}%` : ""}
+              </div>
             </div>
           </div>
+          {preview.sold > 0 && (
+            <p className={`mt-2 text-xs ${F}`}>
+              {preview.sold1} × {cash(p1)}{preview.sold2 > 0 && <> · {preview.sold2} × {cash(p2)}</>}
+              {" · "}<span className={M}>{cash(preview.revenue)} in</span>
+              {preview.gap !== 0 && <> · {preview.gap > 0 ? `${preview.gap} sold beyond what was bought` : `${-preview.gap} bought and unsold`}</>}
+            </p>
+          )}
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -159,7 +206,7 @@ export default function Calls({ calls, settings, onSave, onRemove }) {
       {/* ── where it stands ── */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Tile label="Today" value={money(today.profit)} tone={tone(today.profit)}
-          note={`${today.sold} sold · ${today.billable} billed`} />
+          note={`${today.sold} sold · ${today.bought} bought`} />
         <Tile label="This week" value={money(thisWeek?.profit || 0)} tone={tone(thisWeek?.profit || 0)}
           note={thisWeek ? `${thisWeek.days} day${thisWeek.days === 1 ? "" : "s"} logged` : "nothing logged yet"} />
         <Tile label="Against last week"
@@ -170,7 +217,7 @@ export default function Calls({ calls, settings, onSave, onRemove }) {
             : "no week to compare yet"} />
         <Tile label={range === "all" ? "All time" : `Last ${range} days`} value={money(total.profit)}
           tone={tone(total.profit)}
-          note={`${total.sold} sold · ${total.billable} billed${total.margin != null ? "" : ""}`} />
+          note={`${total.sold} sold · ${total.bought} bought${total.costPerCall != null ? ` · ${cash(total.costPerCall)} each` : ""}`} />
       </div>
 
       {/* ── the shape of it ── */}
@@ -207,6 +254,7 @@ export default function Calls({ calls, settings, onSave, onRemove }) {
           <h3 className={`text-sm font-semibold ${W}`}>Day by day</h3>
           <span className={`text-xs ${F}`}>
             {total.days} day{total.days === 1 ? "" : "s"} · {cash(total.revenue)} in · {cash(total.spend)} out
+            {total.costPerCall != null && <> · {cash(total.costPerCall)} a call</>}
           </span>
         </div>
         {!sorted.length && <p className={`px-4 py-8 text-sm ${M}`}>Nothing logged in this window.</p>}
@@ -215,8 +263,8 @@ export default function Calls({ calls, settings, onSave, onRemove }) {
             <table className="w-full text-sm">
               <thead className={STICKY}>
                 <tr className={`border-b ${BD} text-left`}>
-                  {["Day", "Billed", "Sold", "Out", "In", "Profit", ""].map((h, i) => (
-                    <th key={h + i} className={`px-4 py-2 text-xs font-medium uppercase tracking-wide ${F} ${i && i < 6 ? "text-right" : ""}`}>{h}</th>
+                  {["Day", "Billable", "Google", "Sold", "Out", "In", "Profit", ""].map((h, i) => (
+                    <th key={h + i} className={`px-4 py-2 text-xs font-medium uppercase tracking-wide ${F} ${i && i < 7 ? "text-right" : ""}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -230,7 +278,12 @@ export default function Calls({ calls, settings, onSave, onRemove }) {
                           className={`${W} hover:underline`} title="Load this day above">{dl(r.day)}</button>
                       </td>
                       <td className={`${TD} text-right ${M}`}>{m.billable}</td>
-                      <td className={`${TD} text-right ${M}`}>{m.sold}</td>
+                      <td className={`${TD} text-right ${M}`} title={m.googleRate ? `${cash(m.googleRate)} each` : ""}>
+                        {m.google || "—"}
+                      </td>
+                      <td className={`${TD} text-right ${M}`} title={`${m.sold1} at ${cash(p1)}, ${m.sold2} at ${cash(p2)}`}>
+                        {m.sold}
+                      </td>
                       <td className={`${TD} text-right ${F}`}>{cash(m.spend)}</td>
                       <td className={`${TD} text-right ${F}`}>{cash(m.revenue)}</td>
                       <td className={`${TD} text-right font-semibold ${tone(m.profit)}`}>{money(m.profit)}</td>

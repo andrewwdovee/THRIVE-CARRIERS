@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import {
   RefreshCw, Inbox, Clock, AlertTriangle, X, Mail, Phone,
   CreditCard, Receipt, CheckCircle2, Bell, BellOff, RotateCcw, User, PackageOpen, Wallet, PhoneCall,
-  Package, BarChart3, Settings as GearIcon, Layers, LogOut, Undo2,
+  BarChart3, Settings as GearIcon, Layers, LogOut, Undo2,
 } from "lucide-react";
 import {
   BD, CARD, IN, BTN, PRI, M, F, W, c, ST, sm, MISS, mm, SETTLED, DEF, DAY,
@@ -39,7 +39,6 @@ const TABS = [
   ["wallets", "Wallets", Wallet],
   ["calls", "Calls", PhoneCall],
   ["products-view", "By product", Layers],
-  ["catalog", "Products", Package],
   ["reports", "Reports", BarChart3],
   ["settings", "Settings", GearIcon],
 ];
@@ -450,7 +449,7 @@ export default function Dashboard({ me: account, onSignOut }) {
             </h3>
             <p className={`mt-0.5 text-sm ${M}`}>
               They're on the board with no turnaround target and no fulfillment steps.{" "}
-              <button onClick={() => setTab("catalog")} className="text-blue-600 dark:text-blue-400 hover:underline">
+              <button onClick={() => setTab("settings")} className="text-blue-600 dark:text-blue-400 hover:underline">
                 Add their Stripe price or product ID under Products
               </button>{" "}
               and they'll sort themselves out.
@@ -459,7 +458,7 @@ export default function Dashboard({ me: account, onSignOut }) {
         )}
 
         {WORK.has(tab) && !orders.length
-          ? <FirstRun hasSync={!!syncEndpoint(cfg)} onSync={runSync} onSamples={loadSamples} onAddProducts={() => setTab("catalog")} />
+          ? <FirstRun hasSync={!!syncEndpoint(cfg)} onSync={runSync} onSamples={loadSamples} onAddProducts={() => setTab("settings")} />
           : tab === "inbox"
             ? <OrderList rows={inbox} products={products} now={now} onOpen={setOpen}
                 sortBy={sortBy} onSort={setSortBy} settings={cfg}
@@ -472,7 +471,7 @@ export default function Dashboard({ me: account, onSignOut }) {
                 refundTypes={st.refundTypes} customers={st.customers} onAddCustomer={addCustomer}
                 onRecord={recordRefund} onRemove={removeRefund}
                 onAnnotate={annotateRefund} onUpdate={updateRefund}
-                onSetUp={() => setTab("catalog")} />
+                onSetUp={() => setTab("settings")} />
           : tab === "completed"
             ? <OrderList rows={completed} products={products} now={now} onOpen={setOpen} done paged settings={cfg}
                 title="Delivered" note="Delivered orders and settled failed payments, newest first."
@@ -485,12 +484,11 @@ export default function Dashboard({ me: account, onSignOut }) {
           : tab === "calls"
             ? <Calls calls={st.calls} settings={cfg} onSave={saveCallDay} onRemove={removeCallDay} />
           : tab === "products-view" ? <ByProduct products={products} orders={grouped} now={now} onOpen={setOpen} onMove={move} Card={Card} settings={cfg} />
-          : tab === "catalog" ? <Products products={products} orders={orders} commit={commit} house={cfg.pastDueHours}
-                refundTypes={st.refundTypes} refunds={refunds} />
           : tab === "reports" ? <Reports orders={orders} products={products} n={now} flash={flash}
                 refunds={refunds} refundTypes={st.refundTypes}
                 customers={st.customers} wipes={st.wipes} calls={st.calls} settings={cfg} />
           : <SettingsView cfg={cfg} products={products} orders={orders} customers={st.customers} blocks={st.blocks} hidden={hidden} saveCfg={saveCfg} commit={commit}
+              refundTypes={st.refundTypes} refunds={refunds}
               sync={{ busy: sync.busy, at: sync.at, error: sync.error, added: sync.added }}
               onSync={() => runSync({ backfill: true })} addOrders={addOrders} flash={flash} live={syncEndpoint(cfg) ? live : null} />}
       </main>

@@ -88,7 +88,7 @@ export const DEF = { syncUrl: "", syncToken: "", autoSyncMinutes: 5, notifyWebho
   notifyBrowser: true, notifySound: true, notifyOverdue: true, archiveAfterDays: 14, pastDueHours: 12,
   /* What a call costs and what it sells for, in cents. Settings rather than
      constants: these are prices, and prices move. */
-  callCost: 3000, callPrice: 3500 };
+  callCost: 3000, callPrice: 3500, callPriceHigh: 4000 };
 
 /* ── wallets ──
    Agents hold a balance they spend on calls, and every Saturday whatever is
@@ -152,31 +152,59 @@ export function walletWeeks(wipes, from = 0, to = Infinity) {
    day: logging the same day twice corrects it rather than adding a second
    nobody can see. */
 export function callMath(row, settings) {
-  const cost = Number(settings?.callCost) || 0;
-  const price = Number(settings?.callPrice) || 0;
-  const billable = Math.max(0, Number(row?.billable) || 0);
-  const sold = Math.max(0, Number(row?.sold) || 0);
-  const spend = billable * cost;
-  const revenue = sold * price;
+  const n = (v) => Math.max(0, Number(v) || 0);
+  const fixed = Number(settings?.callCost) || 0;          // Ringba + Call Grid
+  const p1 = Number(settings?.callPrice) || 0;            // the $35 tier
+  const p2 = Number(settings?.callPriceHigh) || 0;        // the $40 tier
+
+  const billable = n(row?.billable);
+  const google = n(row?.googleCalls);
+  /* Ad spend moves daily, so the rate is logged with the day rather than
+     kept in settings like the other two. */
+  const googleRate = n(row?.googleRate);
+  /* Days logged before the tiers existed carry a single `sold`; read it as
+     the lower tier rather than losing the figure. */
+  const sold1 = n(row?.sold35 ?? row?.sold);
+  const sold2 = n(row?.sold40);
+
+  const spendBillable = billable * fixed;
+  const spendGoogle = google * googleRate;
+  const spend = spendBillable + spendGoogle;
+  const revenue = sold1 * p1 + sold2 * p2;
   const profit = revenue - spend;
+
+  const bought = billable + google;
+  const sold = sold1 + sold2;
   return {
-    billable, sold, spend, revenue, profit,
-    /* Margin on what was sold. Dividing by spend instead would read as
-       infinity on a day nothing was bought, which is not a useful number. */
+    billable, google, googleRate, sold1, sold2, sold, bought,
+    spendBillable, spendGoogle, spend, revenue, profit,
+    /* Margin on what came in. Dividing by spend instead reads as infinity on
+       a day nothing was bought. */
     margin: revenue ? Math.round((profit / revenue) * 100) : null,
-    /* Sold but not billed for is the gap worth watching: calls delivered
-       from stock rather than bought in. */
-    gap: sold - billable,
+    /* What a bought call actually cost, blended across both sources — the
+       number to hold the $35 and $40 tiers against. */
+    costPerCall: bought ? Math.round(spend / bought) : null,
+    gap: sold - bought,
   };
 }
 
-export const callTotals = (rows, settings) =>
-  (rows || []).reduce((a, r) => {
+export const callTotals = (rows, settings) => {
+  const t = (rows || []).reduce((a, r) => {
     const m = callMath(r, settings);
-    a.billable += m.billable; a.sold += m.sold;
+    a.billable += m.billable; a.google += m.google;
+    a.sold1 += m.sold1; a.sold2 += m.sold2; a.sold += m.sold; a.bought += m.bought;
+    a.spendBillable += m.spendBillable; a.spendGoogle += m.spendGoogle;
     a.spend += m.spend; a.revenue += m.revenue; a.profit += m.profit;
     return a;
-  }, { billable: 0, sold: 0, spend: 0, revenue: 0, profit: 0, days: (rows || []).length });
+  }, { billable: 0, google: 0, sold1: 0, sold2: 0, sold: 0, bought: 0,
+       spendBillable: 0, spendGoogle: 0, spend: 0, revenue: 0, profit: 0,
+       days: (rows || []).length });
+  /* Averaged over the window, not averaged from each day's average — the
+     latter weights a quiet day the same as a busy one. */
+  t.costPerCall = t.bought ? Math.round(t.spend / t.bought) : null;
+  t.margin = t.revenue ? Math.round((t.profit / t.revenue) * 100) : null;
+  return t;
+};
 
 /* Days grouped into the Saturday-to-Saturday weeks the business already
    runs on, oldest first, so "is it growing?" is one glance down the list. */

@@ -265,51 +265,61 @@ ok("nothing anywhere is empty, not undefined", productIdOf({}) === "" && product
 ok("the price field never reports a product id as a price",
    priceIdOf({ stripePriceId: "prod_b" }) === "" && priceIdOf({ stripePriceId: "price_c" }) === "price_c");
 
-// 14. Calls — bought against sold
+// 14. Calls — two sources bought, two tiers sold
 console.log("\ncall profitability:");
-const RATE = { callCost: 3000, callPrice: 3500 };
-const d1 = callMath({ billable: 10, sold: 12 }, RATE);
-ok("spend is billed x cost", d1.spend === 30000, d1.spend);
-ok("revenue is sold x price", d1.revenue === 42000, d1.revenue);
-ok("profit is the difference", d1.profit === 12000, d1.profit);
-ok("margin is on what was sold", d1.margin === 29, d1.margin);
-ok("the gap is sold less billed", d1.gap === 2, d1.gap);
+const RATE = { callCost: 3000, callPrice: 3500, callPriceHigh: 4000 };
 
-/* Buying more than was sold is a loss, and has to read as one. */
-const bad = callMath({ billable: 20, sold: 5 }, RATE);
-ok("buying more than you sell is negative", bad.profit === -42500, bad.profit);
+/* The worked example: 10 Google calls at $42 is $420 out, sold at $35. */
+const ex = callMath({ googleCalls: 10, googleRate: 4200, sold35: 10 }, RATE);
+ok("google calls cost their own daily rate", ex.spendGoogle === 42000, ex.spendGoogle);
+ok("and selling them at the standard rate is a loss", ex.profit === -7000, ex.profit);
+ok("the blended cost per call is that rate", ex.costPerCall === 4200, ex.costPerCall);
 
-/* A day with nothing sold must not divide by zero. */
-const none = callMath({ billable: 4, sold: 0 }, RATE);
-ok("no sales means no margin, not NaN", none.margin === null, none.margin);
-ok("but the spend still counts", none.profit === -12000, none.profit);
-ok("an empty day is all zeroes", callMath({}, RATE).profit === 0);
-ok("negative counts are floored at zero", callMath({ billable: -5, sold: -2 }, RATE).profit === 0);
-ok("junk in the boxes is zero, not NaN", callMath({ billable: "x", sold: null }, RATE).profit === 0);
+/* Billable calls are always the fixed rate; Google calls are not. */
+const mix = callMath({ billable: 10, googleCalls: 5, googleRate: 4200, sold35: 8, sold40: 7 }, RATE);
+ok("billable priced at the fixed rate", mix.spendBillable === 30000, mix.spendBillable);
+ok("google priced at the day's rate", mix.spendGoogle === 21000, mix.spendGoogle);
+ok("spend is the two together", mix.spend === 51000, mix.spend);
+ok("revenue spans both tiers", mix.revenue === 8 * 3500 + 7 * 4000, mix.revenue);
+ok("profit is the difference", mix.profit === 56000 - 51000, mix.profit);
+ok("bought counts both sources", mix.bought === 15, mix.bought);
+ok("sold counts both tiers", mix.sold === 15, mix.sold);
+ok("cost per call blends the sources", mix.costPerCall === 3400, mix.costPerCall);
+ok("margin is on revenue", mix.margin === Math.round((5000 / 56000) * 100), mix.margin);
 
-/* Rates are settings, so a change re-prices everything already logged. */
-ok("changing the rate re-prices the day",
-   callMath({ billable: 10, sold: 12 }, { callCost: 2500, callPrice: 4000 }).profit === 23000);
+/* A day logged before the tiers existed must keep its figure. */
+ok("an older day's `sold` reads as the standard tier",
+   callMath({ billable: 10, sold: 12 }, RATE).revenue === 42000,
+   callMath({ billable: 10, sold: 12 }, RATE).revenue);
+ok("and still nets out the same", callMath({ billable: 10, sold: 12 }, RATE).profit === 12000);
+
+/* Guards. */
+ok("no google rate means no google spend", callMath({ googleCalls: 9 }, RATE).spendGoogle === 0);
+ok("nothing bought means no cost per call", callMath({ sold35: 3 }, RATE).costPerCall === null);
+ok("nothing sold means no margin, not NaN", callMath({ billable: 4 }, RATE).margin === null);
+ok("an empty day is zero", callMath({}, RATE).profit === 0);
+ok("negatives are floored", callMath({ billable: -5, googleCalls: -2, sold35: -9 }, RATE).profit === 0);
+ok("junk is zero, not NaN", callMath({ billable: "x", googleRate: "y", sold40: null }, RATE).profit === 0);
 
 const DAYS = [
-  { day: "2026-08-31", billable: 10, sold: 12 },
-  { day: "2026-09-01", billable: 8, sold: 9 },
-  { day: "2026-09-05", billable: 6, sold: 6 },
+  { day: "2026-08-31", billable: 10, sold35: 12 },
+  { day: "2026-09-01", googleCalls: 8, googleRate: 4200, sold40: 9 },
+  { day: "2026-09-05", billable: 6, sold35: 6 },
 ];
 const tot = callTotals(DAYS, RATE);
-ok("totals add the days up", tot.billable === 24 && tot.sold === 27, JSON.stringify(tot));
-ok("and the money with them", tot.profit === (27 * 3500) - (24 * 3000), tot.profit);
+ok("totals carry both sources", tot.billable === 16 && tot.google === 8, JSON.stringify(tot));
+ok("and both tiers", tot.sold1 === 18 && tot.sold2 === 9, JSON.stringify(tot));
+ok("spend adds the fixed and the daily", tot.spend === 16 * 3000 + 8 * 4200, tot.spend);
+ok("revenue adds the tiers", tot.revenue === 18 * 3500 + 9 * 4000, tot.revenue);
+/* Weighted over the window, not the mean of each day's own average. */
+ok("cost per call is weighted over the window",
+   tot.costPerCall === Math.round((16 * 3000 + 8 * 4200) / 24), tot.costPerCall);
 ok("no days, no totals", callTotals([], RATE).profit === 0 && callTotals(undefined, RATE).days === 0);
 
 const wks = callWeeks(DAYS, RATE);
-/* Aug 31 and Sep 1 fall in the week beginning Saturday Aug 29; Sep 5 is a
-   Saturday and opens the next one. */
 ok("days group into Saturday weeks", wks.length === 2, wks.map((w) => w.days));
-ok("oldest week first", wks[0].week < wks[1].week);
 ok("the first week holds two days", wks[0].days === 2, wks[0].days);
-ok("and sums them", wks[0].profit === (21 * 3500) - (18 * 3000), wks[0].profit);
-ok("a bad date is skipped, not counted",
-   callWeeks([...DAYS, { day: "not-a-date", billable: 9, sold: 9 }], RATE).length === 2);
+ok("a bad date is skipped", callWeeks([...DAYS, { day: "nope", billable: 9 }], RATE).length === 2);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

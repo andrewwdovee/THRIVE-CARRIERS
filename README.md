@@ -21,8 +21,9 @@ Then the standing picture:
   line per product so a week of finished work can't push the live work off the
   screen — open it to see them, or drop a card on it to deliver.
 
-- **Products** — add and remove what you sell, set each one's turnaround target,
-  and paste the Stripe price or product ID that routes an order to it.
+- **Settings** also holds the product catalogue — what you sell, each one's
+  turnaround target, the Stripe price or product ID that routes an order to
+  it, and the refund types.
 - **Wallets** — what was wiped from each agent's wallet each Saturday.
 - **Reports** — three sections under one date range: **Orders** (what sold and
   how fast), **Refunds** (what went back out), and **Wallets** (what was
@@ -408,14 +409,23 @@ is never renamed by a vaguer one.
 
 ### Calls
 
-Two numbers at the end of the day — calls Lead Tech was billed for, and calls
-sold on — and everything else on the tab is arithmetic on them. The entry sits
-at the top and takes two keystrokes and a click: a number that is a chore to
-log stops being logged, and a gap in the record is worse than a rough figure
-in it. The day's profit shows before you commit to it.
+Five numbers at the end of the day, in two sections — what the calls cost and
+what they sold for — and everything else on the tab is arithmetic on them.
+The day's profit shows before you commit to it.
 
-- **The rates are settings**, not constants (`callCost`, `callPrice`). They are
-  prices, and prices move; changing one re-prices every day already logged.
+**Bought:** billable calls (Ringba + Call Grid, at the fixed rate), Google ad
+account calls, and what those cost today. **Sold:** at the standard rate, and
+at the higher one.
+
+- **The fixed rates are settings** (`callCost`, `callPrice`, `callPriceHigh`);
+  changing one re-prices every day already logged. **The Google rate is logged
+  with the day**, because ad spend moves daily and a setting would rewrite
+  history every time it changed.
+- **Cost per call is blended and weighted** — total spend over total calls
+  bought, across the window, not the mean of each day's own average, which
+  weights a quiet day the same as a busy one.
+- **Days logged before the tiers existed** carry a single `sold`; it reads as
+  the standard rate rather than being lost.
 - **One record per day.** Logging the same day again corrects it rather than
   stacking a second entry nobody would spot.
 - **Margin is on revenue, never on spend** — dividing by spend reads as
