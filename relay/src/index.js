@@ -65,9 +65,21 @@ function ownerToken(req, env) {
   return sameToken(bearer(req), want);
 }
 
-/* Who is asking. A signed-in person, the owner's token, or nobody. */
+/* The LOA desk's token. That desk is a page anyone with the link can open,
+   so it must never hold a credential that opens the whole relay: this one
+   reaches exactly two keys and nothing else — no orders, no accounts, no
+   other board. Set it with `wrangler secret put DESK_TOKEN`. */
+const DESK_KEYS = new Set(["loa.state", "snapshots.loa"]);
+function deskToken(req, env) {
+  const want = env.DESK_TOKEN;
+  if (!want) return false;
+  return sameToken(bearer(req), want);
+}
+
+/* Who is asking. A signed-in person, the owner's token, the desk, or nobody. */
 async function caller(req, env) {
   if (ownerToken(req, env)) return { role: "owner", via: "token" };
+  if (deskToken(req, env)) return { role: "desk", via: "token" };
   const s = await session(env, bearer(req));
   return s ? { ...s, via: "session" } : null;
 }
@@ -326,6 +338,13 @@ export default {
 
     if (!who) return json({ error: "Unauthorized" }, 401, origin);
 
+    /* The desk's credential lives in a page anyone can open, so it reaches the
+       desk's own storage and nothing else. Everything past here is off limits
+       to it — orders, refund requests, the lot. */
+    if (who.role === "desk" && !path.startsWith("/kv/")) {
+      return json({ error: "This token may only reach the desk's own keys." }, 403, origin);
+    }
+
     if (path === "/refund-requests" && req.method === "GET") {
       if (!who) return json({ error: "Unauthorized" }, 401, origin);
       if (!env.BOARD) return json([], 200, origin);
@@ -377,6 +396,17 @@ export default {
       if (!env.BOARD) return json({ error: "No KV namespace bound. Add [[kv_namespaces]] BOARD in wrangler.toml." }, 501, origin);
       const key = decodeURIComponent(path.slice(4));
       if (!key) return json({ error: "Missing key" }, 400, origin);
+
+      /* The desk token is scoped. Anything else it asks for is refused here,
+         so a copy of the desk page is not a copy of the relay. */
+      if (who.role === "desk") {
+        if (!DESK_KEYS.has(key)) {
+          return json({ error: "This token may only reach the desk's own keys." }, 403, origin);
+        }
+        if (req.method === "DELETE") {
+          return json({ error: "This token may not delete." }, 403, origin);
+        }
+      }
 
       if (req.method === "GET") {
         const value = await env.BOARD.get(key);
