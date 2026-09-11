@@ -434,6 +434,31 @@ at the higher one.
   seven is always a collapse, so it measures against the same number of days
   of the week before. Otherwise every Monday shows a fake catastrophe.
 
+### Refund requests
+
+Agents ask for refunds through a public form at `#/request`. It is the only
+thing here a stranger can reach, and that shapes everything about it.
+
+The page is chosen in `main.jsx`, at the root — before `App`, before the auth
+gate, before any of the board loads. A link recipient gets the policy, the
+form, and nothing else: no navigation, no orders, no customers, no settings,
+whatever they do with the page.
+
+`POST /refund-request` takes no token, because the people filling it in have
+no account and must never get one. So the endpoint assumes the page is
+hostile: a fixed shape checked in `relay/src/refund-requests.js`, an 8KB body
+cap, field-length caps, at most 12 calls, 20 submissions per address per
+hour, and a reply of `{ok:true}` that says nothing about the board. Reading
+them back (`GET /refund-requests`) needs a session — the form can write,
+nobody unauthenticated can read.
+
+**Two calls earn one refund**, so a submission of one is refused by the
+validator, not just discouraged by the form. Requests show on the Refunds tab
+behind a button carrying a count, listing refunds *owed* rather than calls
+submitted — that is the number somebody acts on. Settling one records it
+against the agent and moves it out of the waiting list. The form's URL sits
+at the foot of the Refunds tab with a copy button.
+
 ### Blocked payments
 
 Settings -> Blocked payments hides charges that aren't work: a test card, a

@@ -7,7 +7,7 @@
    app runs against this browser's own storage. */
 
 const TOKEN_KEY = "fulfillment_session";
-const RELAY = String(import.meta.env?.VITE_RELAY_URL || import.meta.env?.VITE_STORAGE_URL || "").replace(/\/+$/, "");
+export const RELAY = String(import.meta.env?.VITE_RELAY_URL || import.meta.env?.VITE_STORAGE_URL || "").replace(/\/+$/, "");
 
 export const relayUrl = () => RELAY;
 export const relayConfigured = () => !!RELAY;

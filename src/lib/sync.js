@@ -41,3 +41,21 @@ export async function pullStripe(settings, orders, products, { backfill } = {}) 
   if (!res.ok) throw new Error(`Endpoint replied ${res.status}`);
   return normalize(await res.json(), products);
 }
+
+/* What agents have sent in through the public form. Signed-in only — the
+   form can write here, nobody unauthenticated can read it back. */
+export async function pullRequests(settings) {
+  const base = syncEndpoint(settings);
+  if (!base) return [];
+  const url = base.replace(/\/orders\/?$/, "") + "/refund-requests";
+  /* Same two ways in as the orders pull: a signed-in session, or the
+     owner's token for a board wired up without one. */
+  const headers = sessionToken()
+    ? authHeaders()
+    : (settings.syncToken ? { Authorization: `Bearer ${settings.syncToken}` } : {});
+  const r = await fetch(url, { headers });
+  if (r.status === 401) throw new Error("The relay didn't accept this session. Sign in again.");
+  if (!r.ok) throw new Error(`Relay said ${r.status}`);
+  const out = await r.json();
+  return Array.isArray(out) ? out : [];
+}

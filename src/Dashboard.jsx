@@ -10,7 +10,7 @@ import {
   productIdOf, priceIdOf,
 } from "./lib/shared";
 import { useBoard, appendOrders } from "./lib/useBoard";
-import { pullStripe, relayHealth, syncEndpoint } from "./lib/sync";
+import { pullStripe, pullRequests, relayHealth, syncEndpoint } from "./lib/sync";
 import { buildSamples } from "./lib/samples";
 import { chime, desktop, askPermission, hook } from "./lib/notify";
 import { Stopwatch } from "./components/Elapsed";
@@ -324,6 +324,25 @@ export default function Dashboard({ me: account, onSignOut }) {
     commit((x) => ({ ...x, calls: (x.calls || []).filter((c) => c.id !== id) }), "Day removed");
   }, [commit]);
 
+  /* What agents have sent in through the public form. Polled beside the
+     orders; the board keeps which ones have been dealt with, so the relay
+     stays a plain inbox. */
+  const [requests, setRequests] = useState([]);
+  useEffect(() => {
+    if (!syncEndpoint(cfg)) return;
+    let gone = false;
+    const get = () => pullRequests(cfg).then((r) => { if (!gone) setRequests(r); }).catch(() => {});
+    get();
+    const t = setInterval(() => { if (!document.hidden) get(); }, 6e4);
+    return () => { gone = true; clearInterval(t); };
+  }, [cfg.syncUrl, cfg.syncToken]);
+
+  /* A request is done when somebody says so; the board remembers that. */
+  const settleRequest = useCallback((id, how) => {
+    commit((x) => ({ ...x, handledRequests: { ...(x.handledRequests || {}), [id]: { how, at: Date.now() } } }),
+      how === "credited" ? "Marked credited" : "Marked declined");
+  }, [commit]);
+
   const addCustomer = useCallback((cst) => {
     commit((x) => ({ ...x, customers: [...(x.customers || []), cst] }), "Customer added");
   }, [commit]);
@@ -469,6 +488,8 @@ export default function Dashboard({ me: account, onSignOut }) {
           : tab === "refunds"
             ? <Refunds refunds={refunds} products={products} orders={orders}
                 refundTypes={st.refundTypes} customers={st.customers} onAddCustomer={addCustomer}
+                requests={requests} handled={st.handledRequests} onSettleRequest={settleRequest}
+                formUrl={`${window.location.origin}${window.location.pathname}#/request`}
                 onRecord={recordRefund} onRemove={removeRefund}
                 onAnnotate={annotateRefund} onUpdate={updateRefund}
                 onSetUp={() => setTab("settings")} />

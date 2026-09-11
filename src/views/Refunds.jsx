@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Plus, X, Undo2, TrendingDown, UserPlus } from "lucide-react";
+import { Plus, X, Undo2, TrendingDown, UserPlus, Inbox, Check, Link2, Copy } from "lucide-react";
 import {
   BD, CARD, IN, BTN, PRI, M, F, W, c, cash, uid, L, Field, Confirm,
   custName, findCustomers, SCROLL, DAY, dk, satOf, weekLabel,
@@ -53,6 +53,121 @@ function CustomerPick({ value, customers, onPick, onAddNew }) {
   );
 }
 
+const REQUEST_REASONS = {
+  non_consumer: "Non-consumer", agent: "Life insurance agent",
+  dead_air: "Dead air", other: "Other",
+};
+
+/* What agents sent through the public form, newest first. Two calls earn one
+   refund, so the count of refunds owed is shown rather than the count of
+   calls — that is the number somebody has to act on. */
+function RequestList({ rows, handled, onSettle, onRecord }) {
+  const [open, setOpen] = useState(null);
+  const [showDone, setShowDone] = useState(false);
+  const waiting = rows.filter((r) => !handled?.[r.id]);
+  const done = rows.filter((r) => handled?.[r.id]);
+  const shown = showDone ? [...waiting, ...done] : waiting;
+
+  return (
+    <div className={`overflow-hidden rounded-xl border ${BD}`}>
+      <div className={`flex flex-wrap items-center justify-between gap-2 border-b ${BD} bg-white px-4 py-3 dark:bg-slate-900`}>
+        <div>
+          <h3 className={`text-sm font-semibold ${W}`}>Refund requests</h3>
+          <p className={`text-xs ${F}`}>
+            {waiting.length} waiting{done.length ? ` · ${done.length} dealt with` : ""} · credited the following Saturday
+          </p>
+        </div>
+        {!!done.length && (
+          <button onClick={() => setShowDone((v) => !v)} className={`text-xs ${F} hover:underline`}>
+            {showDone ? "Hide" : "Show"} the ones dealt with
+          </button>
+        )}
+      </div>
+
+      {!shown.length && (
+        <p className={`px-4 py-8 text-sm ${M}`}>
+          Nothing waiting. Requests appear here the moment somebody submits the form.
+        </p>
+      )}
+
+      <div className="divide-y divide-slate-200 dark:divide-slate-800">
+        {shown.map((r) => {
+          const owed = Math.floor((r.calls?.length || 0) / 2);
+          const state = handled?.[r.id];
+          const on = open === r.id;
+          return (
+            <div key={r.id} className={state ? "opacity-60" : ""}>
+              <button onClick={() => setOpen(on ? null : r.id)}
+                className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-900">
+                <div className="min-w-[170px] flex-1">
+                  <div className={`text-sm font-semibold ${W}`}>{r.first} {r.last}</div>
+                  <div className={`truncate text-xs ${F}`}>{r.email}</div>
+                </div>
+                <span className={`text-xs ${M}`}>{r.calls?.length || 0} calls · {owed} refund{owed === 1 ? "" : "s"} owed</span>
+                <span className={`w-28 text-right text-xs ${F}`}>{r.day}</span>
+                <span className={`w-24 shrink-0 rounded px-1.5 py-0.5 text-center text-xs ${
+                  state ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : "bg-amber-500/15 text-amber-700 dark:text-amber-300"}`}>
+                  {state ? (state.how === "credited" ? "Credited" : "Declined") : "Waiting"}
+                </span>
+              </button>
+
+              {on && (
+                <div className={`border-t ${BD} bg-slate-50 px-4 py-3 dark:bg-slate-900/40`}>
+                  <L>The calls</L>
+                  <ul className="mt-1 space-y-1">
+                    {(r.calls || []).map((c, i) => (
+                      <li key={i} className="flex flex-wrap items-baseline gap-x-3 text-sm">
+                        <span className={`font-mono ${W}`}>{c.phone}</span>
+                        <span className={M}>{REQUEST_REASONS[c.reason] || c.reason}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className={`mt-2 text-xs ${F}`}>Sent {new Date(r.at).toLocaleString()}</p>
+                  {!state && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button onClick={() => { onRecord({ customer: `${r.first} ${r.last}`, email: r.email }); onSettle(r.id, "credited"); }}
+                        className={`inline-flex items-center gap-1.5 ${PRI}`}>
+                        <Check className="h-4 w-4" /> Record {owed} refund{owed === 1 ? "" : "s"}
+                      </button>
+                      <button onClick={() => onSettle(r.id, "declined")} className={BTN}>Doesn't meet the criteria</button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* The address to hand out. At the foot of the page because it is looked up
+   occasionally and worked above daily. */
+function FormLink({ url }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000); }
+    catch { /* a browser that refuses the clipboard still shows the text below */ }
+  };
+  return (
+    <div className={`${CARD} p-4`}>
+      <h3 className={`flex items-center gap-2 text-sm font-semibold ${W}`}>
+        <Link2 className="h-4 w-4 text-blue-600 dark:text-blue-400" /> The request form
+      </h3>
+      <p className={`mt-1 text-sm ${M}`}>
+        Send this to agents. It shows the policy and takes their calls — and nothing else here is reachable from it.
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <input readOnly value={url} onFocus={(e) => e.target.select()} className={`${IN} flex-1 font-mono text-xs`} />
+        <button onClick={copy} className={`inline-flex items-center gap-1.5 ${BTN}`}>
+          {copied ? <><Check className="h-4 w-4 text-emerald-500" /> Copied</> : <><Copy className="h-4 w-4" /> Copy</>}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const RANGES = [["7", "Last 7 days"], ["30", "Last 30 days"], ["90", "Last 90 days"], ["all", "All time"], ["custom", "Custom"]];
 
 /* Money that went back out.
@@ -65,9 +180,11 @@ const RANGES = [["7", "Last 7 days"], ["30", "Last 30 days"], ["90", "Last 90 da
 
 const money = (rows) => rows.reduce((s, r) => s + (r.amount || 0), 0);
 
-export default function Refunds({ refunds, products, orders, refundTypes, customers, onRecord, onRemove, onAnnotate, onUpdate, onSetUp, onAddCustomer }) {
+export default function Refunds({ refunds, products, orders, refundTypes, customers, onRecord, onRemove, onAnnotate, onUpdate, onSetUp, onAddCustomer, requests = [], handled = {}, onSettleRequest, formUrl }) {
   const [adding, setAdding] = useState(null);
   const [openGroup, setOpenGroup] = useState(null);
+  const [showRequests, setShowRequests] = useState(false);
+  const waiting = useMemo(() => (requests || []).filter((r) => !handled?.[r.id]), [requests, handled]);
   const [range, setRange] = useState("all");
   const [a, setA] = useState(dk(Date.now() - 30 * DAY)), [b, setB] = useState(dk(Date.now()));
 
@@ -176,8 +293,20 @@ export default function Refunds({ refunds, products, orders, refundTypes, custom
             <div className={`mt-0.5 text-xs ${F}`}>{agents ? `${cash(Math.round(total / agents))} each on average` : "nobody yet"}</div>
           </div>
         </div>
-        <button onClick={() => setAdding({ id: uid("rf"), at: Date.now(), currency: "USD" })}
+<div className="flex flex-col items-stretch gap-2">
+                  <button onClick={() => setAdding({ id: uid("rf"), at: Date.now(), currency: "USD" })}
           className={`inline-flex items-center gap-1.5 ${PRI}`}><Plus className="h-4 w-4" /> Record a refund</button>
+          {/* Second, because recording one is the commoner job — but with a
+              count, since a request nobody looks at is a refund nobody gives. */}
+          <button onClick={() => setShowRequests((v) => !v)}
+            className={`inline-flex items-center justify-center gap-2 ${BTN}`}>
+            <Inbox className="h-4 w-4" />
+            {showRequests ? "Hide" : "View"} refund requests
+            {waiting.length > 0 && (
+              <span className="rounded-full bg-rose-600 px-1.5 py-0.5 text-xs font-semibold text-white">{waiting.length}</span>
+            )}
+          </button>
+        </div>
       </div>
 
       {!refunds.length && (
@@ -189,6 +318,11 @@ export default function Refunds({ refunds, products, orders, refundTypes, custom
             record it here so the totals stay honest.
           </p>
         </div>
+      )}
+
+      {showRequests && (
+        <RequestList rows={requests} handled={handled} onSettle={onSettleRequest}
+          onRecord={(pre) => setAdding({ id: uid("rf"), at: Date.now(), currency: "USD", ...pre })} />
       )}
 
       {groups.map((g) => {
@@ -232,6 +366,8 @@ export default function Refunds({ refunds, products, orders, refundTypes, custom
         <WipeLine empty="No refunds in this window."
           points={weekly.map((w) => ({ at: w.at, value: w.amount, note: `${w.n} refund${w.n === 1 ? "" : "s"}` }))} />
       </div>
+
+      {formUrl && <FormLink url={formUrl} />}
 
       {byReason.length > 1 && (
         <div className={`overflow-hidden rounded-xl border ${BD}`}>

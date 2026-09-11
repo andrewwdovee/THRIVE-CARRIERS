@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import RefundRequest from "./views/RefundRequest";
 import { installStorage } from "./lib/storage";
 import "./index.css";
 
@@ -29,6 +30,16 @@ class Boundary extends React.Component {
   }
 }
 
+/* The refund form is for people who have no account here, so it is chosen at
+   the root — before the app that would ask them to sign in, and before any
+   of the board is loaded. Decided once from the address: it is a page people
+   are sent to, not one they reach from inside. */
+const wantsRequestForm = (() => {
+  try { return /^#\/?request\b/.test(window.location.hash || ""); } catch { return false; }
+})();
+
 createRoot(document.getElementById("root")).render(
-  <React.StrictMode><Boundary><App /></Boundary></React.StrictMode>
+  <React.StrictMode>
+    <Boundary>{wantsRequestForm ? <RefundRequest /> : <App />}</Boundary>
+  </React.StrictMode>
 );

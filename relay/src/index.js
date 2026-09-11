@@ -6,6 +6,8 @@
    and refuses everything else.
 
      POST /stripe/webhook                     Stripe pushes payments here
+     POST /refund-request                     an agent's refund form — no token
+     GET  /refund-requests                    what they sent, for signed-in staff
      POST /auth/login   {email, password}  ->  a session token
      GET  /auth/me                            who the token belongs to
      POST /auth/logout                        revoke this token
@@ -29,12 +31,13 @@
 
 import { createUser, deleteUser, listUsers, login, logout, session, bearer } from "./auth.js";
 import { verify, HANDLED, fromEvent, mergeOrders } from "./stripe-webhook.js";
+import { readRequest, overLimit, tooBig, requestKey, REQUEST_TTL } from "./refund-requests.js";
 
 const STRIPE = "https://api.stripe.com/v1";
 
 const cors = (origin) => ({
   "Access-Control-Allow-Origin": origin || "*",
-  "Access-Control-Allow-Methods": "GET,PUT,DELETE,OPTIONS",
+  "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
   "Access-Control-Allow-Headers": "Authorization,Content-Type",
   "Access-Control-Max-Age": "86400",
 });
@@ -249,6 +252,38 @@ export default {
       return json({ ok: true, received: order.id }, 200, origin);
     }
 
+    /* ── an agent asking for a refund ──
+       No token: the form goes to people who have no account here and must
+       never get one. So this is the one route a stranger can reach, and
+       everything about it is shaped by that — a fixed shape, a size cap, a
+       rate limit, and no way to read anything back. */
+    if (path === "/refund-request" && req.method === "POST") {
+      if (!env.BOARD) return json({ error: "Not accepting requests right now." }, 503, origin);
+
+      const raw = await req.text();
+      if (tooBig(raw)) return json({ error: "That's too long." }, 413, origin);
+
+      const ip = req.headers.get("CF-Connecting-IP") || "";
+      if (await overLimit(env, ip)) {
+        return json({ error: "Too many requests from here. Try again later." }, 429, origin);
+      }
+
+      let body;
+      try { body = JSON.parse(raw); } catch { return json({ error: "Couldn't read that." }, 400, origin); }
+      const { value, error } = readRequest(body);
+      if (error) return json({ error }, 400, origin);
+
+      const at = Math.floor(Date.now() / 1000);
+      const id = crypto.randomUUID();
+      await env.BOARD.put(
+        requestKey(at, id),
+        JSON.stringify({ ...value, id, at: at * 1000, ip: ip ? ip.slice(0, 45) : "" }),
+        { expirationTtl: REQUEST_TTL },
+      );
+      /* Nothing about the board comes back — an acknowledgement only. */
+      return json({ ok: true }, 200, origin);
+    }
+
     /* ── signing in ── */
     if (path === "/auth/login" && req.method === "POST") {
       if (!env.BOARD) return json({ error: "This relay has no KV namespace, so it can't hold accounts." }, 501, origin);
@@ -290,6 +325,22 @@ export default {
     }
 
     if (!who) return json({ error: "Unauthorized" }, 401, origin);
+
+    if (path === "/refund-requests" && req.method === "GET") {
+      if (!who) return json({ error: "Unauthorized" }, 401, origin);
+      if (!env.BOARD) return json([], 200, origin);
+      const out = [];
+      let cursor;
+      do {
+        const page = await env.BOARD.list({ prefix: "rr:", cursor });
+        for (const k of page.keys) {
+          const v = await env.BOARD.get(k.name);
+          if (v) out.push(JSON.parse(v));
+        }
+        cursor = page.list_complete ? null : page.cursor;
+      } while (cursor);
+      return json(out.sort((a, b) => b.at - a.at), 200, origin);
+    }
 
     if (path === "/orders" && req.method === "GET") {
       const raw = Number(url.searchParams.get("since"));
