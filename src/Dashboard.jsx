@@ -491,7 +491,7 @@ export default function Dashboard({ me: account, onSignOut }) {
                 requests={requests} handled={st.handledRequests} onSettleRequest={settleRequest}
                 formUrl={`${window.location.origin}${window.location.pathname}#/request`}
                 onRecord={recordRefund} onRemove={removeRefund}
-                onAnnotate={annotateRefund} onUpdate={updateRefund}
+                onAnnotate={annotateRefund} onUpdate={updateRefund} settings={cfg}
                 onSetUp={() => setTab("settings")} />
           : tab === "completed"
             ? <OrderList rows={completed} products={products} now={now} onOpen={setOpen} done paged settings={cfg}

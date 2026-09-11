@@ -58,6 +58,70 @@ const REQUEST_REASONS = {
   dead_air: "Dead air", other: "Other",
 };
 
+/* Saying yes to a request is one question — how much. Everything else is
+   already on the request, so this asks that and nothing more. The amount is
+   guessed from what a call costs and the number owed; it is a starting figure,
+   not a rule, so it stays editable. */
+function CreditForm({ req, owed, types, price, onCancel, onSave }) {
+  const suggestion = owed && price ? ((owed * price) / 100).toFixed(2) : "";
+  const [dollars, setDollars] = useState(suggestion);
+  const [typeId, setTypeId] = useState(types[0]?.id || "");
+  const [note, setNote] = useState("");
+  const cents = Math.round(Number(dollars) * 100);
+  const ok = Number.isFinite(cents) && cents > 0;
+
+  const save = () => {
+    if (!ok) return;
+    onSave({
+      id: uid("rf"), at: Date.now(), currency: "USD", amount: cents,
+      customer: `${req.first} ${req.last}`.trim(), email: req.email,
+      typeId: typeId || undefined, note: note.trim() || undefined,
+      requestId: req.id, calls: req.calls?.length || 0,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 dark:bg-black/75" onClick={onCancel}>
+      <div className={`max-h-[86vh] w-full max-w-md overflow-y-auto ${CARD} p-5 shadow-2xl`} onClick={(e) => e.stopPropagation()}>
+        <h3 className={`text-base font-semibold ${W}`}>Record {owed} refund{owed === 1 ? "" : "s"}</h3>
+        <p className={`mt-1 text-sm ${M}`}>
+          For {req.first} {req.last} · {req.calls?.length || 0} calls submitted {req.day}.
+          Credited to their account the following Saturday.
+        </p>
+
+        <div className="mt-4 space-y-3">
+          <Field label="How much is the refund?" hint="In US dollars, e.g. 35.00">
+            <input className={IN} inputMode="decimal" autoFocus value={dollars} placeholder="35.00"
+              onChange={(e) => setDollars(e.target.value.replace(/[^0-9.]/g, ""))}
+              onKeyDown={(e) => { if (e.key === "Enter") save(); }} />
+          </Field>
+
+          {!!types.length && (
+            <Field label="What kind of refund is it?" hint="Keeps the reports honest.">
+              <select className={IN} value={typeId} onChange={(e) => setTypeId(e.target.value)}>
+                <option value="">Not categorised</option>
+                {types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </Field>
+          )}
+
+          <Field label="Note" hint="Optional.">
+            <input className={IN} value={note} placeholder="Anything worth remembering"
+              onChange={(e) => setNote(e.target.value)} />
+          </Field>
+        </div>
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button onClick={onCancel} className={BTN}>Cancel</button>
+          <button onClick={save} disabled={!ok} className={`${PRI} disabled:opacity-40`}>
+            Submit the refund
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* What agents sent through the public form, newest first. Two calls earn one
    refund, so the count of refunds owed is shown rather than the count of
    calls — that is the number somebody has to act on. */
@@ -125,7 +189,10 @@ function RequestList({ rows, handled, onSettle, onRecord }) {
                   <p className={`mt-2 text-xs ${F}`}>Sent {new Date(r.at).toLocaleString()}</p>
                   {!state && (
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <button onClick={() => { onRecord({ customer: `${r.first} ${r.last}`, email: r.email }); onSettle(r.id, "credited"); }}
+                      {/* Nothing is settled here. The amount comes next, and a
+                          request only counts as credited once that is saved —
+                          backing out of the amount leaves it waiting. */}
+                      <button onClick={() => onRecord(r, owed)}
                         className={`inline-flex items-center gap-1.5 ${PRI}`}>
                         <Check className="h-4 w-4" /> Record {owed} refund{owed === 1 ? "" : "s"}
                       </button>
@@ -180,8 +247,9 @@ const RANGES = [["7", "Last 7 days"], ["30", "Last 30 days"], ["90", "Last 90 da
 
 const money = (rows) => rows.reduce((s, r) => s + (r.amount || 0), 0);
 
-export default function Refunds({ refunds, products, orders, refundTypes, customers, onRecord, onRemove, onAnnotate, onUpdate, onSetUp, onAddCustomer, requests = [], handled = {}, onSettleRequest, formUrl }) {
+export default function Refunds({ refunds, products, orders, refundTypes, customers, onRecord, onRemove, onAnnotate, onUpdate, onSetUp, onAddCustomer, requests = [], handled = {}, onSettleRequest, formUrl, settings }) {
   const [adding, setAdding] = useState(null);
+  const [crediting, setCrediting] = useState(null);
   const [openGroup, setOpenGroup] = useState(null);
   const [showRequests, setShowRequests] = useState(false);
   const waiting = useMemo(() => (requests || []).filter((r) => !handled?.[r.id]), [requests, handled]);
@@ -322,7 +390,7 @@ export default function Refunds({ refunds, products, orders, refundTypes, custom
 
       {showRequests && (
         <RequestList rows={requests} handled={handled} onSettle={onSettleRequest}
-          onRecord={(pre) => setAdding({ id: uid("rf"), at: Date.now(), currency: "USD", ...pre })} />
+          onRecord={(req, owed) => setCrediting({ req, owed })} />
       )}
 
       {groups.map((g) => {
@@ -384,6 +452,15 @@ export default function Refunds({ refunds, products, orders, refundTypes, custom
             ))}
           </div>
         </div>
+      )}
+
+      {/* Saved here rather than in the modal so the two happen together: the
+          refund is recorded and the request stops waiting, or neither does. */}
+      {crediting && (
+        <CreditForm req={crediting.req} owed={crediting.owed} types={types}
+          price={Number(settings?.callPrice) || 0}
+          onCancel={() => setCrediting(null)}
+          onSave={(rec) => { onRecord(rec); onSettleRequest?.(crediting.req.id, "credited"); setCrediting(null); }} />
       )}
 
       {adding && <RefundForm draft={adding} products={products} orders={orders} types={types} onSetUp={onSetUp}
