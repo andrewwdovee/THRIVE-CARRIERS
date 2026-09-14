@@ -1,0 +1,672 @@
+<title>Thrive Inbound Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#08090c; --rail:#0a0d12; --card:#11161f; --card2:#0d1219; --line:#1f2733;
+  --line2:#161d27; --text:#e6edf3; --muted:#8b98a8; --muted2:#6b7280;
+  --dim:#6e7b8b;
+  --green:#3fb950; --amber:#d29922; --red:#f85149; --purple:#a371f7; --blue:#58a6ff;
+  --pri:#e9eef4; --priText:#0b0f15;
+  --r:8px;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:13px;-webkit-font-smoothing:antialiased}
+.mono{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+.num{font-variant-numeric:tabular-nums}
+a{color:inherit}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* shell */
+.shell{display:flex;min-height:100vh}
+.rail{width:200px;flex:0 0 200px;background:var(--rail);border-right:1px solid var(--line2);display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.brand{display:flex;gap:9px;align-items:center;padding:14px 12px 12px}
+.mark{width:18px;height:18px;flex:0 0 18px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;transform:skewY(-8deg)}
+.mark i{background:var(--text);border-radius:1px}
+.mark i:nth-child(2){background:#5b6878}
+.mark i:nth-child(3){background:#5b6878}
+.brand b{font-size:13px;font-weight:700;letter-spacing:-.01em;display:block;line-height:1.25}
+.brand span{font-size:10.5px;color:var(--dim);display:block}
+.nav{display:flex;flex-direction:column;gap:1px;padding:4px 8px}
+.nav button{display:flex;align-items:center;gap:9px;width:100%;text-align:left;background:none;border:0;padding:7px 9px;border-radius:6px;font-size:12.5px;color:#c3cdd9;transition:background .12s}
+.nav button:hover{background:#141b25}
+.nav button[aria-current="page"]{background:#1c2430;color:#fff;font-weight:500}
+.nav svg{width:14px;height:14px;flex:0 0 14px;opacity:.85}
+.railfoot{margin-top:auto;padding:12px;display:flex;align-items:center;gap:8px}
+.avatar{width:22px;height:22px;border-radius:50%;background:#1c2430;border:1px solid var(--line);display:grid;place-items:center;font-size:9.5px;font-weight:600;color:#c3cdd9}
+.railfoot span{font-size:10px;color:#4e5a68;letter-spacing:.06em;text-transform:uppercase}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{height:46px;border-bottom:1px solid var(--line2);display:flex;align-items:center;gap:14px;padding:0 16px;position:sticky;top:0;background:var(--bg);z-index:5}
+.topbar svg{width:15px;height:15px;color:var(--muted)}
+.topbar b{font-size:13.5px;font-weight:600}
+.page{padding-block:26px;padding-left:24px;padding-right:24px;max-width:1280px}
+h1{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0 0 4px;text-wrap:balance;display:flex;align-items:center;gap:9px}
+h1 svg{width:22px;height:22px}
+.sub{color:var(--muted);font-size:12.5px;margin:0 0 20px}
+.rowhead{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+
+/* pieces */
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px}
+.pad{padding:18px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(196px,1fr));gap:14px;margin-bottom:18px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 15px}
+.tile .t{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;color:var(--muted);font-size:12px;margin-bottom:9px}
+.tile .t svg{width:14px;height:14px;opacity:.7}
+.tile .v{font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.tile .c{font-size:11px;color:var(--dim);margin-top:3px}
+.g{color:var(--green)} .a{color:var(--amber)} .r{color:var(--red)} .p{color:var(--purple)} .b{color:var(--blue)}
+
+h2{font-size:16px;font-weight:600;margin:0 0 3px;display:flex;align-items:center;gap:7px}
+h2 svg{width:15px;height:15px;color:var(--muted)}
+h3{font-size:19px;font-weight:600;margin:0 0 3px}
+.h2sub{color:var(--muted);font-size:12px;margin:0 0 14px}
+label{display:block;font-size:11.5px;color:#b8c3cf;margin-bottom:5px;font-weight:500}
+input,select,textarea{width:100%;background:#080b10;border:1px solid var(--line);border-radius:7px;padding:8px 10px;color:var(--text);font:inherit;font-size:12.5px}
+input::placeholder,textarea::placeholder{color:#55606e}
+select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b98a8' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 9px center;background-size:13px;padding-right:28px}
+.field-search{position:relative}
+.field-search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:#55606e}
+.field-search input{padding-left:30px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.btn{display:inline-flex;align-items:center;gap:7px;background:#161d27;border:1px solid var(--line);border-radius:7px;padding:8px 13px;font-size:12.5px;font-weight:500;white-space:nowrap}
+.btn:hover{background:#1b2431}
+.btn svg{width:13px;height:13px}
+.btn.pri{background:var(--pri);color:var(--priText);border-color:var(--pri)}
+.btn.pri:hover{background:#fff}
+.btn.sm{padding:6px 10px;font-size:12px}
+.btn.icon{padding:6px;border-radius:6px}
+.banner{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:#241c05;border:1px solid #4a3a08;color:#f0d68a;border-radius:9px;padding:11px 14px;font-size:12.5px;margin-bottom:18px}
+.banner b{color:#ffd970;font-weight:600}
+.banner a{color:#ffd970;text-decoration:underline;white-space:nowrap}
+.note{background:#0f1720;border:1px dashed #27384a;color:#8fa3b8;border-radius:9px;padding:11px 14px;font-size:12px;margin-bottom:18px}
+.note b{color:#cfe0f0}
+
+/* tables */
+.tw{overflow-x:auto;margin:0 -1px}
+table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:640px}
+th{text-align:left;font-weight:500;color:var(--muted);font-size:11.5px;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:11px 12px;border-bottom:1px solid var(--line2);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:#131a24}
+.right{text-align:right}
+.nm{font-weight:500}
+.em{color:var(--dim);font-size:12px}
+.dash{color:#4e5a68}
+.pill{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:999px;padding:2px 8px;font-size:10.5px;font-weight:500;white-space:nowrap}
+.pill.out{border-color:#3b4553}
+.badge{display:inline-flex;align-items:center;gap:5px;border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600;letter-spacing:.04em;white-space:nowrap;font-family:"JetBrains Mono",monospace}
+.bd-grey{background:#1b2430;color:#aab6c4}
+.bd-green{background:#0d2a18;color:#56d364}
+.bd-red{background:#2d0f0f;color:#ff7b72}
+.bd-amber{background:#2a2105;color:#e3b341}
+.bd-purple{background:#221238;color:#c297ff}
+.bd-blue{background:#0d2033;color:#79c0ff}
+.st{display:flex;align-items:center;gap:7px}
+.st svg{width:13px;height:13px}
+.dot{width:6px;height:6px;border-radius:50%;flex:0 0 6px;background:#3d4754}
+.pager{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 2px 0;color:var(--muted);font-size:12px}
+.pages{display:flex;align-items:center;gap:3px}
+.pages button{background:none;border:0;padding:5px 9px;border-radius:6px;font-size:12px;color:var(--muted)}
+.pages button:hover{background:#161d27;color:var(--text)}
+.pages button[aria-current="true"]{background:#1c2430;color:#fff;font-weight:600}
+.cnt{border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:11.5px;color:var(--muted)}
+
+/* dashboard tier cards */
+.tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(288px,1fr));gap:14px}
+.tier{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:15px;display:flex;flex-direction:column;gap:9px}
+.tier .tn{font-size:13.5px;font-weight:600;letter-spacing:-.01em}
+.kv{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--muted)}
+.kv b{color:var(--text);font-weight:600;font-size:13px}
+.live{border-top:1px solid var(--line2);padding-top:8px;display:flex;flex-direction:column;gap:6px}
+.lrow{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#0d131c;border-radius:6px;padding:7px 9px}
+.lrow .who{display:flex;flex-direction:column;gap:2px;min-width:0}
+.lrow .who span:first-child{font-size:11.5px;font-family:"JetBrains Mono",monospace}
+.lrow .who span:last-child{font-size:10.5px;color:var(--dim)}
+
+/* recordings player */
+.player{display:flex;align-items:center;gap:9px;min-width:300px}
+.play{width:22px;height:22px;flex:0 0 22px;border-radius:50%;border:1px solid #3a4553;background:none;display:grid;place-items:center}
+.play svg{width:9px;height:9px}
+.ptime{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.track{flex:1;height:3px;background:#222c39;border-radius:2px;position:relative;min-width:80px}
+.track i{position:absolute;left:0;top:-3.5px;width:10px;height:10px;border-radius:50%;background:#c9d4e0}
+.spd{background:#131a24;border:1px solid var(--line);border-radius:6px;padding:3px 6px;font-size:11px;color:#b8c3cf;width:auto;background-image:none;padding-right:6px}
+
+/* leaderboard */
+.lb td{padding:12px}
+.lb .rk{font-weight:700;font-size:13px;color:#aab6c4;width:52px}
+.lb tr.top1{background:linear-gradient(90deg,rgba(210,153,34,.13),rgba(210,153,34,.03))}
+.lb tr.top2{background:linear-gradient(90deg,rgba(160,175,190,.11),rgba(160,175,190,.02))}
+.lb tr.top3{background:linear-gradient(90deg,rgba(176,110,60,.12),rgba(176,110,60,.02))}
+.lb .medal{font-size:15px}
+.lb .den{color:var(--dim);font-size:11.5px}
+.agentcell{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+
+/* goals */
+.goal{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:15px;margin-bottom:12px}
+.goal.has{border-color:#2b3a4c;background:#121a25}
+.ghead{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.gwho{display:flex;align-items:center;gap:10px}
+.gav{width:26px;height:26px;border-radius:6px;background:#1c2430;border:1px solid var(--line);display:grid;place-items:center;font-size:9.5px;font-weight:600;color:#aab6c4;letter-spacing:.04em}
+.gwho b{font-size:13px;font-weight:600;display:block}
+.gwho span{font-size:11px;color:var(--dim)}
+.gmetrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:18px}
+.gm .gl{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--muted);margin-bottom:6px}
+.gm .gv{font-size:15px;font-weight:600;margin-bottom:7px}
+.bar{height:4px;background:#1b2430;border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--blue);border-radius:3px}
+.gm .gc{font-size:10.5px;color:var(--dim);margin-top:6px}
+.glink{margin-top:12px;font-size:11.5px;color:var(--muted)}
+.glink a{color:#a9bdd1;text-decoration:underline}
+
+/* settings */
+.sec{margin-bottom:16px}
+.tierrow{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;background:var(--card2);border:1px solid var(--line);border-radius:9px;padding:13px 14px;margin-bottom:10px}
+.tierrow .tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center}
+.tierrow .fee{font-size:12.5px;margin-bottom:3px}
+.tierrow .cap{font-size:11.5px;color:var(--dim);margin-bottom:6px}
+.tid{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted)}
+.tid code{background:#0a0e14;border:1px solid var(--line2);border-radius:5px;padding:2px 6px;font-family:"JetBrains Mono",monospace;font-size:10.5px}
+.tid button{background:none;border:0;padding:2px;color:#55606e}
+.tid button:hover{color:var(--text)}
+.acts{display:flex;gap:7px;flex:0 0 auto}
+.chars{font-size:11px;color:var(--dim);margin-top:7px}
+.sendrow{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap}
+.selected{font-size:11px;color:var(--dim);margin-top:6px}
+.savebar{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+
+@media (max-width:820px){
+  .shell{flex-direction:column}
+  .rail{position:static;width:100%;flex:none;height:auto;border-right:0;border-bottom:1px solid var(--line2)}
+  .nav{flex-direction:row;overflow-x:auto;padding:4px 8px 8px}
+  .nav button{white-space:nowrap}
+  .railfoot{display:none}
+  .page{padding-left:16px;padding-right:16px}
+  h1{font-size:22px}
+}
+</style>
+
+<div class="shell">
+  <aside class="rail">
+    <div class="brand">
+      <div class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div><b>LeadTech</b><span>Admin Portal</span></div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="railfoot"><div class="avatar">HR</div><span>Prototype</span></div>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>
+      <b>Admin Portal</b>
+    </header>
+    <main class="page" id="view"></main>
+  </div>
+</div>
+
+<script>
+const ICON = {
+  grid:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+  users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/>',
+  globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18"/>',
+  building:'<rect x="4" y="3" width="16" height="18" rx="1"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2"/>',
+  phone:'<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>',
+  activity:'<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+  dollar:'<path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+  headphones:'<path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>',
+  trophy:'<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.7V17a2 2 0 0 1-2 2M14 14.7V17a2 2 0 0 0 2 2M18 2H6v7a6 6 0 0 0 12 0z"/>',
+  target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+  cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  trend:'<path d="M22 7l-8.5 8.5-4-4L2 19"/><path d="M16 7h6v6"/>',
+  check:'<circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 5-5"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>',
+  xc:'<circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/>',
+  pct:'<path d="M19 5L5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>',
+  filter:'<path d="M3 5h18l-7 8v6l-4 2v-8z"/>',
+  ext:'<path d="M15 3h6v6"/><path d="M10 14L21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/>',
+  refresh:'<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  power:'<path d="M18.4 6.6a9 9 0 1 1-12.8 0"/><path d="M12 2v10"/>',
+  mega:'<path d="M3 11l16-7v16l-16-7z"/><path d="M3 11v4a2 2 0 0 0 2 2h2"/>',
+  send:'<path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/>',
+  edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+  trash:'<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/>',
+  copy:'<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+  link:'<path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/>',
+  play:'<path d="M6 3l14 9-14 9z" fill="currentColor" stroke="none"/>',
+  dl:'<path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M4 21h16"/>',
+  left:'<path d="M15 5l-7 7 7 7"/>',
+  rightc:'<path d="M9 5l7 7-7 7"/>'
+};
+const svg=(n,cls='')=>`<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n]||''}</svg>`;
+
+const PAGES=[
+  ['dashboard','Dashboard','grid'],['agents','Agents','users'],['orgs','Organizations','globe'],
+  ['agencies','Agencies','building'],['calls','Calls','phone'],['pings','True Pings','activity'],
+  ['costs','Call Costs','dollar'],['recordings','Call Recordings','headphones'],
+  ['leaderboard','Leaderboard','trophy'],['goals','Goals','target'],['settings','Settings','gear']
+];
+
+/* ---------- example data, transcribed from the reference screenshots ---------- */
+const TIERS=[
+  ['FEX Standard V2',0,2,[]],
+  ['GOOGLE BACKUP ($35)',0,31,[['+1 (502) 310-6700','Jeremy Egelston']]],
+  ['GOOGLE BACKUP ($40)',0,3,[]],
+  ['LeadTech Prequalified FE',0,2,[]],
+  ['LeadTech Standard FE V1',0,2,[]],
+  ['Meta FE (Prequalified)',0,8,[]],
+  ['Meta Standard FE V1',0,6,[]],
+  ['No Tier',0,18,[]],
+  ['OG Google Calls ($40)',0,30,[['+1 (572) 568-1371','Renato Miller'],['+1 (615) 836-9642','Jacklyn Scala']]],
+  ['OG Google Calls ($45)',0,7,[['+1 (472) 235-7825','Aiden W Moore'],['+1 (214) 557-6688','Nathan Marks']]],
+  ['Spanish Standard',0,1,[]],
+  ['TV Calls',0,3,[]]
+];
+const AGENTS=[
+  ['Jacob stevenson','thrivelife.stevenson@gmail.com','pending','$0.00','GOOGLE BACKUP ($35)','$35.00 (on connect)','—',0],
+  ['Nassim Menkor Ono','thrivelife.ono@gmail.com','pending','$0.00','GOOGLE BACKUP ($35)','$35.00 (on connect)','—',0],
+  ['Kevin Gerry','kevingerry.insurance@gmail.com','unavailable','$350.00','GOOGLE BACKUP ($35)','$35.00 (on connect)','—',0],
+  ['Jacklyn Scala','jscala1984@yahoo.com','available','$1,240.00','OG Google Calls ($40)','$40.00 (on connect)','Thrive Life',59],
+  ['Nathan Marks','nathan_marks8@hotmail.com','oncall','$820.00','OG Google Calls ($45)','$45.00 (on connect)','Thrive Life',26],
+  ['Jeremy Egelston','thrivelife.jeremy@gmail.com','oncall','$465.00','GOOGLE BACKUP ($35)','$35.00 (on connect)','Thrive Life',26],
+  ['Joseph Elijah Rawcliffe','joerawcliffe.insurance@gmail.com','unavailable','$630.00','GOOGLE BACKUP ($35)','$35.00 (on connect)','—',18],
+  ['Mason Strodtman','masonstro@gmail.com','unavailable','$1,865.00','LeadTech Standard FE V1','$50.00 (if call > 90s)','LeadTech',51]
+];
+const CALLS=[
+  ['+12145576688','Nathan Marks','nathan_marks8@hotmail.com','INITIATED','N/A','—','9/14/26, 11:58 AM'],
+  ['+15023106700','Jeremy Egelston','thrivelife.jeremy@gmail.com','INITIATED','N/A','—','9/14/26, 11:51 AM'],
+  ['+12162010382','Jeremy Egelston','thrivelife.jeremy@gmail.com','COMPLETED','0:07','NO_SALE','9/14/26, 11:44 AM'],
+  ['+16158369642','Jacklyn Scala','jscala1984@yahoo.com','INITIATED','N/A','—','9/14/26, 11:41 AM'],
+  ['+14698239872','Joseph Elijah Rawcliffe','joerawcliffe.insurance@gmail.com','COMPLETED','8:41','Pending','9/14/26, 11:40 AM']
+];
+const PINGS=[
+  ['Sep 14, 2026','11:57:50 AM','+15704041921','Nathan Marks','OG Google Calls ($45)','TX','—','7d62dd49-8f88-4569-8360-5173caf0b17e'],
+  ['Sep 14, 2026','11:51:05 AM','+15023106700','Jeremy Egelston','GOOGLE BACKUP ($35)','KY','—','—'],
+  ['Sep 14, 2026','11:44:55 AM','+12162010382','Jeremy Egelston','GOOGLE BACKUP ($35)','OH','—','—'],
+  ['Sep 14, 2026','11:40:55 AM','+15704041921','Jacklyn Scala','OG Google Calls ($40)','TX','—','a72dc853-73a1-4a94-8f87-6fe18673678d'],
+  ['Sep 14, 2026','11:40:35 AM','+14698239872','Joseph Elijah Rawcliffe','GOOGLE BACKUP ($35)','TX','—','—']
+];
+const RECS=[
+  ['Jeremy Egelston','+12162010382','9/14/26, 11:44 AM','0:06'],
+  ['Joseph Elijah Rawcliffe','+14698239872','9/14/26, 11:40 AM','8:40'],
+  ['Gavyn Moore','+14079526755','9/14/26, 11:38 AM','17:45'],
+  ['Gabriel Crozat','+18352659038','9/14/26, 11:36 AM','2:39'],
+  ['Mason Strodtman','+18635123035','9/14/26, 11:34 AM','22:08'],
+  ['Angela Asupan','+17273852755','9/14/26, 11:32 AM','0:00'],
+  ['AIDAN LUTZ','+14198344263','9/14/26, 11:22 AM','23:54'],
+  ['Gavyn Moore','+12819194300','9/14/26, 11:21 AM','12:23'],
+  ['Marcus Oraha','+12514633985','9/14/26, 11:19 AM','0:00'],
+  ['Mason Strodtman','+19035391740','9/14/26, 11:06 AM','22:34']
+];
+/* rank, name, state, billable, total, billRate, sales, apps, ap, spend, cpa */
+const LB=[
+  [1,'Jacklyn Scala','available',59,60,98,21,21,'$20.7k',2085,99.29],
+  [2,'Jimmy Defrancesco','away',16,16,100,7,7,'$17.7k',560,80.00],
+  [3,'Mason Strodtman','away',51,51,100,13,14,'$13.0k',1865,143.46],
+  [4,'Destin Phinney','away',64,65,98,13,13,'$12.5k',2285,175.77],
+  [5,'Aiden Cardenas','away',32,33,97,8,8,'$9.5k',1155,144.38],
+  [6,'Christopher Styles','away',33,33,100,7,7,'$9.4k',1200,171.43],
+  [7,'Bradley Olsen','away',23,23,100,7,7,'$8.5k',805,115.00],
+  [8,'Joseph Elijah Rawcliffe','away',18,18,100,5,5,'$6.3k',630,126.00],
+  [9,'Michael Saldana','away',12,12,100,6,6,'$5.6k',420,70.00],
+  [10,'Nathan Marks','oncall',26,27,96,7,8,'$5.1k',980,140.00],
+  [11,'Iachlan evans','oncall',32,32,100,5,5,'$4.5k',1180,236.00],
+  [12,'Dylan','away',27,27,100,4,4,'$3.9k',960,240.00],
+  [13,'Bao Ngo','away',17,18,94,3,3,'$3.8k',635,211.67],
+  [14,'Steven Nathaniel Whitmore','away',18,20,90,5,5,'$3.4k',635,127.00],
+  [15,'Oscar Valencia','away',11,11,100,2,2,'$3.2k',385,192.50],
+  [16,'Aiden W Moore','oncall',23,24,96,3,3,'$3.2k',920,306.67],
+  [17,'Joseph MacNichols','away',16,17,94,1,1,'$2.0k',560,560.00],
+  [18,'Jeremy Egelston','oncall',26,27,96,3,3,'$1.8k',940,313.33],
+  [19,'Gavyn Moore','available',30,30,100,2,2,'$1.6k',1050,525.00],
+  [20,'Brandon','away',11,11,100,1,1,'$1.5k',385,385.00],
+  [21,'Tanell Thomas','away',12,12,100,1,1,'$996',420,420.00]
+];
+/* name, email, state, billable, salesN, cpa, ap, goals{billable,sales,cpa,ap} */
+const GOALS=[
+  ['Leah Silva','leah.k.silva@gmail.com','away',0,0,null,0,{bc:30,s:10,cpa:35,ap:1200}],
+  ['Jacklyn Scala','jscala1984@yahoo.com','available',59,21,99,20669,null],
+  ['Destin Phinney','destinphinney@gmail.com','away',64,13,176,12480,null],
+  ['Mason Strodtman','masonstro@gmail.com','away',51,13,143,12697,null],
+  ['Aiden Cardenas','thrivelife.cardenas@gmail.com','away',32,8,144,9523,null],
+  ['Bradley Olsen','oghenetega.olsen@hotmail.com','away',23,7,115,8534,null],
+  ['Christopher Styles','christopherstyles.ffl@gmail.com','away',33,7,171,9440,null],
+  ['Jimmy Defrancesco','jdefrancesco27@gmail.com','away',16,7,80,17734,null]
+];
+/* name, org, fee, trigger, reservation, tierId */
+const PRICING=[
+  ['FEX Standard V2','Thrive Companies','$20.00','if call > 15s','1 bid / 15s','c7268e87-f85f-485b-a1af-a15ce39970c1'],
+  ['GOOGLE BACKUP ($35)','Thrive Companies','$35.00','on connect','1 bid / 15s','668f3824-0c8b-47ed-9d88-13084c502392'],
+  ['GOOGLE BACKUP ($40)','LeadTech','$40.00','on connect','1 bid / 15s','82e87b2a-e456-414f-889b-e5f98573300a'],
+  ['LeadTech Prequalified FE','LeadTech','$50.00','if call > 15s',null,'4d756bbb-b607-4832-80cd-085b7f6d530a'],
+  ['LeadTech Standard FE V1','LeadTech','$50.00','if call > 90s','1 bid / 15s','ff98044d-75bb-4a95-8197-8484689afdce']
+];
+
+/* ---------- helpers ---------- */
+const AVAIL={available:['Available','#d29922'],away:['Away','#3d4754'],oncall:['On Call','#3fb950']};
+const availPill=k=>{const[l,c]=AVAIL[k];return `<span class="pill"><span class="dot" style="background:${c}"></span>${l}</span>`};
+const statusBadge=s=>s==='COMPLETED'?`<span class="st g">${svg('check')}<span class="badge bd-green">COMPLETED</span></span>`
+  :s==='FAILED'?`<span class="st r">${svg('xc')}<span class="badge bd-red">FAILED</span></span>`
+  :`<span class="st a">${svg('clock')}<span class="badge bd-grey">INITIATED</span></span>`;
+const dispo=d=>d==='—'?'<span class="dash">—</span>':d==='NO_SALE'?'<span class="badge bd-grey">NO_SALE</span>':d==='Pending'?'<span class="badge bd-amber">Pending</span>':`<span class="badge bd-green">${d}</span>`;
+const tile=(t,icon,v,c,cls='')=>`<div class="tile"><div class="t"><span>${t}</span>${svg(icon)}</div><div class="v ${cls}">${v}</div><div class="c">${c}</div></div>`;
+const pager=(pages,label)=>`<div class="pager"><span>${label}</span><div class="pages"><button>${svg('left')} Previous</button><button aria-current="true">1</button><button>2</button><button>3</button><button>4</button><button>…</button><button>${pages}</button><button>Next ${svg('rightc')}</button></div></div>`;
+const sel=(lab,opts)=>`<div><label>${lab}</label><select>${opts.map(o=>`<option>${o}</option>`).join('')}</select></div>`;
+const money=n=>'$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const cpaColor=v=>v<130?'g':v<220?'a':'r';
+const initials=n=>n.trim().slice(0,2).toUpperCase();
+const callRows=rows=>rows.map(([num,ag,em,st,dur,dp,dt])=>`<tr>
+  <td class="mono">${num}</td>
+  <td><div class="nm">${ag}</div><div class="em">${em}</div></td>
+  <td>${statusBadge(st)}</td>
+  <td class="num">${dur}</td>
+  <td>${dispo(dp)}</td>
+  <td class="num">${dt}</td>
+  <td class="right"><a href="#" class="em" style="color:#a9bdd1">View ${svg('ext','',)}</a></td></tr>`).join('');
+const callFilters=(dur)=>`
+  <div class="card pad" style="margin-bottom:18px">
+    <h2>${svg('filter')}Filters</h2>
+    <p class="h2sub">${dur?'Filter calls by date range, agent, status, and disposition':'Filter calls by date range, agent, status, and disposition'}</p>
+    <div style="margin-bottom:14px"><label>Search</label><div class="field-search">${svg('search')}<input id="cf-q${dur?'2':''}" placeholder="Search by caller number, agent name, or phone..."></div></div>
+    <div class="grid3" style="margin-bottom:14px">
+      ${sel('Agent',['All agents',...AGENTS.map(a=>a[0])])}
+      ${sel('Status',['All statuses','Initiated','Completed','Failed'])}
+      ${sel('Disposition',['All dispositions','Sold','No sale','Pending','Non-billable'])}
+      ${sel('Pricing Tier',['All pricing tiers',...TIERS.map(t=>t[0])])}
+      <div><label>Date From</label><input type="date"></div>
+      <div><label>Date To</label><input type="date"></div>
+      ${dur?`<div><label>Duration Min (seconds)</label><input placeholder="e.g. 30"></div><div><label>Duration Max (seconds)</label><input placeholder="e.g. 900"></div>`:''}
+    </div>
+    <button class="btn pri">Apply Filters</button>
+  </div>`;
+
+/* ---------- views ---------- */
+const V={};
+
+V.dashboard=()=>`
+  <h1>Admin Dashboard</h1><p class="sub">Monitor system activity and agent availability</p>
+  <div class="tiles">
+    ${tile('Total Agents','users','116','113 active')}
+    ${tile('Available','trend','0','Ready to take calls','g')}
+    ${tile('Total Calls','phone','3975','Across all agents')}
+    ${tile('Total Balance','dollar','$13490.00','Combined balances')}
+  </div>
+  <div class="tiers">${TIERS.map(([n,av,tot,live])=>`
+    <div class="tier">
+      <div class="tn">${n}</div>
+      <div class="kv"><span>Available Agents</span><span><b class="${av===0?'r':'g'}">${av}</b> <span class="dash">/ ${tot}</span></span></div>
+      <div class="kv"><span>Active Calls</span><b>${live.length}</b></div>
+      ${live.length?`<div class="live">${live.map(([num,who])=>`<div class="lrow"><div class="who"><span>${num}</span><span>${who}</span></div><span class="badge bd-blue">INITIATED</span></div>`).join('')}</div>`:''}
+    </div>`).join('')}</div>`;
+
+V.agents=()=>`
+  <div class="rowhead"><div><h1>Agents</h1><p class="sub">Manage agent accounts, balances, and pricing</p></div>
+    <button class="btn pri">Create Agent</button></div>
+  <div class="banner"><div><b>11 agents need a pricing tier confirmed</b> — they can already log in, but their tier hasn't been assigned yet.</div><a href="#">View pending →</a></div>
+  <div class="card pad" style="margin-bottom:18px">
+    <h2>Generate Onboarding Link</h2>
+    <p class="h2sub">Create an invite link for a new agent. They'll fill in their details and their account will be automatically created with the settings you configure here.</p>
+    <div class="grid2" style="margin-bottom:16px">
+      <div><label>Agent Name (optional pre-fill)</label><input id="on-name" placeholder="Jane Smith"></div>
+      <div><label>Agent Email (optional pre-fill)</label><input id="on-email" placeholder="jane@example.com"></div>
+      ${sel('Role',['Agent','Manager','Admin'])}
+      ${sel('Thrive Contract Level',['Select level','Level 1','Level 2','Level 3','Level 4'])}
+      ${sel('Agency',['Select agency','Thrive Life','LeadTech','Independent'])}
+      ${sel('Upline / Manager',['Select manager',...AGENTS.slice(3,6).map(a=>a[0])])}
+      ${sel('Pricing Tier',['Select tier',...TIERS.map(t=>t[0])])}
+      ${sel('Link expires in (days)',['30 days','7 days','14 days','60 days','90 days'])}
+    </div>
+    <button class="btn">${svg('link')}Generate Invite Link</button>
+  </div>
+  <div class="tiles">
+    ${tile('Total Agents','users','116','113 active')}
+    ${tile('Available','trend','0','Ready to take calls','g')}
+    ${tile('Total Calls','phone','3975','Across all agents')}
+    ${tile('Total Balance','dollar','$13490.00','Combined balances')}
+  </div>
+  <div class="card pad">
+    <h3>All Agents</h3><p class="h2sub">View and manage all agent accounts</p>
+    <div style="margin-bottom:14px"><label>Search</label><div class="field-search">${svg('search')}<input id="ag-q" placeholder="Search by agent name or email..."></div></div>
+    <div class="grid3" style="margin-bottom:14px">
+      ${sel('Status',['All statuses','Available','Unavailable','On call','Pending'])}
+      ${sel('Active Status',['All agents','Active only','Inactive only'])}
+      ${sel('Pricing Tier',['All pricing tiers',...TIERS.map(t=>t[0])])}
+      ${sel('Role',['All roles','Agent','Manager','Admin'])}
+      ${sel('Agency',['All agencies','Thrive Life','LeadTech','Independent'])}
+    </div>
+    <button class="btn pri" style="margin-bottom:16px">Apply Filters</button>
+    <div class="tw"><table>
+      <thead><tr><th>Name</th><th>Email</th><th>Status</th><th>Balance</th><th>Pricing Tier</th><th>Agency</th><th>Calls</th><th class="right">Actions</th></tr></thead>
+      <tbody>${AGENTS.map(([n,em,st,bal,tier,rate,agency,calls])=>{
+        const badge=st==='pending'?'<span class="badge bd-amber">Pending</span>'
+          :st==='unavailable'?'<span class="badge bd-grey">UNAVAILABLE</span>'
+          :st==='oncall'?'<span class="badge bd-blue">ON CALL</span>':'<span class="badge bd-green">AVAILABLE</span>';
+        return `<tr>
+          <td class="nm">${n}</td><td class="em">${em}</td>
+          <td><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-start">${badge}<span class="pill" style="font-size:9.5px">Has Password</span></div></td>
+          <td class="num">${bal}</td>
+          <td><div class="badge bd-grey">${tier}</div><div class="em" style="margin-top:4px">${rate}</div></td>
+          <td class="${agency==='—'?'dash':''}">${agency}</td>
+          <td><div class="num">${calls}</div><div class="em">${calls} completed</div></td>
+          <td class="right"><button class="btn sm">${svg('gear')}Manage</button></td></tr>`}).join('')}</tbody>
+    </table></div>
+  </div>`;
+
+V.orgs=()=>`
+  <div class="rowhead"><div><h1>Organizations</h1><p class="sub">Manage client accounts. Sync GHL locations to create new organizations.</p></div>
+    <div style="display:flex;gap:9px"><button class="btn">${svg('refresh')}Sync GHL Locations</button><button class="btn pri">${svg('plus')}Add Organization</button></div></div>
+  <p class="sub">Click "Sync GHL Locations" to load all sub-accounts from GHL before adding an organization.</p>
+  <div class="card pad"><div class="tw"><table>
+    <thead><tr><th>Name</th><th>Email</th><th>GHL Company ID</th><th>Status</th><th>Created</th><th class="right"></th></tr></thead>
+    <tbody>
+      <tr><td class="nm">LeadTech</td><td class="em">admin@leadtech.com</td><td class="mono em">leadtech-admin</td><td><span class="pill">Active</span></td><td class="num">5/18/2026</td><td class="right"><button class="btn sm">${svg('power')}Deactivate</button></td></tr>
+      <tr><td class="nm">zJ9vOTIJ0giJEGBOGN4R</td><td class="dash">—</td><td class="mono em">zJ9vOTIJ0giJEGBOGN4R</td><td><span class="pill">Active</span></td><td class="num">5/19/2026</td><td class="right"><button class="btn sm">${svg('power')}Deactivate</button></td></tr>
+    </tbody></table></div></div>`;
+
+V.agencies=()=>`
+  <div class="rowhead"><div><h1>Agencies</h1><p class="sub">Manage agencies and their agent rosters</p></div>
+    <button class="btn pri">${svg('plus')}Add Agency</button></div>
+  <div class="note"><b>Inferred layout —</b> this is the one page I haven't seen a screenshot of. Send one and I'll match it exactly; for now it follows the Organizations pattern.</div>
+  <div class="card pad"><div class="tw"><table>
+    <thead><tr><th>Name</th><th>Owner / Manager</th><th>Agents</th><th>Organization</th><th>Status</th><th>Created</th><th class="right"></th></tr></thead>
+    <tbody>
+      <tr><td class="nm">Thrive Life</td><td class="em">hananroberts@gmail.com</td><td class="num">64</td><td>Thrive Companies</td><td><span class="pill">Active</span></td><td class="num">5/18/2026</td><td class="right"><button class="btn sm">${svg('gear')}Manage</button></td></tr>
+      <tr><td class="nm">LeadTech</td><td class="em">admin@leadtech.com</td><td class="num">41</td><td>LeadTech</td><td><span class="pill">Active</span></td><td class="num">5/18/2026</td><td class="right"><button class="btn sm">${svg('gear')}Manage</button></td></tr>
+      <tr><td class="nm">Independent</td><td class="dash">—</td><td class="num">11</td><td class="dash">—</td><td><span class="pill">Active</span></td><td class="num">5/19/2026</td><td class="right"><button class="btn sm">${svg('gear')}Manage</button></td></tr>
+    </tbody></table></div></div>`;
+
+V.calls=()=>`
+  <h1>All Calls</h1><p class="sub">View and manage all calls across all agents</p>
+  <div class="tiles">
+    ${tile('Total Calls Today','cal','82','77 billable (UTC)')}
+    ${tile('Total Calls','phone','3975','All time')}
+    ${tile('Completed','check','3945','Successfully completed','g')}
+    ${tile('Sold','trend','730','Successful sales','p')}
+    ${tile('Pending','clock','6','Need disposition','a')}
+  </div>
+  ${callFilters(true)}
+  <div class="card pad">
+    <div class="rowhead" style="margin-bottom:14px"><div><h3>Calls</h3><p class="h2sub" style="margin:0">View and manage all calls across all agents</p></div>
+      <div style="display:flex;gap:9px;align-items:center"><button class="btn sm">Export filtered (CSV)</button><span class="cnt num">3975 calls</span></div></div>
+    <div class="tw"><table>
+      <thead><tr><th>Caller</th><th>Agent</th><th>Status</th><th>Duration</th><th>Disposition</th><th>Date</th><th class="right">Actions</th></tr></thead>
+      <tbody>${callRows(CALLS)}</tbody></table></div>
+    ${pager(795,'Page 1 of 795')}
+  </div>`;
+
+V.pings=()=>`
+  <h1>True Pings</h1><p class="sub">Pings logged only when availability was true.</p>
+  <div class="card pad">
+    <h2>${svg('activity')}Latest True Pings</h2><p class="h2sub">Showing 5 of 1,924 total</p>
+    <div style="display:flex;gap:9px;margin-bottom:16px"><div class="field-search" style="flex:1">${svg('search')}<input id="pg-q" placeholder="Search caller number, state, tier, tracking ID, agents..."></div><button class="btn">Search</button></div>
+    <div class="tw"><table>
+      <thead><tr><th>Time</th><th>Caller</th><th>Agents</th><th>Pricing Tier</th><th>State</th><th>Tracking ID</th><th>Provider ID</th></tr></thead>
+      <tbody>${PINGS.map(([d,t,num,ag,tier,st,trk,prov])=>`<tr>
+        <td><div class="num">${d}</div><div class="em num">${t}</div></td>
+        <td class="mono">${num}</td>
+        <td class="em">${ag}</td>
+        <td class="mono" style="font-size:11.5px">${tier}</td>
+        <td><span class="pill">${st}</span></td>
+        <td class="${trk==='—'?'dash':'mono'}">${trk}</td>
+        <td class="${prov==='—'?'dash':'mono'}" style="font-size:10.5px">${prov}</td></tr>`).join('')}</tbody></table></div>
+    ${pager(385,'Page 1 of 385')}
+  </div>`;
+
+V.costs=()=>`
+  <h1>Call Costs</h1><p class="sub">Billable rate and cost per sale with filters</p>
+  ${callFilters(false)}
+  <div class="tiles">
+    ${tile('Total Calls','phone','3975','Calls in range')}
+    ${tile('Billable','dollar','3441','Paid calls')}
+    ${tile('Sold','trend','730','Marked as sold')}
+    ${tile('Billable Rate','pct','86.6%','Billable / total calls')}
+    ${tile('Cost per Sale','dollar','$175.34','Total billable amount / sold')}
+    ${tile('Average Monthly Premium','dollar','$98.97','Total monthly premium / sold policies')}
+  </div>
+  <div class="card pad">
+    <div class="rowhead" style="margin-bottom:14px"><div><h3>Calls</h3><p class="h2sub" style="margin:0">Filtered calls matching the above criteria</p></div>
+      <div style="display:flex;gap:9px;align-items:center"><button class="btn sm">Export (CSV)</button><span class="cnt num">3975 calls</span></div></div>
+    <div class="tw"><table>
+      <thead><tr><th>Caller</th><th>Agent</th><th>Status</th><th>Duration</th><th>Disposition</th><th>Date</th><th class="right">Actions</th></tr></thead>
+      <tbody>${callRows(CALLS.map((c,i)=>i===3?[c[0],c[1],c[2],'FAILED',c[4],c[5],c[6]]:c))}</tbody></table></div>
+    ${pager(795,'Page 1 of 795')}
+  </div>`;
+
+V.recordings=()=>`
+  <h1>Call Recordings</h1><p class="sub">Recordings from call-completed webhooks</p>
+  <div class="card pad" style="margin-bottom:18px">
+    <h3>Filters</h3><p class="h2sub">Filter by number, date range, and agent</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;align-items:end">
+      <div><label>Number</label><div class="field-search">${svg('search')}<input id="rc-q" placeholder="Caller number..."></div></div>
+      ${sel('Agent',['All agents',...RECS.map(r=>r[0]).filter((v,i,a)=>a.indexOf(v)===i)])}
+      <div><label>Date from</label><input type="date"></div>
+      <div><label>Date to</label><input type="date"></div>
+      <div><button class="btn pri">Apply</button></div>
+    </div>
+  </div>
+  <div class="card pad">
+    <div class="rowhead" style="margin-bottom:14px"><div><h3>Calls with recordings</h3><p class="h2sub" style="margin:0">Agent name, caller number, date, and playable recording</p></div>
+      <span class="cnt num">3019 recordings</span></div>
+    <div class="tw"><table style="min-width:840px">
+      <thead><tr><th>Agent</th><th>Caller number</th><th>Date</th><th>Recording</th><th class="right">Call</th></tr></thead>
+      <tbody>${RECS.map(([ag,num,dt,len])=>`<tr>
+        <td class="nm">${ag}</td><td class="mono">${num}</td><td class="num">${dt}</td>
+        <td><div class="player">
+          <button class="play" aria-label="Play recording">${svg('play')}</button>
+          <span class="ptime">0:00 / ${len}</span>
+          <div class="track"><i></i></div>
+          <select class="spd" aria-label="Playback speed"><option>1x</option><option>1.5x</option><option>2x</option></select>
+          <button class="btn icon" aria-label="Download recording">${svg('dl')}</button>
+        </div></td>
+        <td class="right"><a href="#" style="color:#a9bdd1">View call</a></td></tr>`).join('')}</tbody></table></div>
+    ${pager(302,'Showing 1–10 of 3019')}
+  </div>`;
+
+V.leaderboard=()=>`
+  <h1>${svg('trophy','')}Leaderboard</h1><p class="sub">Agent performance rankings</p>
+  <div class="card pad">
+    <div class="rowhead" style="margin-bottom:14px"><h3>Agent Rankings</h3>
+      <div style="min-width:170px"><select aria-label="Period"><option>This Month</option><option>Last Month</option><option>This Week</option><option>All Time</option></select></div></div>
+    <div class="tw"><table class="lb" style="min-width:820px">
+      <thead><tr><th>Rank</th><th>Agent</th><th class="right">Calls</th><th class="right">Bill Rate</th><th class="right">Sales</th><th class="right">Apps</th><th class="right">Total AP</th><th class="right">Spend</th><th class="right">CPA</th></tr></thead>
+      <tbody>${LB.map(([rk,n,st,bill,tot,rate,sales,apps,ap,spend,cpa])=>`<tr class="${rk<4?'top'+rk:''}">
+        <td class="rk">${rk===1?'<span class="medal">🥇</span>':rk===2?'<span class="medal">🥈</span>':rk===3?'<span class="medal">🥉</span>':'#'+rk}</td>
+        <td><div class="agentcell"><span class="nm">${n}</span>${availPill(st)}</div></td>
+        <td class="right num"><b>${bill}</b> <span class="den">/${tot}</span></td>
+        <td class="right num g">${rate}%</td>
+        <td class="right num g">${sales}</td>
+        <td class="right num b">${apps}</td>
+        <td class="right num g" style="font-weight:600">${ap}</td>
+        <td class="right num">${money(spend)}</td>
+        <td class="right num ${cpaColor(cpa)}">${money(cpa)}</td></tr>`).join('')}</tbody></table></div>
+  </div>`;
+
+V.goals=()=>`
+  <h1>${svg('target','')}Agent Goals</h1><p class="sub">August 2026 — Track each agent's progress toward their monthly targets</p>
+  ${GOALS.map(([n,em,st,bc,sales,cpa,ap,g])=>{
+    const gm=(lab,val,target,pct,cls='',suffix='')=>`<div class="gm">
+        <div class="gl"><span>${lab}</span>${target?'<span class="r">↘</span>':'<span class="dash">—</span>'}</div>
+        <div class="gv ${cls}">${val}${target?` <span class="dash" style="font-weight:400">/ ${target}</span>`:''}</div>
+        <div class="bar"><i style="width:${pct}%"></i></div>
+        ${suffix?`<div class="gc">${suffix}</div>`:''}
+      </div>`;
+    return `<div class="goal ${g?'has':''}">
+      <div class="ghead">
+        <div class="gwho"><div class="gav">${initials(n)}</div><div><b>${n}</b><span>${em}</span></div></div>
+        <div style="display:flex;gap:7px;align-items:center">${availPill(st)}${g?'':'<span class="pill">No goals set</span>'}</div>
+      </div>
+      <div class="gmetrics">
+        ${gm('Billable Calls',bc,g?g.bc:null,g?0:0,'',g?'0% of target':'')}
+        ${gm('Sales',sales,g?g.s:null,0,'g',g?'0% of target':'')}
+        <div class="gm"><div class="gl"><span>CPA</span>${g?'<span class="r">↘</span>':'<span class="dash">—</span>'}</div>
+          <div class="gv">${g?`<span class="dash">—</span> <span style="font-size:11.5px;color:var(--muted);font-weight:400">target: $${g.cpa}</span>`:'$'+cpa}</div>
+          <div class="bar"><i style="width:0%"></i></div></div>
+        ${gm('Annual Premium','$'+ap.toLocaleString(),g?'$'+g.ap.toLocaleString():null,0,'b',g?'0% of target':'')}
+      </div>
+      ${g?'':`<div class="glink">Set goals for this agent in <a href="#">Agent Management →</a></div>`}
+    </div>`}).join('')}`;
+
+V.settings=()=>`
+  <div class="rowhead"><div><h1>Settings</h1><p class="sub">Manage pricing tiers and system configuration</p></div>
+    <button class="btn pri">${svg('plus')}Create Tier</button></div>
+  <div class="card pad sec">
+    <h2 class="b">${svg('mega')}Broadcast Message</h2>
+    <p class="h2sub">Send a message to all agents — appears as a banner at the top of every agent dashboard.</p>
+    <textarea id="bc" rows="3" maxlength="500" placeholder="Type a message for all agents, e.g. 'Call volume is slow — great time to follow up on callbacks!'"></textarea>
+    <div class="sendrow"><span class="chars"><span id="bcn">0</span>/500</span><button class="btn">${svg('send')}Send to All Agents</button></div>
+  </div>
+  <div class="card pad sec">
+    <h2>Non-billable Call Dispositions</h2>
+    <p class="h2sub">Select the master agent account whose location is used for GoHighLevel sync when disposing non-billable or ghost calls. Optionally select the pipeline and stage (e.g. Inbound FEX, Lead) for GHL opportunity creation.</p>
+    <label for="ma">Master Agent</label>
+    <select id="ma"><option>Hanan Test (hananroberts@gmail.com)</option>${AGENTS.map(a=>`<option>${a[0]} (${a[1]})</option>`).join('')}</select>
+    <div class="selected">Selected: Hanan Test (hananroberts@gmail.com)</div>
+    <div class="savebar"><button class="btn">Refresh</button><button class="btn pri">Save</button></div>
+  </div>
+  <div class="card pad sec">
+    <h2>${svg('clock')}Display Timezone</h2>
+    <p class="h2sub">Choose your timezone for how dates and times are shown throughout the app</p>
+    <label for="tz">Timezone</label>
+    <select id="tz"><option>America/Los_Angeles</option><option>America/Denver</option><option>America/Chicago</option><option>America/New_York</option><option>UTC</option></select>
+    <div style="margin-top:14px"><button class="btn pri">Save</button></div>
+  </div>
+  <div class="card pad">
+    <h2>${svg('dollar')}Pricing Tiers</h2>
+    <p class="h2sub">Configure pricing tiers that can be assigned to agents. These rates determine call costs per minute and default call caps.</p>
+    ${PRICING.map(([n,org,fee,trig,res,id])=>`<div class="tierrow">
+      <div style="min-width:0">
+        <div class="tags">
+          <span class="badge bd-grey">${n}</span>
+          <span class="badge ${org==='LeadTech'?'bd-blue':'bd-purple'}">${org}</span>
+          ${res?`<span class="badge bd-amber">Reservation ${res}</span>`:''}
+        </div>
+        <div class="fee">Flat Fee: <b>${fee}</b> (${trig})</div>
+        <div class="cap">No default cap</div>
+        <div class="tid">Tier ID: <code>${id}</code><button aria-label="Copy tier ID">${svg('copy')}</button></div>
+      </div>
+      <div class="acts"><button class="btn icon" aria-label="Edit tier">${svg('edit')}</button><button class="btn icon" aria-label="Delete tier">${svg('trash')}</button></div>
+    </div>`).join('')}
+    <div class="note" style="margin:10px 0 0"><b>7 more tiers</b> exist on the Dashboard (Meta FE, Meta Standard FE V1, Spanish Standard, TV Calls, OG Google Calls $40/$45, No Tier) — their fees and triggers were below the fold in your screenshot. Send the rest and I'll fill them in.</div>
+  </div>`;
+
+/* ---------- router ---------- */
+let current='dashboard';
+const nav=document.getElementById('nav'), view=document.getElementById('view');
+nav.innerHTML=PAGES.map(([id,label,icon])=>`<button data-id="${id}">${svg(icon)}<span>${label}</span></button>`).join('');
+function render(id){
+  current=id;
+  [...nav.children].forEach(b=>b.setAttribute('aria-current',b.dataset.id===id?'page':'false'));
+  view.innerHTML=V[id]?V[id]():'';
+  window.scrollTo({top:0});
+  const bc=document.getElementById('bc');
+  if(bc)bc.addEventListener('input',()=>document.getElementById('bcn').textContent=bc.value.length);
+}
+nav.addEventListener('click',e=>{const b=e.target.closest('button[data-id]');if(b)render(b.dataset.id)});
+render('dashboard');
+</script>
