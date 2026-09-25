@@ -160,16 +160,40 @@ section{scroll-margin-top:72px;display:grid;gap:24px}
 .btn.onnavy:hover{background:rgba(255,255,255,.14)}
 
 /* Refunds */
-.refund-grid{display:grid;grid-template-columns:1fr 1fr 320px;gap:16px;align-items:start}
-.verdict{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden}
-.verdict header{padding:14px 20px;font-weight:800;font-size:15px;display:flex;align-items:center;gap:10px}
-.verdict.yes header{background:var(--live-soft);color:var(--live)}
-.verdict.no header{background:var(--stop-soft);color:var(--stop)}
-.verdict ul{list-style:none;margin:0;padding:6px 20px 14px}
-.verdict li{padding:10px 0;border-bottom:1px solid var(--line);font-size:14px;display:grid;gap:2px}
-.verdict li:last-child{border-bottom:0}
-.verdict li small{color:var(--muted);font-size:12.5px}
-.form-card{background:linear-gradient(160deg,var(--navy-3),var(--navy-2));color:#fff;border-radius:16px;padding:24px;display:grid;gap:16px;position:sticky;top:80px}
+.refund-grid{display:grid;grid-template-columns:1.45fr 1fr;gap:16px;align-items:start}
+.rcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;display:grid;gap:18px;align-content:start}
+.rcard-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.rcard-head h3{font-size:20px;font-weight:800;font-stretch:110%}
+.chip-ok,.chip-no{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:6px}
+.chip-ok{background:var(--live-soft);color:var(--live)}
+.chip-no{background:var(--stop-soft);color:var(--stop)}
+.ratio{display:grid;grid-template-columns:auto auto auto 1fr;gap:14px;align-items:center;background:var(--mist);border-radius:12px;padding:16px 18px}
+.ratio .pair{display:flex;gap:6px}
+.ratio .c{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-weight:800}
+.ratio .bad{background:var(--stop-soft);color:var(--stop)}
+.ratio .good{background:var(--live);color:#fff;width:auto;padding:0 12px;font-size:14px;white-space:nowrap}
+.ratio .arrow{color:var(--muted);font-family:var(--mono)}
+.ratio p{font-size:14px;color:var(--muted)}
+.ratio p b{color:var(--text)}
+.calc{display:grid;grid-template-columns:auto repeat(6,1fr);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums;text-align:center}
+.calc span{padding:8px 6px;border-left:1px solid var(--line)}
+.calc span.h{text-align:left;padding-left:12px;border-left:0;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;display:flex;align-items:center}
+.calc .row2{background:var(--live-soft);color:var(--live);font-weight:600;border-top:1px solid var(--line)}
+.badlist{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.badlist li{display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:start;border:1px solid var(--line);border-radius:12px;padding:14px}
+.badlist .ico{width:34px;height:34px;border-radius:9px;background:var(--stop-soft);color:var(--stop);display:grid;place-items:center}
+.badlist .ico svg{width:17px;height:17px}
+.badlist b{display:block;font-size:14.5px}
+.badlist small{color:var(--muted);font-size:13px}
+.buffer-bar{display:grid;grid-template-columns:auto 1fr 1.6fr;border-radius:10px;overflow:hidden;font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.buffer-bar span{padding:10px 12px}
+.buffer-bar .b1{background:var(--mist);color:var(--muted)}
+.buffer-bar .b2{background:var(--sky-soft);color:var(--sky);border-left:2px dashed var(--sky)}
+.buffer-bar .b3{background:var(--navy);color:#fff}
+.rcard p.body{font-size:14.5px;color:var(--muted)}
+.rcard p.body b{color:var(--text)}
+.form-card.wide{grid-column:1/-1;grid-template-columns:1fr 1.4fr auto;align-items:center;gap:24px}
+.form-card{background:linear-gradient(160deg,var(--navy-3),var(--navy-2));color:#fff;border-radius:16px;padding:24px 28px;display:grid;gap:16px}
 .form-card h3{font-size:20px;font-weight:800;font-stretch:110%}
 .form-card p{color:#C8D8EC;font-size:14px}
 .steps{display:grid;gap:10px;margin:0;padding:0;list-style:none;counter-reset:s}
@@ -239,8 +263,13 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
 /* Responsive */
 @media (max-width:960px){
 .sched-grid,.states-wrap{grid-template-columns:1fr}
-  .refund-grid{grid-template-columns:1fr 1fr}
-  .refund-grid .form-card{grid-column:1/-1;position:static}
+  .refund-grid,.form-card.wide{grid-template-columns:1fr}
+  .ratio{grid-template-columns:auto auto 1fr}
+  .ratio p{grid-column:1/-1}
+  .calc{font-size:12px}
+  .calc span{padding:8px 2px}
+  .calc span.h{padding-left:8px;font-size:9.5px;letter-spacing:.04em}
+  .rcard{padding:20px}
   .tiers{grid-template-columns:1fr 1fr}
   .ladder{grid-template-columns:1fr 1fr}
   .rules{grid-template-columns:1fr}
@@ -375,31 +404,49 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
       <div class="sec-head">
         <div>
           <div class="eyebrow">Returns &amp; credits</div>
-          <h2>Refund rules</h2>
-          <p>Approved refunds come back as call credits on your next billing cycle. Every request needs the caller's number and the time of the call.</p>
+          <h2>Inbound refund policy</h2>
+          <p>Refunds depend on where the call came from. Google calls can earn refunds for bad calls. Meta and TV calls can't be refunded.</p>
         </div>
       </div>
       <div class="refund-grid">
-        <div class="verdict yes">
-          <header>✓ Eligible for credit</header>
-          <ul id="refundYes"></ul>
+        <div class="rcard">
+          <div class="rcard-head"><h3>Google calls</h3><span class="chip-ok">Refunds available</span></div>
+          <div class="ratio">
+            <span class="pair"><span class="c bad">✕</span><span class="c bad">✕</span></span>
+            <span class="arrow">→</span>
+            <span class="c good">✓ 1 refund</span>
+            <p><b>For every 2 bad calls you get per day</b>, 1 refund is added to your account.</p>
+          </div>
+          <div class="calc" id="calc"></div>
+          <div>
+            <div class="eyebrow" style="margin-bottom:10px">What counts as a bad call</div>
+            <ul class="badlist">
+              <li><span class="ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="5" r="2.5"/><path d="M3 14c.5-3 2.6-4.5 5-4.5s4.5 1.5 5 4.5"/></svg></span>
+                <span><b>An agent called in for customer support</b><small>Not a consumer on the line.</small></span></li>
+              <li><span class="ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 8h13"/><path d="M4 6v4M12 6v4"/></svg></span>
+                <span><b>The call was dead air</b><small>No one was on the other line. The agent must be located in the USA for this to apply.</small></span></li>
+            </ul>
+          </div>
         </div>
-        <div class="verdict no">
-          <header>✕ Not eligible</header>
-          <ul id="refundNo"></ul>
+        <div class="rcard">
+          <div class="rcard-head"><h3>Meta / TV calls</h3><span class="chip-no">No refunds</span></div>
+          <p class="body"><b>There are no refunds on Meta or TV calls.</b> These calls have a buffer so you don't get billed for dead-air calls.</p>
+          <div class="buffer-bar" aria-hidden="true"><span class="b1">Connect</span><span class="b2">Buffer</span><span class="b3">Billed</span></div>
         </div>
-        <aside class="form-card">
-          <div class="eyebrow" style="color:#8CB6FF">Refund form slip</div>
-          <h3>Request a call credit</h3>
-          <p>Submit one slip per call. Reviews are finished within 3 business days.</p>
+        <aside class="form-card wide">
+          <div>
+            <div class="eyebrow" style="color:#8CB6FF">Google calls only</div>
+            <h3 style="margin-top:6px">Submit a refund</h3>
+          </div>
           <ol class="steps">
-            <li>Find the call in your LeadTech call log</li>
-            <li>Copy the caller ID and timestamp</li>
-            <li>Pick the refund reason and add notes</li>
+            <li>Fill out the refund form</li>
+            <li>Your calls are reviewed</li>
+            <li>If they meet the criteria, the funds are added to your account</li>
           </ol>
-          <a class="btn primary" id="refundLink" href="#" target="_blank" rel="noopener">Open refund form
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h7v7M13 3L4 12"/></svg></a>
-          <span class="todo" id="refundTodo" style="justify-self:start">Add refund form link</span>
+          <div style="display:grid;gap:8px;justify-items:start">
+            <a class="btn primary" id="refundLink" href="#" target="_blank" rel="noopener">Open refund form <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h7v7M13 3L4 12"/></svg></a>
+            <span class="todo" id="refundTodo">Add refund form link</span>
+          </div>
         </aside>
       </div>
     </section>
@@ -540,7 +587,7 @@ const CONFIG = {
 
   rules: [
     { icon: "phone", title: "Billed on connect",
-      text: "There's no buffer. <b>You're billed every time a call connects</b> to you, no matter how long it lasts." },
+      text: "<b>Google calls are billed every time a call connects</b>, no matter how long it lasts. Meta / TV calls have a buffer so dead-air calls aren't billed." },
     { icon: "tab", title: "Stay on the inbound portal",
       text: "You must stay on the inbound portal to receive calls. <b>If you click off the Chrome tab, you will not receive calls.</b> To start receiving calls again, click <span class=\"tag\">INACTIVE</span> and then back to <span class=\"tag\">ACTIVE</span>." },
     { icon: "check", title: "Underwriting counts as sold",
@@ -549,21 +596,9 @@ const CONFIG = {
       text: "<b>Google calls:</b> all 50 states must be selected. <b>Meta / TV calls:</b> you choose which states to target." },
   ],
 
-  refundYes: [
-    ["Wrong number or misdial", "Caller never asked about insurance"],
-    ["Outside target states", "Caller lives in a state we don't target"],
-    ["Outside age range", "Caller is under or over the program's age range"],
-    ["Duplicate caller", "Same caller routed to you within 30 days"],
-    ["Language barrier", "No English or Spanish spoken, and no way to continue"],
-    ["Already a client", "Existing policyholder calling about service"],
-  ],
-  refundNo: [
-    ["Caller not interested", "They asked about coverage, then declined"],
-    ["Price objection", "Quoted but said it costs too much"],
-    ["Missed or unanswered", "Calls you didn't pick up"],
-    ["Short call or hang-up", "Every connected call is billed"],
-    ["No disposition", "Call not dispositioned in LeadTech"],
-  ],
+  /* Google refunds: 1 refund for every N bad calls in a day */
+  badCallsPerRefund: 2,
+
 
   /* hours in 24h ET; null = closed */
   hours: {
@@ -653,9 +688,9 @@ for (const [sel, key] of [["#heroPortal", "inboundPortal"], ["#portalCard", "inb
 $("#portalUrl").textContent = CONFIG.links.inboundPortal.replace(/^https?:\/\//, "");
 
 /* Refunds */
-const li = ([a, b]) => `<li><span>${esc(a)}</span><small>${esc(b)}</small></li>`;
-$("#refundYes").innerHTML = CONFIG.refundYes.map(li).join("");
-$("#refundNo").innerHTML = CONFIG.refundNo.map(li).join("");
+const N = CONFIG.badCallsPerRefund, cols = [1, 2, 3, 4, 5, 6];
+$("#calc").innerHTML = `<span class="h">Bad calls / day</span>${cols.map((n) => `<span>${n}</span>`).join("")}` +
+  `<span class="h row2">Refunds</span>${cols.map((n) => `<span class="row2">${Math.floor(n / N)}</span>`).join("")}`;
 function wireLink(aSel, todoSel, href) {
   const a = $(aSel), todo = $(todoSel);
   if (href) { a.href = href; todo.hidden = true; }
