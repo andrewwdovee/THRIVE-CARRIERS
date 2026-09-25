@@ -140,6 +140,8 @@ section{scroll-margin-top:72px;display:grid;gap:24px}
 .alert{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;background:var(--stop-soft);border:1px solid color-mix(in srgb,var(--stop) 40%,transparent);border-left:4px solid var(--stop);border-radius:12px;padding:16px 20px;font-size:14.5px}
 .alert svg{width:22px;height:22px;color:var(--stop);margin-top:1px}
 .alert b{color:var(--stop)}
+.alert.warn{background:var(--warn-soft);border-color:color-mix(in srgb,var(--warn) 40%,transparent);border-left-color:var(--warn)}
+.alert.warn svg,.alert.warn b{color:var(--warn)}
 .rules{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
 .rule-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;display:grid;gap:10px;align-content:start}
 .rule-card .ico{width:34px;height:34px;border-radius:9px;background:var(--sky-soft);color:var(--sky);display:grid;place-items:center}
@@ -381,6 +383,11 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
       <div class="alert" role="note">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/></svg>
         <p><b>Wallet funds are wiped during a suspension.</b> If you're suspended with money in your wallet, all funds are removed from the wallet at the end of the week.</p>
+      </div>
+
+      <div class="alert warn" role="note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        <p><b>Be live by your set time.</b> If you're not live on the inbound portal by your scheduled start time, your account is disabled for the rest of the day.</p>
       </div>
 
       <div class="rules" id="rulesGrid"></div>
