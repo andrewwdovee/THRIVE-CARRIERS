@@ -12,6 +12,7 @@
   --live:#1E9E6A; --live-soft:#E3F5EC;
   --warn:#9A6F14; --warn-soft:#FDF6E4;
   --stop:#C2412D; --stop-soft:#FBEAE6;
+  --google:#2F74E8; --meta:#E0483A; --meta-soft:#FBE3E0;
   --state-off:#E6EBF2; --state-off-text:#8391A3;
   --shadow:0 1px 2px rgba(7,26,49,.06),0 8px 24px -12px rgba(7,26,49,.18);
   --display:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -23,7 +24,7 @@
     --ground:#060F1C; --paper:#0B1829; --card:#0D1C30; --mist:#12233A; --line:#1E3350;
     --text:#E8EEF6; --muted:#93A3B8; --sky:#6FA4FF; --sky-soft:#13294A;
     --live:#3CC98E; --live-soft:#0F2E24; --warn:#E0B458; --warn-soft:#2A2210;
-    --stop:#F0806C; --stop-soft:#321612; --state-off:#15263D; --state-off-text:#5F7390;
+    --stop:#F0806C; --stop-soft:#321612; --google:#6FA4FF; --meta:#FF6B5E; --meta-soft:#3A1714; --state-off:#15263D; --state-off-text:#5F7390;
     --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -14px rgba(0,0,0,.6);
   }
 }
@@ -32,7 +33,7 @@
   --ground:#060F1C; --paper:#0B1829; --card:#0D1C30; --mist:#12233A; --line:#1E3350;
   --text:#E8EEF6; --muted:#93A3B8; --sky:#6FA4FF; --sky-soft:#13294A;
   --live:#3CC98E; --live-soft:#0F2E24; --warn:#E0B458; --warn-soft:#2A2210;
-  --stop:#F0806C; --stop-soft:#321612; --state-off:#15263D; --state-off-text:#5F7390;
+  --stop:#F0806C; --stop-soft:#321612; --google:#6FA4FF; --meta:#FF6B5E; --meta-soft:#3A1714; --state-off:#15263D; --state-off-text:#5F7390;
   --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -14px rgba(0,0,0,.6);
 }
 *{box-sizing:border-box}
@@ -196,15 +197,26 @@ section{scroll-margin-top:72px;display:grid;gap:24px}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px}
 .panel h3{font-size:16px;font-weight:800;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 .days{display:grid;gap:6px}
-.day{display:grid;grid-template-columns:52px 1fr 120px;gap:12px;align-items:center;font-size:14px;padding:6px 8px;border-radius:8px}
+.day{display:grid;grid-template-columns:52px 1fr 150px;gap:12px;align-items:center;font-size:14px;padding:6px 8px;border-radius:8px}
 .day.today{background:var(--sky-soft)}
 .day .d{font-weight:700}
-.day .hrs{font-family:var(--mono);font-size:13px;text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+.day .hrs{font-family:var(--mono);font-size:12px;text-align:right;font-variant-numeric:tabular-nums;color:var(--muted);display:grid;gap:1px;line-height:1.35}
+.day .hrs .g{color:var(--google)}
+.day .hrs .m{color:var(--meta)}
 .day.today .hrs{color:var(--text)}
-.bar{height:10px;background:var(--mist);border-radius:99px;position:relative;overflow:hidden}
-.bar i{position:absolute;top:0;bottom:0;background:var(--sky);border-radius:99px}
+.bar{height:18px;background:var(--mist);border-radius:99px;position:relative}
+.bar i{position:absolute;border-radius:99px}
+.bar i.m{top:0;bottom:0;background:var(--meta-soft);box-shadow:inset 0 0 0 2px var(--meta)}
+.bar i.g{top:5px;bottom:5px;background:var(--google)}
 .bar .now{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--text);border-radius:2px}
-.axis{display:grid;grid-template-columns:52px 1fr 120px;gap:12px;padding:0 8px;font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.key{display:flex;flex-wrap:wrap;gap:10px 22px;margin-bottom:14px;font-size:13px}
+.key span{display:inline-flex;align-items:center;gap:8px}
+.key b{font-weight:700}
+.key small{color:var(--muted);font-family:var(--mono);font-size:11.5px}
+.sw{width:22px;height:12px;border-radius:99px;display:inline-block}
+.sw.g{background:var(--google)}
+.sw.m{background:var(--meta-soft);box-shadow:inset 0 0 0 2px var(--meta)}
+.axis{display:grid;grid-template-columns:52px 1fr 150px;gap:12px;padding:0 8px;font-family:var(--mono);font-size:10.5px;color:var(--muted)}
 .axis div{display:flex;justify-content:space-between}
 .holidays{list-style:none;margin:0;padding:0;display:grid;gap:0}
 .holidays li{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
@@ -273,7 +285,8 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
   .discord{padding:24px}
   .prime{padding:24px}
   .hero-grid{margin-top:32px}
-  .day,.axis{grid-template-columns:40px 1fr 96px;gap:8px}
+  .day,.axis{grid-template-columns:36px 1fr 104px;gap:8px}
+  .day .hrs{font-size:11px}
   main .wrap{gap:56px}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -437,12 +450,13 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
         <div>
           <div class="eyebrow">Hours of operation</div>
           <h2>Hours &amp; schedule</h2>
-          <p>Calls only route to you while the lines are open and your campaign is active. All times are Eastern.</p>
+          <p>Google and Meta / TV calls run on different schedules. Calls only route to you while that channel is open. All times are Eastern.</p>
         </div>
       </div>
       <div class="sched-grid">
         <div class="panel">
           <h3>Weekly call hours <span class="eyebrow">ET</span></h3>
+          <div class="key" id="key"></div>
           <div class="days" id="days"></div>
           <div class="axis" style="margin-top:6px"><span></span><div><span>6a</span><span>12p</span><span>6p</span><span>12a</span></div><span></span></div>
         </div>
@@ -561,11 +575,11 @@ const CONFIG = {
   badCallsPerRefund: 2,
 
 
-  /* hours in 24h ET; null = closed */
-  hours: {
-    Mon: [10, 18], Tue: [10, 18], Wed: [10, 18], Thu: [10, 18], Fri: [10, 18],
-    Sat: [10, 16], Sun: null,
-  },
+  /* hours in 24h ET; days not listed are closed */
+  channels: [
+    { id: "g", name: "Google calls", days: ["Mon", "Tue", "Wed", "Thu", "Fri"], hours: [10, 18] },
+    { id: "m", name: "Meta / TV calls", days: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], hours: [9, 20] },
+  ],
   holidays: [
     ["New Year's Day", "Jan 1"],
     ["Memorial Day", "Last Mon in May"],
@@ -663,15 +677,21 @@ function etNow() {
 function renderSchedule() {
   const now = etNow();
   const frac = now.h + now.m / 60;
+  const pos = (h) => ((h - AX0) / (AX1 - AX0)) * 100;
+  /* draw Meta / TV first so the Google bar sits on top */
+  const layers = [...CONFIG.channels].sort((a, b) => (b.hours[1] - b.hours[0]) - (a.hours[1] - a.hours[0]));
   $("#days").innerHTML = ORDER.map((d) => {
-    const r = CONFIG.hours[d];
     const today = d === now.day;
-    const bar = r ? `<i style="left:${((r[0] - AX0) / (AX1 - AX0)) * 100}%;width:${((r[1] - r[0]) / (AX1 - AX0)) * 100}%"></i>` : "";
-    const marker = today && frac >= AX0 ? `<span class="now" style="left:${((frac - AX0) / (AX1 - AX0)) * 100}%"></span>` : "";
-    return `<div class="day${today ? " today" : ""}"><span class="d">${d}</span><div class="bar">${bar}${marker}</div><span class="hrs">${r ? fmtH(r[0]) + " – " + fmtH(r[1]) : "Closed"}</span></div>`;
+    const open = layers.filter((c) => c.days.includes(d));
+    const bars = open.map((c) => `<i class="${c.id}" style="left:${pos(c.hours[0])}%;width:${pos(c.hours[1]) - pos(c.hours[0])}%" title="${esc(c.name)}"></i>`).join("");
+    const marker = today && frac >= AX0 && frac <= AX1 ? `<span class="now" style="left:${pos(frac)}%"></span>` : "";
+    const hrs = CONFIG.channels.filter((c) => c.days.includes(d)).map((c) => `<span class="${c.id}">${fmtH(c.hours[0])} – ${fmtH(c.hours[1])}</span>`).join("") || "Closed";
+    return `<div class="day${today ? " today" : ""}"><span class="d">${d}</span><div class="bar">${bars}${marker}</div><span class="hrs">${hrs}</span></div>`;
   }).join("");
 
 }
+const dayRange = (ds) => ds.length > 1 ? `${ds[0]}–${ds[ds.length - 1]}` : ds[0];
+$("#key").innerHTML = CONFIG.channels.map((c) => `<span><i class="sw ${c.id}"></i><b>${esc(c.name)}</b><small>${dayRange(c.days)} · ${fmtH(c.hours[0])}–${fmtH(c.hours[1])}</small></span>`).join("");
 renderSchedule();
 setInterval(renderSchedule, 30000);
 $("#holidays").innerHTML = CONFIG.holidays.map(([n, d]) => `<li><span>${esc(n)}</span><span>${esc(d)}</span></li>`).join("");
