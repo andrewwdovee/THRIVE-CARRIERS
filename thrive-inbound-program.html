@@ -212,20 +212,6 @@ section{scroll-margin-top:72px;display:grid;gap:24px}
 .state-detail{margin-top:16px;padding-top:16px;border-top:1px solid var(--line);font-size:14px;color:var(--muted);min-height:48px}
 .state-detail b{color:var(--text)}
 
-/* Training */
-.training{display:grid;grid-template-columns:1fr 1.2fr;gap:0;background:var(--card);border:1px solid var(--line);border-radius:20px;overflow:hidden}
-.training .left{background:var(--navy);color:#fff;padding:32px;display:grid;gap:18px;align-content:start}
-.training .left h3{font-size:28px;font-weight:800;font-stretch:115%;line-height:1.05}
-.training .left p{color:#C8D8EC}
-.modules{list-style:none;margin:0;padding:12px 28px}
-.modules li{display:grid;grid-template-columns:44px 1fr auto;gap:14px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
-.modules li:last-child{border-bottom:0}
-.modules .num{font-family:var(--mono);font-size:12px;color:var(--muted)}
-.modules b{display:block;font-size:14.5px}
-.modules small{color:var(--muted);font-size:12.5px}
-.modules .len{font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap}
-.req{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--sky);margin-left:6px}
-
 /* Support + footer */
 .discord{display:grid;grid-template-columns:1.1fr 1fr;gap:28px;align-items:center;background:linear-gradient(135deg,#4752C4,#5865F2);color:#fff;border-radius:20px;padding:28px 32px}
 .discord .logo{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,.16);display:grid;place-items:center}
@@ -252,7 +238,7 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
 
 /* Responsive */
 @media (max-width:960px){
-.sched-grid,.states-wrap,.training{grid-template-columns:1fr}
+.sched-grid,.states-wrap{grid-template-columns:1fr}
   .refund-grid{grid-template-columns:1fr 1fr}
   .refund-grid .form-card{grid-column:1/-1;position:static}
   .tiers{grid-template-columns:1fr 1fr}
@@ -270,8 +256,6 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
   .ctype-meta div:nth-child(3){grid-column:1/-1;border-left:0;border-top:1px solid var(--line)}
   .hero-grid{margin-top:32px}
   .day,.axis{grid-template-columns:40px 1fr 96px;gap:8px}
-  .training .left{padding:24px}
-  .modules{padding:8px 20px}
   main .wrap{gap:56px}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -293,6 +277,8 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h7v7M13 3L4 12"/></svg></a>
           <a class="btn onnavy" id="heroChat" href="#" target="_blank" rel="noopener">Join Google PPC chat
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h7v7M13 3L4 12"/></svg></a>
+          <a class="btn onnavy" id="heroTraining" href="#" target="_blank" rel="noopener">Training portal
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h7v7M13 3L4 12"/></svg></a>
           <a class="btn onnavy" id="heroDiscord" href="#" target="_blank" rel="noopener">LeadTech support Discord
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h7v7M13 3L4 12"/></svg></a>
         </div>
@@ -309,7 +295,6 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
     <a href="#refunds">Refunds</a>
     <a href="#schedule">Hours &amp; schedule</a>
     <a href="#states">Target states</a>
-    <a href="#training">Training</a>
     <a href="#support">Support</a>
   </div>
 </nav>
@@ -466,23 +451,6 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
       </div>
     </section>
 
-    <!-- TRAINING -->
-    <section id="training">
-      <div class="training">
-        <div class="left">
-          <div class="eyebrow" style="color:#8CB6FF">Training portal</div>
-          <h3>Finish training before your first call.</h3>
-          <p>Required modules must be complete before your campaign goes live. Scripts, objection handling and carrier guides all live in the portal.</p>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-            <a class="btn primary" id="trainingLink" href="#" target="_blank" rel="noopener">Open training portal
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h7v7M13 3L4 12"/></svg></a>
-            <span class="todo" id="trainingTodo">Add portal link</span>
-          </div>
-        </div>
-        <ol class="modules" id="modules"></ol>
-      </div>
-    </section>
-
     <!-- SUPPORT -->
     <section id="support">
       <div class="sec-head">
@@ -617,14 +585,6 @@ const CONFIG = {
     NC: "", OH: "", PA: "", SC: "", TN: "", TX: "",
   },
 
-  modules: [
-    ["Program orientation", "How routing, billing and caps work", "15 min", true],
-    ["LeadTech dashboard", "Call log, dispositions and pausing", "20 min", true],
-    ["Inbound call script", "Opener, fact-find and close", "35 min", true],
-    ["Objection handling", "Price, spouse and 'just looking'", "30 min", false],
-    ["Carrier & underwriting guides", "Final expense product quick picks", "45 min", false],
-    ["Compliance refresher", "TCPA, DNC and required disclosures", "15 min", true],
-  ],
 
 };
 
@@ -687,7 +647,7 @@ $("#rulesGrid").innerHTML = CONFIG.rules.map((r) => `
     <span class="ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[r.icon]}</svg></span>
     <h3>${esc(r.title)}</h3><p>${r.text}</p>
   </div>`).join("");
-for (const [sel, key] of [["#heroPortal", "inboundPortal"], ["#portalCard", "inboundPortal"], ["#heroChat", "ppcChat"], ["#chatCard", "ppcChat"], ["#heroDiscord", "supportDiscord"], ["#discordLink", "supportDiscord"], ["#pricingDiscord", "supportDiscord"]]) {
+for (const [sel, key] of [["#heroPortal", "inboundPortal"], ["#portalCard", "inboundPortal"], ["#heroChat", "ppcChat"], ["#chatCard", "ppcChat"], ["#heroTraining", "trainingPortal"], ["#heroDiscord", "supportDiscord"], ["#discordLink", "supportDiscord"], ["#pricingDiscord", "supportDiscord"]]) {
   if (CONFIG.links[key]) $(sel).href = CONFIG.links[key]; else $(sel).hidden = true;
 }
 $("#portalUrl").textContent = CONFIG.links.inboundPortal.replace(/^https?:\/\//, "");
@@ -702,7 +662,6 @@ function wireLink(aSel, todoSel, href) {
   else { a.addEventListener("click", (e) => e.preventDefault()); a.style.opacity = ".55"; a.style.cursor = "not-allowed"; }
 }
 wireLink("#refundLink", "#refundTodo", CONFIG.links.refundForm);
-wireLink("#trainingLink", "#trainingTodo", CONFIG.links.trainingPortal);
 
 /* Stats */
 
@@ -759,11 +718,6 @@ $("#tiles").addEventListener("click", (e) => {
   $("#stateDetail").innerHTML = `<b>${NAMES[c]}</b> · ${targets[c] ? esc(targets[c]) : "Targeted. No special notes for this state yet."}`;
 });
 
-/* Training */
-$("#modules").innerHTML = CONFIG.modules.map(([t, d, len, req], i) => `
-  <li><span class="num">M${String(i + 1).padStart(2, "0")}</span>
-  <div><b>${esc(t)}${req ? '<span class="req">Required</span>' : ""}</b><small>${esc(d)}</small></div>
-  <span class="len">${esc(len)}</span></li>`).join("");
 
 
 /* Nav highlight */
