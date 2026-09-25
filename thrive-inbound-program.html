@@ -104,24 +104,6 @@ section{scroll-margin-top:72px;display:grid;gap:24px}
 .tier-meta b{font-family:var(--mono);font-size:15px;font-variant-numeric:tabular-nums}
 .tier-meta .save b{color:var(--live)}
 
-/* Call types */
-.ctypes{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
-.ctype{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px;display:grid;gap:16px;align-content:start}
-.ctype-head{display:flex;justify-content:space-between;align-items:start;gap:12px}
-.ctype h3{font-size:18px;font-weight:800;font-stretch:110%}
-.ctype .intent{color:var(--muted);font-size:13.5px;margin-top:2px}
-.code{font-family:var(--mono);font-size:11.5px;font-weight:600;color:var(--sky);background:var(--sky-soft);border-radius:6px;padding:4px 8px;white-space:nowrap}
-.ctype-meta{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:10px;overflow:hidden}
-.ctype-meta div{padding:10px 12px;min-width:0}
-.ctype-meta div+div{border-left:1px solid var(--line)}
-.ctype-meta small{display:block;color:var(--muted);font-size:10.5px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em}
-.ctype-meta b{font-family:var(--mono);font-size:14px;font-variant-numeric:tabular-nums}
-.searches{display:flex;flex-wrap:wrap;gap:6px}
-.search{font-size:12.5px;padding:5px 10px;border-radius:999px;background:var(--mist);border:1px solid var(--line);color:var(--text)}
-.search::before{content:"⌕ ";color:var(--muted)}
-.ctype .tip{font-size:13.5px;border-top:1px solid var(--line);padding-top:14px;color:var(--muted)}
-.ctype .tip b{color:var(--text)}
-
 /* Rules */
 .prime{background:radial-gradient(700px 260px at 100% 0%,rgba(76,141,246,.3),transparent 60%),linear-gradient(160deg,var(--navy-3),var(--navy-2));color:#fff;border-radius:20px;padding:32px;display:grid;gap:12px}
 .prime .big{font-size:clamp(26px,4vw,42px);font-weight:800;font-stretch:115%;line-height:1.02;letter-spacing:-.015em;text-wrap:balance;max-width:22ch}
@@ -280,11 +262,9 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
 @media (max-width:640px){
   .wrap{padding-inline:16px}
   .tiers,.topup{grid-template-columns:1fr}
-  .refund-grid,.support,.ctypes,.links-row,.discord{grid-template-columns:1fr}
+  .refund-grid,.support,.links-row,.discord{grid-template-columns:1fr}
   .discord{padding:24px}
   .prime{padding:24px}
-  .ctype-meta{grid-template-columns:1fr 1fr}
-  .ctype-meta div:nth-child(3){grid-column:1/-1;border-left:0;border-top:1px solid var(--line)}
   .hero-grid{margin-top:32px}
   .day,.axis{grid-template-columns:40px 1fr 96px;gap:8px}
   main .wrap{gap:56px}
@@ -321,7 +301,6 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
 <nav class="nav" aria-label="Sections">
   <div class="wrap" id="navLinks">
     <a href="#pricing">Pricing</a>
-    <a href="#calltypes">Call types</a>
     <a href="#rules">Inbound rules</a>
     <a href="#refunds">Refunds</a>
     <a href="#schedule">Hours &amp; schedule</a>
@@ -344,19 +323,6 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
       </div>
       <div class="topup" id="topup"></div>
       <div class="tiers" id="tiers"></div>
-    </section>
-
-    <!-- CALL TYPES -->
-    <section id="calltypes">
-      <div class="sec-head">
-        <div>
-          <div class="eyebrow">What you'll hear</div>
-          <h2>Call types</h2>
-          <p>Each call comes in tagged with its type so you know who is on the line before you say hello. The tag shows in your LeadTech call log and caller ID.</p>
-        </div>
-        <span class="todo">Sample call types · replace</span>
-      </div>
-      <div class="ctypes" id="ctypes"></div>
     </section>
 
     <!-- RULES -->
@@ -564,26 +530,6 @@ const CONFIG = {
     { name: "Legendary", calls: 50, perCall: 33.5 },
   ],
 
-  /* code = the tag agents see in LeadTech / caller ID */
-  callTypes: [
-    { name: "Final Expense", code: "FEX", intent: "Burial and funeral coverage for seniors",
-      ages: "50–85", coverage: "$5k–$25k", avgTalk: "18 min",
-      searches: ["burial insurance", "final expense plans", "life insurance for seniors over 60"],
-      tip: "<b>Lead with the funeral cost</b> and get health questions done early." },
-    { name: "Term Life", code: "TERM", intent: "Income protection for a set number of years",
-      ages: "25–65", coverage: "$100k–$500k", avgTalk: "22 min",
-      searches: ["cheap term life insurance", "20 year term quote", "life insurance no exam"],
-      tip: "<b>Ask about dependents and debt</b> to size the face amount." },
-    { name: "Mortgage Protection", code: "MP", intent: "Pays off the home if the borrower dies",
-      ages: "25–70", coverage: "Loan balance", avgTalk: "20 min",
-      searches: ["mortgage protection insurance", "pay off house if I die", "mortgage life insurance"],
-      tip: "<b>Confirm the loan balance and years left</b> before quoting." },
-    { name: "Indexed Universal Life", code: "IUL", intent: "Permanent coverage with cash value growth",
-      ages: "18–70", coverage: "$100k+", avgTalk: "30 min",
-      searches: ["IUL insurance", "life insurance cash value", "tax free retirement life insurance"],
-      tip: "<b>Book a second appointment</b> when the case needs an illustration." },
-  ],
-
   /* suspensions for selling a deal through an external contract */
   offenses: [
     { label: "1st offense", days: 7 },
@@ -654,23 +600,6 @@ $("#tiers").innerHTML = CONFIG.tiers.map((t) => {
     </div>
   </article>`;
 }).join("");
-
-/* Call types */
-$("#ctypes").innerHTML = CONFIG.callTypes.map((c) => `
-  <article class="ctype">
-    <div class="ctype-head">
-      <div><h3>${esc(c.name)}</h3><div class="intent">${esc(c.intent)}</div></div>
-      <span class="code">${esc(c.code)}</span>
-    </div>
-    <div class="ctype-meta">
-      <div><small>Ages</small><b>${esc(c.ages)}</b></div>
-      <div><small>Coverage</small><b>${esc(c.coverage)}</b></div>
-      <div><small>Avg talk time</small><b>${esc(c.avgTalk)}</b></div>
-    </div>
-    <div><div class="eyebrow" style="margin-bottom:8px">Caller searched for</div>
-      <div class="searches">${c.searches.map((q) => `<span class="search">${esc(q)}</span>`).join("")}</div></div>
-    <p class="tip">${c.tip}</p>
-  </article>`).join("");
 
 /* Rules */
 const ICONS = {
