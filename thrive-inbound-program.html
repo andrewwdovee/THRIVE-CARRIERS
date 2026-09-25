@@ -130,19 +130,41 @@ section{scroll-margin-top:72px;display:grid;gap:24px}
 .ctype .tip b{color:var(--text)}
 
 /* Rules */
-.rules{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
-.rule-group{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px}
-.rule-group h3{font-size:16px;font-weight:800;display:flex;align-items:center;gap:10px;margin-bottom:14px}
-.rule-group h3 .ico{width:30px;height:30px;border-radius:8px;background:var(--sky-soft);color:var(--sky);display:grid;place-items:center;flex:none}
-.rule-group h3 .ico svg{width:16px;height:16px}
-.rule-group ol{margin:0;padding:0;list-style:none;counter-reset:r;display:grid;gap:12px}
-.rule-group li{counter-increment:r;display:grid;grid-template-columns:34px 1fr;gap:8px;font-size:14px}
-.rule-group li::before{content:attr(data-code);font-family:var(--mono);font-size:11px;color:var(--muted);padding-top:3px}
-.rule-group li b{font-weight:700}
-.callout{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center;background:var(--navy);color:#E6EEF9;border-radius:14px;padding:18px 22px}
-.callout .big{font-family:var(--mono);font-size:30px;font-weight:600;color:#8CB6FF;font-variant-numeric:tabular-nums}
-.callout p{font-size:14px;color:#C8D8EC}
-.callout p b{color:#fff}
+.prime{background:radial-gradient(700px 260px at 100% 0%,rgba(76,141,246,.3),transparent 60%),linear-gradient(160deg,var(--navy-3),var(--navy-2));color:#fff;border-radius:20px;padding:32px;display:grid;gap:12px}
+.prime .big{font-size:clamp(26px,4vw,42px);font-weight:800;font-stretch:115%;line-height:1.02;letter-spacing:-.015em;text-wrap:balance;max-width:22ch}
+.prime .big span{color:#8CB6FF}
+.prime p{color:#C8D8EC;max-width:62ch}
+.ladder{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.step{border-radius:14px;padding:18px;display:grid;gap:6px;align-content:start;border:1px solid var(--line);background:var(--card);position:relative}
+.step .n{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.step b{font-family:var(--mono);font-size:30px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;color:var(--stop)}
+.step b small{font-size:13px;font-weight:500;margin-left:4px}
+.step span{font-size:13px;color:var(--muted)}
+.step .meter{height:6px;border-radius:99px;background:var(--mist);overflow:hidden;margin-top:6px}
+.step .meter i{display:block;height:100%;background:var(--stop);border-radius:99px}
+.step.final{background:var(--stop-soft);border-color:color-mix(in srgb,var(--stop) 45%,transparent)}
+.step.final b{font-family:var(--display);font-size:22px;font-weight:800;font-stretch:108%}
+.alert{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;background:var(--stop-soft);border:1px solid color-mix(in srgb,var(--stop) 40%,transparent);border-left:4px solid var(--stop);border-radius:12px;padding:16px 20px;font-size:14.5px}
+.alert svg{width:22px;height:22px;color:var(--stop);margin-top:1px}
+.alert b{color:var(--stop)}
+.rules{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.rule-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;display:grid;gap:10px;align-content:start}
+.rule-card .ico{width:34px;height:34px;border-radius:9px;background:var(--sky-soft);color:var(--sky);display:grid;place-items:center}
+.rule-card .ico svg{width:17px;height:17px}
+.rule-card h3{font-size:16px;font-weight:800}
+.rule-card p{font-size:14px;color:var(--muted)}
+.rule-card p b{color:var(--text)}
+.tag{font-family:var(--mono);font-size:11.5px;font-weight:600;padding:2px 7px;border-radius:5px;background:var(--live-soft);color:var(--live)}
+.links-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.link-card{display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;text-decoration:none;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px;transition:border-color .15s,transform .15s}
+.link-card:hover{border-color:var(--sky);transform:translateY(-1px)}
+.link-card .ico{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;color:#fff;font-weight:900;font-size:13px}
+.link-card b{display:block;font-size:15.5px}
+.link-card small{color:var(--muted);font-size:12.5px;font-family:var(--mono);word-break:break-all}
+.link-card .go{color:var(--sky);width:18px;height:18px}
+.quick{display:flex;flex-wrap:wrap;gap:10px;margin-top:24px}
+.btn.onnavy{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.22);color:#fff}
+.btn.onnavy:hover{background:rgba(255,255,255,.14)}
 
 /* Refunds */
 .refund-grid{display:grid;grid-template-columns:1fr 1fr 320px;gap:16px;align-items:start}
@@ -229,11 +251,14 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
   .refund-grid{grid-template-columns:1fr 1fr}
   .refund-grid .form-card{grid-column:1/-1;position:static}
   .tiers{grid-template-columns:1fr}
+  .ladder{grid-template-columns:1fr 1fr}
+  .rules{grid-template-columns:1fr}
   .tier{grid-template-rows:auto}
 }
 @media (max-width:640px){
   .wrap{padding-inline:16px}
-  .rules,.refund-grid,.support,.ctypes{grid-template-columns:1fr}
+  .refund-grid,.support,.ctypes,.links-row{grid-template-columns:1fr}
+  .prime{padding:24px}
   .ctype-meta{grid-template-columns:1fr 1fr}
   .ctype-meta div:nth-child(3){grid-column:1/-1;border-left:0;border-top:1px solid var(--line)}
   .hero-grid{margin-top:32px}
@@ -256,6 +281,12 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
         <div class="eyebrow" style="color:#8CB6FF">Agent Handbook · Google Inbound Calls</div>
         <h1 style="margin-top:14px">Inbound calls,<br /><span>clear rules.</span></h1>
         <p class="lede">Everything you need to run on Thrive's Google inbound program: the plans, how calls are billed, what qualifies for a refund, when the lines are open, and where to train.</p>
+        <div class="quick">
+          <a class="btn primary" id="heroPortal" href="#" target="_blank" rel="noopener">Open inbound portal
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h7v7M13 3L4 12"/></svg></a>
+          <a class="btn onnavy" id="heroChat" href="#" target="_blank" rel="noopener">Join Google PPC chat
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h7v7M13 3L4 12"/></svg></a>
+        </div>
       </div>
       <aside class="status-card" aria-live="polite">
         <div class="status-row">
@@ -321,15 +352,41 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
       <div class="sec-head">
         <div>
           <div class="eyebrow">Program rules</div>
-          <h2>Rules for inbounds</h2>
-          <p>These apply to every call routed to you. Breaking them can pause your campaign or void a refund request.</p>
+          <h2>Inbound call rules</h2>
+          <p>These apply to every inbound call you take. Calls are reviewed every day.</p>
         </div>
       </div>
-      <div class="callout">
-        <div class="big" id="bufferBig">120 sec</div>
-        <p><b>Billable buffer.</b> A call becomes billable once it stays connected past the buffer. Anything shorter is free and never needs a refund request.</p>
+
+      <div class="prime">
+        <div class="eyebrow" style="color:#8CB6FF">The first rule</div>
+        <div class="big">All inbounds are sold through <span>Thrive carriers.</span></div>
+        <p>Calls are reviewed on a daily basis. Selling a deal through an external contract leads to a suspension from all LeadTech marketing.</p>
       </div>
+
+      <div>
+        <div class="eyebrow" style="margin-bottom:10px">Suspensions for selling outside Thrive</div>
+        <div class="ladder" id="ladder"></div>
+      </div>
+
+      <div class="alert" role="note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/></svg>
+        <p><b>Wallet funds are wiped during a suspension.</b> If you're suspended with money in your wallet, all funds are removed from the wallet at the end of the week.</p>
+      </div>
+
       <div class="rules" id="rulesGrid"></div>
+
+      <div class="links-row">
+        <a class="link-card" id="portalCard" href="#" target="_blank" rel="noopener">
+          <span class="ico" style="background:var(--sky)">LT</span>
+          <span><b>LeadTech Inbound Portal</b><small id="portalUrl"></small></span>
+          <svg class="go" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h7v7M13 3L4 12"/></svg>
+        </a>
+        <a class="link-card" id="chatCard" href="#" target="_blank" rel="noopener">
+          <span class="ico" style="background:#1FA855"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8.5 8.5 0 01-12.6 7.4L3 21l1.6-5.2A8.5 8.5 0 1121 12z"/></svg></span>
+          <span><b>Google PPC Chat</b><small>WhatsApp group for Google agents</small></span>
+          <svg class="go" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h7v7M13 3L4 12"/></svg>
+        </a>
+      </div>
     </section>
 
     <!-- REFUNDS -->
@@ -395,7 +452,7 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
         <div>
           <div class="eyebrow">Geography</div>
           <h2>States we target</h2>
-          <p>Google campaigns run in these states only. You must hold an active license in a state to receive its calls.</p>
+          <p>These are the states we target. In the inbound portal, <b>Google calls need all 50 states selected</b>. For Meta and TV calls you pick your own states.</p>
         </div>
       </div>
       <div class="states-wrap">
@@ -460,6 +517,8 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
    ============================================================ */
 const CONFIG = {
   links: {
+    inboundPortal: "https://leadtech-crm.vercel.app/agent/login",
+    ppcChat: "https://chat.whatsapp.com/De3lMwuywoZKtCOoepRRBr?s=cl&p=i&mlu=0&ilr=0&amv=0",
     refundForm: "",
     trainingPortal: "",
   },
@@ -501,29 +560,21 @@ const CONFIG = {
       tip: "<b>Book a second appointment</b> when the case needs an illustration." },
   ],
 
+  /* suspensions for selling a deal through an external contract */
+  offenses: [
+    { label: "1st offense", days: 7 },
+    { label: "2nd offense", days: 14 },
+    { label: "3rd offense", days: 30 },
+    { label: "4th offense", final: "Termination", note: "Internal marketing prices removed forever" },
+  ],
+
   rules: [
-    { title: "Before you go live", icon: "shield", items: [
-      ["<b>Active license</b> in every state you want calls from, uploaded to your LeadTech profile."],
-      ["<b>Training complete.</b> All required portal modules finished."],
-      ["<b>Payment on file</b> and your first week's plan paid."],
-      ["<b>Phone tested.</b> Your forwarding number rings through with no voicemail pickup."],
-    ]},
-    { title: "On the call", icon: "phone", items: [
-      ["<b>Answer within 3 rings.</b> Missed calls roll to the next agent and still count toward your cap."],
-      ["<b>Use the approved opener</b> and identify yourself as a licensed agent."],
-      ["<b>No cold transfers.</b> Never hand a caller off to another agent or number."],
-      ["<b>Stay available</b> during your routing hours or pause your campaign in LeadTech."],
-    ]},
-    { title: "Dispositions", icon: "list", items: [
-      ["<b>Disposition every call</b> in LeadTech within 24 hours."],
-      ["<b>Record the outcome:</b> sold, quoted, callback, not interested or invalid."],
-      ["<b>Flag bad calls right away.</b> Refunds need the disposition to match the reason."],
-    ]},
-    { title: "Compliance", icon: "check", items: [
-      ["<b>Follow TCPA and DNC rules</b> on every callback."],
-      ["<b>No misleading claims</b> about government programs or benefits."],
-      ["<b>Recordings are reviewed.</b> Violations can pause routing without notice."],
-    ]},
+    { icon: "tab", title: "Stay on the inbound portal",
+      text: "You must stay on the inbound portal to receive calls. <b>If you click off the Chrome tab, you will not receive calls.</b>" },
+    { icon: "check", title: "Underwriting counts as sold",
+      text: "Deals that are closed and sent to underwriting are still marked <span class=\"tag\">SOLD</span> inside the inbound portal." },
+    { icon: "map", title: "State selection",
+      text: "<b>Google calls:</b> all 50 states must be selected. <b>Meta / TV calls:</b> you choose which states to target." },
   ],
 
   refundYes: [
@@ -620,16 +671,24 @@ $("#ctypes").innerHTML = CONFIG.callTypes.map((c) => `
 
 /* Rules */
 const ICONS = {
-  shield: '<path d="M8 1.5l5.5 2v4c0 3.5-2.4 6-5.5 7-3.1-1-5.5-3.5-5.5-7v-4z"/>',
-  phone: '<path d="M3 2h3l1.5 3.5L6 6.5a8 8 0 003.5 3.5l1-1.5L14 10v3a1 1 0 01-1 1A11 11 0 012 3a1 1 0 011-1z"/>',
-  list: '<path d="M5 4h9M5 8h9M5 12h9M2 4h.01M2 8h.01M2 12h.01"/>',
+  tab: '<rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/><path d="M1.5 6h13M4 4.3h.01M6 4.3h.01"/>',
   check: '<path d="M2.5 8.5l3.5 3.5 7.5-8"/>',
+  map: '<path d="M1.5 3.5l4-1.5 5 2 4-1.5v10l-4 1.5-5-2-4 1.5z"/><path d="M5.5 2v10M10.5 4v10"/>',
 };
-$("#rulesGrid").innerHTML = CONFIG.rules.map((g, gi) => `
-  <div class="rule-group">
-    <h3><span class="ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[g.icon]}</svg></span>${esc(g.title)}</h3>
-    <ol>${g.items.map((it, i) => `<li data-code="R${gi + 1}.${i + 1}"><span>${it[0]}</span></li>`).join("")}</ol>
+const maxDays = Math.max(...CONFIG.offenses.filter((o) => o.days).map((o) => o.days));
+$("#ladder").innerHTML = CONFIG.offenses.map((o) => o.final
+  ? `<div class="step final"><span class="n">${esc(o.label)}</span><b>${esc(o.final)}</b><span>${esc(o.note)}</span></div>`
+  : `<div class="step"><span class="n">${esc(o.label)}</span><b>${o.days}<small>days</small></b><span>Suspended from all LeadTech marketing</span><div class="meter"><i style="width:${(o.days / maxDays) * 100}%"></i></div></div>`
+).join("");
+$("#rulesGrid").innerHTML = CONFIG.rules.map((r) => `
+  <div class="rule-card">
+    <span class="ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[r.icon]}</svg></span>
+    <h3>${esc(r.title)}</h3><p>${r.text}</p>
   </div>`).join("");
+for (const [sel, key] of [["#heroPortal", "inboundPortal"], ["#portalCard", "inboundPortal"], ["#heroChat", "ppcChat"], ["#chatCard", "ppcChat"]]) {
+  if (CONFIG.links[key]) $(sel).href = CONFIG.links[key]; else $(sel).hidden = true;
+}
+$("#portalUrl").textContent = CONFIG.links.inboundPortal.replace(/^https?:\/\//, "");
 
 /* Refunds */
 const li = ([a, b]) => `<li><span>${esc(a)}</span><small>${esc(b)}</small></li>`;
@@ -646,7 +705,6 @@ wireLink("#trainingLink", "#trainingTodo", CONFIG.links.trainingPortal);
 
 /* Stats */
 $("#statBuffer").textContent = CONFIG.bufferSeconds + "s";
-$("#bufferBig").textContent = CONFIG.bufferSeconds + " sec";
 $("#statRefund").textContent = CONFIG.refundWindowHours + "h";
 
 /* Schedule */
