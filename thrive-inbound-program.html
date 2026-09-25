@@ -581,7 +581,15 @@ const CONFIG = {
         { name: "Thrive", calls: 35, perCall: 34, stripe: "" },
         { name: "Legendary", calls: 50, perCall: 33.5, stripe: "" },
       ] },
-    { id: "leadtech", label: "LeadTech", topUp: null, tiers: [] },
+    { id: "leadtech", label: "LeadTech",
+      topUp: { name: "Manual top-up", perCall: 40,
+        text: "Add funds to your wallet whenever you like and pay the standard rate for each billable call. No package needed." },
+      tiers: [
+        { name: "Training", calls: 15, perCall: 40, stripe: "" },
+        { name: "Pro", calls: 25, perCall: 40, stripe: "" },
+        { name: "Thrive", calls: 35, perCall: 40, stripe: "" },
+        { name: "Legendary", calls: 50, perCall: 40, stripe: "" },
+      ] },
   ],
 
   /* suspensions for selling a deal through an external contract */
@@ -658,7 +666,7 @@ function renderPlan(id) {
     <div class="price"><b>${money(T.perCall)}</b><span>per billable call</span></div>`;
   const lowest = Math.min(...plan.tiers.map((t) => t.perCall));
   $("#tiers").innerHTML = plan.tiers.map((t) => {
-    const best = t.perCall === lowest;
+    const best = t.perCall === lowest && plan.tiers.filter((x) => x.perCall === lowest).length === 1;
     const save = (T.perCall - t.perCall) * t.calls;
     return `<article class="tier${best ? " featured" : ""}">
       ${best ? '<span class="flag">Lowest per call</span>' : ""}
