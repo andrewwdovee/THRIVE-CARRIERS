@@ -54,18 +54,10 @@ p{margin:0}
 .powered{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:#A9C2E6;border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:6px 12px 6px 8px}
 .powered b{color:#fff;font-family:var(--display);font-weight:800;letter-spacing:.02em;font-size:13px;text-transform:none;font-stretch:112%}
 .lt-mark{width:18px;height:18px;border-radius:5px;background:var(--sky);display:grid;place-items:center;color:#071A31;font-weight:900;font-size:10px;font-family:var(--display)}
-.hero-grid{display:grid;grid-template-columns:1.35fr 1fr;gap:40px;align-items:end;margin-top:48px}
+.hero-grid{margin-top:48px}
 .hero h1{font-size:clamp(38px,6.4vw,72px);line-height:.95;font-weight:800;font-stretch:118%;letter-spacing:-.02em}
 .hero h1 span{color:#8CB6FF}
 .hero .lede{margin-top:18px;max-width:52ch;color:#C8D8EC;font-size:17px}
-.status-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:20px;backdrop-filter:blur(6px);display:grid;gap:14px}
-.status-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.clock{font-family:var(--mono);font-size:28px;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
-.status-card small{color:#A9C2E6;font-size:12.5px}
-.hero-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(255,255,255,.12);border-radius:12px;overflow:hidden}
-.hero-stats div{background:#0C2443;padding:12px}
-.hero-stats b{display:block;font-family:var(--mono);font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
-.hero-stats span{font-size:11.5px;color:#A9C2E6}
 
 /* ---------- Nav ---------- */
 .nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:color-mix(in srgb,var(--paper) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
@@ -147,7 +139,7 @@ section{scroll-margin-top:72px;display:grid;gap:24px}
 .alert{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;background:var(--stop-soft);border:1px solid color-mix(in srgb,var(--stop) 40%,transparent);border-left:4px solid var(--stop);border-radius:12px;padding:16px 20px;font-size:14.5px}
 .alert svg{width:22px;height:22px;color:var(--stop);margin-top:1px}
 .alert b{color:var(--stop)}
-.rules{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.rules{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
 .rule-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;display:grid;gap:10px;align-content:start}
 .rule-card .ico{width:34px;height:34px;border-radius:9px;background:var(--sky-soft);color:var(--sky);display:grid;place-items:center}
 .rule-card .ico svg{width:17px;height:17px}
@@ -182,8 +174,6 @@ section{scroll-margin-top:72px;display:grid;gap:24px}
 .steps{display:grid;gap:10px;margin:0;padding:0;list-style:none;counter-reset:s}
 .steps li{counter-increment:s;display:grid;grid-template-columns:24px 1fr;gap:10px;font-size:13.5px;color:#DCE7F6}
 .steps li::before{content:counter(s);width:24px;height:24px;border-radius:50%;border:1px solid rgba(255,255,255,.3);display:grid;place-items:center;font-family:var(--mono);font-size:11.5px}
-.window{display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(255,255,255,.14);padding-top:14px;font-size:13px;color:#A9C2E6}
-.window b{font-family:var(--mono);color:#fff;font-size:18px}
 
 /* Schedule */
 .sched-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:16px;align-items:start}
@@ -261,7 +251,7 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
 
 /* Responsive */
 @media (max-width:960px){
-  .hero-grid,.sched-grid,.states-wrap,.training{grid-template-columns:1fr}
+.sched-grid,.states-wrap,.training{grid-template-columns:1fr}
   .refund-grid{grid-template-columns:1fr 1fr}
   .refund-grid .form-card{grid-column:1/-1;position:static}
   .tiers{grid-template-columns:1fr}
@@ -305,18 +295,6 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h7v7M13 3L4 12"/></svg></a>
         </div>
       </div>
-      <aside class="status-card" aria-live="polite">
-        <div class="status-row">
-          <span class="eyebrow" style="color:#A9C2E6">Call center status</span>
-        </div>
-        <div class="clock" id="clock">--:--</div>
-        <small id="liveSub">Eastern Time</small>
-        <div class="hero-stats">
-          <div><b id="statStates">0</b><span>Target states</span></div>
-          <div><b id="statBuffer">120s</b><span>Billable buffer</span></div>
-          <div><b id="statRefund">48h</b><span>Refund window</span></div>
-        </div>
-      </aside>
     </div>
   </div>
 </header>
@@ -343,7 +321,7 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
         <div>
           <div class="eyebrow">Subscriptions</div>
           <h2>Pricing tiers</h2>
-          <p>Pick a daily call cap. Calls are billed per qualified inbound, and your plan renews weekly until you pause or change it. To cancel or change a subscription, message support in the <a class="note-link" id="pricingDiscord" href="#" target="_blank" rel="noopener">LeadTech Discord</a>.</p>
+          <p>Pick a daily call cap. You're billed the moment a call connects, and your plan renews weekly until you pause or change it. To cancel or change a subscription, message support in the <a class="note-link" id="pricingDiscord" href="#" target="_blank" rel="noopener">LeadTech Discord</a>.</p>
         </div>
         <span class="todo">Sample pricing · replace</span>
       </div>
@@ -436,7 +414,6 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
           <a class="btn primary" id="refundLink" href="#" target="_blank" rel="noopener">Open refund form
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h7v7M13 3L4 12"/></svg></a>
           <span class="todo" id="refundTodo" style="justify-self:start">Add refund form link</span>
-          <div class="window"><span>Submit within</span><b id="refundWindow">48 hours</b></div>
         </aside>
       </div>
     </section>
@@ -554,8 +531,6 @@ const CONFIG = {
     refundForm: "",
     trainingPortal: "",
   },
-  bufferSeconds: 120,
-  refundWindowHours: 48,
   timezone: "America/New_York",
 
   tiers: [
@@ -601,6 +576,8 @@ const CONFIG = {
   ],
 
   rules: [
+    { icon: "phone", title: "Billed on connect",
+      text: "There's no buffer. <b>You're billed every time a call connects</b> to you, no matter how long it lasts." },
     { icon: "tab", title: "Stay on the inbound portal",
       text: "You must stay on the inbound portal to receive calls. <b>If you click off the Chrome tab, you will not receive calls.</b>" },
     { icon: "check", title: "Underwriting counts as sold",
@@ -621,8 +598,7 @@ const CONFIG = {
     ["Caller not interested", "They asked about coverage, then declined"],
     ["Price objection", "Quoted but said it costs too much"],
     ["Missed or unanswered", "Calls you didn't pick up"],
-    ["Late request", "Submitted after the refund window"],
-    ["Hung up during quote", "Caller left after the buffer passed"],
+    ["Short call or hang-up", "Every connected call is billed"],
     ["No disposition", "Call not dispositioned in LeadTech"],
   ],
 
@@ -702,6 +678,7 @@ $("#ctypes").innerHTML = CONFIG.callTypes.map((c) => `
 
 /* Rules */
 const ICONS = {
+  phone: '<path d="M3 2h3l1.5 3.5L6 6.5a8 8 0 003.5 3.5l1-1.5L14 10v3a1 1 0 01-1 1A11 11 0 012 3a1 1 0 011-1z"/>',
   tab: '<rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/><path d="M1.5 6h13M4 4.3h.01M6 4.3h.01"/>',
   check: '<path d="M2.5 8.5l3.5 3.5 7.5-8"/>',
   map: '<path d="M1.5 3.5l4-1.5 5 2 4-1.5v10l-4 1.5-5-2-4 1.5z"/><path d="M5.5 2v10M10.5 4v10"/>',
@@ -725,7 +702,6 @@ $("#portalUrl").textContent = CONFIG.links.inboundPortal.replace(/^https?:\/\//,
 const li = ([a, b]) => `<li><span>${esc(a)}</span><small>${esc(b)}</small></li>`;
 $("#refundYes").innerHTML = CONFIG.refundYes.map(li).join("");
 $("#refundNo").innerHTML = CONFIG.refundNo.map(li).join("");
-$("#refundWindow").textContent = CONFIG.refundWindowHours + " hours";
 function wireLink(aSel, todoSel, href) {
   const a = $(aSel), todo = $(todoSel);
   if (href) { a.href = href; todo.hidden = true; }
@@ -735,8 +711,6 @@ wireLink("#refundLink", "#refundTodo", CONFIG.links.refundForm);
 wireLink("#trainingLink", "#trainingTodo", CONFIG.links.trainingPortal);
 
 /* Stats */
-$("#statBuffer").textContent = CONFIG.bufferSeconds + "s";
-$("#statRefund").textContent = CONFIG.refundWindowHours + "h";
 
 /* Schedule */
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -759,21 +733,6 @@ function renderSchedule() {
     return `<div class="day${today ? " today" : ""}"><span class="d">${d}</span><div class="bar">${bar}${marker}</div><span class="hrs">${r ? fmtH(r[0]) + " – " + fmtH(r[1]) : "Closed"}</span></div>`;
   }).join("");
 
-  const r = CONFIG.hours[now.day];
-  const open = r && frac >= r[0] && frac < r[1];
-  const hh = now.h % 12 || 12, ampm = now.h < 12 ? "AM" : "PM";
-  $("#clock").textContent = `${now.day} ${hh}:${String(now.m).padStart(2, "0")} ${ampm}`;
-  let sub;
-  if (open) sub = `Eastern Time · closes at ${fmtH(r[1])}`;
-  else {
-    let idx = DAYS.indexOf(now.day), found = null;
-    for (let i = 0; i < 8 && !found; i++) {
-      const d = DAYS[(idx + i) % 7], rr = CONFIG.hours[d];
-      if (rr && (i > 0 || frac < rr[0])) found = [i === 0 ? "today" : i === 1 ? "tomorrow" : d, rr[0]];
-    }
-    sub = found ? `Eastern Time · opens ${found[0]} at ${fmtH(found[1])}` : "Eastern Time";
-  }
-  $("#liveSub").textContent = sub;
 }
 renderSchedule();
 setInterval(renderSchedule, 30000);
@@ -798,7 +757,6 @@ $("#tiles").innerHTML = GRID.map(([c, r, col]) => {
 }).join("");
 $("#stateList").innerHTML = codes.map((c) => `<span class="chip" title="${NAMES[c]}">${c}</span>`).join("");
 $("#stateCount").textContent = codes.length + " of 50";
-$("#statStates").textContent = codes.length;
 $("#tiles").addEventListener("click", (e) => {
   const b = e.target.closest(".tile.on"); if (!b) return;
   document.querySelectorAll(".tile.sel").forEach((t) => t.classList.remove("sel"));
