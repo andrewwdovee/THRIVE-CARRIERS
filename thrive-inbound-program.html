@@ -105,6 +105,8 @@ section{scroll-margin-top:72px;display:grid;gap:24px}
 .tier-meta .save b{color:var(--live)}
 .tier .buy{display:grid;gap:8px;justify-items:center}
 .tier .buy .btn{width:100%}
+.btn.sub{background:linear-gradient(135deg,#4752C4,#5865F2);color:#fff}
+.btn.sub:hover{background:linear-gradient(135deg,#3C45A5,#4752C4)}
 .btn.off{opacity:.55;cursor:not-allowed}
 .btn.off:hover{transform:none}
 
@@ -606,8 +608,8 @@ $("#tiers").innerHTML = CONFIG.tiers.map((t) => {
     </div>
     <div class="buy">
       ${t.stripe
-        ? `<a class="btn ${best ? "primary" : "ghost"}" href="${esc(t.stripe)}" target="_blank" rel="noopener">Start subscription ${GO}</a>`
-        : `<span class="btn ${best ? "primary" : "ghost"} off" aria-disabled="true">Start subscription ${GO}</span><span class="todo">Add Stripe link</span>`}
+        ? `<a class="btn sub" href="${esc(t.stripe)}" target="_blank" rel="noopener">Start subscription ${GO}</a>`
+        : `<span class="btn sub off" aria-disabled="true">Start subscription ${GO}</span><span class="todo">Add Stripe link</span>`}
     </div>
   </article>`;
 }).join("");
