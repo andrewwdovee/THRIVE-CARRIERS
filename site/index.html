@@ -106,6 +106,8 @@ section{scroll-margin-top:72px;display:grid;gap:24px}
 .tiers{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
 .tier{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;display:grid;gap:16px;align-content:start;position:relative}
 .tier.featured{border-color:var(--sky);box-shadow:var(--shadow)}
+.tier.standard{border-color:var(--live);box-shadow:0 0 0 1px var(--live),var(--shadow)}
+.tier.standard .flag{background:var(--live)}
 .tier .flag{position:absolute;top:-11px;left:22px;background:var(--sky);color:#fff;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:999px}
 .tier h3{font-size:20px;font-weight:800;font-stretch:110%}
 .tier .calls{font-family:var(--mono);font-size:15px;font-weight:500;color:var(--text);margin-top:4px}
@@ -596,7 +598,7 @@ const CONFIG = {
       tiers: [
         { name: "Training", calls: 15, perCall: 38, stripe: "https://buy.stripe.com/14A14n1E98zq8Bx2pD2VG2B" },
         { name: "Pro", calls: 25, perCall: 35, stripe: "https://buy.stripe.com/4gMcN5aaF16Y9FBfcp2VG2C" },
-        { name: "Thrive", calls: 35, perCall: 34, stripe: "https://buy.stripe.com/4gMfZh1E9eXO9FBd4h2VG2D" },
+        { name: "Thrive", calls: 35, perCall: 34, stripe: "https://buy.stripe.com/4gMfZh1E9eXO9FBd4h2VG2D", badge: "The Thrive Standard" },
         { name: "Legendary", calls: 50, perCall: 33.5, stripe: "https://buy.stripe.com/28E9AT82x5ne5pld4h2VG2E", perk: "Wallet doesn't get wiped" },
       ] },
     { id: "leadtech", label: "LeadTech",
@@ -688,8 +690,8 @@ function renderPlan(id) {
   $("#tiers").innerHTML = plan.tiers.map((t) => {
     const best = t.perCall === lowest && plan.tiers.filter((x) => x.perCall === lowest).length === 1;
     const save = (T.perCall - t.perCall) * t.calls;
-    return `<article class="tier${best ? " featured" : ""}">
-      ${best ? '<span class="flag">Lowest per call</span>' : ""}
+    return `<article class="tier${best ? " featured" : ""}${t.badge ? " standard" : ""}">
+      ${best ? '<span class="flag">Lowest per call</span>' : t.badge ? `<span class="flag">${esc(t.badge)}</span>` : ""}
       <div><h3>${esc(t.name)}</h3><div class="calls">${t.calls} calls per week</div></div>
       <div class="price"><b>${money(t.perCall)}</b><span>per call</span></div>
       <div class="tier-meta">
