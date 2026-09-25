@@ -83,25 +83,26 @@ section{scroll-margin-top:72px;display:grid;gap:24px}
 .btn svg{width:16px;height:16px}
 
 /* Pricing */
-.tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-.tier{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;display:grid;grid-template-rows:auto auto auto 1fr auto;gap:16px;position:relative}
+.topup{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center;background:linear-gradient(160deg,var(--navy-3),var(--navy-2));color:#fff;border-radius:16px;padding:24px 28px}
+.topup h3{font-size:22px;font-weight:800;font-stretch:112%;margin-top:6px}
+.topup p{color:#C8D8EC;font-size:14px;margin-top:6px;max-width:56ch}
+.topup .price b{font-size:44px;color:#fff}
+.topup .price span{color:#A9C2E6}
+.tiers{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.tier{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;display:grid;gap:16px;align-content:start;position:relative}
 .tier.featured{border-color:var(--sky);box-shadow:var(--shadow)}
-.tier .flag{position:absolute;top:-11px;left:24px;background:var(--sky);color:#fff;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:999px}
+.tier .flag{position:absolute;top:-11px;left:22px;background:var(--sky);color:#fff;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:999px}
 .tier h3{font-size:20px;font-weight:800;font-stretch:110%}
-.tier .for{color:var(--muted);font-size:13.5px;margin-top:2px}
-.price{display:flex;align-items:baseline;gap:6px}
-.price b{font-family:var(--mono);font-size:40px;font-weight:600;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.tier .calls{font-family:var(--mono);font-size:13px;color:var(--muted);margin-top:2px}
+.price{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.price b{font-family:var(--mono);font-size:38px;font-weight:600;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .price span{color:var(--muted);font-size:13.5px}
 .tier-meta{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:10px;overflow:hidden}
-.tier-meta div{padding:10px 12px}
+.tier-meta div{padding:10px 12px;min-width:0}
 .tier-meta div+div{border-left:1px solid var(--line)}
-.tier-meta small{display:block;color:var(--muted);font-size:11px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em}
+.tier-meta small{display:block;color:var(--muted);font-size:10.5px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em}
 .tier-meta b{font-family:var(--mono);font-size:15px;font-variant-numeric:tabular-nums}
-.checks{list-style:none;margin:0;padding:0;display:grid;gap:9px;align-content:start}
-.checks li{display:grid;grid-template-columns:18px 1fr;gap:10px;font-size:14px}
-.checks li::before{content:"";width:18px;height:18px;border-radius:50%;background:var(--sky-soft) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.5l2.5 2.5L12 5.5' fill='none' stroke='%234C8DF6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/12px no-repeat;margin-top:1px}
-.fineprint{display:flex;flex-wrap:wrap;gap:8px 24px;color:var(--muted);font-size:13px}
-.fineprint span b{color:var(--text);font-family:var(--mono);font-weight:500}
+.tier-meta .save b{color:var(--live)}
 
 /* Call types */
 .ctypes{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
@@ -254,13 +255,14 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
 .sched-grid,.states-wrap,.training{grid-template-columns:1fr}
   .refund-grid{grid-template-columns:1fr 1fr}
   .refund-grid .form-card{grid-column:1/-1;position:static}
-  .tiers{grid-template-columns:1fr}
+  .tiers{grid-template-columns:1fr 1fr}
   .ladder{grid-template-columns:1fr 1fr}
   .rules{grid-template-columns:1fr}
   .tier{grid-template-rows:auto}
 }
 @media (max-width:640px){
   .wrap{padding-inline:16px}
+  .tiers,.topup{grid-template-columns:1fr}
   .refund-grid,.support,.ctypes,.links-row,.discord{grid-template-columns:1fr}
   .discord{padding:24px}
   .prime{padding:24px}
@@ -321,12 +323,11 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
         <div>
           <div class="eyebrow">Subscriptions</div>
           <h2>Pricing tiers</h2>
-          <p>Pick a daily call cap. You're billed the moment a call connects, and your plan renews weekly until you pause or change it. To cancel or change a subscription, message support in the <a class="note-link" id="pricingDiscord" href="#" target="_blank" rel="noopener">LeadTech Discord</a>.</p>
+          <p>Top up manually at the standard rate, or buy a call package for a lower price per call. You're billed the moment a call connects. To cancel or change a subscription, message support in the <a class="note-link" id="pricingDiscord" href="#" target="_blank" rel="noopener">LeadTech Discord</a>.</p>
         </div>
-        <span class="todo">Sample pricing · replace</span>
       </div>
+      <div class="topup" id="topup"></div>
       <div class="tiers" id="tiers"></div>
-      <div class="fineprint" id="fineprint"></div>
     </section>
 
     <!-- CALL TYPES -->
@@ -533,18 +534,14 @@ const CONFIG = {
   },
   timezone: "America/New_York",
 
+  /* pay-as-you-go rate; package savings are measured against it */
+  topUp: { name: "Manual top-up", perCall: 40,
+    text: "Add funds to your wallet whenever you like and pay the standard rate for each billable call. No package needed." },
   tiers: [
-    { name: "Starter", for: "New to inbound, testing volume", perCall: 45, callsPerDay: 5, days: 5,
-      perks: ["Up to 5 calls per day", "Mon–Fri routing", "Standard call queue", "Refund credits on approval"] },
-    { name: "Growth", for: "Full-time agents", perCall: 42, callsPerDay: 10, days: 5, featured: true,
-      perks: ["Up to 10 calls per day", "Mon–Sat routing", "Priority call queue", "Weekly performance review"] },
-    { name: "Elite", for: "Top producers and small teams", perCall: 38, callsPerDay: 20, days: 5,
-      perks: ["Up to 20 calls per day", "Mon–Sat routing", "First-in-line routing", "Dedicated account manager"] },
-  ],
-  fineprint: [
-    ["Billing", "weekly, every Monday"],
-    ["Minimum", "1 week commitment"],
-    ["Pause", "48h notice before billing"],
+    { name: "Training", calls: 15, perCall: 38 },
+    { name: "Pro", calls: 25, perCall: 35 },
+    { name: "Thrive", calls: 35, perCall: 35 },
+    { name: "Legendary", calls: 50, perCall: 33.5 },
   ],
 
   /* code = the tag agents see in LeadTech / caller ID */
@@ -640,24 +637,27 @@ const CONFIG = {
 /* ============================================================ */
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
-const money = (n) => "$" + n.toLocaleString("en-US");
+const money = (n) => "$" + n.toLocaleString("en-US", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 });
 
 /* Pricing */
+const T = CONFIG.topUp;
+$("#topup").innerHTML = `
+  <div><div class="eyebrow" style="color:#8CB6FF">Pay as you go</div><h3>${esc(T.name)}</h3><p>${esc(T.text)}</p></div>
+  <div class="price"><b>${money(T.perCall)}</b><span>per billable call</span></div>`;
+const lowest = Math.min(...CONFIG.tiers.map((t) => t.perCall));
 $("#tiers").innerHTML = CONFIG.tiers.map((t) => {
-  const week = t.perCall * t.callsPerDay * t.days;
-  return `<article class="tier${t.featured ? " featured" : ""}">
-    ${t.featured ? '<span class="flag">Most popular</span>' : ""}
-    <div><h3>${esc(t.name)}</h3><div class="for">${esc(t.for)}</div></div>
-    <div class="price"><b>${money(t.perCall)}</b><span>per billable call</span></div>
+  const best = t.perCall === lowest;
+  const save = (T.perCall - t.perCall) * t.calls;
+  return `<article class="tier${best ? " featured" : ""}">
+    ${best ? '<span class="flag">Lowest per call</span>' : ""}
+    <div><h3>${esc(t.name)}</h3><div class="calls">${t.calls}-call package</div></div>
+    <div class="price"><b>${money(t.perCall)}</b><span>per call</span></div>
     <div class="tier-meta">
-      <div><small>Daily cap</small><b>${t.callsPerDay} calls</b></div>
-      <div><small>Max / week</small><b>${money(week)}</b></div>
+      <div><small>Total</small><b>${money(t.perCall * t.calls)}</b></div>
+      <div class="save"><small>You save</small><b>${save > 0 ? money(save) : "—"}</b></div>
     </div>
-    <ul class="checks">${t.perks.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>
-    <a class="btn ${t.featured ? "primary" : "ghost"}" href="#support">Choose ${esc(t.name)}</a>
   </article>`;
 }).join("");
-$("#fineprint").innerHTML = CONFIG.fineprint.map(([k, v]) => `<span>${esc(k)}: <b>${esc(v)}</b></span>`).join("");
 
 /* Call types */
 $("#ctypes").innerHTML = CONFIG.callTypes.map((c) => `
