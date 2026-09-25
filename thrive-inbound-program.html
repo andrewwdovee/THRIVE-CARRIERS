@@ -236,7 +236,21 @@ section{scroll-margin-top:72px;display:grid;gap:24px}
 .req{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--sky);margin-left:6px}
 
 /* Support + footer */
-.support{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.discord{display:grid;grid-template-columns:1.1fr 1fr;gap:28px;align-items:center;background:linear-gradient(135deg,#4752C4,#5865F2);color:#fff;border-radius:20px;padding:28px 32px}
+.discord .logo{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,.16);display:grid;place-items:center}
+.discord .logo svg{width:28px;height:28px}
+.discord h3{font-size:26px;font-weight:800;font-stretch:112%;line-height:1.05;margin-top:14px}
+.discord p{color:#E3E6FF;margin-top:8px;max-width:48ch}
+.discord .btn{background:#fff;color:#3C45A5;margin-top:18px}
+.discord ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.discord li{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:12px 14px;font-size:14px}
+.discord li b{display:block;font-size:14.5px}
+.discord li small{color:#D5D9FF;font-size:12.5px}
+.discord li .k{font-family:var(--mono);font-size:11px;background:rgba(255,255,255,.18);border-radius:6px;padding:4px 7px}
+.note-link{color:var(--sky);font-weight:700;text-decoration:none}
+.note-link:hover{text-decoration:underline}
+
+.support{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
 .contact{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;display:grid;gap:4px}
 .contact .eyebrow{font-size:10.5px}
 .contact b{font-size:15.5px;word-break:break-word}
@@ -257,7 +271,8 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
 }
 @media (max-width:640px){
   .wrap{padding-inline:16px}
-  .refund-grid,.support,.ctypes,.links-row{grid-template-columns:1fr}
+  .refund-grid,.support,.ctypes,.links-row,.discord{grid-template-columns:1fr}
+  .discord{padding:24px}
   .prime{padding:24px}
   .ctype-meta{grid-template-columns:1fr 1fr}
   .ctype-meta div:nth-child(3){grid-column:1/-1;border-left:0;border-top:1px solid var(--line)}
@@ -285,6 +300,8 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
           <a class="btn primary" id="heroPortal" href="#" target="_blank" rel="noopener">Open inbound portal
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h7v7M13 3L4 12"/></svg></a>
           <a class="btn onnavy" id="heroChat" href="#" target="_blank" rel="noopener">Join Google PPC chat
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h7v7M13 3L4 12"/></svg></a>
+          <a class="btn onnavy" id="heroDiscord" href="#" target="_blank" rel="noopener">LeadTech support Discord
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h7v7M13 3L4 12"/></svg></a>
         </div>
       </div>
@@ -326,7 +343,7 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
         <div>
           <div class="eyebrow">Subscriptions</div>
           <h2>Pricing tiers</h2>
-          <p>Pick a daily call cap. Calls are billed per qualified inbound, and your plan renews weekly until you pause or change it.</p>
+          <p>Pick a daily call cap. Calls are billed per qualified inbound, and your plan renews weekly until you pause or change it. To cancel or change a subscription, message support in the <a class="note-link" id="pricingDiscord" href="#" target="_blank" rel="noopener">LeadTech Discord</a>.</p>
         </div>
         <span class="todo">Sample pricing · replace</span>
       </div>
@@ -494,9 +511,23 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
         <div>
           <div class="eyebrow">Get help</div>
           <h2>Support</h2>
+          <p>LeadTech support runs through Discord. Go there for subscription changes, cancellations and any other help.</p>
         </div>
-        <span class="todo">Add contact details</span>
       </div>
+      <div class="discord">
+        <div>
+          <span class="logo"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.6 5.3A17 17 0 0015.4 4l-.5 1a15.7 15.7 0 00-5.8 0l-.5-1a17 17 0 00-4.2 1.3C1.7 9.3 1 13.2 1.3 17a17 17 0 005.2 2.6l1.1-1.8a11 11 0 01-1.7-.8l.4-.3a12.2 12.2 0 0011.4 0l.4.3-1.7.8 1.1 1.8a17 17 0 005.2-2.6c.4-4.4-.7-8.3-3.1-11.7zM8.7 14.7c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1zm6.6 0c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1z"/></svg></span>
+          <h3>LeadTech Support Discord</h3>
+          <p>Join the server to reach the LeadTech support team for anything to do with your subscription or account.</p>
+          <a class="btn" id="discordLink" href="#" target="_blank" rel="noopener">Join the Discord <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h7v7M13 3L4 12"/></svg></a>
+        </div>
+        <ul>
+          <li><span class="k">✕</span><span><b>Cancel a subscription</b><small>Stop your plan before the next weekly billing</small></span></li>
+          <li><span class="k">⇄</span><span><b>Change your subscription</b><small>Upgrade, downgrade or pause your call volume</small></span></li>
+          <li><span class="k">?</span><span><b>General support</b><small>Portal, routing, billing and account questions</small></span></li>
+        </ul>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div class="eyebrow">Thrive contacts</div><span class="todo">Add contact details</span></div>
       <div class="support" id="support-cards"></div>
     </section>
 
@@ -518,6 +549,7 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
 const CONFIG = {
   links: {
     inboundPortal: "https://leadtech-crm.vercel.app/agent/login",
+    supportDiscord: "https://discord.gg/keSnyfQ738",
     ppcChat: "https://chat.whatsapp.com/De3lMwuywoZKtCOoepRRBr?s=cl&p=i&mlu=0&ilr=0&amv=0",
     refundForm: "",
     trainingPortal: "",
@@ -626,7 +658,6 @@ const CONFIG = {
   support: [
     ["Agent support", "support@thrivecompanies.com", "Mon–Fri, 9a–6p ET"],
     ["Billing questions", "billing@thrivecompanies.com", "Replies within 1 business day"],
-    ["LeadTech help desk", "Add phone or chat link", "Dashboard and routing issues"],
   ],
 };
 
@@ -685,7 +716,7 @@ $("#rulesGrid").innerHTML = CONFIG.rules.map((r) => `
     <span class="ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[r.icon]}</svg></span>
     <h3>${esc(r.title)}</h3><p>${r.text}</p>
   </div>`).join("");
-for (const [sel, key] of [["#heroPortal", "inboundPortal"], ["#portalCard", "inboundPortal"], ["#heroChat", "ppcChat"], ["#chatCard", "ppcChat"]]) {
+for (const [sel, key] of [["#heroPortal", "inboundPortal"], ["#portalCard", "inboundPortal"], ["#heroChat", "ppcChat"], ["#chatCard", "ppcChat"], ["#heroDiscord", "supportDiscord"], ["#discordLink", "supportDiscord"], ["#pricingDiscord", "supportDiscord"]]) {
   if (CONFIG.links[key]) $(sel).href = CONFIG.links[key]; else $(sel).hidden = true;
 }
 $("#portalUrl").textContent = CONFIG.links.inboundPortal.replace(/^https?:\/\//, "");
