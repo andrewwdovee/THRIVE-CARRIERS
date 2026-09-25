@@ -237,9 +237,18 @@ section{scroll-margin-top:72px;display:grid;gap:24px}
 .legend{display:flex;gap:18px;margin-top:16px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
-.state-list{display:flex;flex-wrap:wrap;gap:6px}
-.chip{font-family:var(--mono);font-size:12px;padding:5px 9px;border-radius:6px;background:var(--mist);border:1px solid var(--line)}
-.state-detail{margin-top:16px;padding-top:16px;border-top:1px solid var(--line);font-size:14px;color:var(--muted);min-height:48px}
+.costs{display:grid}
+.cost-row{display:grid;grid-template-columns:34px 1fr 72px 52px;gap:10px;align-items:center;padding:7px 8px;margin:0 -8px;border:0;border-radius:8px;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.cost-row:hover{background:var(--mist)}
+.cost-row.sel{background:var(--sky-soft)}
+.cost-row .cd{font-family:var(--mono);font-size:11.5px;font-weight:600;color:var(--sky)}
+.cost-row .nm{font-size:14px}
+.cost-row .mini{height:6px;border-radius:99px;background:var(--mist);overflow:hidden}
+.cost-row .mini i{display:block;height:100%;background:var(--sky);border-radius:99px}
+.cost-row .amt{font-family:var(--mono);font-size:14px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+.cost-total{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:10px;padding-top:12px;border-top:2px solid var(--text);font-weight:800}
+.cost-total b{font-family:var(--mono);font-size:22px;font-variant-numeric:tabular-nums}
+.state-detail{margin-top:10px;font-size:13px;color:var(--muted)}
 .state-detail b{color:var(--text)}
 
 /* Support + footer */
@@ -488,9 +497,10 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
           </div>
         </div>
         <div class="panel">
-          <h3>Active states <span class="mono" id="stateCount" style="font-size:13px;color:var(--muted)"></span></h3>
-          <div class="state-list" id="stateList"></div>
-          <div class="state-detail" id="stateDetail">Tap a highlighted state to see its name and notes.</div>
+          <h3>Cost by state <span class="mono" id="stateCount" style="font-size:13px;color:var(--muted)"></span></h3>
+          <div class="costs" id="stateList" role="list"></div>
+          <div class="cost-total"><span>Total for all states</span><b id="stateTotal"></b></div>
+          <p class="state-detail" id="stateDetail">Estimated costs. Tap a state on the map or in the list to highlight it.</p>
         </div>
       </div>
     </section>
@@ -593,9 +603,10 @@ const CONFIG = {
   ],
 
   /* two-letter codes; notes are optional */
+  /* targeted states and their estimated cost in dollars; the total is added up automatically */
   targetStates: {
-    AL: "", AR: "", FL: "", GA: "", IN: "", KY: "", MI: "",
-    NC: "", OH: "", PA: "", SC: "", TN: "", TX: "",
+    AL: 86, AR: 76, FL: 61, GA: 126, IN: 96, KY: 106, MI: 16,
+    NC: 76, OH: 16, PA: 116, SC: 31, TN: 66, TX: 56,
   },
 
 
@@ -710,21 +721,30 @@ const LABEL_NUDGE = { FL: [18, 0], MI: [14, 22], LA: [-10, 0], KY: [8, 2], CA: [
 $("#usmap").innerHTML = Object.entries(SHAPES).map(([c, { d }]) => {
   const on = c in targets;
   return on
-    ? `<path class="on" data-s="${c}" d="${d}" tabindex="0" role="button" aria-label="${NAMES[c]}, targeted"><title>${NAMES[c]}</title></path>`
+    ? `<path class="on" data-s="${c}" d="${d}" tabindex="0" role="button" aria-label="${NAMES[c]}, targeted"><title>${NAMES[c]} · ${money(targets[c])}</title></path>`
     : `<path d="${d}"><title>${NAMES[c]}</title></path>`;
 }).join("") + Object.entries(SHAPES).filter(([c]) => !TINY.includes(c)).map(([c, { c: [x, y] }]) => {
   const [dx, dy] = LABEL_NUDGE[c] || [0, 0];
   return `<text class="${c in targets ? "on" : ""}" x="${x + dx}" y="${y + dy}">${c}</text>`;
 }).join("");
-$("#stateList").innerHTML = codes.map((c) => `<span class="chip" title="${NAMES[c]}">${c}</span>`).join("");
+const byName = [...codes].sort((a, b) => NAMES[a].localeCompare(NAMES[b]));
+const maxCost = Math.max(...codes.map((c) => targets[c]));
+$("#stateList").innerHTML = byName.map((c) => `
+  <button class="cost-row" data-s="${c}" role="listitem"><span class="cd">${c}</span><span class="nm">${NAMES[c]}</span>
+    <span class="mini"><i style="width:${(targets[c] / maxCost) * 100}%"></i></span><span class="amt">${money(targets[c])}</span></button>`).join("");
+$("#stateTotal").textContent = money(codes.reduce((t, c) => t + targets[c], 0));
 $("#stateCount").textContent = codes.length + " of 50";
 function pickState(el) {
   document.querySelectorAll(".usmap path.sel").forEach((t) => t.classList.remove("sel"));
   el.classList.add("sel");
   el.parentNode.insertBefore(el, el.parentNode.querySelector("text"));
   const c = el.dataset.s;
-  $("#stateDetail").innerHTML = `<b>${NAMES[c]}</b> · ${targets[c] ? esc(targets[c]) : "Targeted. No special notes for this state yet."}`;
+  document.querySelectorAll(".cost-row").forEach((r) => r.classList.toggle("sel", r.dataset.s === c));
+  $("#stateDetail").innerHTML = `<b>${NAMES[c]}</b> · estimated ${money(targets[c])}`;
 }
+$("#stateList").addEventListener("click", (e) => {
+  const r = e.target.closest(".cost-row"); if (r) pickState($(`#usmap path[data-s="${r.dataset.s}"]`));
+});
 $("#usmap").addEventListener("click", (e) => { const p = e.target.closest("path.on"); if (p) pickState(p); });
 $("#usmap").addEventListener("keydown", (e) => {
   const p = e.target.closest("path.on");
