@@ -140,6 +140,7 @@ section{scroll-margin-top:72px;display:grid;gap:24px}
 .alert.warn{background:var(--warn-soft);border-color:color-mix(in srgb,var(--warn) 40%,transparent);border-left-color:var(--warn)}
 .alert.warn svg,.alert.warn b{color:var(--warn)}
 .rules{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.rules .rule-card:last-child:nth-child(odd){grid-column:1/-1}
 .rule-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;display:grid;gap:10px;align-content:start}
 .rule-card .ico{width:34px;height:34px;border-radius:9px;background:var(--sky-soft);color:var(--sky);display:grid;place-items:center}
 .rule-card .ico svg{width:17px;height:17px}
@@ -611,6 +612,8 @@ const CONFIG = {
       text: "<b>Google calls:</b> all 50 states must be selected. <b>Meta / TV calls:</b> you choose which states to target." },
     { icon: "cal", title: "Subscription goes through every Sunday",
       text: "Your subscription must go through every Sunday. <b>If it doesn't, you can't take calls for the following week.</b> To set this up, make your purchase on a Sunday. It renews at that same time each week, and that's when the funds are added to your wallet." },
+    { icon: "cancel", title: "Cancel by Friday at 5 p.m.",
+      text: "To cancel a subscription, <b>cancel it before 5 p.m. ET on the Friday before the Sunday you'd be billed.</b> Cancel through support in the LeadTech Discord." },
     { icon: "wallet", title: "50-call wallets carry over",
       text: "If you purchase <b>50 calls per week</b>, your wallet is not reset, unless your subscription fails for the following week." },
   ],
@@ -699,6 +702,7 @@ const ICONS = {
   phone: '<path d="M3 2h3l1.5 3.5L6 6.5a8 8 0 003.5 3.5l1-1.5L14 10v3a1 1 0 01-1 1A11 11 0 012 3a1 1 0 011-1z"/>',
   tab: '<rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/><path d="M1.5 6h13M4 4.3h.01M6 4.3h.01"/>',
   check: '<path d="M2.5 8.5l3.5 3.5 7.5-8"/>',
+  cancel: '<circle cx="8" cy="8" r="6.5"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5"/>',
   cal: '<rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3"/>',
   wallet: '<path d="M2 4.5A1.5 1.5 0 013.5 3H12v2.5"/><rect x="2" y="5" width="12.5" height="8.5" rx="1.5"/><path d="M11 9.3h.01"/>',
   map: '<path d="M1.5 3.5l4-1.5 5 2 4-1.5v10l-4 1.5-5-2-4 1.5z"/><path d="M5.5 2v10M10.5 4v10"/>',
