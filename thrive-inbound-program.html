@@ -103,6 +103,10 @@ section{scroll-margin-top:72px;display:grid;gap:24px}
 .tier-meta small{display:block;color:var(--muted);font-size:10.5px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em}
 .tier-meta b{font-family:var(--mono);font-size:15px;font-variant-numeric:tabular-nums}
 .tier-meta .save b{color:var(--live)}
+.tier .buy{display:grid;gap:8px;justify-items:center}
+.tier .buy .btn{width:100%}
+.btn.off{opacity:.55;cursor:not-allowed}
+.btn.off:hover{transform:none}
 
 /* Rules */
 .prime{background:radial-gradient(700px 260px at 100% 0%,rgba(76,141,246,.3),transparent 60%),linear-gradient(160deg,var(--navy-3),var(--navy-2));color:#fff;border-radius:20px;padding:32px;display:grid;gap:12px}
@@ -523,11 +527,12 @@ const CONFIG = {
   /* pay-as-you-go rate; package savings are measured against it */
   topUp: { name: "Manual top-up", perCall: 40,
     text: "Add funds to your wallet whenever you like and pay the standard rate for each billable call. No package needed." },
+  /* paste each tier's Stripe checkout link into stripe: "" */
   tiers: [
-    { name: "Training", calls: 15, perCall: 38 },
-    { name: "Pro", calls: 25, perCall: 35 },
-    { name: "Thrive", calls: 35, perCall: 34 },
-    { name: "Legendary", calls: 50, perCall: 33.5 },
+    { name: "Training", calls: 15, perCall: 38, stripe: "" },
+    { name: "Pro", calls: 25, perCall: 35, stripe: "" },
+    { name: "Thrive", calls: 35, perCall: 34, stripe: "" },
+    { name: "Legendary", calls: 50, perCall: 33.5, stripe: "" },
   ],
 
   /* suspensions for selling a deal through an external contract */
@@ -582,6 +587,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&":"&amp;","<":"&lt;"
 const money = (n) => "$" + n.toLocaleString("en-US", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 });
 
 /* Pricing */
+const GO = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h7v7M13 3L4 12"/></svg>';
 const T = CONFIG.topUp;
 $("#topup").innerHTML = `
   <div><div class="eyebrow" style="color:#8CB6FF">Pay as you go</div><h3>${esc(T.name)}</h3><p>${esc(T.text)}</p></div>
@@ -597,6 +603,11 @@ $("#tiers").innerHTML = CONFIG.tiers.map((t) => {
     <div class="tier-meta">
       <div><small>Total</small><b>${money(t.perCall * t.calls)}</b></div>
       <div class="save"><small>You save</small><b>${save > 0 ? money(save) : "—"}</b></div>
+    </div>
+    <div class="buy">
+      ${t.stripe
+        ? `<a class="btn ${best ? "primary" : "ghost"}" href="${esc(t.stripe)}" target="_blank" rel="noopener">Start subscription ${GO}</a>`
+        : `<span class="btn ${best ? "primary" : "ghost"} off" aria-disabled="true">Start subscription ${GO}</span><span class="todo">Add Stripe link</span>`}
     </div>
   </article>`;
 }).join("");
