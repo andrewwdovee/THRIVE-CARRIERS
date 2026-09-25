@@ -505,8 +505,6 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
           <li><span class="k">?</span><span><b>General support</b><small>Portal, routing, billing and account questions</small></span></li>
         </ul>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div class="eyebrow">Thrive contacts</div><span class="todo">Add contact details</span></div>
-      <div class="support" id="support-cards"></div>
     </section>
 
   </div>
@@ -628,10 +626,6 @@ const CONFIG = {
     ["Compliance refresher", "TCPA, DNC and required disclosures", "15 min", true],
   ],
 
-  support: [
-    ["Agent support", "support@thrivecompanies.com", "Mon–Fri, 9a–6p ET"],
-    ["Billing questions", "billing@thrivecompanies.com", "Replies within 1 business day"],
-  ],
 };
 
 /* ============================================================ */
@@ -771,9 +765,6 @@ $("#modules").innerHTML = CONFIG.modules.map(([t, d, len, req], i) => `
   <div><b>${esc(t)}${req ? '<span class="req">Required</span>' : ""}</b><small>${esc(d)}</small></div>
   <span class="len">${esc(len)}</span></li>`).join("");
 
-/* Support */
-$("#support-cards").innerHTML = CONFIG.support.map(([k, v, s]) => `
-  <div class="contact"><span class="eyebrow">${esc(k)}</span><b>${esc(v)}</b><span>${esc(s)}</span></div>`).join("");
 
 /* Nav highlight */
 const links = [...document.querySelectorAll("#navLinks a")];
