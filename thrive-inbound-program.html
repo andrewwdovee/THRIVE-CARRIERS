@@ -60,12 +60,6 @@ p{margin:0}
 .hero .lede{margin-top:18px;max-width:52ch;color:#C8D8EC;font-size:17px}
 .status-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:20px;backdrop-filter:blur(6px);display:grid;gap:14px}
 .status-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.pill{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:5px 12px;font-size:12.5px;font-weight:700;letter-spacing:.02em}
-.pill .dot{width:8px;height:8px;border-radius:50%;background:currentColor}
-.pill.on{background:rgba(60,201,142,.16);color:#57DFA4}
-.pill.on .dot{box-shadow:0 0 0 0 rgba(87,223,164,.7);animation:pulse 2s infinite}
-.pill.off{background:rgba(240,128,108,.16);color:#FF9A87}
-@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(87,223,164,.6)}70%{box-shadow:0 0 0 9px rgba(87,223,164,0)}100%{box-shadow:0 0 0 0 rgba(87,223,164,0)}}
 .clock{font-family:var(--mono);font-size:28px;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .status-card small{color:#A9C2E6;font-size:12.5px}
 .hero-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(255,255,255,.12);border-radius:12px;overflow:hidden}
@@ -246,7 +240,6 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
       <aside class="status-card" aria-live="polite">
         <div class="status-row">
           <span class="eyebrow" style="color:#A9C2E6">Call center status</span>
-          <span id="livePill" class="pill off"><span class="dot"></span><span id="liveText">Closed</span></span>
         </div>
         <div class="clock" id="clock">--:--</div>
         <small id="liveSub">Eastern Time</small>
@@ -512,8 +505,8 @@ const CONFIG = {
 
   /* two-letter codes; notes are optional */
   targetStates: {
-    FL: "", GA: "", TX: "", NC: "", SC: "", TN: "", AL: "", MS: "", LA: "",
-    OH: "", PA: "", MI: "", IN: "", KY: "", AZ: "", MO: "", VA: "",
+    AL: "", AR: "", FL: "", GA: "", IN: "", KY: "", MI: "",
+    NC: "", OH: "", PA: "", SC: "", TN: "", TX: "",
   },
 
   modules: [
@@ -608,8 +601,6 @@ function renderSchedule() {
 
   const r = CONFIG.hours[now.day];
   const open = r && frac >= r[0] && frac < r[1];
-  $("#livePill").className = "pill " + (open ? "on" : "off");
-  $("#liveText").textContent = open ? "Lines open" : "Closed";
   const hh = now.h % 12 || 12, ampm = now.h < 12 ? "AM" : "PM";
   $("#clock").textContent = `${now.day} ${hh}:${String(now.m).padStart(2, "0")} ${ampm}`;
   let sub;
