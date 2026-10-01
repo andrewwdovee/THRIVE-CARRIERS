@@ -372,6 +372,10 @@ footer img{height:30px;width:auto;display:block;opacity:.9}
         </div>
       </div>
       <div class="seg" role="tablist" aria-label="Pricing for" id="planSeg"></div>
+      <div class="alert warn" id="planNotice" role="note" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/></svg>
+        <p id="planNoticeText"></p>
+      </div>
       <div class="topup" id="topup"></div>
       <div class="tiers" id="tiers"></div>
       <div class="plan-empty" id="planEmpty" hidden></div>
@@ -602,8 +606,9 @@ const CONFIG = {
         { name: "Legendary", calls: 50, perCall: 33.5, stripe: "https://buy.stripe.com/28E9AT82x5ne5pld4h2VG2E", perk: "Wallet doesn't get wiped" },
       ] },
     { id: "leadtech", label: "LeadTech",
+      notice: "<b>External pricing is limited to 60 days.</b> LeadTech pricing runs at $40 a call for your first 60 days. After that, you move to $50 a call, or you can switch to internal (Thrive Companies) contracts only.",
       topUp: { name: "Manual top-up", perCall: 40,
-        text: "External pricing runs at $40 per call for your first 60 days. After that, move to internal contracts only or pay $50 per call." },
+        text: "Add funds to your wallet whenever you like and pay the standard rate for each billable call. No package needed." },
       tiers: [
         { name: "Training", calls: 15, perCall: 40, stripe: "https://buy.stripe.com/7sY5kDeqV7vm7xt8O12VG2F" },
         { name: "Pro", calls: 25, perCall: 40, stripe: "https://buy.stripe.com/eVqeVdciNbLC7xtc0d2VG2G" },
@@ -677,6 +682,8 @@ const GO = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-wi
 function renderPlan(id) {
   const plan = CONFIG.plans.find((p) => p.id === id) || CONFIG.plans[0];
   document.querySelectorAll("#planSeg button").forEach((b) => b.setAttribute("aria-selected", b.dataset.plan === plan.id));
+  $("#planNotice").hidden = !plan.notice;
+  $("#planNoticeText").innerHTML = plan.notice || "";
   const ready = plan.topUp && plan.tiers.length;
   $("#topup").hidden = $("#tiers").hidden = !ready;
   $("#planEmpty").hidden = ready;
