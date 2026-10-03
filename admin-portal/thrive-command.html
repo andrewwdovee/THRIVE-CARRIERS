@@ -445,6 +445,10 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
 /* ---------- charts ---------- */
 .charts { display: grid; gap: 18px; grid-template-columns: 1fr; align-items: start; }
 @media (min-width: 1000px) { .charts.c2 { grid-template-columns: 1.35fr 1fr; } }
+/* c2 is weighted for a wide chart beside a donut. Two charts of the same
+   kind need the same width, or the one on the right scales its own text
+   down to fit a narrower column and stops matching its twin. */
+@media (min-width: 1000px) { .charts.even { grid-template-columns: 1fr 1fr; } }
 .charts .panel { margin-top: 0; }
 .chart { position: relative; }
 .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
@@ -513,6 +517,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
 }
 .linkbtn:hover { filter: brightness(1.15); }
 .codebox { font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: var(--mist-2); border: 1px dashed var(--line-2); border-radius: 6px; padding: 8px 10px; word-break: break-all; }
+.barsub { margin: 4px 0 0; font-size: 11.5px; color: var(--muted); }
 .bar-mini { height: 5px; border-radius: 3px; background: var(--mist-2); overflow: hidden; min-width: 54px; }
 .bar-mini i { display: block; height: 100%; background: var(--s-loa); }
 .bar-mini i.good { background: var(--paid); }
@@ -605,10 +610,14 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
   var LOA_STATUS = {
     underwriting: { label: "In underwriting",    tone: "warn", group: "pending" },
     approved:     { label: "Approved, not paid", tone: "key",  group: "pending" },
-    issued_paid:  { label: "Issued & paid",      tone: "good", group: "paid"    },
+    issued_paid:  { label: "Issued & paid",      tone: "good", group: "paid", placed: true },
     nsf:          { label: "Insufficient funds", tone: "bad",  group: "lost"    },
     declined:     { label: "Declined",           tone: "bad",  group: "lost"    },
-    chargeback:   { label: "Chargeback",         tone: "bad",  group: "lost"    }
+    /* A chargeback is not a placement failure. The policy issued and the
+       carrier paid before it came back, so it clears placement and costs
+       persistency instead \u2014 which is why it carries a flag the other
+       two lost statuses do not. */
+    chargeback:   { label: "Chargeback",         tone: "bad",  group: "lost", placed: true }
   };
   var LOA_ALIAS = { submitted: "underwriting", not_taken: "declined", withdrawn: "declined", lapsed: "chargeback" };
 
@@ -977,7 +986,32 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     m.houseFullPaid = paid.reduce(function (t, d) { return t + houseCommFullOn(d); }, 0);
     m.spreadPaid = m.houseGrossPaid - m.agentCommPaid;
     m.net = m.spreadPaid - m.marketingCost;
-    m.placement = ratio(m.apPaid, m.apPaid + m.apLost);
+    /* Placement and persistency measure two different halves of a
+       policy's life and the line between them is the carrier's first
+       payment. Anything that falls over before it is a placement
+       failure; a chargeback lands after it, so it costs persistency
+       instead. Counting a chargeback against both would punish the
+       producer twice for one event. */
+    var backs = lost.filter(function (d) { return !!statusOf(d.status).placed; });
+    var early = lost.filter(function (d) { return !statusOf(d.status).placed; });
+    m.chargebacks = backs;
+    m.apChargeback = sumBy(backs, "ap");
+    m.apLostEarly = sumBy(early, "ap");
+    m.apPlaced = m.apPaid + m.apChargeback;
+    m.placement = ratio(m.apPlaced, m.apPlaced + m.apLostEarly);
+    /* Null rather than zero where nothing has placed yet: a producer with
+       no settled business has no persistency, which is not the same as
+       having lost all of it. */
+    m.persistency = m.apPlaced > 0 ? ratio(m.apPaid, m.apPlaced) : null;
+
+    /* Daily averages run over the days a producer actually logged calls,
+       not calendar days \u2014 someone who works four days a week should not
+       read as worse than someone who works five. */
+    var seenDays = {};
+    calls.forEach(function (c) { var d = toISODate(c.date); if (d) seenDays[d] = 1; });
+    m.daysLogged = Object.keys(seenDays).length;
+    m.callsPerDeal = m.written ? m.callsTaken / m.written : 0;
+    m.costPerDeal = m.written ? m.marketingCost / m.written : 0;
     m.callsPerPaid = paid.length ? m.callsTaken / paid.length : 0;
     /* Both defined exactly as the Producer Desk defines them, so a
        producer reading their own desk and the owner reading this table
@@ -985,6 +1019,31 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     m.closeRate = ratio(m.written, m.callsTaken);
     m.roi = m.marketingCost > 0 ? ratio(m.net, m.marketingCost) : 0;
     return m;
+  }
+
+  /* One row per calendar day across the range, zeros included. A line
+     drawn only on the days something happened lies about the quiet ones:
+     a gap read as a straight line between two busy days is the opposite
+     of what the floor actually did. */
+  function loaDaySeries(from, to, agentIds) {
+    var days = [], index = {}, cur = from, guard = 0;
+    while (cur <= to && guard++ < 400) {
+      index[cur] = days.length;
+      days.push({ date: cur, label: prettyDate(cur), calls: 0, deals: 0 });
+      cur = addDays(cur, 1);
+    }
+    function want(x) { return !agentIds || agentIds.indexOf(x.agentId) >= 0; }
+    loaCalls().forEach(function (c) {
+      if (!want(c)) return;
+      var i = index[toISODate(c.date)];
+      if (i != null) days[i].calls += num(c.calls);
+    });
+    loaDeals().forEach(function (d) {
+      if (!want(d)) return;
+      var i = index[toISODate(d.date)];
+      if (i != null) days[i].deals += 1;
+    });
+    return days;
   }
 
   /* ------------------------------------------------- Lead Tech normalizing */
@@ -1314,6 +1373,20 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
   }
   function chartTip() { return '<div class="chart-tip" data-tip></div>'; }
 
+  /* Not every series on this console is money. One formatter pair keeps
+     the axis, the end label and the tooltip saying the same thing in the
+     same unit \u2014 the axis terse, the tooltip exact. */
+  function axisVal(kind, v) {
+    if (kind === "int") return intf(v);
+    if (kind === "pct") return pct(v, 0);
+    return shortMoney(v);
+  }
+  function tipVal(kind, v) {
+    if (kind === "int") return intf(v);
+    if (kind === "pct") return pct(v, 1);
+    return money(v);
+  }
+
   /* One shared dollar scale, two series — never two y-axes. Both series
      are money, so they belong on one chart; anything in other units gets
      its own. */
@@ -1330,11 +1403,16 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
        zero, or a loss reads as a small profit. */
     var top = niceCeil(max || 1);
     var bot = min < 0 ? -niceCeil(-min) : 0;
+    /* Four gridlines across a count of 3 would be labelled 0.75, 1.5,
+       2.25 \u2014 a scale no one counts in. Round the top up to a multiple
+       of four so every tick lands on a whole call or a whole deal. */
+    if ((opts.fmt === "int") && top < 8) top = Math.max(4, Math.ceil(top / 4) * 4);
     var n = buckets.length;
     function x(i) { return n <= 1 ? L + iw / 2 : L + (i / (n - 1)) * iw; }
     function y(v) { return T + ih - ((v - bot) / (top - bot)) * ih; }
 
-    var out = '<div class="chart" data-chart="line" data-cid="' + chartId({ buckets: buckets, series: series }) + '">';
+    var fmt = opts.fmt || "money";
+    var out = '<div class="chart" data-chart="line" data-cid="' + chartId({ buckets: buckets, series: series, fmt: fmt }) + '">';
     out += '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' +
       esc(series.length === 1 ? series[0].label + " over time" : "Contribution by business line over time") + '">';
 
@@ -1342,7 +1420,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     for (var g = 0; g <= 4; g++) {
       var yv = bot + (top - bot) * g / 4, yy = y(yv);
       out += '<line class="gridline" x1="' + L + '" y1="' + yy + '" x2="' + (L + iw) + '" y2="' + yy + '"></line>';
-      out += '<text class="tick" x="' + (L - 8) + '" y="' + (yy + 3.5) + '" text-anchor="end">' + esc(shortMoney(yv)) + '</text>';
+      out += '<text class="tick" x="' + (L - 8) + '" y="' + (yy + 3.5) + '" text-anchor="end">' + esc(axisVal(fmt, yv)) + '</text>';
     }
     var zeroY = y(0);
     out += '<line class="axisline" x1="' + L + '" y1="' + zeroY + '" x2="' + (L + iw) + '" y2="' + zeroY + '"></line>';
@@ -1366,7 +1444,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       out += '<path class="mark" d="' + d + '" stroke="' + s.color + '"></path>';
       var last = s.values[n - 1];
       out += '<circle class="dot" cx="' + x(n - 1) + '" cy="' + y(last) + '" r="4" fill="' + s.color + '"></circle>';
-      out += '<text class="endlabel" x="' + (L + iw + 9) + '" y="' + (y(last) + 3.5) + '" fill="' + s.color + '">' + esc(shortMoney(last)) + '</text>';
+      out += '<text class="endlabel" x="' + (L + iw + 9) + '" y="' + (y(last) + 3.5) + '" fill="' + s.color + '">' + esc(axisVal(fmt, last)) + '</text>';
     });
 
     /* hover layer */
@@ -1443,17 +1521,22 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     return "M" + x0.toFixed(2) + " " + y0.toFixed(2) + " A" + r + " " + r + " 0 " + large + " 1 " + x1.toFixed(2) + " " + y1.toFixed(2);
   }
 
-  function barRows(rows, color) {
+  /* `opts.max` fixes the scale, which a rate needs: left to find its own
+     maximum, a floor where the best producer places 92% would draw that
+     bar full and an 80% beside it nearly as long. */
+  function barRows(rows, color, opts) {
+    opts = opts || {};
     if (!rows.length) return '<div class="empty"><p>Nothing in this range.</p></div>';
-    var max = rows.reduce(function (t, r) { return Math.max(t, r.value); }, 0) || 1;
+    var max = opts.max || rows.reduce(function (t, r) { return Math.max(t, r.value); }, 0) || 1;
     var out = '<div class="stack">';
     rows.forEach(function (r) {
       out += '<div>' +
         '<div class="row" style="justify-content:space-between;gap:12px;margin-bottom:4px">' +
           '<span style="font-size:12.5px">' + esc(r.label) + '</span>' +
-          '<span class="num" style="font-size:12.5px;font-weight:600">' + esc(r.display || money(r.value)) + '</span>' +
+          '<span class="num" style="font-size:12.5px;font-weight:600">' + (r.displayHtml || esc(r.display || money(r.value))) + '</span>' +
         '</div>' +
-        '<div class="bar-mini" style="height:8px"><i style="width:' + (r.value / max * 100).toFixed(1) + '%;background:' + color + '"></i></div>' +
+        '<div class="bar-mini" style="height:8px"><i style="width:' + Math.max(0, Math.min(100, r.value / max * 100)).toFixed(1) + '%;background:' + (r.color || color) + '"></i></div>' +
+        (r.sub ? '<p class="barsub">' + esc(r.sub) + "</p>" : "") +
       '</div>';
     });
     return out + "</div>";
@@ -1555,9 +1638,28 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     if (r >= 70) return "warn";
     return "bad";
   }
+  /* Persistency bands run tighter than placement: a book losing a tenth
+     of what it placed is already in trouble, where a floor placing 85%
+     of what it writes is doing respectably. */
+  function persistencyTone(r) {
+    if (r == null || !isFinite(r)) return "";
+    if (r >= 95) return "hot";
+    if (r >= 90) return "good";
+    if (r >= 80) return "warn";
+    return "bad";
+  }
+
   /* One band name, two places it has to be spelled: the stripe down the
      side of a tile, and the colour of the figure on it. */
   var TONE_STRIPE = { hot: "is-hot", good: "is-good", warn: "is-warn", bad: "is-bad" };
+  /* A banded rate reads as a pill, never as the colour of its own bar:
+     red against green at one lightness is the pair a protanope cannot
+     separate, and the dark palette has no room to pull them apart. The
+     pill carries the figure, so the band is reinforcement and never the
+     only key \u2014 the same way the producer table above states a rate. */
+  function ratePill(tone, text) {
+    return '<span class="pill' + (tone ? " " + tone : "") + '">' + esc(text) + "</span>";
+  }
   var TONE_VALUE  = { hot: "hot",    good: "pos",     warn: "warn",    bad: "neg" };
 
   function isSample(snap) { return !!(snap && snap.isSample); }
@@ -1984,6 +2086,28 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       out += "</tbody></table></div></div></div>";
     }
 
+    /* ---- the floor, day by day ---- */
+    var dayRows = loaDaySeries(w.from, w.to);
+    if (dayRows.length > 1) {
+      out += '<div class="section-head"><p class="eyebrow">Volume</p><h3>Calls in, deals out</h3>' +
+        '<p class="sub">What the floor did day by day over ' + esc(w.label.toLowerCase()) +
+        ", and how reliably the calls turned into business.</p></div>";
+      out += '<div class="charts even">';
+      out += '<section class="panel"><div class="panel-head"><h3>Calls per day</h3>' +
+        '<span class="note">' + esc(intf(m.callsTaken)) + " calls \u00b7 " + esc(money(m.marketingCost)) + " spent</span></div>" +
+        '<div class="panel-body">' + lineChart(dayRows, [{
+          label: "Calls", color: "var(--s-loa)", fill: "var(--loa-fill)",
+          values: dayRows.map(function (d) { return d.calls; })
+        }], { legend: false, height: 190, fmt: "int" }) + "</div></section>";
+      out += '<section class="panel"><div class="panel-head"><h3>Deals closed per day</h3>' +
+        '<span class="note">' + esc(intf(m.written)) + " deal" + (m.written === 1 ? "" : "s") + " in range</span></div>" +
+        '<div class="panel-body">' + lineChart(dayRows, [{
+          label: "Deals", color: "var(--s-lt)", fill: "var(--lt-fill)",
+          values: dayRows.map(function (d) { return d.deals; })
+        }], { legend: false, height: 190, fmt: "int" }) + "</div></section>";
+      out += "</div>";
+    }
+
     /* carrier mix */
     var byCarrier = {};
     m.deals.forEach(function (d) {
@@ -2002,18 +2126,149 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       shown.push({ label: "Other carriers  ·  " + (carrierRows.length - 8), value: rest });
     }
 
-    out += '<div class="charts c2" style="margin-top:18px">';
-    out += '<section class="panel"><div class="panel-head"><h3>Carrier mix</h3><span class="note">Written premium</span></div>' +
+    out += '<div class="section-head"><p class="eyebrow">The book</p><h3>Where the premium sits</h3>' +
+      '<p class="sub">Every deal written in the range, by which carrier wrote it and how it settled. ' +
+      "The two ways a deal can go wrong are kept apart: one costs placement, the other costs persistency.</p></div>";
+    out += '<div class="charts c2">';
+    out += '<section class="panel"><div class="panel-head"><h3>Premium by carrier</h3><span class="note">Annualized, written</span></div>' +
       '<div class="panel-body">' + barRows(shown, "var(--s-loa)") + "</div></section>";
 
     var slices = [
-      { label: "Issued & paid", value: m.apPaid, color: "var(--paid)" },
+      { label: "Issued \u0026 paid", value: m.apPaid, color: "var(--paid)" },
       { label: "Still pending", value: m.apPending, color: "var(--pipe)" },
-      { label: "Fell off", value: m.apLost, color: "var(--fell)" }
+      { label: "Fell out before placing", value: m.apLostEarly, color: "var(--fell)" },
+      { label: "Charged back after paying", value: m.apChargeback, color: "var(--s-lt)" }
     ];
-    out += '<section class="panel"><div class="panel-head"><h3>Outcome</h3><span class="note">Annualized premium</span></div>' +
+    out += '<section class="panel"><div class="panel-head"><h3>Where the book stands</h3><span class="note">Annualized premium</span></div>' +
       '<div class="panel-body">' + donut(slices, shortMoney(m.apWritten), "written AP") + "</div></section>";
     out += "</div>";
+
+    /* ---- the same producers as the table above, but compared ---- */
+    /* `rows` is already built and already filtered to producers with
+       something in the range, so the comparison and the table can never
+       disagree about who is on the floor. */
+    /* One producer on the floor is not a comparison, and eight bar charts
+       each holding a single full-width bar say nothing a number would not
+       say better. Same eight figures, read as tiles instead. */
+    if (rows.length === 1) {
+      var only = rows[0];
+      out += '<div class="section-head"><p class="eyebrow">Producer</p><h3>How ' + esc(only.agent.name) + " is doing</h3>" +
+        '<p class="sub">Over ' + esc(w.label.toLowerCase()) +
+        ". Daily averages count only the days they logged calls. Placement is premium that reached the carrier\u2019s first payment; " +
+        "persistency is how much of that stayed on the books.</p></div>";
+      var o = only.m, oTone = placementTone(o.placement), cTone = closeRateTone(o.closeRate), sTone = persistencyTone(o.persistency);
+      out += '<div class="tiles">';
+      out += tile("src-loa", "Calls a day", o.daysLogged ? (o.callsTaken / o.daysLogged).toFixed(1) : "\u2014",
+        intf(o.callsTaken) + " calls over " + intf(o.daysLogged) + " day" + (o.daysLogged === 1 ? "" : "s"));
+      out += tile("src-loa", "Deals a day", o.daysLogged ? (o.written / o.daysLogged).toFixed(2) : "\u2014",
+        intf(o.written) + " deal" + (o.written === 1 ? "" : "s") + " over the same days");
+      out += tile("src-loa", "Average annual premium a deal", o.written ? money(o.apWritten / o.written) : "\u2014",
+        money(o.apWritten) + " over " + intf(o.written) + " deal" + (o.written === 1 ? "" : "s"));
+      out += tile("src-loa", "Premium written", money(o.apWritten), money(o.mpWritten) + " a month, annualized here");
+      out += tile(TONE_STRIPE[oTone] || "src-loa", "Placement rate", pct(o.placement, 1),
+        money(o.apPlaced) + " placed \u00b7 " + money(o.apLostEarly) + " fell out first", TONE_VALUE[oTone] || "");
+      out += tile(TONE_STRIPE[sTone] || "src-loa", "Persistency", o.persistency == null ? "\u2014" : pct(o.persistency, 1),
+        o.apChargeback > 0 ? money(o.apChargeback) + " charged back of " + money(o.apPlaced) + " placed" : "nothing charged back",
+        TONE_VALUE[sTone] || "");
+      out += tile(TONE_STRIPE[cTone] || "src-loa", "Close rate", pct(o.closeRate, 1),
+        intf(o.written) + " deal" + (o.written === 1 ? "" : "s") + " from " + intf(o.callsTaken) + " calls", TONE_VALUE[cTone] || "");
+      out += tile("src-loa", "Calls to close one deal", o.written && o.callsTaken ? o.callsPerDeal.toFixed(1) : "\u2014",
+        money(o.costPerDeal) + " of calls per deal");
+      out += "</div>";
+    } else if (rows.length > 1) {
+      /* One producer per bar, one hue, the value on the bar: every one of
+         these is a magnitude against an identity, and a rate per producer
+         is still a magnitude. Each panel sorts on its own figure, so the
+         eye reads the ranking without hunting for it. */
+      var rank = function (pick, asc) {
+        return rows.map(pick).filter(function (x) { return x; })
+          .sort(function (a, b) { return asc ? a.value - b.value : b.value - a.value; });
+      };
+      var dp1 = function (v) { return v.toFixed(1); };
+      var pnl = function (title, note, bars, color, opts) {
+        return '<section class="panel"><div class="panel-head"><h3>' + esc(title) + "</h3>" +
+          '<span class="note">' + esc(note) + "</span></div>" +
+          '<div class="panel-body">' + barRows(bars, color, opts) + "</div></section>";
+      };
+
+      out += '<div class="section-head"><p class="eyebrow">Producers</p><h3>How the floor splits</h3>' +
+        '<p class="sub">Each producer against the others over ' + esc(w.label.toLowerCase()) +
+        ". Daily averages count only the days that producer logged calls, so a four-day week is not read as a bad five-day one. " +
+        "Placement is premium that reached the carrier\u2019s first payment; persistency is how much of that stayed on the books.</p></div>";
+
+      out += '<div class="charts even">';
+      out += pnl("Calls a day", "Average over the days each producer logged",
+        rank(function (r) {
+          return r.m.daysLogged ? {
+            label: r.agent.name, value: r.m.callsTaken / r.m.daysLogged, display: dp1(r.m.callsTaken / r.m.daysLogged),
+            sub: intf(r.m.callsTaken) + " calls over " + intf(r.m.daysLogged) + " day" + (r.m.daysLogged === 1 ? "" : "s")
+          } : null;
+        }), "var(--s-loa)");
+      out += pnl("Deals a day", "Average over the same days",
+        rank(function (r) {
+          return r.m.daysLogged ? {
+            label: r.agent.name, value: r.m.written / r.m.daysLogged, display: (r.m.written / r.m.daysLogged).toFixed(2),
+            sub: intf(r.m.written) + " deal" + (r.m.written === 1 ? "" : "s") + " over " + intf(r.m.daysLogged) + " day" + (r.m.daysLogged === 1 ? "" : "s")
+          } : null;
+        }), "var(--s-lt)");
+      out += "</div>";
+
+      out += '<div class="charts even">';
+      out += pnl("Average annual premium a deal", "What a deal is worth when they write one",
+        rank(function (r) {
+          return r.m.written ? {
+            label: r.agent.name, value: r.m.apWritten / r.m.written, display: money(r.m.apWritten / r.m.written),
+            sub: money(r.m.apWritten) + " over " + intf(r.m.written) + " deal" + (r.m.written === 1 ? "" : "s")
+          } : null;
+        }), "var(--s-loa)");
+      out += pnl("Premium written", "Annualized, everything they wrote",
+        rank(function (r) {
+          return r.m.written ? {
+            label: r.agent.name, value: r.m.apWritten, display: money(r.m.apWritten),
+            sub: money(r.m.mpWritten) + " a month \u00b7 " + intf(r.m.written) + " deal" + (r.m.written === 1 ? "" : "s")
+          } : null;
+        }), "var(--s-loa)");
+      out += "</div>";
+
+      out += '<div class="charts even">';
+      out += pnl("Placement rate", "Premium that reached the first payment",
+        rank(function (r) {
+          return (r.m.apPlaced + r.m.apLostEarly) > 0 ? {
+            label: r.agent.name, value: r.m.placement,
+            displayHtml: ratePill(placementTone(r.m.placement), pct(r.m.placement, 1)),
+            sub: money(r.m.apPlaced) + " placed, " + money(r.m.apLostEarly) + " fell out first"
+          } : null;
+        }), "var(--paid)", { max: 100 });
+      out += pnl("Persistency", "Placed premium still on the books",
+        rank(function (r) {
+          return r.m.persistency == null ? null : {
+            label: r.agent.name, value: r.m.persistency,
+            displayHtml: ratePill(persistencyTone(r.m.persistency), pct(r.m.persistency, 1)),
+            sub: r.m.apChargeback > 0
+              ? money(r.m.apChargeback) + " charged back of " + money(r.m.apPlaced) + " placed"
+              : "nothing charged back"
+          };
+        }), "var(--paid)", { max: 100 });
+      out += "</div>";
+
+      out += '<div class="charts even">';
+      out += pnl("Close rate", "Deals written against calls taken",
+        rank(function (r) {
+          return r.m.callsTaken ? {
+            label: r.agent.name, value: r.m.closeRate,
+            displayHtml: ratePill(closeRateTone(r.m.closeRate), pct(r.m.closeRate, 1)),
+            sub: intf(r.m.written) + " deal" + (r.m.written === 1 ? "" : "s") + " from " + intf(r.m.callsTaken) + " calls"
+          } : null;
+        }), "var(--paid)", { max: 100 });
+      out += pnl("Calls to close one deal", "Lower is cheaper \u2014 " + money(loaOrg().costPerCall) + " a call",
+        rank(function (r) {
+          return r.m.written && r.m.callsTaken ? {
+            label: r.agent.name, value: r.m.callsPerDeal, display: dp1(r.m.callsPerDeal),
+            sub: money(r.m.costPerDeal) + " of calls per deal"
+          } : null;
+        }, true), "var(--s-lt)");
+      out += "</div>";
+    }
 
     /* deals */
     out += '<div class="section-head"><p class="eyebrow">Policy ledger</p><h3>Every deal in the range</h3>' +
@@ -2536,7 +2791,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
         if (line) { line.setAttribute("x1", cx); line.setAttribute("x2", cx); cross.removeAttribute("hidden"); }
         tip.innerHTML = "<b>" + esc(d.buckets[i].label) + "</b><br>" +
           d.series.map(function (s) {
-            return '<span class="k" style="background:' + s.color + '"></span>' + esc(s.label) + " <b>" + esc(money(s.values[i])) + "</b>";
+            return '<span class="k" style="background:' + s.color + '"></span>' + esc(s.label) + " <b>" + esc(tipVal(d.fmt, s.values[i])) + "</b>";
           }).join("<br>");
         tip.style.left = px + "px";
         tip.style.top = (r.top - br.top + 46) + "px";
