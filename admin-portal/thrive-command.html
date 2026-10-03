@@ -983,11 +983,48 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
   function ltSettings() {
     var s = (ui.lt && ui.lt.settings) || {};
     return {
-      callCost: num(s.callCost) / 100,
-      callPrice: num(s.callPrice) / 100,
+      /* Ringba billable calls are bought at a fixed rate. Google calls
+         are not — their cost moves daily and is logged on the day. */
+      callCost: num(s.callCost) / 100 || 30,
+      callPrice: num(s.callPrice) / 100 || 35,
+      sellLow: pickNum(s, ["sellLow", "sellPriceA", "priceLow", "callPrice"], 3500) / 100,
+      sellHigh: pickNum(s, ["sellHigh", "sellPriceB", "priceHigh", "callPriceHigh"], 4000) / 100,
       pastDueHours: num(s.pastDueHours) || 12
     };
   }
+
+  /* The board has gained fields since this console first read it —
+     Google calls alongside Ringba's, and sold calls split across two
+     prices — and will gain more. Rather than hard-code one spelling of
+     each, take the first name that is actually present. An unknown
+     spelling then costs a missing figure, not a wrong one, and the
+     Sync tab lists what arrived so the gap is visible. */
+  function pickNum(o, names, dflt) {
+    for (var i = 0; i < names.length; i++) {
+      var v = o ? o[names[i]] : null;
+      if (v !== undefined && v !== null && v !== "") return num(v);
+    }
+    return dflt == null ? 0 : dflt;
+  }
+  function hasAny(o, names) {
+    for (var i = 0; i < names.length; i++) {
+      if (o && o[names[i]] !== undefined && o[names[i]] !== null && o[names[i]] !== "") return true;
+    }
+    return false;
+  }
+
+  var CALL_FIELDS = {
+    date:        ["day", "date", "at"],
+    billable:    ["billable", "billableCalls", "ringba", "ringbaCalls", "paidCalls", "bought"],
+    google:      ["google", "googleCalls", "gCalls", "adCalls", "googleAds", "ads", "adwords"],
+    googleRate:  ["googlePrice", "googleCost", "googleCpc", "googleRate", "googleCostPerCall", "gPrice", "adCost", "adCpc", "costPerGoogleCall"],
+    googleSpend: ["googleSpend", "adSpend", "googleTotal", "googleAmount", "googleOut"],
+    soldLow:     ["sold35", "soldAt35", "sold_35", "soldLow", "soldA", "tier35"],
+    soldHigh:    ["sold40", "soldAt40", "sold_40", "soldHigh", "soldB", "tier40"],
+    soldFlat:    ["sold", "soldCalls"],
+    spend:       ["spend", "spent", "out", "totalSpend", "cost"],
+    revenue:     ["revenue", "collected", "in", "totalRevenue", "income"]
+  };
   function ltProducts() { return (ui.lt && Array.isArray(ui.lt.products)) ? ui.lt.products : []; }
   function ltProduct(id) {
     var p = ltProducts().filter(function (x) { return x.id === id; })[0];
@@ -1069,18 +1106,51 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
      is the whole business. */
   function ltCalls() {
     var raw = (ui.lt && Array.isArray(ui.lt.calls)) ? ui.lt.calls : [];
+    var set = ltSettings();
     return raw.map(function (c) {
-      var bought = c.billable != null ? num(c.billable) : (c.bought != null ? num(c.bought) : num(c.calls));
-      var sold = c.sold != null ? num(c.sold) : num(c.calls);
+      var F = CALL_FIELDS;
+
+      /* Two sources of bought calls: Ringba's billable ones at a fixed
+         rate, and Google's, whose rate is whatever was paid that day. */
+      var billable = pickNum(c, F.billable);
+      var google = pickNum(c, F.google);
+
+      /* Sold at two prices. A row from before the split carries one
+         flat count, which is read at the lower price. */
+      var tiered = hasAny(c, F.soldLow) || hasAny(c, F.soldHigh);
+      var soldLow = tiered ? pickNum(c, F.soldLow) : pickNum(c, F.soldFlat);
+      var soldHigh = tiered ? pickNum(c, F.soldHigh) : 0;
+
+      /* Money: take the board's own figure for the day where it has
+         one. It knows the real ad spend and which calls went at which
+         price; a rate held over here could only ever approximate it. */
+      var googleSpend = hasAny(c, F.googleSpend)
+        ? pickNum(c, F.googleSpend) / 100
+        : google * (pickNum(c, F.googleRate) / 100);
+      var spend = hasAny(c, F.spend)
+        ? pickNum(c, F.spend) / 100
+        : billable * set.callCost + googleSpend;
+      var revenue = hasAny(c, F.revenue)
+        ? pickNum(c, F.revenue) / 100
+        : soldLow * set.sellLow + soldHigh * set.sellHigh;
+
       return {
         id: c.id,
         date: toISODate(c.day || c.date || c.at),
-        bought: bought,
-        sold: sold,
-        /* Thrive Companies production, logged on the same daily row. Money
-           comes across in cents like everything else the board stores. */
+        billable: billable,
+        google: google,
+        bought: billable + google,
+        soldLow: soldLow,
+        soldHigh: soldHigh,
+        sold: soldLow + soldHigh,
+        googleSpend: googleSpend,
+        spend: spend,
+        revenue: revenue,
+        profit: revenue - spend,
+        /* Thrive Companies production, logged on the same daily row. */
         deals: num(c.deals),
-        avgMp: num(c.avgMp) / 100
+        avgMp: num(c.avgMp) / 100,
+        raw: c
       };
     }).filter(function (c) { return !!c.date; });
   }
@@ -1119,10 +1189,17 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     /* Mirrors the board's own arithmetic exactly: spend is billable calls
        at cost, revenue is sold calls at price. */
     m.callsBought = calls.reduce(function (t, c) { return t + c.bought; }, 0);
+    m.callsBillable = calls.reduce(function (t, c) { return t + c.billable; }, 0);
+    m.callsGoogle = calls.reduce(function (t, c) { return t + c.google; }, 0);
     m.callsSold = calls.reduce(function (t, c) { return t + c.sold; }, 0);
+    m.callsSoldLow = calls.reduce(function (t, c) { return t + c.soldLow; }, 0);
+    m.callsSoldHigh = calls.reduce(function (t, c) { return t + c.soldHigh; }, 0);
     m.callsTaken = m.callsBought;
-    m.callSpend = m.callsBought * set.callCost;
-    m.callRevenue = m.callsSold * set.callPrice;
+    /* Summed from the days rather than counts times a rate here: the
+       Google rate moves daily, so no single rate could reproduce it. */
+    m.callSpend = calls.reduce(function (t, c) { return t + c.spend; }, 0);
+    m.googleSpend = calls.reduce(function (t, c) { return t + c.googleSpend; }, 0);
+    m.callRevenue = calls.reduce(function (t, c) { return t + c.revenue; }, 0);
     m.callCost = m.callSpend;
     m.callsRefunded = refunds.reduce(function (t, r) { return t + r.calls; }, 0);
 
@@ -1616,15 +1693,17 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     }
 
     /* ---- 3. Lead Tech ---- */
-    out += sectionHead("Lead Tech", "Lead Tech Google Calls", "Calls bought at " + money(set.callCost) + ", sold at " + money(set.callPrice) + ", less everything handed back.",
+    out += sectionHead("Lead Tech", "Lead Tech Google Calls", "Billable calls at " + money(set.callCost) + " plus Google\u2019s at whatever the day cost, sold at " + money(set.sellLow) + " and " + money(set.sellHigh) + ".",
       tm ? growthChip(tm.pnl, ptm ? ptm.pnl : 0, "profit", pw.label) : "");
     if (!tm) {
       out += notSynced("lt");
     } else {
       out += '<div class="tiles t3">';
-      out += tile("src-lt", "Inbound calls taken", intf(tm.callsBought), intf(tm.callsSold) + " of them sold on to agents");
-      out += tile("src-lt", "Total spent on calls", money(tm.callSpend), intf(tm.callsBought) + " bought at " + money(set.callCost));
-      out += tile("src-lt", "Total cash collected", money(tm.callRevenue), intf(tm.callsSold) + " sold at " + money(set.callPrice));
+      out += tile("src-lt", "Inbound calls taken", intf(tm.callsBought),
+        intf(tm.callsBillable) + " billable \u00b7 " + intf(tm.callsGoogle) + " Google");
+      out += tile("src-lt", "Total spent on calls", money(tm.callSpend),
+        intf(tm.callsBillable) + " at " + money(set.callCost) + " \u00b7 " + money(tm.googleSpend) + " on Google");
+      out += tile("src-lt", "Total cash collected", money(tm.callRevenue), intf(tm.callsSold) + " calls sold");
       out += tile("is-warn", "Total refunds", money(tm.refunded),
         tm.callsRefunded ? intf(tm.callsRefunded) + " calls refunded" : intf(tm.refunds.length) + " refunds");
       out += tile("is-good", "Total wiped wallet", money(tm.wiped), intf(tm.wipeRows.length) + " wipes — unspent balance Lead Tech keeps", tm.wiped > 0 ? "pos" : "");
@@ -1680,7 +1759,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     if (wantLT) {
       ltCalls().forEach(function (c) {
         var i = index[c.date];
-        if (i != null) days[i].value += c.sold * set.callPrice - c.bought * set.callCost;
+        if (i != null) days[i].value += c.profit;
       });
       ltRefunds().forEach(function (r) { var i = index[r.date]; if (i != null) days[i].value -= r.amount; });
       ltWipes().forEach(function (x) { var i = index[x.date]; if (i != null) days[i].value += x.amount; });
@@ -1952,8 +2031,11 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     out += '<div class="ledger">';
     out += tile("src-lt", "Collected", money(m.callRevenue), "cash in from calls sold");
     out += tile("src-lt", "Spent", money(m.callSpend), "cash out buying calls");
-    out += tile("src-lt", "Calls sold", intf(m.callsSold), "agents bought these at " + money(set.callPrice));
-    out += tile("src-lt", "Calls purchased", intf(m.callsBought), "Lead Tech bought these at " + money(set.callCost));
+    out += tile("src-lt", "Calls sold", intf(m.callsSold), m.callsSoldHigh
+      ? intf(m.callsSoldLow) + " at " + money(set.sellLow) + " \u00b7 " + intf(m.callsSoldHigh) + " at " + money(set.sellHigh)
+      : "agents bought these");
+    out += tile("src-lt", "Calls purchased", intf(m.callsBought),
+      intf(m.callsBillable) + " billable \u00b7 " + intf(m.callsGoogle) + " Google");
     out += tile(m.wiped > 0 ? "is-good" : "src-lt", "Wallet wipes", money(m.wiped),
       intf(m.wipeRows.length) + " wipes — unspent balance kept", m.wiped > 0 ? "pos" : "");
     out += tile(m.refunded > 0 ? "is-warn" : "src-lt", "Total refunds", money(m.refunded),
@@ -1966,8 +2048,9 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
 
     /* ---- the daily call ledger ---- */
     out += '<div class="section-head"><p class="eyebrow">Call ledger</p><h3>Day by day</h3>' +
-      '<p class="sub">Straight from the Calls tab on the board. The gap column is calls sold less calls bought — ' +
-      "sell more than you buy and the day pays for itself.</p></div>";
+      '<p class="sub">Straight from the Calls tab on the board. Bought is Ringba\u2019s billable calls plus Google\u2019s; ' +
+      "the gap is calls sold less calls bought, so selling more than you buy makes the day pay for itself. " +
+      "Spent and collected are the board\u2019s own figures for the day, which is why the Google rate can move daily.</p></div>";
 
     if (!m.callRows.length) {
       out += '<div class="panel"><div class="empty"><strong>No call days logged in this range</strong>' +
@@ -1975,23 +2058,28 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     } else {
       var days = m.callRows.slice().sort(function (a, b) { return b.date.localeCompare(a.date); });
       out += '<div class="panel"><div class="panel-body flush"><div class="tblwrap"><table class="data"><thead><tr>' +
-        '<th>Day</th><th class="n">Bought</th><th class="n">Sold</th><th class="n">Gap</th>' +
+        '<th>Day</th><th class="n">Billable</th><th class="n">Google</th><th class="n">Bought</th>' +
+        '<th class="n">Sold</th><th class="n">Gap</th>' +
         '<th class="n">Spent</th><th class="n">Collected</th><th class="n">Profit</th>' +
         "</tr></thead><tbody>";
       days.slice(0, 120).forEach(function (c) {
-        var spend = c.bought * set.callCost, rev = c.sold * set.callPrice, p = rev - spend;
         var gap = c.sold - c.bought;
         out += "<tr><td class=\"nowrap dim\">" + esc(prettyDate(c.date)) + "</td>" +
-          '<td class="n">' + esc(intf(c.bought)) + '</td><td class="n">' + esc(intf(c.sold)) + "</td>" +
+          '<td class="n">' + esc(intf(c.billable)) + "</td>" +
+          '<td class="n">' + (c.google ? esc(intf(c.google)) : '<span class="dim">—</span>') + "</td>" +
+          '<td class="n">' + esc(intf(c.bought)) + "</td>" +
+          '<td class="n">' + esc(intf(c.sold)) +
+            (c.soldHigh ? '<div class="dim">' + esc(intf(c.soldLow)) + " + " + esc(intf(c.soldHigh)) + "</div>" : "") + "</td>" +
           '<td class="n" style="color:' + (gap >= 0 ? "var(--good)" : "var(--bad)") + '">' + (gap > 0 ? "+" : "") + esc(intf(gap)) + "</td>" +
-          '<td class="n">' + esc(money(spend)) + '</td><td class="n">' + esc(money(rev)) + "</td>" +
-          '<td class="n"><b>' + esc(money(p)) + "</b></td></tr>";
+          '<td class="n">' + esc(money(c.spend, 2)) + '</td><td class="n">' + esc(money(c.revenue, 2)) + "</td>" +
+          '<td class="n"><b>' + esc(money(c.profit, 2)) + "</b></td></tr>";
       });
       out += '<tr class="total"><td>' + esc(intf(m.callRows.length)) + " days</td>" +
+        '<td class="n">' + esc(intf(m.callsBillable)) + '</td><td class="n">' + esc(intf(m.callsGoogle)) + "</td>" +
         '<td class="n">' + esc(intf(m.callsBought)) + '</td><td class="n">' + esc(intf(m.callsSold)) + "</td>" +
         '<td class="n">' + ((m.callsSold - m.callsBought) > 0 ? "+" : "") + esc(intf(m.callsSold - m.callsBought)) + "</td>" +
-        '<td class="n">' + esc(money(m.callSpend)) + '</td><td class="n">' + esc(money(m.callRevenue)) + "</td>" +
-        '<td class="n">' + esc(money(m.callRevenue - m.callSpend)) + "</td></tr>";
+        '<td class="n">' + esc(money(m.callSpend, 2)) + '</td><td class="n">' + esc(money(m.callRevenue, 2)) + "</td>" +
+        '<td class="n">' + esc(money(m.callRevenue - m.callSpend, 2)) + "</td></tr>";
       out += "</tbody></table></div>";
       if (days.length > 120) out += '<div class="panel-body" style="border-top:1px solid var(--line)"><span style="color:var(--muted);font-size:12px">The 120 most recent of ' + esc(intf(days.length)) + " days.</span></div>";
       out += "</div></div>";
@@ -2211,6 +2299,38 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       (ui.settings && ui.settings.updatedAt ?
         '<p style="margin:10px 0 0;font-size:12px;color:var(--muted)">Last changed ' + esc(agoLabel(ui.settings.updatedAt)) + ".</p>" : "") +
       "</div></div>";
+
+    /* Field names on the board move as it gains features, and when one
+       moves the console reports a confident zero rather than an error.
+       This shows the newest row exactly as it arrived, and flags the
+       figures that found nothing, so a rename is visible here instead
+       of being discovered in a number that looks plausible. */
+    var dayRows = ltCalls();
+    if (dayRows.length) {
+      var newest = dayRows.slice().sort(function (a, b) { return b.date.localeCompare(a.date); })[0];
+      var missing = [];
+      if (!hasAny(newest.raw, CALL_FIELDS.billable)) missing.push("billable calls");
+      if (!hasAny(newest.raw, CALL_FIELDS.google)) missing.push("Google calls");
+      if (!hasAny(newest.raw, CALL_FIELDS.soldLow) && !hasAny(newest.raw, CALL_FIELDS.soldHigh)
+        && !hasAny(newest.raw, CALL_FIELDS.soldFlat)) missing.push("calls sold");
+      if (!hasAny(newest.raw, CALL_FIELDS.spend) && !hasAny(newest.raw, CALL_FIELDS.googleSpend)
+        && !hasAny(newest.raw, CALL_FIELDS.googleRate)) missing.push("Google spend");
+      if (!hasAny(newest.raw, CALL_FIELDS.revenue) && !hasAny(newest.raw, CALL_FIELDS.soldHigh)) missing.push("cash collected");
+
+      out += '<div class="section-head"><p class="eyebrow">Call ledger</p><h3>What the board is sending</h3>' +
+        '<p class="sub">The most recent day exactly as it arrived from the Calls tab. If a figure here reads zero on the Lead Tech page, this is where to see whether the board sent it under a name this console does not know.</p></div>';
+      out += '<div class="panel"><div class="panel-body">' +
+        (missing.length
+          ? '<div class="msg warnbar" style="margin-bottom:12px">Nothing arrived for: <b>' + esc(missing.join(", ")) +
+            "</b>. Either the board is not logging it, or it is using a field name this console has not been told about \u2014 the raw row below says which.</div>"
+          : '<div class="msg ok" style="margin-bottom:12px">Every figure this console looks for was present on the most recent day.</div>') +
+        '<p class="hint" style="margin:0 0 6px">' + esc(prettyDate(newest.date)) + " \u00b7 read as " +
+          esc(intf(newest.billable)) + " billable + " + esc(intf(newest.google)) + " Google bought, " +
+          esc(intf(newest.sold)) + " sold, " + esc(money(newest.spend, 2)) + " spent, " +
+          esc(money(newest.revenue, 2)) + " collected</p>" +
+        '<div class="codebox" style="white-space:pre-wrap">' + esc(JSON.stringify(newest.raw, null, 1)) + "</div>" +
+        "</div></div>";
+    }
 
     out += '<div class="section-head"><p class="eyebrow">Top it up by hand</p><h3>Paste a snapshot</h3>' +
       '<p class="sub">Export from either portal and drop the JSON here. The console works out which source it came from. This overwrites that source’s snapshot; it never touches the portal it came from.</p></div>';
