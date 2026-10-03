@@ -498,6 +498,17 @@
     /* The same book counted over twelve months instead of the advance.
        The producer's side does not change with it: they are paid on the
        advance either way. */
+    /* What a deal is worth to Thrive, averaged over everything written
+       rather than only what has placed: the question is what a closed
+       deal earns, and a deal that has not settled yet is still one. */
+    m.houseGrossWritten = houseComm(deals);
+    m.houseFullWritten = deals.reduce(function (t, d) { return t + houseCommFullOn(d); }, 0);
+    m.overrideWritten = m.houseGrossWritten - m.agentCommWritten;
+    m.overrideFullWritten = m.houseFullWritten - m.agentCommWritten;
+    m.avgAp = m.written ? m.apWritten / m.written : 0;
+    m.avgOverride = m.written ? m.overrideWritten / m.written : 0;
+    m.avgOverrideFull = m.written ? m.overrideFullWritten / m.written : 0;
+
     m.houseFullPaid = paid.reduce(function (t, d) { return t + houseCommFullOn(d); }, 0);
     m.spreadFull = m.houseFullPaid - m.agentCommPaid;
     m.netFull = m.spreadFull - m.marketingCost;
@@ -1294,7 +1305,11 @@
       + tile("Close rate", k.callsTaken ? pct(k.closeRate, 1) : "\u2014", { tone: "key",
           foot: k.written ? "1 deal per " + dec(k.callsPerDeal, 1) + " calls" : "Deals \u00f7 calls taken" })
       + tile("Total annual premium", money(k.apWritten), {
-          foot: k.written ? "Submitted \u00b7 " + money(k.mpWritten) + " a month" : "Nothing written yet" })
+          foot: k.written ? money(k.avgAp) + " average deal size" : "Nothing written yet" })
+      + tile("Thrive override", k.written ? money(k.avgOverride) : "\u2014", {
+          foot: k.written
+            ? money(k.avgOverrideFull) + " a deal over 12 months"
+            : "What a closed deal earns Thrive" })
       + tile("Issued & paid", money(k.apPaid), { tone: "good",
           foot: k.paid.length + " polic" + (k.paid.length === 1 ? "y" : "ies") + " \u00b7 " + pct(k.placement, 0) + " placement" })
       + tile("Marketing spend", money(k.marketingCost), { tone: "warn",
