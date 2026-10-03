@@ -1369,10 +1369,10 @@
        column gives a net that is true on its own terms. */
     var adv = advanceMonths();
     var lines = [
-      ["Advanced commissions", "What the carriers have fronted \u2014 " + adv + " months", k.houseGrossPaid, k.houseFullPaid, ""],
-      ["Less agent commission", "Paid on the advance, on " + k.paid.length + " placed deal" + (k.paid.length === 1 ? "" : "s"), -k.agentCommPaid, -k.agentCommPaid, ""],
-      ["Thrive commission", "What the agency keeps on the business", k.spreadPaid, k.spreadFull, "sub"],
-      ["Less marketing", intf(k.callsTaken) + " inbound calls at " + money(costPerCall()), -k.marketingCost, -k.marketingCost, ""],
+      ["Total commissions", "What the carriers have fronted \u2014 " + adv + " months", k.houseGrossPaid, k.houseFullPaid, ""],
+      ["Agent commissions", "Paid on the advance, on " + k.paid.length + " placed deal" + (k.paid.length === 1 ? "" : "s"), -k.agentCommPaid, -k.agentCommPaid, ""],
+      ["Thrive commissions", "What the agency keeps on the business", k.spreadPaid, k.spreadFull, "sub"],
+      ["Total marketing cost", intf(k.callsTaken) + " inbound calls at " + money(costPerCall()), -k.marketingCost, -k.marketingCost, ""],
       ["Net commission", "The program\u2019s profit for the period", k.net, k.netFull, "total"]
     ];
     var head = "<thead><tr><th>Line</th>"
