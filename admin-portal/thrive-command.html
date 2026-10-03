@@ -59,6 +59,11 @@
   --axis:    #94A3B4;
   --loa-fill: rgba(42,120,214,.13);
   --lt-fill:  rgba(235,104,52,.11);
+  /* Series red for refunds, validated against --s-loa in both modes:
+     light dE 30.8 normal / 26.0 deutan, dark 29.2 / 19.0 protan. Not
+     --bad, which is a status token sized for text and sits outside the
+     categorical lightness band on dark. */
+  --s-refund: #B8362B;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -96,6 +101,7 @@
     --axis:    #5D6E80;
     --loa-fill: rgba(57,135,229,.18);
     --lt-fill:  rgba(217,89,38,.16);
+    --s-refund: #d9604f;
   }
 }
 
@@ -133,6 +139,7 @@
   --axis:    #5D6E80;
   --loa-fill: rgba(57,135,229,.18);
   --lt-fill:  rgba(217,89,38,.16);
+  --s-refund: #d9604f;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -1046,6 +1053,15 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     return days;
   }
 
+  /* Monday of the week a date falls in. Weeks are the natural unit for
+     anything that happens in ones and twos \u2014 a refund, a wiped wallet \u2014
+     where a daily line would be mostly zeros with spikes. */
+  function weekStart(iso) {
+    var d = new Date(iso + "T12:00:00");
+    var dow = (d.getDay() + 6) % 7;
+    return addDays(iso, -dow);
+  }
+
   /* ------------------------------------------------- Lead Tech normalizing */
   /* The fulfillment board stores money in cents and is looser about field
      names than the desk, so everything is read through one normalizer and
@@ -1464,6 +1480,68 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     }
     return out;
   }
+  /* Columns with an optional line laid over them, sharing one axis. A
+     second measure is only allowed on here when it is counted in the
+     same thing the columns are \u2014 calls against calls \u2014 which is why
+     this takes a unit for the pair and not one each. */
+  function columnChart(buckets, bars, line, opts) {
+    opts = opts || {};
+    var W = 760, H = opts.height || 210, L = 52, R = 16, T = 14, B = 26;
+    var iw = W - L - R, ih = H - T - B, n = buckets.length;
+    var fmt = opts.fmt || "int";
+    var max = 0;
+    bars.values.forEach(function (v) { if (v > max) max = v; });
+    if (line) line.values.forEach(function (v) { if (v > max) max = v; });
+    var top = niceCeil(max || 1);
+    if (fmt === "int" && top < 8) top = Math.max(4, Math.ceil(top / 4) * 4);
+    function x(i) { return L + (i + 0.5) * (iw / Math.max(n, 1)); }
+    function y(v) { return T + ih - (v / top) * ih; }
+    /* A 2px gap between columns, and never thinner than a hairline: a
+       year of days on a chart this wide is a lot of columns. */
+    /* A handful of weeks across this width would otherwise draw columns
+       80px wide, which reads as a diagram rather than a chart. */
+    var step = iw / Math.max(n, 1), bw = Math.min(Math.max(1, step - 2), opts.maxWidth || 46);
+
+    var series = [{ label: bars.label, color: bars.color, values: bars.values, tip: bars.tip }];
+    if (line) series.push({ label: line.label, color: line.color, values: line.values, tip: line.tip });
+
+    var out = '<div class="chart" data-chart="line" data-cid="' +
+      chartId({ buckets: buckets, series: series, fmt: fmt }) + '">';
+    out += '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(opts.alt || bars.label) + '">';
+    for (var g = 0; g <= 4; g++) {
+      var yv = top * g / 4, yy = y(yv);
+      out += '<line class="gridline" x1="' + L + '" y1="' + yy + '" x2="' + (L + iw) + '" y2="' + yy + '"></line>';
+      out += '<text class="tick" x="' + (L - 8) + '" y="' + (yy + 3.5) + '" text-anchor="end">' + esc(axisVal(fmt, yv)) + "</text>";
+    }
+    out += '<line class="axisline" x1="' + L + '" y1="' + y(0) + '" x2="' + (L + iw) + '" y2="' + y(0) + '"></line>';
+    [0, Math.floor((n - 1) / 2), n - 1].filter(function (v, i, a) { return n > 0 && a.indexOf(v) === i; })
+      .forEach(function (i) {
+        out += '<text class="tick" x="' + x(i).toFixed(1) + '" y="' + (T + ih + 16) + '" text-anchor="middle">' + esc(buckets[i].label) + "</text>";
+      });
+    bars.values.forEach(function (v, i) {
+      if (v <= 0) return;
+      var h = Math.max(1.5, y(0) - y(v));
+      out += '<rect class="bar" x="' + (x(i) - bw / 2).toFixed(1) + '" y="' + (y(0) - h).toFixed(1) +
+        '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '" fill="' + bars.color + '"></rect>';
+    });
+    if (line) {
+      var d = "";
+      line.values.forEach(function (v, i) { d += (i ? " L" : "M") + x(i).toFixed(1) + " " + y(v).toFixed(1); });
+      out += '<path class="mark" d="' + d + '" stroke="' + line.color + '"></path>';
+    }
+    out += '<g class="crosshair-g" data-cross hidden><line class="crosshair" y1="' + T + '" y2="' + (T + ih) + '"></line></g>';
+    for (var i2 = 0; i2 < n; i2++) {
+      out += '<rect class="hit" data-i="' + i2 + '" x="' + (x(i2) - step / 2).toFixed(1) + '" y="' + T +
+        '" width="' + step.toFixed(1) + '" height="' + ih + '"></rect>';
+    }
+    out += "</svg>" + chartTip() + "</div>";
+    if (line) {
+      out += '<div class="viz-legend"><span><i style="background:' + bars.color + '"></i>' + esc(bars.label) + "</span>" +
+        '<span><i style="background:' + line.color + '"></i>' + esc(line.label) + "</span></div>";
+    }
+    return out;
+  }
+
   function niceCeil(v) {
     if (v <= 0) return 100;
     var mag = Math.pow(10, Math.floor(Math.log(v) / Math.LN10));
@@ -1540,6 +1618,82 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       '</div>';
     });
     return out + "</div>";
+  }
+
+  /* One row a day across the range for the Lead Tech board: calls sold,
+     refunds and orders. Refunds are recorded on the day the credit went
+     out, which clumps them \u2014 ten on one Saturday is a Saturday spike,
+     not a Saturday problem. So each week's refunds are spread evenly
+     across that week's days: the line then reads as a rate, and the area
+     under it still comes to the real number of refunds. */
+  function ltDaySeries(from, to) {
+    var days = [], index = {}, cur = from, guard = 0;
+    while (cur <= to && guard++ < 400) {
+      index[cur] = days.length;
+      days.push({ date: cur, label: prettyDate(cur), sold: 0, orders: 0, refunds: 0 });
+      cur = addDays(cur, 1);
+    }
+    ltCalls().forEach(function (c) {
+      var i = index[c.date];
+      if (i != null) days[i].sold += c.sold;
+    });
+    ltOrders().forEach(function (o) {
+      var i = index[o.date];
+      if (i != null) days[i].orders += 1;
+    });
+
+    var week = {};
+    days.forEach(function (d) {
+      var k = weekStart(d.date);
+      week[k] = week[k] || { n: 0, count: 0 };
+      week[k].n += 1;
+    });
+    ltRefunds().forEach(function (r) {
+      if (!r.date || r.date < from || r.date > to) return;
+      var k = weekStart(r.date);
+      if (week[k]) week[k].count += 1;
+    });
+    days.forEach(function (d) {
+      var w = week[weekStart(d.date)];
+      d.refunds = w && w.n ? w.count / w.n : 0;
+      d.refundsThisWeek = w ? w.count : 0;
+    });
+    return days;
+  }
+
+  /* Refunds by the week they were given. The line over the volume chart
+     keeps them in proportion \u2014 which, against a few thousand calls, is
+     a line on the floor. That proportion is worth seeing once; week to
+     week movement needs its own scale, which is what this is for. */
+  function ltRefundWeeks(from, to) {
+    var weeks = [], index = {}, cur = weekStart(from), guard = 0;
+    while (cur <= to && guard++ < 160) {
+      index[cur] = weeks.length;
+      weeks.push({ date: cur, label: prettyDate(cur), value: 0, amount: 0 });
+      cur = addDays(cur, 7);
+    }
+    ltRefunds().forEach(function (r) {
+      if (!r.date || r.date < from || r.date > to) return;
+      var i = index[weekStart(r.date)];
+      if (i != null) { weeks[i].value += 1; weeks[i].amount += r.amount; }
+    });
+    return weeks;
+  }
+
+  /* Wiped wallets, by the week they were cleared. */
+  function ltWipeWeeks(from, to) {
+    var weeks = [], index = {}, cur = weekStart(from), guard = 0;
+    while (cur <= to && guard++ < 160) {
+      index[cur] = weeks.length;
+      weeks.push({ date: cur, label: prettyDate(cur), value: 0 });
+      cur = addDays(cur, 7);
+    }
+    ltWipes().forEach(function (x) {
+      if (!x.date || x.date < from || x.date > to) return;
+      var i = index[weekStart(x.date)];
+      if (i != null) weeks[i].value += x.amount;
+    });
+    return weeks;
   }
 
   /* ------------------------------------------------------------ shell */
@@ -2338,6 +2492,83 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     out += "</div>";
 
     /* ---- the daily call ledger ---- */
+    /* ---- who bought the calls ---- */
+    /* The three prices a call goes out at, counted apart. They partition
+       the day's sold calls exactly: the LOA ones are already out of the
+       $35 tier by the time the ledger below is built, so these three add
+       back up to everything that left the building. */
+    var intCalls = m.callsSoldLow, extCalls = m.callsSoldHigh, loaCalls2 = m.callsLoa;
+    out += '<div class="section-head"><p class="eyebrow">Who bought them</p><h3>Calls sold, by price</h3>' +
+      '<p class="sub">Every call that went out, split by what it went out at. The LOA calls are charged to our own program at cost, ' +
+      "so they are counted here but no money came in on them.</p></div>";
+    out += '<div class="tiles t3">';
+    out += tile("src-lt", "Internal calls sold", intf(intCalls), "at " + money(set.sellLow) + " a call",
+      "", { value: money(intCalls * set.sellLow), label: "collected" });
+    out += tile("src-lt", "External calls sold", intf(extCalls), "at " + money(set.sellHigh) + " a call",
+      "", { value: money(extCalls * set.sellHigh), label: "collected" });
+    out += tile(loaCalls2 ? "is-warn" : "src-lt", "LOA calls sold", intf(loaCalls2), "at " + money(set.callCost) + " a call, to ourselves",
+      "", { value: money(loaCalls2 * set.callCost), label: "at cost, not collected" });
+    out += "</div>";
+
+    /* ---- the board, day by day and week by week ---- */
+    var ltDays = ltDaySeries(w.from, w.to);
+    var refundTotal = m.refunds.length;
+    if (ltDays.length > 1) {
+      out += '<div class="section-head"><p class="eyebrow">Volume</p><h3>Calls out, refunds back</h3>' +
+        '<p class="sub">Calls sold each day over ' + esc(w.label.toLowerCase()) +
+        ". The red line spreads each week\u2019s refunds evenly across its days, so it reads as a rate against the volume beside it " +
+        "and still adds up to the " + esc(intf(refundTotal)) + " refund" + (refundTotal === 1 ? "" : "s") + " actually given. " +
+        "Against a few thousand calls that line sits near the floor, which is the honest proportion \u2014 the chart on the right is the " +
+        "same refunds on a scale you can read a bad week off.</p></div>";
+      out += '<div class="charts even">';
+      out += '<section class="panel"><div class="panel-head"><h3>Calls sold per day</h3>' +
+        '<span class="note">' + esc(intf(m.callsSold)) + " sold \u00b7 " + esc(intf(m.callsRefunded)) + " calls refunded</span></div>" +
+        '<div class="panel-body">' + columnChart(ltDays,
+          { label: "Calls sold", color: "var(--s-loa)", values: ltDays.map(function (d) { return d.sold; }) },
+          { label: "Refunds given", color: "var(--s-refund)",
+            values: ltDays.map(function (d) { return d.refunds; }),
+            /* The plotted value is a seventh of a week and rounds to zero
+               as a count. On hover, say the thing the owner can act on. */
+            tip: ltDays.map(function (d) {
+              return d.refundsThisWeek
+                ? intf(d.refundsThisWeek) + " that week (" + d.refunds.toFixed(1) + " a day)"
+                : "none that week";
+            }) },
+          { height: 230, fmt: "int", alt: "Calls sold each day with refunds given per week" }) + "</div></section>";
+
+      /* The same refunds again, on a scale that can show them. Against
+         call volume they are a line on the floor, which is the honest
+         proportion and the reason the chart beside this one is worth
+         reading \u2014 but it is not a chart you can see a bad week in. */
+      var refWeeks = ltRefundWeeks(w.from, w.to);
+      out += '<section class="panel"><div class="panel-head"><h3>Refunds given per week</h3>' +
+        '<span class="note">' + esc(intf(refundTotal)) + " refund" + (refundTotal === 1 ? "" : "s") +
+        " \u00b7 " + esc(money(m.refunded)) + " back</span></div>" +
+        '<div class="panel-body">' + columnChart(refWeeks,
+          { label: "Refunds", color: "var(--s-refund)", values: refWeeks.map(function (d) { return d.value; }),
+            tip: refWeeks.map(function (d) {
+              return d.value ? intf(d.value) + " \u00b7 " + money(d.amount) + " back" : "none";
+            }) },
+          null, { height: 230, fmt: "int", alt: "Refunds given each week" }) + "</div></section>";
+      out += "</div>";
+
+      out += '<div class="charts even">';
+      var wipeWeeks = ltWipeWeeks(w.from, w.to);
+      out += '<section class="panel"><div class="panel-head"><h3>Wiped wallets per week</h3>' +
+        '<span class="note">' + esc(money(m.wiped)) + " over " + esc(intf(m.wipeRows.length)) + " wipe" + (m.wipeRows.length === 1 ? "" : "s") + "</span></div>" +
+        '<div class="panel-body">' + lineChart(wipeWeeks, [{
+          label: "Wiped", color: "var(--paid)", fill: "rgba(27,175,122,.12)",
+          values: wipeWeeks.map(function (d) { return d.value; })
+        }], { legend: false, height: 190 }) + "</div></section>";
+      out += '<section class="panel"><div class="panel-head"><h3>Orders per day</h3>' +
+        '<span class="note">' + esc(intf(m.count)) + " order" + (m.count === 1 ? "" : "s") + " in range</span></div>" +
+        '<div class="panel-body">' + lineChart(ltDays, [{
+          label: "Orders", color: "var(--s-lt)", fill: "var(--lt-fill)",
+          values: ltDays.map(function (d) { return d.orders; })
+        }], { legend: false, height: 190, fmt: "int" }) + "</div></section>";
+      out += "</div>";
+    }
+
     out += '<div class="section-head"><p class="eyebrow">Call ledger</p><h3>Day by day</h3>' +
       '<p class="sub">Straight from the Calls tab on the board. Bought is Ringba\u2019s billable calls plus Google\u2019s; ' +
       "the gap is calls sold less calls bought, so selling more than you buy makes the day pay for itself. " +
@@ -2763,7 +2994,8 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
         if (line) { line.setAttribute("x1", cx); line.setAttribute("x2", cx); cross.removeAttribute("hidden"); }
         tip.innerHTML = "<b>" + esc(d.buckets[i].label) + "</b><br>" +
           d.series.map(function (s) {
-            return '<span class="k" style="background:' + s.color + '"></span>' + esc(s.label) + " <b>" + esc(tipVal(d.fmt, s.values[i])) + "</b>";
+            var shown = s.tip ? s.tip[i] : tipVal(d.fmt, s.values[i]);
+            return '<span class="k" style="background:' + s.color + '"></span>' + esc(s.label) + " <b>" + esc(shown) + "</b>";
           }).join("<br>");
         tip.style.left = px + "px";
         tip.style.top = (r.top - br.top + 46) + "px";
