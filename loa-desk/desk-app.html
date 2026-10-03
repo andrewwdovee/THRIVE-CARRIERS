@@ -2352,6 +2352,8 @@
       + '<p class="sub">The floor in pictures. Goals run month to date — the marker on each bar is where the floor should be today.</p></div>'
       + "<div>" + rangeControls() + "</div></div>";
 
+    h += sectionHead("Targets", "Against the month",
+      "Goals run month to date whatever range is selected above \u2014 the marker on each bar is where the floor should be by today.");
     h += panel("Month-to-date goals", prettyDate(monthStart(todayISO())) + " → today · " + pct(monthPace() * 100, 0) + " through the month",
       '<div class="goals">'
       + goalCard("Calls taken", mtd.callsTaken, num(g.calls), intf)
@@ -2368,6 +2370,8 @@
       + '<div class="field"><label for="g-net">Net commission</label><input type="number" id="g-net" min="0" step="100" value="' + esc(g.net || "") + '"></div>'
       + '</div><div class="row end" style="margin-top:14px"><button class="btn accent" type="submit">Save goals</button></div></form>');
 
+    h += sectionHead("Volume", "Calls in, deals out",
+      "What the floor did day by day, and how reliably calls turned into business.");
     h += '<div class="charts c2">'
       + panel("Calls per day", intf(k.callsTaken) + " calls · " + money(k.marketingCost) + " spent", svgLine(labels, [
           { name: "Calls", color: "var(--s1)", values: rows.map(function (d) { return d.calls; }), fill: true, fmt: intf }
@@ -2384,6 +2388,9 @@
             { name: "Deals that issued and paid", color: "var(--paid)", values: runningCloseRate(rows, true), fmt: function (v) { return pct(v, 1); } }
           ], { width: 1180, height: 240, axisFmt: pctAxis, alt: "Running close rate across the floor" }))
       + "</div>";
+
+    h += sectionHead("Money", "What it earned and what it cost",
+      "Running totals across the range, on business the carriers have actually settled.");
 
     /* Agency gross vs marketing — same unit, one axis, two series. */
     h += '<div class="charts">'
@@ -2407,6 +2414,8 @@
           svgLine(labels, netSeries, { width: 1180, height: 260, axisFmt: money, alt: "Cumulative net to the program" }))
       + "</div>";
 
+    h += sectionHead("The book", "Where the premium sits",
+      "Every deal written in the range, by how it settled and which carrier wrote it.");
     h += '<div class="charts c2">'
       + panel("Where the book stands", "Every deal written in range", statusDonut(k))
       + panel("Premium by carrier", "Monthly premium written", carrierDonut(k.deals))
@@ -2422,16 +2431,71 @@
     }).filter(function (x) { return x.k.callsTaken > 0 || x.k.written > 0; });
 
     if (perAgent.length) {
+      /* One producer per bar, one hue, value on the bar. Every one of
+         these is magnitude against identity, which is what bars are
+         for — and a rate per producer is still magnitude. Averages
+         are over days actually logged, not calendar days, so a
+         producer who works four days a week is not punished for the
+         three they do not. */
+      var ranked = function (pick, cmp) {
+        return perAgent.map(pick).filter(function (x) { return x; })
+          .sort(cmp || function (a, b) { return b.value - a.value; });
+      };
+      var oneDp = function (v) { return dec(v, 1); };
+
+      h += sectionHead("Producers", "How the floor splits",
+        "Each producer against the others, over " + esc(r.label.toLowerCase())
+        + ". Daily averages count only the days that producer logged calls.");
+
+      h += '<div class="charts c2">'
+        + panel("Calls a day", "Average over the days each producer logged", svgBars(
+            ranked(function (x) {
+              return x.k.daysLogged
+                ? { name: x.a.name, value: x.k.callsTaken / x.k.daysLogged,
+                    sub: intf(x.k.callsTaken) + " calls over " + x.k.daysLogged + " day" + (x.k.daysLogged === 1 ? "" : "s") }
+                : null;
+            }),
+            { fmt: oneDp, alt: "Average calls taken per logged day, by producer" }))
+        + panel("Deals a day", "Average over the same days", svgBars(
+            ranked(function (x) {
+              return x.k.daysLogged
+                ? { name: x.a.name, value: x.k.written / x.k.daysLogged,
+                    sub: intf(x.k.written) + " deal" + (x.k.written === 1 ? "" : "s") + " over " + x.k.daysLogged + " day" + (x.k.daysLogged === 1 ? "" : "s") }
+                : null;
+            }),
+            { fmt: function (v) { return dec(v, 2); }, color: "var(--s2)", alt: "Average deals closed per logged day, by producer" }))
+        + "</div>";
+
+      h += '<div class="charts c2">'
+        + panel("Average annual premium a deal", "What a deal is worth when they write one", svgBars(
+            ranked(function (x) {
+              return x.k.written
+                ? { name: x.a.name, value: x.k.apWritten / x.k.written,
+                    sub: money(x.k.apWritten) + " over " + x.k.written + " deal" + (x.k.written === 1 ? "" : "s") }
+                : null;
+            }),
+            { fmt: money, alt: "Average annualised premium per deal, by producer" }))
+        + panel("Placement rate", "Premium that issued and paid, of everything written", svgBars(
+            ranked(function (x) {
+              return x.k.apWritten
+                ? { name: x.a.name, value: x.k.placement,
+                    sub: money(x.k.apPaid) + " placed of " + money(x.k.apWritten) }
+                : null;
+            }),
+            { fmt: function (v) { return pct(v, 1); }, color: "var(--paid)", alt: "Placement rate by producer" }))
+        + "</div>";
+
       h += '<div class="charts c2">'
         + panel("Premium written by producer", "Monthly premium", svgBars(
-            perAgent.map(function (x) { return { name: x.a.name, value: x.k.mpWritten, sub: x.k.written + " deals" }; })
-              .sort(function (a, b) { return b.value - a.value; }),
+            ranked(function (x) { return { name: x.a.name, value: x.k.mpWritten, sub: x.k.written + " deals" }; }),
             { fmt: money, alt: "Monthly premium by producer" }))
-        + panel("Calls to close one deal", "Lower is cheaper — " + money(costPerCall()) + " a call", svgBars(
-            perAgent.filter(function (x) { return x.k.written > 0; })
-              .map(function (x) { return { name: x.a.name, value: x.k.callsPerDeal, sub: money(x.k.costPerDeal) + " of calls per deal" }; })
-              .sort(function (a, b) { return a.value - b.value; }),
-            { fmt: function (v) { return dec(v, 1); }, color: "var(--s2)", alt: "Calls per deal by producer" }))
+        + panel("Calls to close one deal", "Lower is cheaper \u2014 " + money(costPerCall()) + " a call", svgBars(
+            ranked(function (x) {
+              return x.k.written
+                ? { name: x.a.name, value: x.k.callsPerDeal, sub: money(x.k.costPerDeal) + " of calls per deal" }
+                : null;
+            }, function (a, b) { return a.value - b.value; }),
+            { fmt: oneDp, color: "var(--s2)", alt: "Calls per deal by producer" }))
         + "</div>";
     }
     return h;
