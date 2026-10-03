@@ -1301,7 +1301,6 @@
       + '<p class="sub">Every inbound call costs ' + money(costPerCall()) + ". The question this page answers is how many of them turn into premium that actually pays.</p></div>"
       + "<div>" + rangeControls() + "</div></div>";
 
-    var adv = advanceMonths();
     h += '<div class="tiles">'
       + tile("Calls taken", intf(k.callsTaken), { foot: money(k.marketingCost) + " in marketing" })
       + tile("Deals closed", intf(k.written), {
@@ -1326,22 +1325,16 @@
        producer's side appears once, because they are paid on the
        advance and the twelve-month figure does not change it. */
     h += '<div class="tiles" style="margin-top:12px">'
-      /* Each of these reports what the carriers have actually settled,
-         with the same figure across everything written underneath it —
-         what the period comes to if every deal still in underwriting
-         goes on to pay. */
+      /* Settled on top, projected underneath, and nothing else: the
+         tile label already says which commission it is. */
       + tile("Advanced commissions", money(k.houseGrossPaid), { tone: "key",
-          sub: { value: money(k.houseGrossWritten), label: "projected on all written" },
-          foot: "Carriers fronted " + adv + " months on " + money(k.advPaid) + " advanced premium" })
+          sub: { value: money(k.houseGrossWritten), label: "projected commissions" } })
       + tile("Gross commissions", money(k.houseFullPaid), {
-          sub: { value: money(k.houseFullWritten), label: "projected on all written" },
-          foot: "Full 12 months \u00b7 " + money(k.tailPaid) + " still to be earned" })
+          sub: { value: money(k.houseFullWritten), label: "projected commissions" } })
       + tile("Agent advanced commissions", money(k.agentCommPaid), { tone: "warn",
-          sub: { value: money(k.agentCommWritten), label: "projected on all written" },
-          foot: "Out to producers on " + k.paid.length + " placed deal" + (k.paid.length === 1 ? "" : "s") })
+          sub: { value: money(k.agentCommWritten), label: "projected commissions" } })
       + tile("Thrive advanced commissions", money(k.spreadPaid), {
-          sub: { value: money(k.overrideWritten), label: "projected on all written" },
-          foot: "Kept on the advance, before marketing" })
+          sub: { value: money(k.overrideWritten), label: "projected commissions" } })
       + tile("Thrive net \u2014 advanced", money(k.net), { tone: profitable ? "good" : "bad", sign: profitable ? "pos" : "neg",
           foot: "After agents and " + money(k.marketingCost) + " marketing" })
       + tile("Thrive net \u2014 12 month", money(k.netFull), { tone: k.netFull >= 0 ? "good" : "bad", sign: k.netFull >= 0 ? "pos" : "neg",
