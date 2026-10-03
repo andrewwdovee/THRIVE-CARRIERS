@@ -570,6 +570,10 @@
     return '<div class="' + cls + '">'
       + '<p class="eyebrow">' + esc(label) + "</p>"
       + '<span class="' + vcls + '">' + esc(value) + "</span>"
+      /* A second figure under the headline one, for a tile that reports
+         both what has settled and what the same thing comes to if the
+         pipeline behaves. */
+      + (opts.sub ? '<span class="v2"><b>' + esc(opts.sub.value) + "</b> " + esc(opts.sub.label) + "</span>" : "")
       + (opts.foot ? '<span class="foot">' + esc(opts.foot) + "</span>" : "")
       + "</div>";
   }
@@ -1322,13 +1326,21 @@
        producer's side appears once, because they are paid on the
        advance and the twelve-month figure does not change it. */
     h += '<div class="tiles" style="margin-top:12px">'
+      /* Each of these reports what the carriers have actually settled,
+         with the same figure across everything written underneath it —
+         what the period comes to if every deal still in underwriting
+         goes on to pay. */
       + tile("Advanced commissions", money(k.houseGrossPaid), { tone: "key",
+          sub: { value: money(k.houseGrossWritten), label: "projected on all written" },
           foot: "Carriers fronted " + adv + " months on " + money(k.advPaid) + " advanced premium" })
       + tile("Gross commissions", money(k.houseFullPaid), {
+          sub: { value: money(k.houseFullWritten), label: "projected on all written" },
           foot: "Full 12 months \u00b7 " + money(k.tailPaid) + " still to be earned" })
       + tile("Agent advanced commissions", money(k.agentCommPaid), { tone: "warn",
+          sub: { value: money(k.agentCommWritten), label: "projected on all written" },
           foot: "Out to producers on " + k.paid.length + " placed deal" + (k.paid.length === 1 ? "" : "s") })
       + tile("Thrive advanced commissions", money(k.spreadPaid), {
+          sub: { value: money(k.overrideWritten), label: "projected on all written" },
           foot: "Kept on the advance, before marketing" })
       + tile("Thrive net \u2014 advanced", money(k.net), { tone: profitable ? "good" : "bad", sign: profitable ? "pos" : "neg",
           foot: "After agents and " + money(k.marketingCost) + " marketing" })
