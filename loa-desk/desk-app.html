@@ -505,6 +505,11 @@
     m.houseFullWritten = deals.reduce(function (t, d) { return t + houseCommFullOn(d); }, 0);
     m.overrideWritten = m.houseGrossWritten - m.agentCommWritten;
     m.overrideFullWritten = m.houseFullWritten - m.agentCommWritten;
+    /* Net if everything written pays. The marketing is the real figure,
+       not a projected one — those calls have already been bought, so
+       the only thing being projected is the commission above it. */
+    m.netProjected = m.overrideWritten - m.marketingCost;
+    m.netFullProjected = m.overrideFullWritten - m.marketingCost;
     m.avgAp = m.written ? m.apWritten / m.written : 0;
     m.avgOverride = m.written ? m.overrideWritten / m.written : 0;
     m.avgOverrideFull = m.written ? m.overrideFullWritten / m.written : 0;
@@ -1326,18 +1331,18 @@
        advance and the twelve-month figure does not change it. */
     h += '<div class="tiles" style="margin-top:12px">'
       /* Settled on top, projected underneath, and nothing else: the
-         tile label already says which commission it is. */
-      + tile("Advanced commissions", money(k.houseGrossPaid), { tone: "key",
-          sub: { value: money(k.houseGrossWritten), label: "projected commissions" } })
-      + tile("Gross commissions", money(k.houseFullPaid), {
-          sub: { value: money(k.houseFullWritten), label: "projected commissions" } })
+         tile label already says which figure it is. The gross and
+         advanced totals are gone — the ladder below carries them, and
+         what the agency keeps is the number worth the space. */
       + tile("Agent advanced commissions", money(k.agentCommPaid), { tone: "warn",
           sub: { value: money(k.agentCommWritten), label: "projected commissions" } })
       + tile("Thrive advanced commissions", money(k.spreadPaid), {
           sub: { value: money(k.overrideWritten), label: "projected commissions" } })
       + tile("Thrive net \u2014 advanced", money(k.net), { tone: profitable ? "good" : "bad", sign: profitable ? "pos" : "neg",
+          sub: { value: money(k.netProjected), label: "projected net" },
           foot: "After agents and " + money(k.marketingCost) + " marketing" })
       + tile("Thrive net \u2014 12 month", money(k.netFull), { tone: k.netFull >= 0 ? "good" : "bad", sign: k.netFull >= 0 ? "pos" : "neg",
+          sub: { value: money(k.netFullProjected), label: "projected net" },
           foot: "The same, once the tail is earned" })
       + "</div>";
 
