@@ -291,6 +291,12 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 /* When one field carries a hint under its input, align the tops so the
    button sits beside the input and the hint hangs below its own field. */
 .filters.top { align-items: flex-start; }
+/* The entry form: a two-column grid that collapses to one, with a
+   couple of fields allowed to run the full width. */
+.expform { display: grid; gap: 14px; grid-template-columns: 1fr; }
+@media (min-width: 720px) { .expform { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1060px) { .expform { grid-template-columns: repeat(4, 1fr); }
+  .expform .field.wide { grid-column: span 2; } }
 .filters .field.searchbox { flex: 1 1 300px; min-width: 220px; max-width: 460px; }
 
 /* ---------- panels ---------- */
@@ -602,6 +608,24 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
 
   var OWNER_DOC = "config/owner";
   var SETTINGS_DOC = "config/settings";
+  /* The first document this console owns rather than mirrors. Everything
+     else here is written by the Producer Desk or the fulfillment board
+     and read-only on this side; expenses are entered here and live here. */
+  var EXPENSE_DOC = "company/expenses";
+  var EXP_CATS = [
+    "Marketing & leads", "Software & tools", "Payroll & contractors",
+    "Office & equipment", "Licensing & compliance", "Professional services",
+    "Travel", "Other"
+  ];
+  var EXP_CADENCE = [
+    { k: "",          label: "One-off",        short: "One-off",   perYear: 0 },
+    { k: "weekly",    label: "Every week",     short: "Weekly",    perYear: 52 },
+    { k: "monthly",   label: "Every month",    short: "Monthly",   perYear: 12 },
+    { k: "quarterly", label: "Every quarter",  short: "Quarterly", perYear: 4 },
+    { k: "yearly",    label: "Every year",     short: "Yearly",    perYear: 1 }
+  ];
+  var EXP_BY_K = {};
+  EXP_CADENCE.forEach(function (c) { EXP_BY_K[c.k] = c; });
   /* The brokerage's blended spread. Per-deal spread is computed exactly
      from each carrier's schedule; this is the house's own average rate
      applied to everything written, which is how the brokerage side is
@@ -791,6 +815,9 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     settings: null,       /* {brokerageSpreadPct} — owner-editable */
     loa: null,            /* snapshot document body */
     lt: null,
+    expenses: null,       /* this console's own document, not a mirror */
+    expEdit: "",          /* id being edited, so the form renders filled */
+    expDel: "",           /* id awaiting a confirm, in place in the row */
     filters: { dealStatus: "", dealAgent: "", dealQuery: "" },
     toast: null
   };
@@ -872,6 +899,10 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     ltRefunds().forEach(function (r) { seen(r.date); });
     ltWipes().forEach(function (x) { seen(x.date); });
     ltOrders().forEach(function (o) { seen(o.date); });
+    /* An expense entered here is a record like any other: without this,
+       "All time" on the Expenses tab would stop at whatever the two
+       mirrored portals last reported and hide the bills either side. */
+    expenseItems().forEach(function (x) { seen(x.date); });
     return { first: first, last: last };
   }
 
@@ -1053,6 +1084,19 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     return days;
   }
 
+  /* Same day of the month, n months on, clamped to the month's length.
+     A bill set on the 31st falls on the 30th in a 30-day month; stepping
+     by 30 days instead would quietly drift it earlier every month, and
+     refusing to place it would drop April, June, September and November
+     from the year. */
+  function addMonths(iso, n) {
+    var p = iso.split("-"), d = +p[2];
+    var t = new Date(Date.UTC(+p[0], (+p[1] - 1) + n, 1));
+    var last = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0)).getUTCDate();
+    t.setUTCDate(Math.min(d, last));
+    return t.toISOString().slice(0, 10);
+  }
+
   /* Monday of the week a date falls in. Weeks are the natural unit for
      anything that happens in ones and twos \u2014 a refund, a wiped wallet \u2014
      where a daily line would be mostly zeros with spikes. */
@@ -1061,6 +1105,79 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     var dow = (d.getDay() + 6) % 7;
     return addDays(iso, -dow);
   }
+
+  /* ------------------------------------------------------------ expenses */
+  function expenseItems() {
+    var raw = (ui.expenses && Array.isArray(ui.expenses.items)) ? ui.expenses.items : [];
+    return raw.map(function (x) {
+      return {
+        id: x.id,
+        name: x.name || "\u2014",
+        amount: num(x.amount),
+        category: x.category || "Other",
+        cadence: EXP_BY_K[x.cadence] ? x.cadence : "",
+        date: toISODate(x.date),
+        endsOn: toISODate(x.endsOn),
+        note: x.note || ""
+      };
+    }).filter(function (x) { return !!x.date; });
+  }
+
+  /* Every date an expense actually lands on inside the window. A recurring
+     bill is stored once, as its first charge and a cadence; the day-by-day
+     and the totals need the charges themselves. */
+  function expenseHits(x, from, to) {
+    var hits = [], guard = 0;
+    if (!x.date) return hits;
+    var stop = (x.endsOn && x.endsOn < to) ? x.endsOn : to;
+    var cad = EXP_BY_K[x.cadence];
+    if (!cad || !cad.perYear) {
+      if (x.date >= from && x.date <= stop) hits.push(x.date);
+      return hits;
+    }
+    if (cad.k === "weekly") {
+      var cur = x.date;
+      while (cur < from && guard++ < 4000) cur = addDays(cur, 7);
+      while (cur <= stop && guard++ < 4000) { hits.push(cur); cur = addDays(cur, 7); }
+      return hits;
+    }
+    var step = cad.k === "monthly" ? 1 : cad.k === "quarterly" ? 3 : 12, n = 0;
+    while (guard++ < 4000) {
+      var d = addMonths(x.date, n * step);
+      if (d > stop) break;
+      if (d >= from) hits.push(d);
+      n++;
+    }
+    return hits;
+  }
+
+  function expenseMetrics(from, to) {
+    var all = expenseItems();
+    var m = { all: all, rows: [], total: 0, recurring: 0, oneOff: 0, byCat: {}, byDay: {}, charges: 0 };
+    all.forEach(function (x) {
+      var hits = expenseHits(x, from, to);
+      if (!hits.length) return;
+      var spend = hits.length * x.amount;
+      m.total += spend;
+      m.charges += hits.length;
+      if (x.cadence) m.recurring += spend; else m.oneOff += spend;
+      m.byCat[x.category] = (m.byCat[x.category] || 0) + spend;
+      hits.forEach(function (d) { m.byDay[d] = (m.byDay[d] || 0) + x.amount; });
+      m.rows.push({ x: x, hits: hits.length, spend: spend, first: hits[0], last: hits[hits.length - 1] });
+    });
+    m.rows.sort(function (a, b) { return b.spend - a.spend; });
+    /* The run rate is a property of the book, not of the window on screen:
+       what the standing commitments come to in a month, whatever range is
+       selected above. An expense that has already ended does not count. */
+    var today = todayISO();
+    m.live = all.filter(function (x) {
+      return x.cadence && EX_PER_YEAR(x) > 0 && !(x.endsOn && x.endsOn < today);
+    });
+    m.monthly = m.live.reduce(function (t, x) { return t + x.amount * EX_PER_YEAR(x) / 12; }, 0);
+    return m;
+  }
+  function EX_PER_YEAR(x) { var c = EX_BY(x); return c ? c.perYear : 0; }
+  function EX_BY(x) { return EXP_BY_K[x.cadence]; }
 
   /* ------------------------------------------------- Lead Tech normalizing */
   /* The fulfillment board stores money in cents and is looser about field
@@ -1696,6 +1813,163 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     return weeks;
   }
 
+
+  /* --------------------------------------------------------- expenses page */
+  function expenseForm(m) {
+    var editing = ui.expEdit ? m.all.filter(function (x) { return x.id === ui.expEdit; })[0] : null;
+    var e = editing || { name: "", amount: "", category: EXP_CATS[0], cadence: "", date: todayISO(), endsOn: "", note: "" };
+    var out = '<section class="panel"><div class="panel-head"><h3>' +
+      (editing ? "Edit " + esc(e.name) : "Add an expense") + "</h3>" +
+      '<span class="note">' + (editing ? "Saving replaces the original" : "Recurring bills are entered once") + "</span></div>" +
+      '<div class="panel-body"><div class="expform">';
+    out += '<div class="field wide"><label for="x-name">What it is</label>' +
+      '<input type="text" id="x-name" value="' + esc(e.name) + '" placeholder="Ringba, office rent, E&O cover…"></div>';
+    out += '<div class="field"><label for="x-amount">Amount</label>' +
+      '<input type="text" inputmode="decimal" id="x-amount" value="' + esc(e.amount === "" ? "" : String(e.amount)) + '" placeholder="0.00"></div>';
+    out += '<div class="field"><label for="x-cat">Category</label><select id="x-cat">' +
+      EXP_CATS.map(function (c) { return '<option value="' + esc(c) + '"' + (e.category === c ? " selected" : "") + ">" + esc(c) + "</option>"; }).join("") +
+      "</select></div>";
+    out += '<div class="field"><label for="x-cad">How often</label><select id="x-cad">' +
+      EXP_CADENCE.map(function (c) { return '<option value="' + esc(c.k) + '"' + (e.cadence === c.k ? " selected" : "") + ">" + esc(c.label) + "</option>"; }).join("") +
+      "</select></div>";
+    out += '<div class="field"><label for="x-date">Date</label>' +
+      '<input type="date" id="x-date" value="' + esc(e.date) + '">' +
+      '<span class="hint">For a recurring bill, the first charge — every one after it is worked out from here.</span></div>';
+    out += '<div class="field"><label for="x-ends">Ends on</label>' +
+      '<input type="date" id="x-ends" value="' + esc(e.endsOn) + '">' +
+      '<span class="hint">Optional. Leave empty if it is still running.</span></div>';
+    out += '<div class="field wide"><label for="x-note">Note</label>' +
+      '<input type="text" id="x-note" value="' + esc(e.note) + '" placeholder="Optional"></div>';
+    out += "</div>";
+    /* The preview copy keeps everything in the page and writes nowhere.
+       Saying so here is cheaper than someone entering a month of bills
+       into a review build and losing them on reload. */
+    if (store && store.mode === "preview") {
+      out += '<div class="msg warnbar" style="margin-top:4px">This is a preview copy \u2014 anything added here stays in this tab and is gone on reload.</div>';
+    }
+    out += '<div id="x-msg"></div>';
+    out += '<div class="row end" style="margin-top:14px;gap:8px">' +
+      (editing ? '<button class="btn ghost" data-act="expcancel">Cancel</button>' : "") +
+      '<button class="btn accent" data-act="expsave">' + (editing ? "Save changes" : "Add expense") + "</button></div>";
+    return out + "</div></section>";
+  }
+
+  function pageExpenses() {
+    var w = rangeWindow(), m = expenseMetrics(w.from, w.to);
+    var out = pageHead("Expenses", rangePicker());
+
+    out += hero("Expenses · " + w.label, money(m.total),
+      "Everything the company paid out in this window, one-off and recurring together.", [
+        { k: "Monthly run rate", v: money(m.monthly) },
+        { k: "Standing bills", v: intf(m.live.length) },
+        { k: "Charges", v: intf(m.charges) }
+      ], m.total > 0);
+
+    out += '<div class="tiles">';
+    out += tile("src-all", "Total in range", money(m.total), intf(m.charges) + " charge" + (m.charges === 1 ? "" : "s"));
+    out += tile("src-all", "Recurring", money(m.recurring),
+      intf(m.live.length) + " standing bill" + (m.live.length === 1 ? "" : "s"));
+    out += tile("src-all", "One-off", money(m.oneOff), "paid once, not repeating");
+    out += tile("src-all", "Monthly run rate", money(m.monthly), "what the standing bills cost a month");
+    out += "</div>";
+
+    out += '<div class="section-head"><p class="eyebrow">Keeping it current</p><h3>Add or change an expense</h3>' +
+      '<p class="sub">A recurring bill is entered once, with its first charge and how often it repeats — the console works out every charge after that, ' +
+      "so the day-by-day and the totals stay right without anyone logging it again.</p></div>";
+    out += '<div class="charts">' + expenseForm(m) + "</div>";
+
+    if (!m.rows.length) {
+      out += '<div class="section-head"><p class="eyebrow">Expense ledger</p><h3>Nothing in this range</h3></div>';
+      out += '<div class="panel"><div class="empty"><strong>No expenses land in ' + esc(w.label.toLowerCase()) + "</strong>" +
+        "<p>Add one above, or widen the range if you have entered some already.</p></div></div>";
+      return out + expenseList(m, w);
+    }
+
+    /* ---- where it goes ---- */
+    var catRows = Object.keys(m.byCat).map(function (k) {
+      return { label: k, value: m.byCat[k], display: money(m.byCat[k]),
+               sub: pct(ratio(m.byCat[k], m.total), 0) + " of the range" };
+    }).sort(function (a, b) { return b.value - a.value; });
+
+    out += '<div class="section-head"><p class="eyebrow">Where it goes</p><h3>What the money is spent on</h3>' +
+      '<p class="sub">Every charge in ' + esc(w.label.toLowerCase()) +
+      ", by category and by whether it is a standing commitment or a one-off.</p></div>";
+    out += '<div class="charts c2">';
+    out += '<section class="panel"><div class="panel-head"><h3>By category</h3><span class="note">' +
+      esc(money(m.total)) + " in range</span></div>" +
+      '<div class="panel-body">' + barRows(catRows, "var(--s-refund)") + "</div></section>";
+    out += '<section class="panel"><div class="panel-head"><h3>Fixed against one-off</h3><span class="note">How much of the bill is committed</span></div>' +
+      '<div class="panel-body">' + donut([
+        { label: "Recurring", value: m.recurring, color: "var(--s-refund)" },
+        { label: "One-off", value: m.oneOff, color: "var(--s-loa)" }
+      ], shortMoney(m.total), "paid out") + "</div></section>";
+    out += "</div>";
+
+    /* ---- day by day ---- */
+    var days = [], index = {}, cur = w.from, guard = 0;
+    while (cur <= w.to && guard++ < 400) {
+      index[cur] = days.length;
+      days.push({ date: cur, label: prettyDate(cur), value: m.byDay[cur] || 0 });
+      cur = addDays(cur, 1);
+    }
+    if (days.length > 1) {
+      var biggest = days.reduce(function (a, b) { return b.value > a.value ? b : a; });
+      out += '<div class="section-head"><p class="eyebrow">Expense ledger</p><h3>Company expenses, day by day</h3>' +
+        '<p class="sub">Each charge on the day it lands. Recurring bills show up on every date they repeat on, not just the first one' +
+        (biggest.value > 0 ? " — the heaviest day in this range is " + esc(prettyDate(biggest.date)) + " at " + esc(money(biggest.value)) : "") +
+        ".</p></div>";
+      out += '<div class="charts">';
+      out += '<section class="panel"><div class="panel-head"><h3>Paid out per day</h3>' +
+        '<span class="note">' + esc(money(m.total)) + " over " + esc(intf(m.charges)) + " charge" + (m.charges === 1 ? "" : "s") + "</span></div>" +
+        '<div class="panel-body">' + columnChart(days,
+          { label: "Paid out", color: "var(--s-refund)", values: days.map(function (d) { return d.value; }) },
+          null, { height: 220, fmt: "money", alt: "Company expenses paid out each day" }) + "</div></section>";
+      out += "</div>";
+    }
+
+    return out + expenseList(m, w);
+  }
+
+  function expenseList(m, w) {
+    var out = '<div class="section-head"><p class="eyebrow">Every expense</p><h3>The whole book</h3>' +
+      '<p class="sub">Everything on file, whether or not it lands in the selected range. The range column counts only the charges inside it.</p></div>';
+    var all = m.all.slice().sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
+    if (!all.length) {
+      return out + '<div class="panel"><div class="empty"><strong>No expenses on file yet</strong>' +
+        "<p>Add the first one with the form above.</p></div></div>";
+    }
+    var inRange = {};
+    m.rows.forEach(function (r) { inRange[r.x.id] = r; });
+
+    out += '<div class="panel"><div class="panel-body flush"><div class="tblwrap"><table class="data"><thead><tr>' +
+      "<th>What</th><th>Category</th><th>How often</th><th>Starts</th><th>Ends</th>" +
+      '<th class="n">Each time</th><th class="n">In range</th><th></th></tr></thead><tbody>';
+    all.forEach(function (x) {
+      var r = inRange[x.id], cad = EXP_BY_K[x.cadence] || EXP_CADENCE[0];
+      var ended = x.endsOn && x.endsOn < todayISO();
+      out += "<tr><td><strong>" + esc(x.name) + "</strong>" +
+        (x.note ? '<div class="dim">' + esc(x.note) + "</div>" : "") + "</td>" +
+        "<td>" + esc(x.category) + "</td>" +
+        '<td><span class="pill' + (x.cadence ? (ended ? "" : " key") : "") + '">' + esc(cad.short) + "</span>" +
+        (ended ? '<div class="dim">ended</div>' : "") + "</td>" +
+        '<td class="nowrap dim">' + esc(prettyDate(x.date)) + "</td>" +
+        '<td class="nowrap dim">' + (x.endsOn ? esc(prettyDate(x.endsOn)) : '<span class="dim">—</span>') + "</td>" +
+        '<td class="n">' + esc(money(x.amount, 2)) + "</td>" +
+        '<td class="n">' + (r ? "<b>" + esc(money(r.spend, 2)) + "</b>" +
+            (r.hits > 1 ? '<div class="dim">' + esc(intf(r.hits)) + " charges</div>" : "")
+          : '<span class="dim">—</span>') + "</td>" +
+        '<td class="nowrap">' + (ui.expDel === x.id
+          ? '<button class="btn sm" data-act="expdelyes" data-id="' + esc(x.id) + '" style="background:var(--bad);border-color:var(--bad)">Delete</button> ' +
+            '<button class="btn ghost sm" data-act="expdelno">Keep</button>'
+          : '<button class="btn ghost sm" data-act="expedit" data-id="' + esc(x.id) + '">Edit</button> ' +
+            '<button class="btn ghost sm" data-act="expdel" data-id="' + esc(x.id) + '">Delete</button>') +
+        "</td></tr>";
+    });
+    out += '<tr class="total"><td colspan="6">' + esc(intf(all.length)) + " expense" + (all.length === 1 ? "" : "s") +
+      " on file · " + esc(w.label.toLowerCase()) + '</td><td class="n">' + esc(money(m.total, 2)) + "</td><td></td></tr>";
+    return out + "</tbody></table></div></div></div>";
+  }
+
   /* ------------------------------------------------------------ shell */
   function render() {
     chartData = {}; chartSeq = 0;
@@ -1716,6 +1990,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     if (ui.tab === "loa") body = pageLOA();
     else if (ui.tab === "lt") body = pageLT();
     else if (ui.tab === "company") body = pageCompany();
+    else if (ui.tab === "expenses") body = pageExpenses();
     else if (ui.tab === "sync") body = pageSync();
     else body = pageOverview();
 
@@ -1854,7 +2129,8 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
        arriving a moment apart made the page jump twice. */
     return Promise.all([
       store.get(SOURCES.loa.doc).then(function (d) { ui.loa = d; }).catch(function () {}),
-      store.get(SOURCES.lt.doc).then(function (d) { ui.lt = d; }).catch(function () {})
+      store.get(SOURCES.lt.doc).then(function (d) { ui.lt = d; }).catch(function () {}),
+      store.get(EXPENSE_DOC).then(function (d) { ui.expenses = d; }).catch(function () {})
     ]).then(function () { render(); });
   }
 
@@ -1893,6 +2169,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       { k: "loa", label: "LOA Program" },
       { k: "lt", label: "Lead Tech" },
       { k: "company", label: "Thrive Companies" },
+      { k: "expenses", label: "Expenses" },
       { k: "sync", label: "Sync & sources" }
     ];
     var out = '<nav class="rail"><div class="rail-in">';
@@ -3196,6 +3473,12 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     else if (act === "changepw") { changePasscode(); }
     else if (act === "clearsample") { clearSample(); }
     else if (act === "savespread") { saveSpread(); }
+    else if (act === "expsave") { saveExpense(); }
+    else if (act === "expedit") { ui.expEdit = t.getAttribute("data-id"); ui.expDel = ""; render(); window.scrollTo(0, 0); }
+    else if (act === "expcancel") { ui.expEdit = ""; render(); }
+    else if (act === "expdel") { ui.expDel = t.getAttribute("data-id"); render(); }
+    else if (act === "expdelno") { ui.expDel = ""; render(); }
+    else if (act === "expdelyes") { deleteExpense(t.getAttribute("data-id")); }
     else if (act === "signin") { signIn(); }
   });
 
@@ -3214,6 +3497,71 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       .catch(function (e) {
         msg.innerHTML = '<div class="msg err">' + esc((e && e.message) || "Could not save the rate.") + "</div>";
       });
+  }
+
+  /* The whole document goes back every time. One owner, one console, a
+     list this size \u2014 a merge protocol would be more moving parts than
+     the thing it protects. */
+  function putExpenses(items, done) {
+    var doc = { items: items, updatedAt: new Date().toISOString() };
+    return store.set(EXPENSE_DOC, doc).then(function () {
+      ui.expenses = doc;
+      done();
+    }).catch(function (e) {
+      var msg = document.getElementById("x-msg");
+      var text = (e && e.message) || "Could not save. The console could not reach the relay.";
+      if (msg) msg.innerHTML = '<div class="msg err">' + esc(text) + "</div>";
+      else toast(text);
+    });
+  }
+
+  function saveExpense() {
+    var g = function (id) { var el = document.getElementById(id); return el ? el.value.trim() : ""; };
+    var msg = document.getElementById("x-msg");
+    var fail = function (text) { if (msg) msg.innerHTML = '<div class="msg err">' + esc(text) + "</div>"; };
+
+    var name = g("x-name");
+    var amount = parseFloat(g("x-amount").replace(/[$,]/g, ""));
+    var date = g("x-date"), ends = g("x-ends"), cad = g("x-cad");
+    if (!name) return fail("Give the expense a name.");
+    if (!isFinite(amount) || amount <= 0) return fail("Enter what it costs, as a number greater than zero.");
+    if (!date) return fail("Pick the date it was charged.");
+    if (ends && ends < date) return fail("The end date is before the first charge.");
+
+    var rec = {
+      id: ui.expEdit || ("x_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7)),
+      name: name, amount: Math.round(amount * 100) / 100,
+      category: g("x-cat") || "Other", cadence: EXP_BY_K[cad] ? cad : "",
+      date: date, endsOn: ends, note: g("x-note")
+    };
+    var items = expenseItems().map(function (x) {
+      return { id: x.id, name: x.name, amount: x.amount, category: x.category,
+               cadence: x.cadence, date: x.date, endsOn: x.endsOn, note: x.note };
+    });
+    var at = -1;
+    items.forEach(function (x, i) { if (x.id === rec.id) at = i; });
+    if (at >= 0) items[at] = rec; else items.push(rec);
+
+    if (msg) msg.innerHTML = '<div class="msg info">Saving\u2026</div>';
+    putExpenses(items, function () {
+      ui.expEdit = "";
+      toast((at >= 0 ? "Updated " : "Added ") + rec.name);
+      render();
+    });
+  }
+
+  function deleteExpense(id) {
+    var gone = expenseItems().filter(function (x) { return x.id !== id; })
+      .map(function (x) {
+        return { id: x.id, name: x.name, amount: x.amount, category: x.category,
+                 cadence: x.cadence, date: x.date, endsOn: x.endsOn, note: x.note };
+      });
+    putExpenses(gone, function () {
+      ui.expDel = "";
+      if (ui.expEdit === id) ui.expEdit = "";
+      toast("Expense removed");
+      render();
+    });
   }
 
   function clearSample() {
