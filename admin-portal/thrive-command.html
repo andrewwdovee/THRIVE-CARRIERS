@@ -1104,9 +1104,24 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
   /* The Calls tab records one row a day: `billable` is what Lead Tech had
      to pay for, `sold` is what went out to agents. The gap between them
      is the whole business. */
+  /* Calls the LOA producers took, by day, from the Producer Desk's own
+     log. A call an LOA producer takes was still bought at the billable
+     rate, but the sale is Thrive paying Thrive — so the cost is real
+     and the revenue is not. Keeping the two apart is the only way the
+     call ledger tells the truth about either business. */
+  function loaCallsByDay() {
+    var by = {};
+    loaCalls().forEach(function (c) {
+      var d = toISODate(c.date);
+      if (d) by[d] = (by[d] || 0) + num(c.calls);
+    });
+    return by;
+  }
+
   function ltCalls() {
     var raw = (ui.lt && Array.isArray(ui.lt.calls)) ? ui.lt.calls : [];
     var set = ltSettings();
+    var loaByDay = loaCallsByDay();
     return raw.map(function (c) {
       var F = CALL_FIELDS;
 
@@ -1134,19 +1149,43 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
         ? pickNum(c, F.revenue) / 100
         : soldLow * set.sellLow + soldHigh * set.sellHigh;
 
+      var date = toISODate(c.day || c.date || c.at);
+      var sold = soldLow + soldHigh;
+
+      /* The LOA share of the day. Capped at the calls actually sold:
+         the desk's log is a separate source and a mismatch should
+         dent a figure, not invert it. */
+      var loa = Math.min(num(loaByDay[date]), sold);
+      var loaSpend = loa * set.callCost;
+      /* No per-call price is recorded, so an LOA call is valued at what
+         the day's calls actually went for on average. */
+      var collected = sold > 0 ? revenue - loa * (revenue / sold) : revenue;
+
       return {
         id: c.id,
-        date: toISODate(c.day || c.date || c.at),
+        date: date,
         billable: billable,
         google: google,
         bought: billable + google,
         soldLow: soldLow,
         soldHigh: soldHigh,
-        sold: soldLow + soldHigh,
+        sold: sold,
+        loa: loa,
         googleSpend: googleSpend,
         spend: spend,
-        revenue: revenue,
-        profit: revenue - spend,
+        ltSpend: spend - loaSpend,
+        loaSpend: loaSpend,
+        /* What the board billed, kept for reference, against what came
+           in from outside the company. */
+        billed: revenue,
+        revenue: collected,
+        loaProfit: -loaSpend,
+        /* The LOA calls are an internal transfer at cost: Lead Tech buys
+           them and hands them over, so it is square on them and the LOA
+           business carries the $30. Keeping them out of both sides here
+           is what makes Profit and LOA profit add up to the day's real
+           result instead of charging the same call twice. */
+        profit: collected - (spend - loaSpend),
         /* Thrive Companies production, logged on the same daily row. */
         deals: num(c.deals),
         avgMp: num(c.avgMp) / 100,
@@ -1199,13 +1238,18 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
        Google rate moves daily, so no single rate could reproduce it. */
     m.callSpend = calls.reduce(function (t, c) { return t + c.spend; }, 0);
     m.googleSpend = calls.reduce(function (t, c) { return t + c.googleSpend; }, 0);
+    m.callsLoa = calls.reduce(function (t, c) { return t + c.loa; }, 0);
+    m.loaSpend = calls.reduce(function (t, c) { return t + c.loaSpend; }, 0);
+    m.ltSpend = calls.reduce(function (t, c) { return t + c.ltSpend; }, 0);
+    m.loaProfit = -m.loaSpend;
+    m.billed = calls.reduce(function (t, c) { return t + c.billed; }, 0);
     m.callRevenue = calls.reduce(function (t, c) { return t + c.revenue; }, 0);
     m.callCost = m.callSpend;
     m.callsRefunded = refunds.reduce(function (t, r) { return t + r.calls; }, 0);
 
     m.wipeRows = ltWipes().filter(function (x) { return inRange(x.date, from, to); });
     m.wiped = m.wipeRows.reduce(function (t, x) { return t + x.amount; }, 0);
-    m.pnl = m.callRevenue + m.wiped - m.callSpend - m.refunded;
+    m.pnl = m.callRevenue + m.wiped - m.ltSpend - m.refunded;
     m.margin = m.callRevenue > 0 ? ratio(m.pnl, m.callRevenue) : null;
     m.net = m.pnl;
 
@@ -1701,9 +1745,12 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       out += '<div class="tiles t3">';
       out += tile("src-lt", "Inbound calls taken", intf(tm.callsBought),
         intf(tm.callsBillable) + " billable \u00b7 " + intf(tm.callsGoogle) + " Google");
-      out += tile("src-lt", "Total spent on calls", money(tm.callSpend),
-        intf(tm.callsBillable) + " at " + money(set.callCost) + " \u00b7 " + money(tm.googleSpend) + " on Google");
-      out += tile("src-lt", "Total cash collected", money(tm.callRevenue), intf(tm.callsSold) + " calls sold");
+      out += tile("src-lt", "Total spent on calls", money(tm.ltSpend),
+        intf(tm.callsBillable) + " at " + money(set.callCost) + " \u00b7 " + money(tm.googleSpend) + " on Google" +
+        (tm.callsLoa ? " \u00b7 less " + money(tm.loaSpend) + " of LOA calls" : ""));
+      out += tile("src-lt", "Total cash collected", money(tm.callRevenue), tm.callsLoa
+        ? intf(tm.callsSold - tm.callsLoa) + " calls sold outside \u00b7 " + intf(tm.callsLoa) + " to our own producers"
+        : intf(tm.callsSold) + " calls sold");
       out += tile("is-warn", "Total refunds", money(tm.refunded),
         tm.callsRefunded ? intf(tm.callsRefunded) + " calls refunded" : intf(tm.refunds.length) + " refunds");
       out += tile("is-good", "Total wiped wallet", money(tm.wiped), intf(tm.wipeRows.length) + " wipes — unspent balance Lead Tech keeps", tm.wiped > 0 ? "pos" : "");
@@ -2029,8 +2076,12 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
        under the figures they explain, and the net across the bottom —
        read it down a column or across a row and it still adds up. */
     out += '<div class="ledger">';
-    out += tile("src-lt", "Collected", money(m.callRevenue), "cash in from calls sold");
-    out += tile("src-lt", "Spent", money(m.callSpend), "cash out buying calls");
+    out += tile("src-lt", "Collected", money(m.callRevenue), m.callsLoa
+      ? "cash in from calls sold outside the company"
+      : "cash in from calls sold");
+    out += tile("src-lt", "Spent", money(m.ltSpend), m.callsLoa
+      ? money(m.loaSpend) + " more went on the " + intf(m.callsLoa) + " LOA calls, carried by LOA"
+      : "cash out buying calls");
     out += tile("src-lt", "Calls sold", intf(m.callsSold), m.callsSoldHigh
       ? intf(m.callsSoldLow) + " at " + money(set.sellLow) + " \u00b7 " + intf(m.callsSoldHigh) + " at " + money(set.sellHigh)
       : "agents bought these");
@@ -2050,7 +2101,9 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     out += '<div class="section-head"><p class="eyebrow">Call ledger</p><h3>Day by day</h3>' +
       '<p class="sub">Straight from the Calls tab on the board. Bought is Ringba\u2019s billable calls plus Google\u2019s; ' +
       "the gap is calls sold less calls bought, so selling more than you buy makes the day pay for itself. " +
-      "Spent and collected are the board\u2019s own figures for the day, which is why the Google rate can move daily.</p></div>";
+      "Spent is the board\u2019s own figure for the day, which is why the Google rate can move daily. " +
+      "LOA is the calls Thrive\u2019s own producers took: bought like any other, but handed to ourselves, so no money is counted as collected on them " +
+      "and their cost sits in its own column. LOA profit is that cost back out again, and it plus Profit is what the day really left the company.</p></div>";
 
     if (!m.callRows.length) {
       out += '<div class="panel"><div class="empty"><strong>No call days logged in this range</strong>' +
@@ -2059,8 +2112,9 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       var days = m.callRows.slice().sort(function (a, b) { return b.date.localeCompare(a.date); });
       out += '<div class="panel"><div class="panel-body flush"><div class="tblwrap"><table class="data"><thead><tr>' +
         '<th>Day</th><th class="n">Billable</th><th class="n">Google</th><th class="n">Bought</th>' +
-        '<th class="n">Sold</th><th class="n">Gap</th>' +
-        '<th class="n">Spent</th><th class="n">Collected</th><th class="n">Profit</th>' +
+        '<th class="n">Sold</th><th class="n">LOA</th><th class="n">Gap</th>' +
+        '<th class="n">Lead Tech spent</th><th class="n">LOA spent</th>' +
+        '<th class="n">Collected</th><th class="n">LOA profit</th><th class="n">Profit</th>' +
         "</tr></thead><tbody>";
       days.slice(0, 120).forEach(function (c) {
         var gap = c.sold - c.bought;
@@ -2070,16 +2124,24 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
           '<td class="n">' + esc(intf(c.bought)) + "</td>" +
           '<td class="n">' + esc(intf(c.sold)) +
             (c.soldHigh ? '<div class="dim">' + esc(intf(c.soldLow)) + " + " + esc(intf(c.soldHigh)) + "</div>" : "") + "</td>" +
+          '<td class="n">' + (c.loa ? esc(intf(c.loa)) : '<span class="dim">—</span>') + "</td>" +
           '<td class="n" style="color:' + (gap >= 0 ? "var(--good)" : "var(--bad)") + '">' + (gap > 0 ? "+" : "") + esc(intf(gap)) + "</td>" +
-          '<td class="n">' + esc(money(c.spend, 2)) + '</td><td class="n">' + esc(money(c.revenue, 2)) + "</td>" +
+          '<td class="n">' + esc(money(c.ltSpend, 2)) + "</td>" +
+          '<td class="n">' + (c.loaSpend ? esc(money(c.loaSpend, 2)) : '<span class="dim">—</span>') + "</td>" +
+          '<td class="n">' + esc(money(c.revenue, 2)) + "</td>" +
+          '<td class="n" style="color:' + (c.loaProfit < 0 ? "var(--bad)" : "var(--muted)") + '">' +
+            (c.loaProfit ? esc(money(c.loaProfit, 2)) : '<span class="dim">—</span>') + "</td>" +
           '<td class="n"><b>' + esc(money(c.profit, 2)) + "</b></td></tr>";
       });
       out += '<tr class="total"><td>' + esc(intf(m.callRows.length)) + " days</td>" +
         '<td class="n">' + esc(intf(m.callsBillable)) + '</td><td class="n">' + esc(intf(m.callsGoogle)) + "</td>" +
         '<td class="n">' + esc(intf(m.callsBought)) + '</td><td class="n">' + esc(intf(m.callsSold)) + "</td>" +
+        '<td class="n">' + esc(intf(m.callsLoa)) + "</td>" +
         '<td class="n">' + ((m.callsSold - m.callsBought) > 0 ? "+" : "") + esc(intf(m.callsSold - m.callsBought)) + "</td>" +
-        '<td class="n">' + esc(money(m.callSpend, 2)) + '</td><td class="n">' + esc(money(m.callRevenue, 2)) + "</td>" +
-        '<td class="n">' + esc(money(m.callRevenue - m.callSpend, 2)) + "</td></tr>";
+        '<td class="n">' + esc(money(m.ltSpend, 2)) + '</td><td class="n">' + esc(money(m.loaSpend, 2)) + "</td>" +
+        '<td class="n">' + esc(money(m.callRevenue, 2)) + "</td>" +
+        '<td class="n">' + esc(money(m.loaProfit, 2)) + "</td>" +
+        '<td class="n">' + esc(money(m.callRevenue - m.ltSpend, 2)) + "</td></tr>";
       out += "</tbody></table></div>";
       if (days.length > 120) out += '<div class="panel-body" style="border-top:1px solid var(--line)"><span style="color:var(--muted);font-size:12px">The 120 most recent of ' + esc(intf(days.length)) + " days.</span></div>";
       out += "</div></div>";
@@ -2196,8 +2258,12 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     if (tm) {
       var set = ltSettings();
       out += '<tr><td colspan="3" style="background:var(--mist);font-family:\'IBM Plex Mono\',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)">Lead Tech</td></tr>';
-      out += plRow("Cash collected on calls", intf(tm.callsTaken) + " at " + money(set.callPrice), tm.callRevenue, "in");
-      out += plRow("Spent on calls", intf(tm.callsTaken) + " at " + money(set.callCost), -tm.callSpend, "out");
+      out += plRow("Cash collected on calls", tm.callsLoa
+        ? intf(tm.callsSold - tm.callsLoa) + " sold outside the company"
+        : intf(tm.callsTaken) + " at " + money(set.callPrice), tm.callRevenue, "in");
+      out += plRow("Spent on calls", tm.callsLoa
+        ? intf(tm.callsTaken - tm.callsLoa) + " calls \u2014 the " + intf(tm.callsLoa) + " LOA calls sit in LOA\u2019s call spend above"
+        : intf(tm.callsTaken) + " at " + money(set.callCost), -tm.ltSpend, "out");
       out += plRow("Refunds", intf(tm.refunds.length) + " refunds", -tm.refunded, "out");
       out += plRow("Wiped wallets", intf(tm.wipeRows.length) + " wipes — credit kept, no calls owed against it", tm.wiped, "in");
       out += plRow("Lead Tech profit & loss", "", ltPnl, "total");
