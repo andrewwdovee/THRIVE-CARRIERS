@@ -424,6 +424,17 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
 .msg.ok   { background: var(--good-bg); color: var(--good); }
 .msg.info { background: var(--sky-soft); color: var(--sky); }
 .msg.warnbar { background: var(--warn-bg); color: var(--warn); }
+/* A short note above a table whose columns are not self-explanatory.
+   Deliberately plain — it is a caption, not a second panel competing
+   with the figures underneath it. */
+.howto { margin: 0 0 14px; padding: 12px 15px 13px; background: var(--mist);
+  border: 1px solid var(--line); border-left: 3px solid var(--s-lt); border-radius: 8px; }
+.howto .eyebrow { margin-bottom: 7px; }
+.howto ul { margin: 0; padding-left: 17px; }
+.howto li { font-size: 12.5px; line-height: 1.6; color: var(--muted); }
+.howto li + li { margin-top: 5px; }
+.howto b { color: var(--ink); font-weight: 600; }
+
 .empty { padding: 40px 20px; text-align: center; color: var(--muted); }
 .empty strong { display: block; color: var(--ink); font-size: 15px; margin-bottom: 5px; }
 .empty p { margin: 0 auto; max-width: 52ch; font-size: 13px; line-height: 1.6; }
@@ -2103,15 +2114,31 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     out += '<div class="section-head"><p class="eyebrow">Call ledger</p><h3>Day by day</h3>' +
       '<p class="sub">Straight from the Calls tab on the board. Bought is Ringba\u2019s billable calls plus Google\u2019s; ' +
       "the gap is calls sold less calls bought, so selling more than you buy makes the day pay for itself. " +
-      "Spent is the board\u2019s own figure for the day, which is why the Google rate can move daily. " +
-      "LOA is the calls Thrive\u2019s own producers took. They are taken straight back off every other figure on the row \u2014 bought, sold, spent and collected \u2014 " +
-      "because they were never sold to anyone, and shown instead as LOA profit: a flat " + money(set.callCost) + " loss each, which is what they cost to buy.</p></div>";
+      "Spent is the board\u2019s own figure for the day, which is why the Google rate can move daily.</p></div>";
 
     if (!m.callRows.length) {
       out += '<div class="panel"><div class="empty"><strong>No call days logged in this range</strong>' +
         "<p>Nothing has been entered on the board's Calls tab for these dates.</p></div></div>";
     } else {
       var days = m.callRows.slice().sort(function (a, b) { return b.date.localeCompare(a.date); });
+
+      /* The LOA columns are the one thing on this page nobody guesses
+         right from the headings, because the deduction is invisible:
+         every figure on the row is already net of them. Say so once,
+         here, with the range's own numbers doing the explaining. */
+      var ltProfit = m.callRevenue - m.callSpend, bothSides = ltProfit + m.loaProfit;
+      out += '<div class="howto"><p class="eyebrow">How the LOA calls are counted</p><ul>' +
+        "<li><b>Billable, Google, Bought, Sold, Spent and Collected all have the LOA calls taken out of them.</b> " +
+          "Those columns are the calls sold to agents outside the company.</li>" +
+        "<li><b>LOA</b> is how many of the day\u2019s calls Thrive\u2019s own producers took, and <b>LOA profit</b> is what they cost us \u2014 " +
+          esc(money(set.callCost)) + " each, always a loss, because nobody paid us for them.</li>" +
+        "<li><b>Profit</b> is the plain math on the columns to its left. Add LOA profit to it for what the day actually left the company. " +
+          "Across this range that is " + esc(money(ltProfit)) + " made against " + esc(money(-m.loaProfit)) + " of LOA calls, so " +
+          (bothSides >= 0
+            ? "Lead Tech funded the program and kept " + esc(money(bothSides))
+            : "the program cost " + esc(money(-bothSides)) + " more than Lead Tech made") + ".</li>" +
+        "</ul></div>";
+
       out += '<div class="panel"><div class="panel-body flush"><div class="tblwrap"><table class="data"><thead><tr>' +
         '<th>Day</th><th class="n">Billable</th><th class="n">Google</th><th class="n">Bought</th>' +
         '<th class="n">Sold</th><th class="n">LOA</th><th class="n">Gap</th>' +
