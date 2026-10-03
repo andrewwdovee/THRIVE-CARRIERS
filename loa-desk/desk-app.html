@@ -2232,17 +2232,39 @@
       { name: "Fell off", value: k.lost.length, color: "var(--fell)" }
     ], "deals", intf(k.written));
   }
-  function carrierBars(deals, opts) {
+  /* Where the premium sits, by carrier. Part-to-whole at a glance, so
+     a ring — but only while it stays readable: the five largest keep
+     their own colour in a fixed order and the rest fold into Other,
+     because past six segments adjacent slices stop being tellable
+     apart. Colour never carries identity alone; the key names every
+     slice with its premium and its share. */
+  var CARRIER_COLORS = ["var(--cat1)", "var(--cat2)", "var(--cat3)", "var(--cat4)", "var(--cat5)"];
+
+  function carrierDonut(deals) {
     var agg = {};
     deals.forEach(function (d) {
       var a = agg[d.carrierId] || (agg[d.carrierId] = { mp: 0, n: 0 });
       a.mp += num(d.mp); a.n++;
     });
-    var items = Object.keys(agg).map(function (id) {
-      return { name: (CARRIER_BY_ID[id] || {}).name || id, value: agg[id].mp, sub: agg[id].n + " deal" + (agg[id].n === 1 ? "" : "s") };
+    var ranked = Object.keys(agg).map(function (id) {
+      return { name: (CARRIER_BY_ID[id] || {}).name || id, value: agg[id].mp, n: agg[id].n };
     }).sort(function (a, b) { return b.value - a.value; });
-    return svgBars(items, { fmt: money, alt: "Monthly premium by carrier", limit: (opts && opts.limit) || 8 });
+
+    var slices = ranked.slice(0, CARRIER_COLORS.length).map(function (c, i) {
+      return { name: c.name, value: c.value, color: CARRIER_COLORS[i] };
+    });
+    var rest = ranked.slice(CARRIER_COLORS.length);
+    if (rest.length) {
+      slices.push({
+        name: rest.length + " other carrier" + (rest.length === 1 ? "" : "s"),
+        value: rest.reduce(function (t, c) { return t + c.value; }, 0),
+        color: "var(--cat-other)"
+      });
+    }
+    var total = ranked.reduce(function (t, c) { return t + c.value; }, 0);
+    return svgDonut(slices, "monthly", money(total), money);
   }
+
 
   /* ---- producer analytics ---------------------------------------------- */
   function viewMyAnalytics() {
@@ -2311,7 +2333,7 @@
 
     h += '<div class="charts c2">'
       + panel("Where your book stands", "Every deal you wrote in range", statusDonut(k))
-      + panel("Premium by carrier", "Monthly premium written", carrierBars(k.deals))
+      + panel("Premium by carrier", "Monthly premium written", carrierDonut(k.deals))
       + "</div>";
     return h;
   }
@@ -2387,7 +2409,7 @@
 
     h += '<div class="charts c2">'
       + panel("Where the book stands", "Every deal written in range", statusDonut(k))
-      + panel("Premium by carrier", "Monthly premium written", carrierBars(k.deals))
+      + panel("Premium by carrier", "Monthly premium written", carrierDonut(k.deals))
       + "</div>";
 
     /* The bars above rank the paper; this is the same book with the figures

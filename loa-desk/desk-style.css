@@ -404,6 +404,20 @@ input[type=search]::-webkit-search-cancel-button { -webkit-appearance: none; app
    pills keep their red; every slice here is direct-labeled.
    ====================================================================== */
 :root {
+  /* Carrier slices. Five hues in a fixed order from the validated
+     categorical set, checked with the palette validator against both
+     surfaces: worst adjacent CVD deltaE 9.1 light / 8.4 dark, normal
+     vision 19.6 / 19.3. Three light steps sit under 3:1 on white,
+     which is allowed because the key direct-labels every slice with
+     its name, premium and share, so identity never rests on colour
+     alone. A sixth carrier and beyond fold into Other, which is
+     deliberately neutral and outside the palette. */
+  --cat1:    #2a78d6;
+  --cat2:    #eb6834;
+  --cat3:    #1baf7a;
+  --cat4:    #eda100;
+  --cat5:    #e87ba4;
+  --cat-other: #94A3B4;
   --s1:      #2a78d6;   /* primary magnitude — lines, bars */
   --s2:      #eb6834;   /* second series, same units only */
   --paid:    #1baf7a;
@@ -415,6 +429,12 @@ input[type=search]::-webkit-search-cancel-button { -webkit-appearance: none; app
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    --cat1:    #3987e5;
+    --cat2:    #d95926;
+    --cat3:    #199e70;
+    --cat4:    #c98500;
+    --cat5:    #d55181;
+    --cat-other: #5D6E80;
     --s1:      #3987e5;
     --s2:      #d95926;
     --paid:    #199e70;
@@ -426,6 +446,12 @@ input[type=search]::-webkit-search-cancel-button { -webkit-appearance: none; app
   }
 }
 :root[data-theme="dark"] {
+  --cat1:    #3987e5;
+  --cat2:    #d95926;
+  --cat3:    #199e70;
+  --cat4:    #c98500;
+  --cat5:    #d55181;
+  --cat-other: #5D6E80;
   --s1:      #3987e5;
   --s2:      #d95926;
   --paid:    #199e70;
