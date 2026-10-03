@@ -2147,35 +2147,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     /* `rows` is already built and already filtered to producers with
        something in the range, so the comparison and the table can never
        disagree about who is on the floor. */
-    /* One producer on the floor is not a comparison, and eight bar charts
-       each holding a single full-width bar say nothing a number would not
-       say better. Same eight figures, read as tiles instead. */
-    if (rows.length === 1) {
-      var only = rows[0];
-      out += '<div class="section-head"><p class="eyebrow">Producer</p><h3>How ' + esc(only.agent.name) + " is doing</h3>" +
-        '<p class="sub">Over ' + esc(w.label.toLowerCase()) +
-        ". Daily averages count only the days they logged calls. Placement is premium that reached the carrier\u2019s first payment; " +
-        "persistency is how much of that stayed on the books.</p></div>";
-      var o = only.m, oTone = placementTone(o.placement), cTone = closeRateTone(o.closeRate), sTone = persistencyTone(o.persistency);
-      out += '<div class="tiles">';
-      out += tile("src-loa", "Calls a day", o.daysLogged ? (o.callsTaken / o.daysLogged).toFixed(1) : "\u2014",
-        intf(o.callsTaken) + " calls over " + intf(o.daysLogged) + " day" + (o.daysLogged === 1 ? "" : "s"));
-      out += tile("src-loa", "Deals a day", o.daysLogged ? (o.written / o.daysLogged).toFixed(2) : "\u2014",
-        intf(o.written) + " deal" + (o.written === 1 ? "" : "s") + " over the same days");
-      out += tile("src-loa", "Average annual premium a deal", o.written ? money(o.apWritten / o.written) : "\u2014",
-        money(o.apWritten) + " over " + intf(o.written) + " deal" + (o.written === 1 ? "" : "s"));
-      out += tile("src-loa", "Premium written", money(o.apWritten), money(o.mpWritten) + " a month, annualized here");
-      out += tile(TONE_STRIPE[oTone] || "src-loa", "Placement rate", pct(o.placement, 1),
-        money(o.apPlaced) + " placed \u00b7 " + money(o.apLostEarly) + " fell out first", TONE_VALUE[oTone] || "");
-      out += tile(TONE_STRIPE[sTone] || "src-loa", "Persistency", o.persistency == null ? "\u2014" : pct(o.persistency, 1),
-        o.apChargeback > 0 ? money(o.apChargeback) + " charged back of " + money(o.apPlaced) + " placed" : "nothing charged back",
-        TONE_VALUE[sTone] || "");
-      out += tile(TONE_STRIPE[cTone] || "src-loa", "Close rate", pct(o.closeRate, 1),
-        intf(o.written) + " deal" + (o.written === 1 ? "" : "s") + " from " + intf(o.callsTaken) + " calls", TONE_VALUE[cTone] || "");
-      out += tile("src-loa", "Calls to close one deal", o.written && o.callsTaken ? o.callsPerDeal.toFixed(1) : "\u2014",
-        money(o.costPerDeal) + " of calls per deal");
-      out += "</div>";
-    } else if (rows.length > 1) {
+    if (rows.length) {
       /* One producer per bar, one hue, the value on the bar: every one of
          these is a magnitude against an identity, and a rate per producer
          is still a magnitude. Each panel sorts on its own figure, so the
@@ -2192,7 +2164,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       };
 
       out += '<div class="section-head"><p class="eyebrow">Producers</p><h3>How the floor splits</h3>' +
-        '<p class="sub">Each producer against the others over ' + esc(w.label.toLowerCase()) +
+        '<p class="sub">' + (rows.length > 1 ? "Each producer against the others" : "The floor") + " over " + esc(w.label.toLowerCase()) +
         ". Daily averages count only the days that producer logged calls, so a four-day week is not read as a bad five-day one. " +
         "Placement is premium that reached the carrier\u2019s first payment; persistency is how much of that stayed on the books.</p></div>";
 
