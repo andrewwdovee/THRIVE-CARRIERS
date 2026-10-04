@@ -45,7 +45,9 @@ export async function pullStripe(settings, orders, products, { backfill } = {}) 
 /* What agents have sent in through the public form. Signed-in only — the
    form can write here, nobody unauthenticated can read it back. */
 export async function pullRequests(settings) {
-  const base = syncEndpoint(settings);
+  /* The form posts to the app's own relay, so read them back from there
+     when there is one -- a separate orders endpoint never sees them. */
+  const base = relayUrl() ? `${relayUrl()}/orders` : syncEndpoint(settings);
   if (!base) return [];
   const url = base.replace(/\/orders\/?$/, "") + "/refund-requests";
   /* Same two ways in as the orders pull: a signed-in session, or the

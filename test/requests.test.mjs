@@ -34,6 +34,18 @@ ok("an unknown reason is refused", !!readRequest({ ...FULL, calls: [{ phone: "55
 ok("a missing reason is refused", !!readRequest({ ...FULL, calls: [{ phone: "5551234567" }, CALLS[1]] }).error);
 ok("formatting in a phone number is fine", !!readRequest(FULL).value);
 
+/* The duplicate-call slip: one call, and the reason is fixed. */
+const DUP = { ...FULL, kind: "duplicate", calls: [{ phone: "555 123 4567", reason: "duplicate" }] };
+ok("a duplicate is one call", readRequest(DUP).value?.calls.length === 1);
+ok("a duplicate is marked as one", readRequest(DUP).value?.kind === "duplicate");
+ok("a duplicate's reason is always duplicate",
+   readRequest({ ...DUP, calls: [{ phone: "5551234567", reason: "dead_air" }] }).value?.calls[0].reason === "duplicate");
+ok("a duplicate still needs a phone number", !!readRequest({ ...DUP, calls: [] }).error);
+ok("a duplicate keeps only the one call", readRequest({ ...DUP, calls: [DUP.calls[0], DUP.calls[0]] }).value?.calls.length === 1);
+ok("duplicate is not a reason on the two-call slip",
+   !!readRequest({ ...FULL, calls: [{ phone: "5551234567", reason: "duplicate" }, CALLS[1]] }).error);
+ok("an ordinary request is the two-call slip", readRequest(FULL).value?.kind === "pair");
+
 /* Nothing a stranger sends may land in storage unbounded. */
 const long = "x".repeat(5000);
 const trimmed = readRequest({ ...FULL, first: long, note: long }).value;

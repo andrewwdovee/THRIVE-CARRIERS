@@ -20,8 +20,17 @@ const REASONS = [
 
 const BLANK = () => ({ phone: "", reason: "" });
 
+/* The two slips an agent can send. A duplicate is one call and carries its
+   own reason; the two-bad-calls slip is the original form. */
+const KINDS = [
+  ["pair", "Two bad calls"],
+  ["duplicate", "Duplicate call"],
+];
+
 export default function RefundRequest() {
+  const [kind, setKind] = useState("pair");
   const [f, setF] = useState(() => ({ day: dk(Date.now()), first: "", last: "", email: "" }));
+  const [dupPhone, setDupPhone] = useState("");
   /* Two to begin with, because two is the rule. */
   const [calls, setCalls] = useState([BLANK(), BLANK()]);
   const [busy, setBusy] = useState(false);
@@ -34,8 +43,12 @@ export default function RefundRequest() {
 
   const digits = (p) => String(p || "").replace(/\D/g, "");
   const pairs = Math.floor(calls.filter((c) => digits(c.phone).length >= 10 && c.reason).length / 2);
-  const ready = f.first.trim() && f.last.trim() && /\S+@\S+\.\S+/.test(f.email) && f.day
-    && calls.length >= 2 && calls.every((c) => digits(c.phone).length >= 10 && c.reason);
+  const dup = kind === "duplicate";
+  const who = f.first.trim() && f.last.trim() && /\S+@\S+\.\S+/.test(f.email) && f.day;
+  const ready = who && (dup
+    ? digits(dupPhone).length >= 10
+    : calls.length >= 2 && calls.every((c) => digits(c.phone).length >= 10 && c.reason));
+  const sent = dup ? [{ phone: dupPhone, reason: "duplicate" }] : calls;
 
   const submit = async (e) => {
     e.preventDefault();
@@ -44,7 +57,7 @@ export default function RefundRequest() {
       const r = await fetch(`${RELAY}/refund-request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...f, calls }),
+        body: JSON.stringify({ ...f, kind, calls: sent }),
       });
       const out = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(out.error || "That didn't send. Try again in a moment.");
@@ -60,10 +73,11 @@ export default function RefundRequest() {
         <Check className="mx-auto h-8 w-8 text-emerald-600 dark:text-emerald-400" />
         <h2 className={`mt-3 text-lg font-bold ${W}`}>Sent</h2>
         <p className={`mt-2 text-sm ${M}`}>
-          {calls.length} call{calls.length === 1 ? "" : "s"} submitted for review. Anything that meets the
-          criteria is credited to your account <strong>the following Saturday</strong>, not straight away.
+          {dup ? "Your duplicate call was" : `${calls.length} call${calls.length === 1 ? " was" : "s were"}`} submitted
+          for review. Anything that meets the criteria is credited to your account <strong>the following
+          Saturday</strong>, not straight away.
         </p>
-        <button onClick={() => { setDone(false); setCalls([BLANK(), BLANK()]); }} className={`mt-4 ${BTN}`}>
+        <button onClick={() => { setDone(false); setCalls([BLANK(), BLANK()]); setDupPhone(""); }} className={`mt-4 ${BTN}`}>
           Submit another
         </button>
       </div>
@@ -72,11 +86,27 @@ export default function RefundRequest() {
 
   return (
     <Shell>
-      <Policy />
+      <div className={`${CARD} mb-4 p-4`}>
+        <L>Which refund are you submitting?</L>
+        <div role="radiogroup" aria-label="Refund type" className="mt-2 grid grid-cols-2 gap-2">
+          {KINDS.map(([id, label]) => (
+            <button key={id} type="button" role="radio" aria-checked={kind === id}
+              onClick={() => { setKind(id); setErr(""); }}
+              className={`rounded-lg border px-3 py-2.5 text-sm font-semibold ${
+                kind === id
+                  ? "border-blue-500 bg-blue-500/10 text-blue-700 dark:text-blue-300"
+                  : `${BD} ${M} hover:bg-slate-50 dark:hover:bg-slate-900`}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {dup ? <DuplicatePolicy /> : <Policy />}
 
       <form onSubmit={submit} className={`${CARD} mt-4 space-y-4 p-5`}>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Date of the calls">
+          <Field label={dup ? "Date of the call" : "Date of the calls"}>
             <input type="date" required className={IN} value={f.day} onChange={set("day")} max={dk(Date.now())} />
           </Field>
           <Field label="Email on your Lead Tech account" hint="Where the credit goes">
@@ -91,6 +121,17 @@ export default function RefundRequest() {
           </Field>
         </div>
 
+        {dup ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Phone number">
+              <input required inputMode="tel" className={IN} value={dupPhone}
+                onChange={(e) => setDupPhone(e.target.value)} placeholder="(555) 123-4567" />
+            </Field>
+            <Field label="Reason for the refund">
+              <input readOnly className={`${IN} opacity-70`} value="Duplicate call" aria-readonly="true" />
+            </Field>
+          </div>
+        ) : (
         <div>
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <L>The calls</L>
@@ -134,6 +175,7 @@ export default function RefundRequest() {
             <Plus className="h-4 w-4" /> Add two more calls
           </button>
         </div>
+        )}
 
         {err && (
           <p role="alert" className={`flex items-start gap-2 rounded-md border border-rose-300 bg-rose-100 px-3 py-2 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-200`}>
@@ -142,7 +184,7 @@ export default function RefundRequest() {
         )}
 
         <button type="submit" disabled={!ready || busy}
-          title={ready ? "" : "Fill in every box, and at least two calls"}
+          title={ready ? "" : dup ? "Fill in every box" : "Fill in every box, and at least two calls"}
           className={`w-full ${PRI} disabled:cursor-not-allowed disabled:opacity-40`}>
           {busy
             ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Sending</span>
@@ -159,7 +201,7 @@ function Shell({ children }) {
       <div className="mx-auto w-full max-w-2xl">
         <div className="mb-6 text-center">
           <Logo size="lg" className={`justify-center ${W}`} />
-          <L className="mt-3 block">Google call refund request</L>
+          <L className="mt-3 block">Call refund request</L>
         </div>
         {children}
         <p className={`mt-6 text-center text-xs ${F}`}>
@@ -201,6 +243,34 @@ function Policy() {
 
       <p className={`mt-4 text-sm ${M}`}>
         Fill in the form below and the calls will be reviewed. Anything meeting the criteria is credited to your
+        account <strong className={W}>the following Saturday</strong> — not immediately.
+      </p>
+    </div>
+  );
+}
+
+/* What counts as a duplicate, shown in place of the two-bad-calls rules
+   when that slip is picked. */
+function DuplicatePolicy() {
+  return (
+    <div className={`${PANEL} rounded-xl p-5`}>
+      <h2 className={`text-base font-bold ${W}`}>Duplicate call policy</h2>
+      <ul className={`mt-3 space-y-2 text-sm ${M}`}>
+        <li className="flex gap-2">
+          <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-blue-500" />
+          <span>Duplicate calls that came through the <strong className={W}>same internal DID number</strong> will be refunded.</span>
+        </li>
+        <li className="flex gap-2">
+          <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-blue-500" />
+          <span>If the caller rang an <strong className={W}>external</strong> support desk and then called us, those calls are not refunded. That is not an internal duplicate.</span>
+        </li>
+        <li className="flex gap-2">
+          <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-blue-500" />
+          <span>If the same number called <strong className={W}>our</strong> support desk more than once, it counts as a refund.</span>
+        </li>
+      </ul>
+      <p className={`mt-4 text-sm ${M}`}>
+        Fill in the form below and the call will be reviewed. Anything meeting the criteria is credited to your
         account <strong className={W}>the following Saturday</strong> — not immediately.
       </p>
     </div>

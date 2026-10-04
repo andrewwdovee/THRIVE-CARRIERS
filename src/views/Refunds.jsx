@@ -58,8 +58,14 @@ function CustomerPick({ value, customers, onPick, onAddNew }) {
 
 const REQUEST_REASONS = {
   non_consumer: "Non-consumer", agent: "Life insurance agent",
-  dead_air: "Dead air", other: "Other",
+  dead_air: "Dead air", other: "Other", duplicate: "Duplicate call",
 };
+
+/* Two bad calls earn one refund; a duplicate is a refund on its own. */
+const isDuplicate = (r) => r?.kind === "duplicate";
+const owedFor = (r) => (isDuplicate(r)
+  ? (r.calls?.length || 0)
+  : Math.floor((r.calls?.length || 0) / 2));
 
 /* Saying yes to a request is one question — how much. Everything else is
    already on the request, so this asks that and nothing more. The amount is
@@ -88,7 +94,7 @@ function CreditForm({ req, owed, types, price, onCancel, onSave }) {
       <div className={`max-h-[86vh] w-full max-w-md overflow-y-auto ${CARD} p-5 shadow-2xl`} onClick={(e) => e.stopPropagation()}>
         <h3 className={`text-base font-semibold ${W}`}>Record {owed} refund{owed === 1 ? "" : "s"}</h3>
         <p className={`mt-1 text-sm ${M}`}>
-          For {req.first} {req.last} · {req.calls?.length || 0} calls submitted {req.day}.
+          For {req.first} {req.last} · {isDuplicate(req) ? "a duplicate call" : `${req.calls?.length || 0} calls`} submitted {req.day}.
           Credited to their account the following Saturday.
         </p>
 
@@ -131,7 +137,7 @@ function CreditForm({ req, owed, types, price, onCancel, onSave }) {
 /* One request, closed to a line and open to its calls. The same row serves
    all three boxes; what changes is which buttons it offers. */
 function RequestRow({ r, state, open, onToggle, onRecord, onSettle }) {
-  const owed = Math.floor((r.calls?.length || 0) / 2);
+  const owed = owedFor(r);
   return (
     <div className={state ? "opacity-70" : ""}>
       <button onClick={onToggle}
@@ -140,7 +146,9 @@ function RequestRow({ r, state, open, onToggle, onRecord, onSettle }) {
           <div className={`text-sm font-semibold ${W}`}>{r.first} {r.last}</div>
           <div className={`truncate text-xs ${F}`}>{r.email}</div>
         </div>
-        <span className={`text-xs ${M}`}>{r.calls?.length || 0} calls · {owed} refund{owed === 1 ? "" : "s"} owed</span>
+        <span className={`text-xs ${M}`}>
+          {isDuplicate(r) ? "Duplicate call" : `${r.calls?.length || 0} calls`} · {owed} refund{owed === 1 ? "" : "s"} owed
+        </span>
         <span className={`w-28 text-right text-xs ${F}`}>{r.day}</span>
         <span className={`w-24 shrink-0 rounded px-1.5 py-0.5 text-center text-xs ${
           !state ? "bg-amber-500/15 text-amber-700 dark:text-amber-300"
