@@ -314,11 +314,10 @@ async function handle(request, env) {
         phone:     text(body.phone, 60),
         npn:       text(body.npn, 60),
         referrer:  text(body.referrer, 120),
-        states:    text(body.states, 400),
-        hours:     text(body.hours, 160),
+        startTime: text(body.startTime, 60),
         title:     text(body.title, 80),
         signedName: text(body.signedName, 160),
-        agency:    body.agency === "yes" ? "yes" : body.agency === "no" ? "no" : "",
+        signedDate: text(body.signedDate, 20),
         version:   text(body.version, 40),
         tz:        text(body.tz, 60),
         agent:     text(body.agent, 200),
@@ -326,13 +325,12 @@ async function handle(request, env) {
       const signature = typeof body.signature === "string" ? body.signature : "";
       const photo = typeof body.photo === "string" ? body.photo : "";
 
-      const missing = ["legalName", "business", "email", "phone", "states", "signedName"]
+      const missing = ["legalName", "business", "email", "phone", "startTime", "signedName"]
         .filter((k) => !rec[k]);
       if (missing.length) return json({ error: "Missing fields", missing }, 400, head);
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(rec.email)) {
         return json({ error: "That email does not look right." }, 400, head);
       }
-      if (!rec.agency) return json({ error: "Say whether you are with the agency." }, 400, head);
       if (!signature.startsWith("data:image/png")) {
         return json({ error: "The signature is missing." }, 400, head);
       }
@@ -344,9 +342,6 @@ async function handle(request, env) {
       }
       if (photo.length > ONBOARD_MAX_PHOTO) {
         return json({ error: "That photo is too large." }, 413, head);
-      }
-      if (rec.agency === "yes" && !photo) {
-        return json({ error: "Agency agents need a headshot." }, 400, head);
       }
 
       const id = "ob_" + Date.now().toString(36) + "_" + b64url(crypto.getRandomValues(new Uint8Array(6)));
@@ -363,19 +358,21 @@ async function handle(request, env) {
       index.unshift({
         id,
         signedAt,
+        signedDate: rec.signedDate,
         legalName: rec.legalName,
         business: rec.business,
         email: rec.email,
         phone: rec.phone,
-        states: rec.states,
-        agency: rec.agency,
+        startTime: rec.startTime,
         version: rec.version,
+        /* The headshot is optional and only means anything for an internal
+           agent, so "not given" is null — nothing missing — not false. */
         steps: {
           details: true,
           read: true,
           agreed: true,
           signed: true,
-          photo: rec.agency === "yes" ? !!photo : null,
+          photo: photo ? true : null,
         },
         reviewed: false,
       });

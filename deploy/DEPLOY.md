@@ -241,12 +241,18 @@ New since the rest of this file. Three pieces:
 
 ```sh
 cd ~/THRIVE-CARRIERS/onboarding
-node build-onboarding.mjs https://thrive-relay.<subdomain>.workers.dev \
-  --entity "Thrive Companies LLC" --state Florida
+node build-onboarding.mjs https://stripe-sync.aandrewdavidson.workers.dev \
+  --entity "Thrive Companies LLC" --state Florida \
+  --rules https://thrive-inbound.pages.dev/
 npx wrangler pages deploy ./dist --project-name thrive-onboarding --commit-dirty=true
 ```
 
-Pages prints a URL — something like `https://thrive-onboarding.pages.dev`. Keep it.
+Pages prints a URL — `https://thrive-onboarding.pages.dev` if the project is named
+as above. That is the link the board hands out, so keep the name.
+
+`--rules` is where the button on the thank-you page goes. `--preview` builds the
+same page with no relay instead, to show someone before any of this exists: it
+posts nowhere and says so on submit rather than losing a signature quietly.
 
 ### 2. Let the relay accept it
 
@@ -263,7 +269,7 @@ npx wrangler deploy
 Check it answers:
 
 ```sh
-curl -s -X POST https://thrive-relay.<subdomain>.workers.dev/onboarding/submit \
+curl -s -X POST https://stripe-sync.aandrewdavidson.workers.dev/onboarding/submit \
   -H 'Content-Type: application/json' -H 'Origin: https://thrive-onboarding.pages.dev' \
   -d '{}'
 ```
@@ -274,7 +280,7 @@ is live and validating. `403` means the origin is not on the list yet.
 ### 3. Put the tab on the board
 
 ```sh
-node build-leadtech.mjs https://thrive-relay.<subdomain>.workers.dev \
+node build-leadtech.mjs https://stripe-sync.aandrewdavidson.workers.dev \
   --onboarding https://thrive-onboarding.pages.dev
 npx wrangler pages deploy ./dist-leadtech --project-name thrive-leadtech --commit-dirty=true
 ```
@@ -290,7 +296,7 @@ exactly what no longer fits instead of writing a broken board.
 
 | key | holds |
 |---|---|
-| `onboarding/submissions` | the list the grid reads — names, steps, no images |
+| `onboarding/submissions` | the list the grid reads — names, start times, steps, no images |
 | `onboarding/doc/<id>` | one signed agreement, with the signature and the photo |
 
 The images live apart from the list so the grid is one small read however many people
@@ -309,6 +315,9 @@ have signed. The board fetches a document only when you open that row.
   not the relay. The tab is only useful on the Pages copy.
 - **Headshots are not wired into the Social Studio roster yet.** They are stored and
   shown on the row; copying them across is a separate job.
+- **The signed page is the record.** The agreement, the signature, the name, the title
+  and the date all print together — there is a print stylesheet for exactly that, and a
+  button on the page.
 
 ## If something goes wrong
 

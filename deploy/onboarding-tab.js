@@ -59,7 +59,7 @@ function ObTick(props) {
   if (v === null || v === undefined) {
     return __JSX__.jsx("span", {
       className: "text-slate-500 dark:text-slate-400",
-      title: "Not needed — outside agency",
+      title: "Optional — not given",
       children: "–",
     });
   }
@@ -117,7 +117,7 @@ function ObPanel() {
   const week = Date.now() - 7 * 864e5;
   const signedThisWeek = list.filter((r) => new Date(r.signedAt).getTime() >= week).length;
   const waiting = list.filter((r) => !r.reviewed).length;
-  const agencyAgents = list.filter((r) => r.agency === "yes").length;
+  const withPhoto = list.filter((r) => (r.steps || {}).photo === true).length;
 
   async function openRow(id) {
     if (open === id) { setOpen(null); setDoc(null); return; }
@@ -201,7 +201,7 @@ function ObPanel() {
       __JSX__.jsx(ObStat, { label: "Signed", value: list.length }, "a"),
       __JSX__.jsx(ObStat, { label: "This week", value: signedThisWeek }, "b"),
       __JSX__.jsx(ObStat, { label: "Not yet reviewed", value: waiting }, "c"),
-      __JSX__.jsx(ObStat, { label: "Agency agents", value: agencyAgents }, "d"),
+      __JSX__.jsx(ObStat, { label: "Photo on file", value: withPhoto }, "d"),
     ],
   });
 
@@ -231,7 +231,7 @@ function ObPanel() {
             children: [
               pair("Email", doc.email), pair("Phone", doc.phone),
               pair("NPN", doc.npn), pair("Brought in by", doc.referrer),
-              pair("Licensed states", doc.states), pair("Hours", doc.hours),
+              pair("Calls start", doc.startTime), pair("Dated", doc.signedDate),
               pair("Title", doc.title), pair("Agreement", doc.version),
             ],
           }, "f"),
@@ -316,7 +316,7 @@ function ObPanel() {
                         __JSX__.jsx("div", { className: "font-semibold truncate", children: r.legalName || "—" }, "n"),
                         __JSX__.jsxs("div", {
                           className: "text-xs text-slate-500 dark:text-slate-400 truncate",
-                          children: [r.business || "", r.agency === "yes" ? " · agency agent" : ""],
+                          children: [r.business || "", r.startTime ? " · starts " + r.startTime : ""],
                         }, "b"),
                       ],
                     }, "w"),

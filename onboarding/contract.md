@@ -12,10 +12,10 @@
     STATE   the governing-law state
 -->
 
-# Inbound Programme Agreement
+# Lead Tech Marketing Agreement
 
 This agreement is between **{{ENTITY}}** ("Thrive", "we", "us"), which operates
-the Lead Tech inbound call programme, and the person or business named on the
+the Lead Tech inbound call platform, and the person or business named on the
 form ("you"). It takes effect on the date you sign it.
 
 ## 1. What you are buying
@@ -70,9 +70,9 @@ charge for something never delivered. Those are section 4, and we refund them.
 2. **Payment is due the day it is raised.** An invoice unpaid after 12 hours is
    past due, and a past-due account is paused: routing off for a subscription,
    spend paused for a campaign.
-3. **You take the calls.** Transfers come during the hours you agreed. A call
-   you do not answer is still delivered and still billable. Tell us before your
-   hours change.
+3. **You take the calls.** Transfers start at the time you chose on the form and
+   run through the day. A call you do not answer is still delivered and still
+   billable. Tell us before your hours change.
 4. **Licensing is yours to keep current.** Accept transfers only in states where
    you hold an active, appointed licence. Tell us the same day one lapses and we
    will stop routing those states.
@@ -126,7 +126,7 @@ none is kept.
 ## 6. General
 
 Governed by the laws of the State of {{STATE}}. This is the whole agreement
-between us about the inbound programme and it replaces anything said
+between us about the inbound call platform and it replaces anything said
 beforehand. If a court finds part of it unenforceable the rest stands. We may
 change these rules on thirty (30) days' notice; taking calls after that is
 acceptance.
