@@ -1,5 +1,6 @@
 /**
- * Splices the Onboarding tab into the Lead Tech Fulfillment bundle.
+ * Splices the Onboarding and Start times tabs into the Lead Tech
+ * Fulfillment bundle.
  *
  *   node patch-onboarding.mjs https://thrive-onboarding.pages.dev
  *
@@ -40,6 +41,13 @@ const NOT_CLASSES = new Set(["aria-label", "aria-hidden", "data-act", "no-referr
 const DIVIDER = "products-view";
 const HEAD_ORDER = ["inbox", "missed", "completed", "refunds", "wallets", "calls"];
 
+/* The tabs this patch adds, in the order they are shown, each with the
+   file holding it, the component it exports and the icon beside it. */
+const ADDED = [
+  { id: "onboarding", label: "Onboarding", file: "onboarding-tab.js", component: "ObPanel", icon: "ObIcon" },
+  { id: "starttimes", label: "Start times", file: "starttimes-tab.js", component: "StPanel", icon: "StIcon" },
+];
+
 /* A real scanner, because a regex for "..." also matches the gap between
    two strings on the same line and turns `", children: "` into a token. */
 function stringLiterals(src) {
@@ -66,9 +74,16 @@ function stringLiterals(src) {
 
 export function patchOnboarding(source, onboardingUrl, opts = {}) {
   const log = opts.log || (() => {});
-  if (source.includes("function ObPanel(")) {
-    log("Already carries the Onboarding tab — left alone.");
+  const already = ADDED.filter((t) => source.includes("function " + t.component + "("));
+  if (already.length === ADDED.length) {
+    log("Already carries both tabs — left alone.");
     return source;
+  }
+  if (already.length) {
+    throw new Error(
+      `This bundle already carries ${already.map((t) => t.label).join(", ")} but not the rest. ` +
+      `Patch a clean bundle rather than layering onto a patched one.`
+    );
   }
 
   /* ---- 1. find the minified bindings ---- */
@@ -124,8 +139,8 @@ export function patchOnboarding(source, onboardingUrl, opts = {}) {
       `  differ:   ${strayed.join(", ")}`
     );
   }
-  entries.set("onboarding", { label: "Onboarding", icon: "ObIcon" });
-  const order = HEAD_ORDER.concat(["onboarding"], tail);
+  ADDED.forEach((t) => entries.set(t.id, { label: t.label, icon: t.icon }));
+  const order = HEAD_ORDER.concat(ADDED.map((t) => t.id), tail);
   log(`  tabs           ${order.join(", ")}`);
   const rebuilt =
     `const ${tabsHit[1]}=[` +
@@ -140,7 +155,8 @@ export function patchOnboarding(source, onboardingUrl, opts = {}) {
   }
 
   /* ---- 4. the classes ---- */
-  let tab = readFileSync(join(here, "onboarding-tab.js"), "utf8")
+  const tab = ADDED.map((t) => readFileSync(join(here, t.file), "utf8"))
+    .join("\n")
     .replace(/__JSX__/g, JSX)
     .replace(/__REACT__/g, REACT)
     .replace(/__STORE__/g, STORE)
@@ -156,8 +172,10 @@ export function patchOnboarding(source, onboardingUrl, opts = {}) {
   for (const m of css.matchAll(/\.((?:\\.|[-\w])+)/g)) have.add(m[1].replace(/\\(.)/g, "$1"));
   const missing = new Set();
   for (const lit of stringLiterals(tab)) {
-    /* The keys and the link are strings too, and neither is a class. */
-    if (lit.includes("://") || lit.startsWith("onboarding/")) continue;
+    /* The storage keys and the link are strings too, and neither is a
+       class. A key is a bare word then a slash then a letter, which no
+       Tailwind utility is ("bg-slate-900/40" breaks on the hyphen). */
+    if (lit.includes("://") || /^[a-z][a-z0-9]*\/[a-z]/.test(lit)) continue;
     for (const t of lit.split(/\s+/)) {
       /* Only judge tokens shaped like a utility: a word, then at least one
          hyphen, colon or bracket. Prose never matches, and svg path data
@@ -179,8 +197,11 @@ export function patchOnboarding(source, onboardingUrl, opts = {}) {
   log(`  classes        all present`);
 
   /* ---- splice ---- */
-  let out = source.replace(tabsSrc, `\n/* --- onboarding tab --- */\n${tab}\n${rebuilt}`);
-  out = out.replace(branchNeedle, `:u==="onboarding"?${JSX}.jsx(ObPanel,{})${branchNeedle}`);
+  let out = source.replace(tabsSrc, `\n/* --- added tabs --- */\n${tab}\n${rebuilt}`);
+  const branches = ADDED
+    .map((t) => `:u==="${t.id}"?${JSX}.jsx(${t.component},{})`)
+    .join("");
+  out = out.replace(branchNeedle, `${branches}${branchNeedle}`);
   if (out === source) throw new Error("Nothing was spliced. Refusing to write an unchanged bundle.");
   return out;
 }

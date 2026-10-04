@@ -277,7 +277,7 @@ curl -s -X POST https://stripe-sync.aandrewdavidson.workers.dev/onboarding/submi
 `{"error":"Missing fields","missing":[...]}` is the right answer — it means the route
 is live and validating. `403` means the origin is not on the list yet.
 
-### 3. Put the tab on the board
+### 3. Put the tabs on the board
 
 ```sh
 node build-leadtech.mjs https://stripe-sync.aandrewdavidson.workers.dev \
@@ -285,12 +285,23 @@ node build-leadtech.mjs https://stripe-sync.aandrewdavidson.workers.dev \
 npx wrangler pages deploy ./dist-leadtech --project-name thrive-leadtech --commit-dirty=true
 ```
 
-The board has no source, only the built bundle, so the tab is spliced in. The patch
+That adds two tabs: **Onboarding** and **Start times**.
+
+**Start times** is the morning and evening job. Everyone who signed picked 10:00 or
+11:00, and the tab lists them under the time they picked with their first name, last
+name and email. If someone is not on fifteen minutes past, switch them off; at night,
+"Turn everyone back on" clears the lot. Each switch-off is logged, so the figure at
+the bottom ranks who ends up off most often, over the last thirty days or all time.
+An account left off from a previous day is called out in the banner rather than
+quietly reset — it stays off until someone turns it back on.
+
+The board has no source, only the built bundle, so the tabs are spliced in. The patch
 refuses rather than guesses: it finds the minified names for the jsx runtime, React
 and the storage object and fails if any is ambiguous, checks the tab array is the
 shape it expects, and checks every CSS class it uses is in the board's compiled
 stylesheet. If the board is ever rebuilt and the patch stops matching, it will say
-exactly what no longer fits instead of writing a broken board.
+exactly what no longer fits instead of writing a broken board. It also refuses to
+layer onto a bundle that already carries one of the two tabs but not the other.
 
 ### What lands where
 
@@ -298,6 +309,7 @@ exactly what no longer fits instead of writing a broken board.
 |---|---|
 | `onboarding/submissions` | the list the grid reads — names, start times, steps, no images |
 | `onboarding/doc/<id>` | one signed agreement, with the signature and the photo |
+| `starttimes/state` | who is switched off right now, and every switch-off ever |
 
 The images live apart from the list so the grid is one small read however many people
 have signed. The board fetches a document only when you open that row.
