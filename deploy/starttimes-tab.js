@@ -100,6 +100,27 @@ function stUseDark() {
   return dark;
 }
 
+function StStat(props) {
+  return __JSX__.jsxs("div", {
+    className: "rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3",
+    children: [
+      __JSX__.jsx("div", {
+        className: "text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400",
+        children: props.label,
+      }),
+      __JSX__.jsx("div", {
+        className: "text-2xl font-bold tabular-nums text-slate-900 dark:text-white",
+        children: props.value,
+      }),
+    ],
+  });
+}
+
+/* 0 a week means they are taking the week off. */
+function stWeekOff(p) {
+  return p.callsPerWeek === 0 || p.callsPerWeek === "0";
+}
+
 function StPanel() {
   const [rows, setRows] = __REACT__.useState(null);
   const [state, setState] = __REACT__.useState({ off: {}, log: [] });
@@ -232,6 +253,21 @@ function StPanel() {
   const cell = "px-3 py-2 text-sm text-slate-900 dark:text-white";
   const btn = "rounded-md border border-slate-200 dark:border-slate-800 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800";
   const card = "rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900";
+
+  /* -------------------------------------------------------- the totals
+     Active is everyone who has signed, minus anyone taking the week off.
+     The calls figure adds up what those active agents asked for. */
+  const active = people.filter((p) => !stWeekOff(p));
+  const totalCalls = active.reduce((t, p) => t + (Number(p.callsPerWeek) || 0), 0);
+  const stats = __JSX__.jsxs("div", {
+    className: "grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3",
+    children: [
+      __JSX__.jsx(StStat, { label: "Active agents", value: active.length }, "a"),
+      __JSX__.jsx(StStat, { label: "At 10:00 AM", value: active.filter((p) => p.startTime === ST_SLOTS[0]).length }, "b"),
+      __JSX__.jsx(StStat, { label: "At 11:00 AM", value: active.filter((p) => p.startTime === ST_SLOTS[1]).length }, "c"),
+      __JSX__.jsx(StStat, { label: "Calls per week", value: totalCalls }, "d"),
+    ],
+  });
 
   /* --------------------------------------------------------- the link */
   const linkCard = __JSX__.jsxs("div", {
@@ -370,7 +406,7 @@ function StPanel() {
                         }, "e"),
                         __JSX__.jsx("td", {
                           className: cell + " text-right tabular-nums text-slate-600 dark:text-slate-300",
-                          children: p.callsPerWeek == null || p.callsPerWeek === "" ? "—" : p.callsPerWeek,
+                          children: stWeekOff(p) ? "Week off" : (p.callsPerWeek == null || p.callsPerWeek === "" ? "—" : p.callsPerWeek),
                         }, "w"),
                         __JSX__.jsx("td", {
                           className: cell + " text-right",
@@ -508,6 +544,7 @@ function StPanel() {
 
   return __JSX__.jsxs("div", {
     children: [
+      stats,
       linkCard,
       banner,
       err && __JSX__.jsx("div", {

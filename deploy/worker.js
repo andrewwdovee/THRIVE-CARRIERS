@@ -44,8 +44,11 @@ const ONBOARD_MAX_PHOTO = 2.6 * 1024 * 1024;
 const ONBOARD_MAX_ROWS = 2000;
 const ONBOARD_PER_HOUR = 6;
 const PREFS_PER_HOUR = 20;
-/* The only weekly volumes on offer. */
-const CALL_TIERS = [15, 25, 35, 50];
+/* The only weekly volumes on offer. 0 is "taking the week off". */
+const CALL_TIERS = [15, 25, 35, 50, 0];
+/* Where the Lead Tech board keeps who is switched off (its {off, log}
+   record, written through the /kv route). */
+const STARTTIMES_KEY = "kv:starttimes/state";
 const BUSY_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const BUSY_PARTS = ["AM", "PM", "All day"];
 /* The only start times the desk runs. The signing page and the settings
@@ -510,19 +513,30 @@ async function handle(request, env) {
       let index = [];
       try { index = JSON.parse((await env.THRIVE_KV.get(ONBOARD_INDEX)) || "[]"); } catch { index = []; }
       if (!Array.isArray(index)) index = [];
-      const people = index
-        .filter((r) => r && r.legalName)
-        .map((r) => ({
-          id: String(r.id || ""),
-          name: String(r.legalName || ""),
-          startTime: ONBOARD_SLOTS.indexOf(r.startTime) >= 0 ? r.startTime : "",
-          callsPerWeek: CALL_TIERS.indexOf(r.callsPerWeek) >= 0 ? r.callsPerWeek : null,
-          busyDays: Array.isArray(r.busyDays) ? r.busyDays.filter((d) => BUSY_DAYS.indexOf(d) >= 0) : [],
-          busyPart: BUSY_PARTS.indexOf(r.busyPart) >= 0 ? r.busyPart : "",
-        }));
+      /* Who the board has switched off. Only a yes/no per person comes down
+         here; the email it is keyed on stays on this side. */
+      let offMap = {};
+      try { offMap = (JSON.parse((await env.THRIVE_KV.get(STARTTIMES_KEY)) || "{}") || {}).off || {}; } catch { offMap = {}; }
+      /* One row per person: signing twice keeps the latest answer. */
+      const latest = new Map();
+      index.filter((r) => r && r.legalName).forEach((r) => {
+        const k = String(r.email || r.id || "").toLowerCase();
+        const prev = latest.get(k);
+        if (prev && new Date(prev.signedAt) >= new Date(r.signedAt)) return;
+        latest.set(k, r);
+      });
+      /* Volumes are deliberately left off: the public board shows names,
+         start times and busy days. The totals live on the Lead Tech board. */
+      const people = [...latest.values()].map((r) => ({
+        id: String(r.id || ""),
+        name: String(r.legalName || ""),
+        startTime: ONBOARD_SLOTS.indexOf(r.startTime) >= 0 ? r.startTime : "",
+        busyDays: Array.isArray(r.busyDays) ? r.busyDays.filter((d) => BUSY_DAYS.indexOf(d) >= 0) : [],
+        busyPart: BUSY_PARTS.indexOf(r.busyPart) >= 0 ? r.busyPart : "",
+        off: !!offMap[String(r.email || "").toLowerCase()],
+      }));
       return json({
         slots: ONBOARD_SLOTS,
-        tiers: CALL_TIERS,
         days: BUSY_DAYS,
         parts: BUSY_PARTS,
         people,

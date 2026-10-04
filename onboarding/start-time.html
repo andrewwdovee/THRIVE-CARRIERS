@@ -98,6 +98,12 @@ input:focus,textarea:focus{outline:2px solid rgba(240,180,41,.55); outline-offse
 .slot li{padding:11px 17px; border-bottom:1px solid var(--line); display:grid; gap:3px}
 .slot li:last-child{border-bottom:0}
 .slot li.me{background:rgba(240,180,41,.08)}
+.slot li.off{background:rgba(240,115,106,.14); box-shadow:inset 0 0 0 2px var(--bad); border-radius:10px; margin:6px 8px}
+.slot li.off .who b{color:var(--bad)}
+.slot .offtag{
+  font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#fff;
+  background:var(--bad); border-radius:999px; padding:1px 9px; flex:none; white-space:nowrap;
+}
 .slot .who{display:flex; align-items:baseline; justify-content:space-between; gap:10px}
 .slot .who b{font-size:14.5px; font-weight:600; color:var(--fg); min-width:0; overflow-wrap:anywhere}
 .slot .vol{
@@ -219,6 +225,7 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
         <label class="choice"><input type="radio" name="callsPerWeek" value="25"><span><b>25</b><small>a week</small></span></label>
         <label class="choice"><input type="radio" name="callsPerWeek" value="35"><span><b>35</b><small>a week</small></span></label>
         <label class="choice"><input type="radio" name="callsPerWeek" value="50"><span><b>50</b><small>a week</small></span></label>
+        <label class="choice"><input type="radio" name="callsPerWeek" value="0"><span><b>0</b><small>Taking the week off</small></span></label>
       </div>
     </section>
 
@@ -329,9 +336,9 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
         html += "<ul>";
         inSlot.forEach(function (p) {
           var busy = busyLine(p);
-          html += "<li" + (p.me ? ' class="me"' : "") + '><div class="who"><b>' + esc(p.name) + "</b>" +
-            '<span class="vol' + (p.callsPerWeek ? "" : " none") + '">' +
-            (p.callsPerWeek ? p.callsPerWeek + " calls a week" : "Calls not set") + "</span></div>" +
+          var cls = (p.me ? " me" : "") + (p.off ? " off" : "");
+          html += "<li" + (cls ? ' class="' + cls.trim() + '"' : "") + '><div class="who"><b>' + esc(p.name) + "</b>" +
+            (p.off ? '<span class="offtag">Off today</span>' : "") + "</div>" +
             (busy ? '<div class="busy">' + esc(busy) + "</div>" : "") + "</li>";
         });
         html += "</ul>";
@@ -367,7 +374,7 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
     $("#board").hidden = false;
     $("#title").textContent = "Who's on when";
     $("#rule").textContent = "10:00 AM AND 11:00 AM";
-    $("#lede").textContent = "Everyone on each start time, and how many calls a week they take.";
+    $("#lede").textContent = "Everyone on each start time. A name in red has been switched off for the day.";
     if (location.hash !== "#board") history.replaceState(null, "", "#board");
     loadRoster();
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -456,7 +463,8 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
     }).then(function (j) {
       var bits = [];
       if (j.startTime) bits.push("Calls start at " + j.startTime);
-      if (j.callsPerWeek) bits.push(j.callsPerWeek + " calls a week");
+      if (j.callsPerWeek === 0) bits.push("taking the week off");
+      else if (j.callsPerWeek) bits.push(j.callsPerWeek + " calls a week");
       if (j.busyDays && j.busyDays.length) {
         bits.push("busy " + j.busyDays.join(", ") + (j.busyPart ? " " + j.busyPart : ""));
       }
