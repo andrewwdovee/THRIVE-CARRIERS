@@ -40,6 +40,11 @@ const NOT_CLASSES = new Set(["aria-label", "aria-hidden", "data-act", "no-referr
    some carry a separate Products tab and some do not. */
 const DIVIDER = "products-view";
 const HEAD_ORDER = ["inbox", "missed", "completed", "refunds", "wallets", "calls"];
+/* Tabs taken off the board altogether. Their code stays in the bundle;
+   only the tab is gone, so nothing can open it. */
+const REMOVED = ["products-view"];
+/* With "By product" gone, the divider moves to the next tab down. */
+const DIVIDER_AFTER_REMOVAL = "reports";
 
 /* The tabs this patch adds, in the order they are shown, each with the
    file holding it, the component it exports and the icon beside it. */
@@ -187,7 +192,8 @@ export function patchOnboarding(source, onboardingUrl, opts = {}) {
     entries.set(m[1], { label: m[2], icon: m[3] });
   }
   const found = [...entries.keys()];
-  const cut = found.indexOf(DIVIDER);
+  let cut = found.indexOf(DIVIDER);
+  if (cut < 0) cut = found.indexOf(DIVIDER_AFTER_REMOVAL);
   if (cut < 0) {
     throw new Error(`No "${DIVIDER}" tab to divide on. Found: ${found.join(", ")}`);
   }
@@ -207,7 +213,7 @@ export function patchOnboarding(source, onboardingUrl, opts = {}) {
     );
   }
   ADDED.forEach((t) => entries.set(t.id, { label: t.label, icon: t.icon }));
-  const order = HEAD_ORDER.concat(ADDED.map((t) => t.id), tail);
+  const order = HEAD_ORDER.concat(ADDED.map((t) => t.id), tail.filter((id) => !REMOVED.includes(id)));
   log(`  tabs           ${order.join(", ")}`);
   const rebuilt =
     `const ${tabsHit[1]}=[` +
@@ -295,6 +301,20 @@ export function patchOnboarding(source, onboardingUrl, opts = {}) {
       .map((t) => `:u==="${t.id}"?${JSX}.jsx(${t.component},{})`)
       .join("");
     out = out.replace(branchNeedle, `${branches}${branchNeedle}`);
+  }
+  /* The divider is a constant naming the tab it sits above, declared
+     right after the tab array. When that tab has been removed, point it
+     at the next one down so the line still separates the day's work. */
+  if (REMOVED.includes(DIVIDER) && !order.includes(DIVIDER)) {
+    const at = out.indexOf(rebuilt);
+    const after = out.slice(at + rebuilt.length);
+    const dm = after.match(/^,([\w$]{1,3})="([\w-]+)",/);
+    if (!dm) throw new Error("Could not find the divider after the tab array. Re-derive the patch.");
+    if (dm[2] === DIVIDER) {
+      out = out.slice(0, at + rebuilt.length) +
+        after.replace(dm[0], `,${dm[1]}="${DIVIDER_AFTER_REMOVAL}",`);
+    }
+    log(`  removed        ${REMOVED.join(", ")} (divider above ${DIVIDER_AFTER_REMOVAL})`);
   }
   if (out === source) throw new Error("Nothing was spliced. Refusing to write an unchanged bundle.");
   return out;
