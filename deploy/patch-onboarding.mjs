@@ -48,6 +48,37 @@ const ADDED = [
   { id: "starttimes", label: "Start times", file: "starttimes-tab.js", component: "StPanel", icon: "StIcon" },
 ];
 
+/* Helpers the tabs share, spliced in ahead of them. Not tabs: nothing in
+   here renders on its own. */
+const SHARED = ["ob-pdf.js"];
+
+/* The agreement text, so the board can hand somebody a PDF of what they
+   signed without fetching anything. It is read from the same Markdown
+   the onboarding page is built from, and the version is read from the
+   page itself, so the two cannot drift: if the page ships wording the
+   board does not carry, the PDF says so on its face. */
+export function contractText(opts = {}) {
+  const md = readFileSync(join(here, "..", "onboarding", "contract.md"), "utf8")
+    .replace(/^\s*<!--[\s\S]*?-->\s*/, "");
+  const parts = md.split(/\n-{3,}\n/);
+  if (parts.length !== 2) {
+    throw new Error(`onboarding/contract.md should hold two agreements split by a rule, found ${parts.length}.`);
+  }
+  const page = readFileSync(join(here, "..", "onboarding", "index.html"), "utf8");
+  const version = (page.match(/AGREEMENT_VERSION\s*=\s*"([^"]+)"/) || [])[1];
+  if (!version) throw new Error("Could not read AGREEMENT_VERSION from onboarding/index.html.");
+  for (const [i, name] of [[0, "Lead Tech"], [1, "Thrive Companies"]]) {
+    if (!/^#\s+\S/m.test(parts[i])) throw new Error(`The ${name} half of contract.md has no title.`);
+  }
+  return {
+    version,
+    entity: opts.entity || "Thrive Companies LLC",
+    state: opts.state || "Florida",
+    lt: parts[0].trim(),
+    tc: parts[1].trim(),
+  };
+}
+
 /* A real scanner, because a regex for "..." also matches the gap between
    two strings on the same line and turns `", children: "` into a token. */
 function stringLiterals(src) {
@@ -72,18 +103,38 @@ function stringLiterals(src) {
   return out;
 }
 
+/* What a previous patch left behind, so a later one can find its own
+   work and replace it rather than layering a second copy on top. */
+const MARK = "/* --- added tabs --- */";
+
 export function patchOnboarding(source, onboardingUrl, opts = {}) {
   const log = opts.log || (() => {});
   const already = ADDED.filter((t) => source.includes("function " + t.component + "("));
-  if (already.length === ADDED.length) {
-    log("Already carries both tabs — left alone.");
-    return source;
-  }
-  if (already.length) {
+
+  /* A bundle that already carries the tabs is the normal case once the
+     board has been patched once: the artifact is the only copy there is,
+     so every later change has to go onto a patched bundle. The tab array
+     and the render branches are already right, so only the code between
+     the marker and the array is swapped. Half-patched is still refused:
+     that is damage, not a previous run. */
+  const upgrading = already.length === ADDED.length;
+  if (already.length && !upgrading) {
     throw new Error(
       `This bundle already carries ${already.map((t) => t.label).join(", ")} but not the rest. ` +
       `Patch a clean bundle rather than layering onto a patched one.`
     );
+  }
+  let markAt = -1;
+  if (upgrading) {
+    const marks = source.split(MARK).length - 1;
+    if (marks !== 1) {
+      throw new Error(
+        `Expected one "${MARK}" in a patched bundle, found ${marks}. ` +
+        `Patch a clean bundle rather than guessing where the old tabs end.`
+      );
+    }
+    markAt = source.indexOf(MARK);
+    log("  already patched — replacing the tabs that are in there");
   }
 
   /* ---- 1. find the minified bindings ---- */
@@ -109,6 +160,18 @@ export function patchOnboarding(source, onboardingUrl, opts = {}) {
   }
   const STORE = storeHits[0];
   log(`  storage        ${STORE}`);
+  /* The board already knows how to hand somebody a file: it asks the
+     artifact host first, which is the only thing that works inside the
+     artifact frame, and falls back to an anchor everywhere else. Borrow
+     it rather than writing a second one that only works on Pages. */
+  const saveHits = [...source.matchAll(
+    /use\("downloads"\)[\s\S]{0,260}?async function ([\w$]{1,4})\([\w$],[\w$]\)\{const [\w$]=await/g
+  )].map((m) => m[1]);
+  if (saveHits.length !== 1) {
+    throw new Error(`Expected one save-a-file helper, found ${saveHits.length}. Re-derive it before patching.`);
+  }
+  const SAVE = saveHits[0];
+  log(`  save helper    ${SAVE}`);
   for (const h of ["useEffect", "useCallback"]) {
     if (!source.includes(`${REACT}.${h}(`)) throw new Error(`${REACT}.${h} is not in this bundle.`);
   }
@@ -130,12 +193,16 @@ export function patchOnboarding(source, onboardingUrl, opts = {}) {
   }
   const head = found.slice(0, cut);
   const tail = found.slice(cut);
-  const strayed = head.filter((t) => !HEAD_ORDER.includes(t))
-    .concat(HEAD_ORDER.filter((t) => !head.includes(t)));
+  /* On a re-patch the tabs this script added are already sitting in the
+     head, at the end of it. They are put back in the same place below,
+     so they are not a stray tab. */
+  const expected = upgrading ? HEAD_ORDER.concat(ADDED.map((t) => t.id)) : HEAD_ORDER;
+  const strayed = head.filter((t) => !expected.includes(t))
+    .concat(expected.filter((t) => !head.includes(t)));
   if (strayed.length) {
     throw new Error(
       `The tabs before the divider are not the ones this patch reorders.\n` +
-      `  found:    ${head.join(", ")}\n  expected: ${HEAD_ORDER.join(", ")}\n` +
+      `  found:    ${head.join(", ")}\n  expected: ${expected.join(", ")}\n` +
       `  differ:   ${strayed.join(", ")}`
     );
   }
@@ -153,14 +220,25 @@ export function patchOnboarding(source, onboardingUrl, opts = {}) {
   if (branchHits !== 1) {
     throw new Error(`Expected one render branch to hang the panel off, found ${branchHits}.`);
   }
+  if (upgrading) {
+    /* The branches went in ahead of the needle last time and the panels
+       keep their names, so they already point at the new code. */
+    for (const t of ADDED) {
+      if (!source.includes(`:u==="${t.id}"?${JSX}.jsx(${t.component},{})`)) {
+        throw new Error(`The ${t.label} render branch is missing from a bundle that has its panel. Patch a clean bundle.`);
+      }
+    }
+  }
 
   /* ---- 4. the classes ---- */
-  const tab = ADDED.map((t) => readFileSync(join(here, t.file), "utf8"))
+  const tab = SHARED.concat(ADDED.map((t) => t.file))
+    .map((f) => readFileSync(join(here, f), "utf8"))
     .join("\n")
     .replace(/__JSX__/g, JSX)
     .replace(/__REACT__/g, REACT)
     .replace(/__STORE__/g, STORE)
-    .replace(/__URL__/g, JSON.stringify(onboardingUrl));
+    .replace(/__URL__/g, JSON.stringify(onboardingUrl))
+    .replace(/__SAVE__/g, SAVE);
 
   /* The largest style block, not the first: a published artifact is
      wrapped in a skeleton whose own little reset comes before the
@@ -196,12 +274,28 @@ export function patchOnboarding(source, onboardingUrl, opts = {}) {
   }
   log(`  classes        all present`);
 
+  /* The agreement goes in after the class check, not before: it is a
+     contract, and contract prose is full of hyphenated words that look
+     exactly like a Tailwind utility to the scanner above. */
+  const contract = contractText(opts);
+  const tabOut = tab.replace(/__CONTRACT__/g, JSON.stringify(contract));
+  if (tabOut === tab) throw new Error("The agreement text was never spliced into the tab.");
+  log(`  agreement      version ${contract.version}, ${contract.lt.length + contract.tc.length} characters`);
+
   /* ---- splice ---- */
-  let out = source.replace(tabsSrc, `\n/* --- added tabs --- */\n${tab}\n${rebuilt}`);
-  const branches = ADDED
-    .map((t) => `:u==="${t.id}"?${JSX}.jsx(${t.component},{})`)
-    .join("");
-  out = out.replace(branchNeedle, `${branches}${branchNeedle}`);
+  let out;
+  if (upgrading) {
+    const tabsAt = source.indexOf(tabsSrc, markAt);
+    if (tabsAt < 0) throw new Error("The tab array is not after the marker. Patch a clean bundle.");
+    out = source.slice(0, markAt) + MARK + "\n" + tabOut + "\n" + rebuilt +
+      source.slice(tabsAt + tabsSrc.length);
+  } else {
+    out = source.replace(tabsSrc, `\n${MARK}\n${tabOut}\n${rebuilt}`);
+    const branches = ADDED
+      .map((t) => `:u==="${t.id}"?${JSX}.jsx(${t.component},{})`)
+      .join("");
+    out = out.replace(branchNeedle, `${branches}${branchNeedle}`);
+  }
   if (out === source) throw new Error("Nothing was spliced. Refusing to write an unchanged bundle.");
   return out;
 }

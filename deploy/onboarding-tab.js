@@ -95,6 +95,8 @@ function ObPanel() {
   const [open, setOpen] = __REACT__.useState(null);
   const [doc, setDoc] = __REACT__.useState(null);
   const [copied, setCopied] = __REACT__.useState(false);
+  const [pdfBusy, setPdfBusy] = __REACT__.useState("");
+  const [pdfErr, setPdfErr] = __REACT__.useState("");
 
   const load = __REACT__.useCallback(async () => {
     setBusy(true);
@@ -206,6 +208,22 @@ function ObPanel() {
     ],
   });
 
+  /* A copy of the agreement as signed, built here rather than fetched:
+     the text, the typed name, the date and the signature image. The two
+     agreements are separate documents and download separately. */
+  function savePdf(rec, which) {
+    setPdfErr("");
+    setPdfBusy(which);
+    obContractPdf(rec, which).then(function (out) {
+      return obDownload(out);
+    }).then(function () {
+      setPdfBusy("");
+    }).catch(function (e) {
+      setPdfBusy("");
+      setPdfErr("Could not build that PDF: " + (e && e.message ? e.message : String(e)));
+    });
+  }
+
   /* ------------------------------------------------------ one open row */
   function detail(r) {
     if (!doc) {
@@ -267,6 +285,24 @@ function ObPanel() {
               }, "ph"),
             ],
           }, "m"),
+          __JSX__.jsxs("div", {
+            className: "flex gap-2 flex-wrap items-center",
+            children: [
+              ...[["lt", "Lead Tech contract", doc.signature],
+                  ["tc", "Thrive contract", doc.thriveSignature]]
+                .map(([which, label, png]) => __JSX__.jsx("button", {
+                  type: "button",
+                  className: btn,
+                  disabled: !png || pdfBusy !== "",
+                  onClick: () => savePdf(doc, which),
+                  children: pdfBusy === which ? "Building the PDF…" : "Download " + label + " (PDF)",
+                }, which)),
+              pdfErr && __JSX__.jsx("span", {
+                className: "text-sm text-rose-600 dark:text-rose-400",
+                children: pdfErr,
+              }, "e"),
+            ],
+          }, "d"),
         ],
       }),
     });
