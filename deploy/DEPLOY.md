@@ -248,7 +248,7 @@ New since the rest of this file. Three pieces:
 
 ```sh
 cd ~/THRIVE-CARRIERS/onboarding
-node build-onboarding.mjs https://stripe-sync.aandrewdavidson.workers.dev \
+node build-onboarding.mjs https://thrive-relay.aandrewdavidson.workers.dev \
   --entity "Thrive Companies LLC" --state Florida \
   --rules https://thrive-inbound.pages.dev/
 npx wrangler pages deploy ./dist --project-name thrive-onboarding --commit-dirty=true
@@ -299,7 +299,7 @@ npx wrangler deploy
 Check it answers:
 
 ```sh
-curl -s -X POST https://stripe-sync.aandrewdavidson.workers.dev/onboarding/submit \
+curl -s -X POST https://thrive-relay.aandrewdavidson.workers.dev/onboarding/submit \
   -H 'Content-Type: application/json' -H 'Origin: https://thrive-onboarding.pages.dev' \
   -d '{}'
 ```
@@ -310,7 +310,7 @@ is live and validating. `403` means the origin is not on the list yet.
 ### 3. Put the tabs on the board
 
 ```sh
-node build-leadtech.mjs https://stripe-sync.aandrewdavidson.workers.dev \
+node build-leadtech.mjs https://thrive-relay.aandrewdavidson.workers.dev \
   --onboarding https://thrive-onboarding.pages.dev
 npx wrangler pages deploy ./dist-leadtech --project-name thrive-leadtech --commit-dirty=true
 ```
@@ -366,6 +366,13 @@ have signed. The board fetches a document only when you open that row.
 - **Both public routes are public on purpose.** Guards: the origin allow-list, a
   3.2 MB body cap, an hourly throttle per address, required fields, and no deletes.
   Reading anything back still needs the bearer token.
+- **`thrive-relay` is this worker; `stripe-sync` is not.** `deploy/wrangler.toml`
+  names the worker `thrive-relay`, so `npx wrangler deploy` publishes it to
+  `thrive-relay.aandrewdavidson.workers.dev`. The console's Pages build points at
+  `stripe-sync.aandrewdavidson.workers.dev`, which is a different worker — it
+  answers `{"error":"Unauthorized"}`, a string this code never produces. If the
+  console is meant to share a store with the board, that mismatch needs settling
+  before it will.
 - **The board is public and the note is not on it.** Anything typed into "anything
   else the desk should know" goes to the desk, not the board — the page says so where
   it is typed.
