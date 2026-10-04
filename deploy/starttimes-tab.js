@@ -262,10 +262,10 @@ function StPanel() {
   const stats = __JSX__.jsxs("div", {
     className: "grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3",
     children: [
-      __JSX__.jsx(StStat, { label: "Active agents", value: active.length }, "a"),
-      __JSX__.jsx(StStat, { label: "At 10:00 AM", value: active.filter((p) => p.startTime === ST_SLOTS[0]).length }, "b"),
-      __JSX__.jsx(StStat, { label: "At 11:00 AM", value: active.filter((p) => p.startTime === ST_SLOTS[1]).length }, "c"),
-      __JSX__.jsx(StStat, { label: "Calls per week", value: totalCalls }, "d"),
+      __JSX__.jsx(StStat, { label: "Agents taking calls this week", value: active.length }, "a"),
+      __JSX__.jsx(StStat, { label: "Calls to route this week", value: totalCalls }, "d"),
+      __JSX__.jsx(StStat, { label: "Starting at 10:00 AM", value: active.filter((p) => p.startTime === ST_SLOTS[0]).length }, "b"),
+      __JSX__.jsx(StStat, { label: "Starting at 11:00 AM", value: active.filter((p) => p.startTime === ST_SLOTS[1]).length }, "c"),
     ],
   });
 
