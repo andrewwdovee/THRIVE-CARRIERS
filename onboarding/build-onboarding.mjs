@@ -19,7 +19,8 @@ import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
-const FLAGS = ["--entity", "--state", "--rules", "--welcome", "--settings"];
+const FLAGS = ["--entity", "--state", "--rules", "--welcome", "--settings",
+  "--portal", "--licences", "--course", "--training"];
 const flag = (n, d) => { const i = args.indexOf(n); return i < 0 ? d : args[i + 1]; };
 /* The relay is the one URL given on its own. Everything a flag takes is
    skipped first — otherwise `--welcome https://...` is read as the relay,
@@ -39,6 +40,7 @@ if (!relay && !preview) {
                  [--entity "Thrive Companies LLC"] [--state Florida]
                  [--rules https://thrive-inbound.pages.dev/]
                  [--welcome <url>] [--settings <url>]
+                 [--portal <url>] [--licences <url>] [--course <url>] [--training <url>]
 
 The relay must be the same Worker the Lead Tech board posts to, or the
 board will never see the signed agreements.`);
@@ -53,6 +55,14 @@ const rules = (flag("--rules", "https://thrive-inbound.pages.dev/") || "").trim(
    A preview build has nowhere to send anyone unless it is told. */
 const welcome = (flag("--welcome", "") || "").trim();
 const settings = (flag("--settings", "") || "").trim();
+/* The four the setup list still needs. Unset is fine: the step keeps its
+   words and loses its button. */
+const EXTRA_LINKS = [
+  ["--portal", "PORTAL_URL"],
+  ["--licences", "LICENCE_URL"],
+  ["--course", "COURSE_URL"],
+  ["--training", "TRAINING_URL"],
+];
 const src = readFileSync(join(here, "index.html"), "utf8");
 
 /* Each of these is asserted to appear exactly once. A page that silently
@@ -111,6 +121,12 @@ wc = one(wc, 'var RULES_URL = "https://thrive-inbound.pages.dev/";', `var RULES_
 wc = one(wc, 'var LOGOS = {};', `var LOGOS = ${JSON.stringify(logos)};`, "welcome.html");
 wc = one(wc, 'var SETTINGS_URL = "../start-time/";',
   `var SETTINGS_URL = ${JSON.stringify(settings || (relay ? "../start-time/" : ""))};`, "welcome.html");
+const missingLinks = [];
+for (const [f, varName] of EXTRA_LINKS) {
+  const v = (flag(f, "") || "").trim();
+  if (!v) missingLinks.push(f);
+  wc = one(wc, `var ${varName} = "";`, `var ${varName} = ${JSON.stringify(v)};`, "welcome.html");
+}
 
 const dist = join(here, "dist");
 mkdirSync(dist, { recursive: true });
@@ -127,7 +143,10 @@ console.log(`Wrote onboarding/dist/${name}  (${(out.length / 1024).toFixed(0)} K
   relay   ${relay || "(none — preview, submissions go nowhere)"}
   entity  ${entity}
   state   ${state}
-  rules   ${rules}
+  rules   ${rules}${missingLinks.length
+  ? "\n\nThe setup list has no link yet for: " + missingLinks.join(" ") +
+    "\nThose steps still read; they just have no button. Pass the flags once the URLs exist."
+  : ""}
 
 Deploy it:
   npx wrangler pages deploy ./dist --project-name thrive-onboarding --commit-dirty=true

@@ -173,6 +173,12 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
 
   var ENTITY = "Thrive Companies LLC";
   var RULES_URL = "https://thrive-inbound.pages.dev/";
+  /* Four links the desk still has to supply. Any left empty simply loses
+     its button — the step still reads, and nothing points at a 404. */
+  var PORTAL_URL = "";
+  var LICENCE_URL = "";
+  var COURSE_URL = "";
+  var TRAINING_URL = "";
   /* Sits beside this page in the deploy. Empty in a preview, where
      there is nothing to point at — the button is dropped rather than
      left dead. */
@@ -190,6 +196,16 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
      `id` stable, or somebody part-way through loses their ticks. */
   var STEPS = [
     {
+      id: "portal",
+      who: "you",
+      title: "Set up your inbound portal",
+      body: "Your login, your wallet and your card on file. It is where you top up, " +
+            "see every charge, and watch the calls come in. We send the invite — take " +
+            "two minutes to finish it, because nothing is delivered against an empty " +
+            "wallet.",
+      link: { href: PORTAL_URL, label: "Open the inbound portal" }
+    },
+    {
       id: "rules",
       who: "you",
       title: "Read how the inbound works",
@@ -202,56 +218,36 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
       who: "you",
       title: "Confirm when your calls start",
       body: "You picked 10:00 or 11:00 when you signed. Change it here any time, " +
-            "along with how many calls you want a week.",
+            "along with how many calls you want a week. If you are not on fifteen " +
+            "minutes past, calls stop for the day — so pick the one you will keep.",
       link: { href: SETTINGS_URL, label: "Open your call settings", quiet: true }
-    },
-    {
-      id: "billing",
-      who: "you",
-      title: "Set up billing and fund your wallet",
-      body: "Calls are delivered against a funded wallet — at zero, delivery stops, " +
-            "and topping up starts it again. Your card goes on file in Stripe and " +
-            "every charge lands on a receipt you can see."
     },
     {
       id: "licences",
       who: "you",
-      title: "Send your licences and appointments",
-      body: "The states you are actively licensed and appointed in. We only route " +
-            "transfers to those states, so a missing one is a missing call — and a " +
-            "lapsed one has to reach us the same day."
+      title: "Make sure you have all your state licences",
+      body: "Active and appointed, in every state you want calls from. We only route " +
+            "transfers to the states on your list, so a missing one is a missing call " +
+            "— and a lapsed one has to reach us the same day.",
+      link: { href: LICENCE_URL, label: "Send your licences", quiet: true }
     },
     {
-      id: "routing",
-      who: "us",
-      title: "Your number and call routing",
-      body: "Tell us the line transfers should land on and we set the routing, " +
-            "confirm your coverage area, and test a call end to end before anything " +
-            "live reaches you."
-    },
-    {
-      id: "dialer",
-      who: "us",
-      only: "Final Expense transfers",
-      title: "Into the dialer rotation",
-      body: "We confirm your licensed states, set your daily transfer cap, add you to " +
-            "the rotation and book your first live day."
-    },
-    {
-      id: "instagram",
-      who: "us",
-      only: "Instagram software",
-      title: "Instagram software access",
-      body: "We create the account, connect your profile, load the message templates " +
-            "and send you the login and a walkthrough."
-    },
-    {
-      id: "kickoff",
+      id: "course",
       who: "you",
-      title: "Book your kickoff call",
-      body: "Twenty minutes with the desk before your first live day: how the transfers " +
-            "come through, what to do with a bad one, and who to call when something " +
-            "looks wrong."
+      title: "The inbound course",
+      body: "How to work a transferred caller: the open, qualifying fast, and closing " +
+            "on the first call. Watch it before your first live day — the people who " +
+            "do close at a different rate than the people who do not.",
+      link: { href: COURSE_URL, label: "Start the course" }
+    },
+    {
+      id: "training",
+      who: "us",
+      title: "Our training schedule",
+      body: "Live sessions through the week — call reviews, objection work, and time " +
+            "with the desk. Get them in your calendar now and come to the first one " +
+            "you can.",
+      link: { href: TRAINING_URL, label: "See the schedule", quiet: true }
     }
   ];
 
