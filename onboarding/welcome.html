@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Welcome to Thrive</title>
+<meta name="description" content="The setup list — what to do, what we do, and what you need in place before your first live day.">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700;800&display=swap">
+<style>
+:root{
+  color-scheme: dark;
+  --ink:#07090E; --panel:#1A2130; --panel-2:#222B3C;
+  --line:#2E394B; --line-2:#667998; --fg:#F0F4F9; --muted:#A3B4C8;
+  --gold:#F0B429; --gold-hi:#FFE08A; --good:#35C892; --blue:#3987E5;
+  --display:'Anton','Arial Narrow',sans-serif;
+  --body:'Archivo',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--ink); color:var(--fg); font-family:var(--body); font-size:15px; line-height:1.62}
+body::before{
+  content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:
+    radial-gradient(1100px 620px at 78% -8%, rgba(240,180,41,.13), transparent 62%),
+    radial-gradient(900px 520px at 6% 4%, rgba(47,111,224,.10), transparent 58%);
+}
+.wrap{max-width:720px; margin:0 auto; padding:0 16px 90px}
+
+.masthead{padding:44px 0 10px; text-align:center}
+.marks{display:flex; align-items:center; justify-content:center; gap:19px; margin:0 0 24px}
+.marks img.thrive{height:78px; width:auto}
+.marks img.lead{height:14px; width:auto}
+.marks .by{
+  display:flex; align-items:center; gap:9px;
+  padding-left:19px; border-left:1px solid var(--line-2);
+}
+.marks .by span{
+  font-size:8px; font-weight:700; letter-spacing:.26em;
+  text-transform:uppercase; color:var(--muted); white-space:nowrap;
+}
+.masthead h1{
+  font-family:var(--display); font-weight:400; margin:0;
+  font-size:clamp(32px,7.6vw,54px); line-height:1.06; letter-spacing:.012em;
+  background:linear-gradient(180deg,#FFFFFF 6%,#DCE3EC 58%,#9BA7B6 100%);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.rule{
+  display:flex; align-items:center; gap:14px; margin:16px auto 0; max-width:460px;
+  color:var(--gold); font-size:10.5px; font-weight:700; letter-spacing:.26em;
+}
+.rule::before,.rule::after{content:""; flex:1; height:1px; background:linear-gradient(90deg,transparent,rgba(240,180,41,.55))}
+.rule::after{background:linear-gradient(90deg,rgba(240,180,41,.55),transparent)}
+.lede{color:var(--muted); max-width:54ch; margin:18px auto 0; font-size:14.5px}
+
+/* --------------------------------------------------------- progress */
+.progress{
+  background:var(--panel); border:1px solid var(--line); border-radius:15px;
+  padding:18px 20px; margin:26px 0 8px;
+  display:flex; align-items:center; gap:18px; flex-wrap:wrap;
+}
+.progress .count{font-family:var(--display); font-size:30px; line-height:1; color:var(--fg)}
+.progress .count small{font-family:var(--body); font-size:13px; font-weight:600; color:var(--muted); margin-left:4px}
+.progress .track{flex:1 1 180px; min-width:140px; height:10px; border-radius:999px; background:var(--panel-2); overflow:hidden}
+.progress .fill{height:100%; width:0; border-radius:999px; background:var(--good); transition:width .25s ease}
+.progress .msg{font-size:13px; color:var(--muted); flex-basis:100%}
+.progress.done .fill{background:var(--good)}
+.progress.done .msg{color:var(--good); font-weight:600}
+
+/* ------------------------------------------------------------ steps */
+.steps{list-style:none; margin:16px 0 0; padding:0; display:grid; gap:12px}
+.step{
+  background:var(--panel); border:1px solid var(--line); border-radius:15px;
+  padding:18px 20px; display:grid; grid-template-columns:auto 1fr; gap:16px;
+}
+.step.on{border-color:rgba(53,200,146,.45); background:rgba(53,200,146,.045)}
+.step .tick{
+  width:28px; height:28px; border-radius:50%; border:1.5px solid var(--line-2);
+  background:var(--panel-2); display:grid; place-items:center; cursor:pointer;
+  font-size:14px; color:transparent; flex:none; padding:0; margin-top:2px;
+}
+.step.on .tick{background:var(--good); border-color:var(--good); color:#06281C; font-weight:800}
+.step .tick:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+.step .body{min-width:0}
+.step h2{
+  margin:0; font-size:16.5px; font-weight:700; color:var(--fg);
+  display:flex; align-items:baseline; gap:9px; flex-wrap:wrap;
+}
+.step h2 .n{
+  font-size:11px; font-weight:800; letter-spacing:.14em; color:var(--gold);
+  text-transform:uppercase; flex:none;
+}
+.step.on h2{color:var(--muted); text-decoration:line-through; text-decoration-thickness:1px}
+.step p{margin:7px 0 0; font-size:14px; color:var(--muted)}
+.step .tags{display:flex; gap:7px; flex-wrap:wrap; margin-top:11px}
+.tag{
+  font-size:10.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase;
+  border-radius:999px; padding:3px 10px; border:1px solid var(--line-2); color:var(--muted);
+}
+.tag.us{border-color:rgba(57,135,229,.5); color:#8FBDF2; background:rgba(57,135,229,.10)}
+.tag.you{border-color:rgba(240,180,41,.5); color:var(--gold-hi); background:rgba(240,180,41,.10)}
+.tag.opt{border-style:dashed}
+.step .go{
+  display:inline-block; margin-top:12px; font-size:13.5px; font-weight:700;
+  color:#2A1C01; text-decoration:none; border-radius:9px; padding:9px 16px;
+  background:linear-gradient(180deg,var(--gold-hi),var(--gold) 52%,#D99A12);
+  border:1px solid rgba(255,224,138,.65);
+}
+.step .go.quiet{
+  background:var(--panel-2); color:var(--fg); border-color:var(--line-2);
+  background-image:none;
+}
+
+.endnote{
+  background:var(--panel); border:1px solid var(--line); border-radius:15px;
+  padding:20px; margin-top:16px; text-align:center;
+}
+.endnote h3{margin:0 0 7px; font-size:15px; font-weight:700}
+.endnote p{margin:0; font-size:14px; color:var(--muted)}
+.ref{
+  display:inline-block; margin-top:14px; font-family:ui-monospace,Menlo,monospace;
+  font-size:12px; letter-spacing:.07em; color:var(--gold);
+  border:1px dashed rgba(240,180,41,.45); border-radius:9px; padding:8px 14px;
+}
+footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16px 10px}
+@media (max-width:560px){
+  .step{padding:15px 16px; gap:13px}
+  .marks{gap:14px}
+  .marks img.thrive{height:66px}
+  .marks .by{padding-left:14px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="marks">
+      <img class="thrive" id="mk-thrive" alt="Thrive Companies">
+      <span class="by"><span>Powered by</span><img class="lead" id="mk-lead" alt="Lead Tech"></span>
+    </div>
+    <h1 id="hello">Welcome to Thrive</h1>
+    <p class="rule">STEP 2 OF 2 &middot; GETTING YOU SET UP</p>
+    <p class="lede">
+      The agreements are signed and your account is being approved — that takes up to
+      48 hours. In the meantime, work down this list. It is everything that has to be
+      in place before your first live day, and it tells you which parts are ours.
+    </p>
+  </header>
+
+  <div class="progress" id="progress">
+    <span class="count"><span id="pdone">0</span><small>of <span id="ptotal">0</span> done</small></span>
+    <span class="track"><span class="fill" id="pfill"></span></span>
+    <span class="msg" id="pmsg"></span>
+  </div>
+
+  <ol class="steps" id="steps"></ol>
+
+  <div class="endnote">
+    <h3>Stuck on any of it?</h3>
+    <p>Reply to your onboarding email, or message the person who brought you in. The desk would rather answer early than fix it later.</p>
+    <p class="ref" id="ref" hidden></p>
+  </div>
+
+  <footer><span data-entity>Thrive Companies</span> &middot; Lead Tech inbound</footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var ENTITY = "Thrive Companies LLC";
+  var RULES_URL = "https://thrive-inbound.pages.dev/";
+  /* Sits beside this page in the deploy. Empty in a preview, where
+     there is nothing to point at — the button is dropped rather than
+     left dead. */
+  var SETTINGS_URL = "../start-time/";
+  var LOGOS = {};
+
+  /* ------------------------------------------------------------ steps
+     These follow the step lists the fulfilment board already keeps
+     against each product, so what a client is told here matches what
+     the desk actually does. `who` is who the step belongs to, and
+     `only` marks the ones that depend on what was ordered.
+
+     Editing the list: add, remove or reword freely — the numbering, the
+     progress bar and the saved ticks all come off this array. Keep each
+     `id` stable, or somebody part-way through loses their ticks. */
+  var STEPS = [
+    {
+      id: "rules",
+      who: "you",
+      title: "Read how the inbound works",
+      body: "The wallet, the daily cut-off, what gets credited and what does not. " +
+            "Fifteen minutes now saves an argument later.",
+      link: { href: RULES_URL, label: "Read the inbound rules" }
+    },
+    {
+      id: "starttime",
+      who: "you",
+      title: "Confirm when your calls start",
+      body: "You picked 10:00 or 11:00 when you signed. Change it here any time, " +
+            "along with how many calls you want a week.",
+      link: { href: SETTINGS_URL, label: "Open your call settings", quiet: true }
+    },
+    {
+      id: "billing",
+      who: "you",
+      title: "Set up billing and fund your wallet",
+      body: "Calls are delivered against a funded wallet — at zero, delivery stops, " +
+            "and topping up starts it again. Your card goes on file in Stripe and " +
+            "every charge lands on a receipt you can see."
+    },
+    {
+      id: "licences",
+      who: "you",
+      title: "Send your licences and appointments",
+      body: "The states you are actively licensed and appointed in. We only route " +
+            "transfers to those states, so a missing one is a missing call — and a " +
+            "lapsed one has to reach us the same day."
+    },
+    {
+      id: "routing",
+      who: "us",
+      title: "Your number and call routing",
+      body: "Tell us the line transfers should land on and we set the routing, " +
+            "confirm your coverage area, and test a call end to end before anything " +
+            "live reaches you."
+    },
+    {
+      id: "dialer",
+      who: "us",
+      only: "Final Expense transfers",
+      title: "Into the dialer rotation",
+      body: "We confirm your licensed states, set your daily transfer cap, add you to " +
+            "the rotation and book your first live day."
+    },
+    {
+      id: "instagram",
+      who: "us",
+      only: "Instagram software",
+      title: "Instagram software access",
+      body: "We create the account, connect your profile, load the message templates " +
+            "and send you the login and a walkthrough."
+    },
+    {
+      id: "kickoff",
+      who: "you",
+      title: "Book your kickoff call",
+      body: "Twenty minutes with the desk before your first live day: how the transfers " +
+            "come through, what to do with a bad one, and who to call when something " +
+            "looks wrong."
+    }
+  ];
+
+  var $ = function (s) { return document.querySelector(s); };
+  Array.prototype.slice.call(document.querySelectorAll("[data-entity]"))
+    .forEach(function (el) { el.textContent = ENTITY; });
+  [["mk-thrive", "thriveV"], ["mk-lead", "leadWhite"]].forEach(function (p) {
+    var el = $("#" + p[0]);
+    if (el && LOGOS[p[1]]) el.src = LOGOS[p[1]];
+    else if (el) el.remove();
+  });
+
+  /* The form sends them here with their reference and first name. */
+  var q;
+  try { q = new URLSearchParams(location.search); } catch (e) { q = null; }
+  var ref = q && q.get("ref");
+  var who = q && q.get("name");
+  if (who) $("#hello").textContent = "Welcome, " + who;
+  if (ref) { $("#ref").textContent = "Reference  " + ref; $("#ref").hidden = false; }
+
+  /* Ticks are this browser's, not the desk's. Keyed on the reference so
+     two people on one machine do not share a list. */
+  var KEY = "thrive.setup." + (ref || "anon");
+  function load() {
+    try { return JSON.parse(localStorage.getItem(KEY) || "{}") || {}; }
+    catch (e) { return {}; }
+  }
+  function save(state) {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* private window */ }
+  }
+  var state = load();
+
+  function esc(v) {
+    return String(v == null ? "" : v)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  var list = $("#steps");
+  STEPS.forEach(function (s, i) {
+    var li = document.createElement("li");
+    li.className = "step";
+    li.id = "step-" + s.id;
+    var tags = '<span class="tag ' + (s.who === "us" ? "us" : "you") + '">' +
+      (s.who === "us" ? "We do this" : "You do this") + "</span>";
+    if (s.only) tags += '<span class="tag opt">Only if you ordered ' + esc(s.only) + "</span>";
+    var go = s.link && s.link.href
+      ? '<a class="go' + (s.link.quiet ? " quiet" : "") + '" href="' + esc(s.link.href) +
+        '" target="_blank" rel="noreferrer">' + esc(s.link.label) + "</a>"
+      : "";
+    li.innerHTML =
+      '<button type="button" class="tick" aria-pressed="false" ' +
+        'aria-label="Mark &quot;' + esc(s.title) + '&quot; done">&#10003;</button>' +
+      '<div class="body">' +
+        '<h2><span class="n">Step ' + (i + 1) + "</span>" + esc(s.title) + "</h2>" +
+        "<p>" + esc(s.body) + "</p>" +
+        '<div class="tags">' + tags + "</div>" +
+        go +
+      "</div>";
+    li.querySelector(".tick").addEventListener("click", function () {
+      state[s.id] = !state[s.id];
+      save(state);
+      paint();
+    });
+    list.appendChild(li);
+  });
+
+  function paint() {
+    var done = 0;
+    STEPS.forEach(function (s) {
+      var li = $("#step-" + s.id);
+      var on = !!state[s.id];
+      if (on) done++;
+      li.classList.toggle("on", on);
+      li.querySelector(".tick").setAttribute("aria-pressed", on ? "true" : "false");
+    });
+    $("#pdone").textContent = done;
+    $("#ptotal").textContent = STEPS.length;
+    $("#pfill").style.width = (done / STEPS.length * 100) + "%";
+    var left = STEPS.length - done;
+    $("#progress").classList.toggle("done", left === 0);
+    $("#pmsg").textContent = left === 0
+      ? "That is everything. The desk will confirm your first live day."
+      : left === 1
+        ? "One left. Ticking these is just for you — nothing here is submitted."
+        : left + " to go. Ticking these is just for you — nothing here is submitted.";
+  }
+  paint();
+})();
+</script>
+</body>
+</html>

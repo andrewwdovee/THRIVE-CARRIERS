@@ -234,6 +234,7 @@ New since the rest of this file. Three pieces:
 | | |
 |---|---|
 | `onboarding/index.html` | the public page a client signs — both agreements, the signature pads, the headshot |
+| `onboarding/welcome.html` | step two, at `/welcome` — the setup list they land on the moment the form is signed |
 | `onboarding/start-time.html` | the page they come back to, at `/start-time`, to change their start time, weekly volume and note |
 | `POST /onboarding/submit` on the worker | no token, because the signer has no account yet |
 | `POST /onboarding/preferences` | no token either; it can only change three fields on a row that already exists |
@@ -251,9 +252,18 @@ npx wrangler pages deploy ./dist --project-name thrive-onboarding --commit-dirty
 ```
 
 Pages prints a URL — `https://thrive-onboarding.pages.dev` if the project is named
-as above. That is the link the board hands out, so keep the name. The settings page
-rides along in the same deploy at `/start-time`, which is why it needs no second
-project and no second allowed origin.
+as above. That is the link the board hands out, so keep the name. The setup list at
+`/welcome` and the settings page at `/start-time` ride along in the same deploy,
+which is why neither needs a second project or a second allowed origin, and why the
+signed form can reach the setup list with a relative path.
+
+**The setup list is the part to edit.** `onboarding/welcome.html` opens with a
+`STEPS` array, and the numbering, the progress bar and the saved ticks all come off
+it. The eight it ships with follow the step lists the board already keeps against
+each product, so what a client reads matches what the desk does — but the billing,
+licensing and kickoff ones were written from the agreements rather than from your
+actual process. Read them before anyone does. Keep each `id` stable: somebody
+part-way through loses their ticks if it changes.
 
 `--rules` is where the button on the thank-you page goes. `--preview` builds the
 same page with no relay instead, to show someone before any of this exists: it

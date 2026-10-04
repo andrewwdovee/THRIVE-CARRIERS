@@ -794,6 +794,9 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
   var ENTITY = "Thrive Companies LLC";
   var STATE  = "Florida";
   var RULES_URL = "https://thrive-inbound.pages.dev/";
+  /* Where a signed form sends them. Empty means there is nowhere to go
+     -- a preview build -- and the thank-you panel below stands in. */
+  var WELCOME_URL = "";
   var AGREEMENT_VERSION = "2026-10-04";
   var LOGOS = {};   /* filled in by the build; see build-onboarding.mjs */
 
@@ -1186,6 +1189,16 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
         return j;
       });
     }).then(function (j) {
+      if (WELCOME_URL) {
+        /* Step two is its own page, so it has a URL they can come back
+           to. The reference and the first name ride along. */
+        var first = (f.legalName || "").trim().split(/\s+/)[0] || "";
+        location.href = WELCOME_URL +
+          (WELCOME_URL.indexOf("?") < 0 ? "?" : "&") +
+          "ref=" + encodeURIComponent(j.id || "") +
+          (first ? "&name=" + encodeURIComponent(first) : "");
+        return;
+      }
       $("#form").hidden = true;
       $("#masthead").hidden = true;
       $("#done").hidden = false;

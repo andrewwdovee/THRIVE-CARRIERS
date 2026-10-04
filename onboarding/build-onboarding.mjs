@@ -19,8 +19,16 @@ import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
+const FLAGS = ["--entity", "--state", "--rules", "--welcome", "--settings"];
 const flag = (n, d) => { const i = args.indexOf(n); return i < 0 ? d : args[i + 1]; };
-const relay = (args.find((a) => /^https:\/\//.test(a)) || "").replace(/\/+$/, "");
+/* The relay is the one URL given on its own. Everything a flag takes is
+   skipped first — otherwise `--welcome https://...` is read as the relay,
+   which silently builds the live page instead of the preview and points
+   it at the wrong host. */
+const flagValues = new Set(FLAGS.map((f) => flag(f, null)).filter(Boolean));
+const positional = args.filter((a, i) => !FLAGS.includes(a) && !FLAGS.includes(args[i - 1]));
+const relay = (positional.find((a) => /^https:\/\//.test(a) && !flagValues.has(a)) || "")
+  .replace(/\/+$/, "");
 /* A copy to show someone before the relay exists. It is the real page,
    logos and all, but with nowhere to post — and it says so plainly on
    submit rather than losing a signature quietly. */
@@ -30,6 +38,7 @@ if (!relay && !preview) {
   console.error(`Usage: node build-onboarding.mjs https://thrive-relay.<subdomain>.workers.dev
                  [--entity "Thrive Companies LLC"] [--state Florida]
                  [--rules https://thrive-inbound.pages.dev/]
+                 [--welcome <url>] [--settings <url>]
 
 The relay must be the same Worker the Lead Tech board posts to, or the
 board will never see the signed agreements.`);
@@ -39,6 +48,11 @@ board will never see the signed agreements.`);
 const entity = flag("--entity", "Thrive Companies LLC");
 const state = flag("--state", "Florida");
 const rules = (flag("--rules", "https://thrive-inbound.pages.dev/") || "").trim();
+/* Step two lives at /welcome in this same deploy, so the signed form
+   can reach it with a relative path and nothing has to be configured.
+   A preview build has nowhere to send anyone unless it is told. */
+const welcome = (flag("--welcome", "") || "").trim();
+const settings = (flag("--settings", "") || "").trim();
 const src = readFileSync(join(here, "index.html"), "utf8");
 
 /* Each of these is asserted to appear exactly once. A page that silently
@@ -67,6 +81,8 @@ if (relay) out = one(out, 'var RELAY  = "";', `var RELAY  = ${JSON.stringify(rel
 out = one(out, 'var ENTITY = "Thrive Companies LLC";', `var ENTITY = ${JSON.stringify(entity)};`);
 out = one(out, 'var STATE  = "Florida";', `var STATE  = ${JSON.stringify(state)};`);
 out = one(out, 'var RULES_URL = "https://thrive-inbound.pages.dev/";', `var RULES_URL = ${JSON.stringify(rules)};`);
+out = one(out, 'var WELCOME_URL = "";',
+  `var WELCOME_URL = ${JSON.stringify(welcome || (relay ? "welcome/" : ""))};`);
 out = one(out, 'var LOGOS = {};', `var LOGOS = ${JSON.stringify(logos)};`);
 
 /* ---- the agreement in the page against the one in the repo ---- */
@@ -89,15 +105,25 @@ if (relay) st = one(st, 'var RELAY  = "";', `var RELAY  = ${JSON.stringify(relay
 st = one(st, 'var ENTITY = "Thrive Companies LLC";', `var ENTITY = ${JSON.stringify(entity)};`, "start-time.html");
 st = one(st, 'var LOGOS  = {};', `var LOGOS  = ${JSON.stringify(logos)};`, "start-time.html");
 
+let wc = readFileSync(join(here, "welcome.html"), "utf8");
+wc = one(wc, 'var ENTITY = "Thrive Companies LLC";', `var ENTITY = ${JSON.stringify(entity)};`, "welcome.html");
+wc = one(wc, 'var RULES_URL = "https://thrive-inbound.pages.dev/";', `var RULES_URL = ${JSON.stringify(rules)};`, "welcome.html");
+wc = one(wc, 'var LOGOS = {};', `var LOGOS = ${JSON.stringify(logos)};`, "welcome.html");
+wc = one(wc, 'var SETTINGS_URL = "../start-time/";',
+  `var SETTINGS_URL = ${JSON.stringify(settings || (relay ? "../start-time/" : ""))};`, "welcome.html");
+
 const dist = join(here, "dist");
 mkdirSync(dist, { recursive: true });
 const name = preview && !relay ? "preview.html" : "index.html";
 writeFileSync(join(dist, name), out);
 mkdirSync(join(dist, "start-time"), { recursive: true });
 writeFileSync(join(dist, "start-time", name), st);
+mkdirSync(join(dist, "welcome"), { recursive: true });
+writeFileSync(join(dist, "welcome", name), wc);
 
 console.log(`Wrote onboarding/dist/${name}  (${(out.length / 1024).toFixed(0)} KB)
   and  onboarding/dist/start-time/${name}  (${(st.length / 1024).toFixed(0)} KB)  ->  <url>/start-time
+  and  onboarding/dist/welcome/${name}     (${(wc.length / 1024).toFixed(0)} KB)  ->  <url>/welcome
   relay   ${relay || "(none — preview, submissions go nowhere)"}
   entity  ${entity}
   state   ${state}
