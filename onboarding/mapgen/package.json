@@ -1,0 +1,12 @@
+{
+  "name": "thrive-mapgen",
+  "private": true,
+  "type": "module",
+  "description": "Generates onboarding/us-states.json — the projected US map the states page embeds.",
+  "scripts": { "build": "node gen.mjs" },
+  "dependencies": {
+    "d3-geo": "^3.1.1",
+    "topojson-client": "^3.1.0",
+    "us-atlas": "^3.0.1"
+  }
+}
