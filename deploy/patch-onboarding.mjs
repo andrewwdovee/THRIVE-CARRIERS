@@ -316,6 +316,9 @@ export function patchOnboarding(source, onboardingUrl, opts = {}) {
     }
     log(`  removed        ${REMOVED.join(", ")} (divider above ${DIVIDER_AFTER_REMOVAL})`);
   }
+  /* A patched bundle that already carries exactly these tabs is up to
+     date, not broken: the build still has its own steps to run on it. */
+  if (out === source && upgrading) { log("  tabs already up to date"); return out; }
   if (out === source) throw new Error("Nothing was spliced. Refusing to write an unchanged bundle.");
   return out;
 }
