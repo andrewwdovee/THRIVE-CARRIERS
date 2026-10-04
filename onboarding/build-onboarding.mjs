@@ -123,11 +123,14 @@ wc = one(wc, 'var RULES_URL = "https://thrive-inbound.pages.dev/";', `var RULES_
 wc = one(wc, 'var LOGOS = {};', `var LOGOS = ${JSON.stringify(logos)};`, "welcome.html");
 wc = one(wc, 'var SETTINGS_URL = "../start-time/";',
   `var SETTINGS_URL = ${JSON.stringify(settings || (relay ? "../start-time/" : ""))};`, "welcome.html");
+/* A flag overrides whatever the page already has; a link already baked
+   into welcome.html needs no flag and is not reported missing. */
 const missingLinks = [];
 for (const [f, varName] of EXTRA_LINKS) {
   const v = (flag(f, "") || "").trim();
-  if (!v) missingLinks.push(f);
-  wc = one(wc, `var ${varName} = "";`, `var ${varName} = ${JSON.stringify(v)};`, "welcome.html");
+  const here = (wc.match(new RegExp("var " + varName + ' = "([^"]*)";')) || [, ""])[1];
+  if (!v && !here) missingLinks.push(f);
+  if (v) wc = one(wc, `var ${varName} = "${here}";`, `var ${varName} = ${JSON.stringify(v)};`, "welcome.html");
 }
 
 const dist = join(here, "dist");

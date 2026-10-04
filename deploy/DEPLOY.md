@@ -262,18 +262,20 @@ signed form can reach the setup list with a relative path.
 `STEPS` array, and the numbering, the progress bar and the saved ticks all come off
 it. Keep each `id` stable: somebody part-way through loses their ticks if it changes.
 
-Four of its six steps have no link yet. Pass them when the URLs exist, and the
-build tells you which are still missing every time it runs:
+The course link is baked into the page. Four of the seven steps still have none —
+pass them when the URLs exist, and the build names the ones still missing every
+time it runs:
 
 ```sh
 node build-onboarding.mjs https://stripe-sync.aandrewdavidson.workers.dev \
   --portal   https://...   # the inbound portal they log into
   --licences https://...   # wherever licences get sent
-  --course   https://...   # the inbound course
   --training https://...   # the training schedule
+  --discord  https://...   # the Discord invite
 ```
 
-An unset link loses its button; the step still reads.
+A flag overrides whatever the page already holds; an unset link loses its button
+and the step still reads.
 
 `--rules` is where the button on the thank-you page goes. `--preview` builds the
 same page with no relay instead, to show someone before any of this exists: it
