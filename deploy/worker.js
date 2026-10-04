@@ -16,6 +16,8 @@
  *   POST /onboarding/submit        no token, {record} -> {ok: true, id}
  *   POST /onboarding/preferences   no token, {email, ...} -> {ok: true, ...}
  *   GET  /onboarding/roster        no token            -> {slots: [...]}
+ *   POST /refund-request           no token, an agent's refund slip -> {ok: true}
+ *   GET  /refund-requests          Bearer token        -> [request, ...]
  *
  * It is the only unauthenticated write, because the person signing the
  * agreement has no account yet. It is not open: the CORS allow-list
@@ -54,6 +56,47 @@ const BUSY_PARTS = ["AM", "PM", "All day"];
 /* The only start times the desk runs. The signing page and the settings
    page both offer these two, and the relay accepts nothing else. */
 const ONBOARD_SLOTS = ["10:00 AM EST", "11:00 AM EST"];
+
+/* Refund slips from the public form on the Lead Tech board (#request).
+   Two kinds: two bad calls earn one refund, and a duplicate call is one
+   call that is a refund on its own. */
+const RR_PREFIX = "rr:";
+const RR_TTL = 120 * 24 * 3600;          /* long enough to settle a dispute */
+const RR_MAX_BODY = 8 * 1024;
+const RR_MAX_CALLS = 12;
+const RR_PER_HOUR = 20;
+const RR_REASONS = ["non_consumer", "agent", "dead_air", "other", "duplicate"];
+
+function readRefundRequest(body) {
+  const str = (v, max) => String(v ?? "").trim().slice(0, max);
+  const first = str(body?.first, 80);
+  const last = str(body?.last, 80);
+  const email = str(body?.email, 160).toLowerCase();
+  const day = str(body?.day, 10);
+  if (!first || !last) return { error: "A first and last name are needed." };
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "That email address doesn't look right." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return { error: "A date is needed." };
+
+  const kind = body?.kind === "duplicate" ? "duplicate" : "pair";
+  const raw = Array.isArray(body?.calls) ? body.calls.slice(0, kind === "duplicate" ? 1 : RR_MAX_CALLS) : [];
+  const calls = [];
+  for (const c of raw) {
+    const phone = str(c?.phone, 24);
+    const reason = kind === "duplicate" ? "duplicate" : str(c?.reason, 32);
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length < 10) return { error: "Each call needs a phone number of at least 10 digits." };
+    if (RR_REASONS.indexOf(reason) < 0 || (kind === "pair" && reason === "duplicate")) {
+      return { error: "Pick a reason for each call." };
+    }
+    calls.push({ phone, digits, reason, note: str(c?.note, 200) });
+  }
+  if (kind === "duplicate") {
+    if (calls.length !== 1) return { error: "A duplicate call needs its phone number." };
+  } else if (calls.length < 2) {
+    return { error: "Two calls are needed for one refund." };
+  }
+  return { value: { kind, first, last, email, day, calls, note: str(body?.note, 500) } };
+}
 
 /* ---------------------------------------------------------------- utils */
 
@@ -541,6 +584,50 @@ async function handle(request, env) {
         parts: BUSY_PARTS,
         people,
       }, 200, { ...head, "Cache-Control": "no-store" });
+    }
+
+    /* ---- refund slips ----
+       The form goes to agents with no account, so the POST takes no token:
+       a fixed shape, a size cap, a rate limit, and nothing comes back. */
+    if (path === "/refund-request" && request.method === "POST") {
+      const raw = await request.text();
+      if (raw.length > RR_MAX_BODY) return json({ error: "That's too long." }, 413, head);
+      let body;
+      try { body = JSON.parse(raw); } catch { return json({ error: "Couldn't read that." }, 400, head); }
+      const { value, error } = readRefundRequest(body);
+      if (error) return json({ error }, 400, head);
+
+      const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+      const who = await hmac(env.TOKEN_SECRET || "refunds", ip);
+      const bucket = `rate:refund:${who.slice(0, 24)}:${Math.floor(Date.now() / 36e5)}`;
+      const seen = Number(await env.THRIVE_KV.get(bucket)) || 0;
+      if (seen >= RR_PER_HOUR) return json({ error: "Too many requests from here. Try again later." }, 429, head);
+
+      const at = Date.now();
+      const id = crypto.randomUUID();
+      await env.THRIVE_KV.put(
+        `${RR_PREFIX}${String(Math.floor(at / 1000)).padStart(12, "0")}:${id}`,
+        JSON.stringify({ ...value, id, at }),
+        { expirationTtl: RR_TTL },
+      );
+      await env.THRIVE_KV.put(bucket, String(seen + 1), { expirationTtl: 7200 });
+      return json({ ok: true }, 200, head);
+    }
+
+    if (path === "/refund-requests" && request.method === "GET") {
+      const who = await readToken(env, request);
+      if (!who) return json({ error: "Signed out" }, 401, head);
+      const out = [];
+      let cursor;
+      do {
+        const page = await env.THRIVE_KV.list({ prefix: RR_PREFIX, cursor });
+        for (const k of page.keys) {
+          const v = await env.THRIVE_KV.get(k.name);
+          if (v) { try { out.push(JSON.parse(v)); } catch { /* skip a bad row */ } }
+        }
+        cursor = page.list_complete ? null : page.cursor;
+      } while (cursor);
+      return json(out.sort((a, b) => b.at - a.at), 200, { ...head, "Cache-Control": "no-store" });
     }
 
     /* ---- key/value ---- */
