@@ -32,13 +32,13 @@ const here = dirname(fileURLToPath(import.meta.url));
 /* Strings in the tab that are shaped like a utility but are not one. */
 const NOT_CLASSES = new Set(["aria-label", "aria-hidden", "data-act", "no-referrer"]);
 
-/* The order the tabs are shown in, left to right. The divider the board
-   draws before "products-view" stays where it is, so everything above it
-   is the day's work and everything below is reference. */
-const TAB_ORDER = [
-  "inbox", "missed", "completed", "refunds", "wallets", "calls", "onboarding",
-  "products-view", "catalog", "reports", "settings",
-];
+/* The board draws a divider before "products-view": everything above it
+   is the day's work, everything below is reference. Only the top half is
+   reordered, and Onboarding goes at the end of it. What sits below the
+   divider is left exactly as the bundle has it, because builds differ --
+   some carry a separate Products tab and some do not. */
+const DIVIDER = "products-view";
+const HEAD_ORDER = ["inbox", "missed", "completed", "refunds", "wallets", "calls"];
 
 /* A real scanner, because a regex for "..." also matches the gap between
    two strings on the same line and turns `", children: "` into a token. */
@@ -108,17 +108,28 @@ export function patchOnboarding(source, onboardingUrl, opts = {}) {
   for (const m of tabsSrc.matchAll(/\["([\w-]+)","([^"]+)",([\w$]+)\]/g)) {
     entries.set(m[1], { label: m[2], icon: m[3] });
   }
-  const expected = TAB_ORDER.filter((t) => t !== "onboarding");
   const found = [...entries.keys()];
-  if (found.length !== expected.length || expected.some((t) => !entries.has(t))) {
+  const cut = found.indexOf(DIVIDER);
+  if (cut < 0) {
+    throw new Error(`No "${DIVIDER}" tab to divide on. Found: ${found.join(", ")}`);
+  }
+  const head = found.slice(0, cut);
+  const tail = found.slice(cut);
+  const strayed = head.filter((t) => !HEAD_ORDER.includes(t))
+    .concat(HEAD_ORDER.filter((t) => !head.includes(t)));
+  if (strayed.length) {
     throw new Error(
-      `The tab array is not the shape this patch expects.\n  found:    ${found.join(", ")}\n  expected: ${expected.join(", ")}`
+      `The tabs before the divider are not the ones this patch reorders.\n` +
+      `  found:    ${head.join(", ")}\n  expected: ${HEAD_ORDER.join(", ")}\n` +
+      `  differ:   ${strayed.join(", ")}`
     );
   }
   entries.set("onboarding", { label: "Onboarding", icon: "ObIcon" });
+  const order = HEAD_ORDER.concat(["onboarding"], tail);
+  log(`  tabs           ${order.join(", ")}`);
   const rebuilt =
     `const ${tabsHit[1]}=[` +
-    TAB_ORDER.map((id) => `["${id}","${entries.get(id).label}",${entries.get(id).icon}]`).join(",") +
+    order.map((id) => `["${id}","${entries.get(id).label}",${entries.get(id).icon}]`).join(",") +
     `]`;
 
   /* ---- 3. the place in the render chain ---- */
@@ -135,7 +146,12 @@ export function patchOnboarding(source, onboardingUrl, opts = {}) {
     .replace(/__STORE__/g, STORE)
     .replace(/__URL__/g, JSON.stringify(onboardingUrl));
 
-  const css = (source.match(/<style>([\s\S]*?)<\/style>/) || [, ""])[1];
+  /* The largest style block, not the first: a published artifact is
+     wrapped in a skeleton whose own little reset comes before the
+     board's compiled stylesheet. */
+  const css = [...source.matchAll(/<style>([\s\S]*?)<\/style>/g)]
+    .map((m) => m[1]).sort((a, b) => b.length - a.length)[0] || "";
+  if (css.length < 5000) throw new Error("Could not find the board's compiled stylesheet.");
   const have = new Set();
   for (const m of css.matchAll(/\.((?:\\.|[-\w])+)/g)) have.add(m[1].replace(/\\(.)/g, "$1"));
   const missing = new Set();
