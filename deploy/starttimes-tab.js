@@ -139,6 +139,7 @@ function StPanel() {
         email, first: nm.first, last: nm.last, name: r.legalName || email,
         startTime: r.startTime || "", signedAt: r.signedAt,
         callsPerWeek: r.callsPerWeek, note: r.note || "", prefsUpdatedAt: r.prefsUpdatedAt || "",
+        busyDays: Array.isArray(r.busyDays) ? r.busyDays : [], busyPart: r.busyPart || "",
       });
     });
     return [...seen.values()].sort((a, b) =>
@@ -334,6 +335,10 @@ function StPanel() {
                           className: cell + " text-slate-600 dark:text-slate-300",
                           children: [
                             __JSX__.jsx("div", { className: "truncate", children: p.email }, "a"),
+                            p.busyDays.length ? __JSX__.jsxs("div", {
+                              className: "text-xs text-amber-600 dark:text-amber-400 truncate",
+                              children: ["Busy ", p.busyDays.join(", "), p.busyPart ? " · " + p.busyPart : ""],
+                            }, "b") : null,
                             p.note ? __JSX__.jsx("div", {
                               className: "text-xs text-slate-500 dark:text-slate-400 truncate",
                               title: p.note,

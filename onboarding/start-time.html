@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Your call settings</title>
-<meta name="description" content="Change your start time, how many calls you want a week, and leave a note for the desk.">
+<title>Start times</title>
+<meta name="description" content="Who starts at 10 and who starts at 11, what everyone is taking, and where to change yours.">
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -84,6 +84,49 @@ input:focus,textarea:focus{outline:2px solid rgba(240,180,41,.55); outline-offse
 .choice b{display:block; font-size:15px; font-weight:700; color:var(--fg)}
 .choice span small{display:block; font-size:12px; color:var(--muted); font-weight:500}
 
+/* ------------------------------------------------------------ roster */
+.roster{display:grid; gap:14px; grid-template-columns:1fr 1fr; margin:8px 0 10px}
+.roster .loading{grid-column:1/-1; color:var(--muted); font-size:13.5px; text-align:center; margin:0; padding:18px}
+.slot{background:var(--panel); border:1px solid var(--line); border-radius:15px; overflow:hidden}
+.slot .hd{
+  padding:14px 17px; border-bottom:1px solid var(--line);
+  display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap;
+}
+.slot .hd b{font-family:var(--display); font-weight:400; font-size:20px; letter-spacing:.01em}
+.slot .hd span{font-size:11.5px; color:var(--muted); font-weight:600}
+.slot ul{list-style:none; margin:0; padding:0}
+.slot li{padding:11px 17px; border-bottom:1px solid var(--line); display:grid; gap:3px}
+.slot li:last-child{border-bottom:0}
+.slot li.me{background:rgba(240,180,41,.08)}
+.slot .who{display:flex; align-items:baseline; justify-content:space-between; gap:10px}
+.slot .who b{font-size:14.5px; font-weight:600; color:var(--fg); min-width:0; overflow-wrap:anywhere}
+.slot .vol{
+  font-size:12px; font-weight:700; color:var(--gold-hi); white-space:nowrap;
+  border:1px solid rgba(240,180,41,.4); border-radius:999px; padding:1px 9px; flex:none;
+}
+.slot .vol.none{color:var(--muted); border-color:var(--line-2); font-weight:500}
+.slot .busy{font-size:12px; color:var(--muted)}
+.slot .empty{padding:16px 17px; font-size:13px; color:var(--muted)}
+.sectionhead{
+  font-family:var(--display); font-weight:400; font-size:24px; margin:28px 0 0;
+  text-align:center; color:var(--fg);
+}
+
+/* ------------------------------------------------------------- days */
+.days{display:flex; gap:7px; flex-wrap:wrap}
+.day{cursor:pointer}
+.day input{position:absolute; opacity:0; width:0; height:0}
+.day span{
+  display:block; border:1px solid var(--line-2); border-radius:999px;
+  padding:7px 14px; font-size:13px; font-weight:600; color:var(--muted);
+  background:var(--panel-2);
+}
+.day input:checked + span{border-color:var(--gold); color:var(--gold-hi); background:rgba(240,180,41,.12)}
+.day input:focus-visible + span{outline:2px solid var(--gold); outline-offset:2px}
+.choices.tiers .choice{flex:1 1 90px; justify-content:center; text-align:center}
+.choices.tiers .choice b{font-family:var(--display); font-weight:400; font-size:24px; line-height:1.1}
+.choices.tiers .choice small{display:block; font-size:11px; color:var(--muted)}
+
 .btn{
   font:inherit; font-weight:700; font-size:15px; cursor:pointer;
   border-radius:11px; padding:13px 26px; border:1px solid var(--line-2);
@@ -106,6 +149,7 @@ input:focus,textarea:focus{outline:2px solid rgba(240,180,41,.55); outline-offse
 footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16px 10px}
 @media (max-width:560px){
   section.card{padding:17px}
+  .roster{grid-template-columns:1fr}
   .marks{gap:14px}
   .marks img.thrive{height:66px}
   .marks .by{padding-left:14px}
@@ -120,13 +164,19 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
       <img class="thrive" id="mk-thrive" alt="Thrive Companies">
       <span class="by"><span>Powered by</span><img class="lead" id="mk-lead" alt="Lead Tech"></span>
     </div>
-    <h1>Thrive Companies</h1>
-    <p class="rule">YOUR CALL SETTINGS</p>
+    <h1>Start times</h1>
+    <p class="rule">WHO IS ON WHEN</p>
     <p class="lede">
-      Change when your calls start, how many you want a week, and leave the desk a
-      note. Takes a minute.
+      Who is on at 10 and who is on at 11, and what everyone is taking. Change
+      yours at the bottom — it takes a minute.
     </p>
   </header>
+
+  <div id="roster" class="roster" aria-live="polite">
+    <p class="loading">Loading the board…</p>
+  </div>
+
+  <h2 class="sectionhead">Change yours</h2>
 
   <form id="form" novalidate>
     <section class="card" id="s-you">
@@ -156,14 +206,44 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
     <section class="card" id="s-vol">
       <h2>How many calls a week</h2>
       <p class="sub">What you want. We will tell you if the volume is not there.</p>
+      <div class="choices tiers" id="tiers">
+        <label class="choice"><input type="radio" name="callsPerWeek" value="15"><span><b>15</b><small>a week</small></span></label>
+        <label class="choice"><input type="radio" name="callsPerWeek" value="25"><span><b>25</b><small>a week</small></span></label>
+        <label class="choice"><input type="radio" name="callsPerWeek" value="35"><span><b>35</b><small>a week</small></span></label>
+        <label class="choice"><input type="radio" name="callsPerWeek" value="50"><span><b>50</b><small>a week</small></span></label>
+      </div>
+    </section>
+
+    <section class="card" id="s-busy">
+      <h2>When you are typically busy</h2>
+      <p class="sub">
+        Days you are usually tied up, and when. The desk works around it where it
+        can — it is not a hard stop, so calls can still land.
+      </p>
       <div class="field">
-        <label for="callsPerWeek">Calls per week</label>
-        <input id="callsPerWeek" name="callsPerWeek" type="number" min="0" max="1000" step="1" inputmode="numeric" placeholder="e.g. 40">
+        <label>Days</label>
+        <div class="days" id="days">
+          <label class="day"><input type="checkbox" name="busyDay" value="Mon"><span>Mon</span></label>
+          <label class="day"><input type="checkbox" name="busyDay" value="Tue"><span>Tue</span></label>
+          <label class="day"><input type="checkbox" name="busyDay" value="Wed"><span>Wed</span></label>
+          <label class="day"><input type="checkbox" name="busyDay" value="Thu"><span>Thu</span></label>
+          <label class="day"><input type="checkbox" name="busyDay" value="Fri"><span>Fri</span></label>
+          <label class="day"><input type="checkbox" name="busyDay" value="Sat"><span>Sat</span></label>
+          <label class="day"><input type="checkbox" name="busyDay" value="Sun"><span>Sun</span></label>
+        </div>
       </div>
       <div class="field">
-        <label for="note">Anything the desk should know</label>
-        <textarea id="note" name="note" maxlength="600" placeholder="States you've added, days you're out, a cap you want held — anything."></textarea>
-        <p class="hint"><span id="noteleft">600</span> characters left.</p>
+        <label>When on those days</label>
+        <div class="choices">
+          <label class="choice"><input type="radio" name="busyPart" value="AM"><span><b>AM</b></span></label>
+          <label class="choice"><input type="radio" name="busyPart" value="PM"><span><b>PM</b></span></label>
+          <label class="choice"><input type="radio" name="busyPart" value="All day"><span><b>All day</b></span></label>
+        </div>
+      </div>
+      <div class="field">
+        <label for="note">Anything else the desk should know</label>
+        <textarea id="note" name="note" maxlength="600" placeholder="States you've added, a week you're out, a cap you want held — anything."></textarea>
+        <p class="hint"><span id="noteleft">600</span> characters left. This one is for the desk, not the board above.</p>
       </div>
     </section>
 
@@ -193,25 +273,108 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
   var LOGOS  = {};
 
   var $ = function (s) { return document.querySelector(s); };
-  Array.prototype.slice.call(document.querySelectorAll("[data-entity]"))
-    .forEach(function (el) { el.textContent = ENTITY; });
+  var $$ = function (s) { return Array.prototype.slice.call(document.querySelectorAll(s)); };
+
+  $$("[data-entity]").forEach(function (el) { el.textContent = ENTITY; });
   [["mk-thrive", "thriveV"], ["mk-lead", "leadWhite"]].forEach(function (p) {
     var el = $("#" + p[0]);
     if (el && LOGOS[p[1]]) el.src = LOGOS[p[1]];
     else if (el) el.remove();
   });
 
+  var SLOTS = ["10:00 AM EST", "11:00 AM EST"];
+
   /* The link the desk hands out can carry the email, so somebody opening
      it from their own row does not have to type it. */
+  var mine = "";
   try {
     var q = new URLSearchParams(location.search).get("email");
-    if (q) $("#email").value = q;
+    if (q) { $("#email").value = q; mine = q.trim().toLowerCase(); }
   } catch (e) { /* no query string, no matter */ }
 
   var note = $("#note");
   function countNote() { $("#noteleft").textContent = String(600 - note.value.length); }
   note.addEventListener("input", countNote);
   countNote();
+
+  function esc(v) {
+    return String(v == null ? "" : v)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  /* ------------------------------------------------------- the board
+     Public, and deliberately thin: names, start times, volumes and busy
+     days. No email, no phone, nothing else off the record — the email is
+     what lets somebody change a row, so it never comes down here. */
+  function busyLine(p) {
+    if (!p.busyDays || !p.busyDays.length) return "";
+    return "Busy " + p.busyDays.join(", ") + (p.busyPart ? " · " + p.busyPart : "");
+  }
+
+  function drawRoster(data) {
+    var people = (data && data.people) || [];
+    var slots = (data && data.slots) || SLOTS;
+    var html = "";
+    slots.forEach(function (slot) {
+      var inSlot = people.filter(function (p) { return p.startTime === slot; })
+        .sort(function (a, b) { return a.name.localeCompare(b.name); });
+      var taking = inSlot.reduce(function (t, p) { return t + (p.callsPerWeek || 0); }, 0);
+      html += '<section class="slot"><div class="hd"><b>' + esc(slot) + "</b>" +
+        "<span>" + inSlot.length + (inSlot.length === 1 ? " agent" : " agents") +
+        (taking ? " · " + taking + " calls a week" : "") + "</span></div>";
+      if (!inSlot.length) {
+        html += '<p class="empty">Nobody on this one yet.</p>';
+      } else {
+        html += "<ul>";
+        inSlot.forEach(function (p) {
+          var busy = busyLine(p);
+          html += "<li" + (p.me ? ' class="me"' : "") + '><div class="who"><b>' + esc(p.name) + "</b>" +
+            '<span class="vol' + (p.callsPerWeek ? "" : " none") + '">' +
+            (p.callsPerWeek ? p.callsPerWeek + " a wk" : "not set") + "</span></div>" +
+            (busy ? '<div class="busy">' + esc(busy) + "</div>" : "") + "</li>";
+        });
+        html += "</ul>";
+      }
+      html += "</section>";
+    });
+    var unslotted = people.filter(function (p) { return slots.indexOf(p.startTime) < 0; });
+    if (unslotted.length) {
+      html += '<section class="slot" style="grid-column:1/-1"><div class="hd"><b>No start time yet</b>' +
+        "<span>" + unslotted.length + "</span></div><p class=\"empty\">" +
+        esc(unslotted.map(function (p) { return p.name; }).join(", ")) + "</p></section>";
+    }
+    $("#roster").innerHTML = html;
+  }
+
+  function loadRoster() {
+    if (!RELAY) {
+      $("#roster").innerHTML = '<p class="loading">The board appears once this page is live.</p>';
+      return;
+    }
+    fetch(RELAY.replace(/\/+$/, "") + "/onboarding/roster")
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error("could not load")); })
+      .then(drawRoster)
+      .catch(function () {
+        $("#roster").innerHTML = '<p class="loading">The board could not be loaded. Your changes below still save.</p>';
+      });
+  }
+  loadRoster();
+
+  function setStatus(msg, kind) {
+    var el = $("#status");
+    el.textContent = msg || "";
+    el.className = "status" + (kind ? " " + kind : "");
+  }
+  function mark(sel, bad) { $(sel).classList.toggle("invalid", !!bad); }
+
+  function picked(name) {
+    var el = document.querySelector("input[name=" + name + "]:checked");
+    return el ? el.value : "";
+  }
+  function pickedDays() {
+    return $$("input[name=busyDay]:checked").map(function (el) { return el.value; });
+  }
 
   document.addEventListener("click", function (ev) {
     var b = ev.target.closest("[data-act]");
@@ -222,32 +385,28 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
     }
   });
 
-  function setStatus(msg, kind) {
-    var el = $("#status");
-    el.textContent = msg || "";
-    el.className = "status" + (kind ? " " + kind : "");
-  }
-  function mark(sel, bad) { $(sel).classList.toggle("invalid", !!bad); }
-
   $("#form").addEventListener("submit", function (ev) {
     ev.preventDefault();
     var email = ($("#email").value || "").trim().toLowerCase();
-    var picked = document.querySelector("input[name=startTime]:checked");
-    var calls = ($("#callsPerWeek").value || "").trim();
+    var startTime = picked("startTime");
+    var calls = picked("callsPerWeek");
+    var days = pickedDays();
+    var part = picked("busyPart");
+    var text = note.value.trim();
 
-    var bad = !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
-    mark("#s-you", bad);
-    mark("#s-time", !picked && !calls && !note.value.trim());
-    if (bad) {
+    var badEmail = !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
+    mark("#s-you", badEmail);
+    if (badEmail) {
       setStatus("Put in the email you onboarded with.", "bad");
       $("#s-you").scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
-    if (!picked && !calls && !note.value.trim()) {
-      setStatus("Nothing to change yet — pick a time, a number, or write a note.", "bad");
+    var nothing = !startTime && !calls && !days.length && !part && !text;
+    mark("#s-time", nothing);
+    if (nothing) {
+      setStatus("Nothing to change yet — pick a time, a number, a day, or write a note.", "bad");
       return;
     }
-
     if (!RELAY) {
       setStatus("This page has not been pointed at the relay yet, so nothing was sent.", "bad");
       return;
@@ -255,17 +414,17 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
 
     var btn = $("#submit");
     btn.disabled = true;
-    setStatus("Saving…");
+    setStatus("Saving\u2026");
+
+    var body = { email: email, startTime: startTime, callsPerWeek: calls, note: text };
+    /* An empty day list is a real answer -- "no busy days" -- so it only
+       travels when they touched the days at all. */
+    if (days.length || part) { body.busyDays = days; body.busyPart = part; }
 
     fetch(RELAY.replace(/\/+$/, "") + "/onboarding/preferences", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: email,
-        startTime: picked ? picked.value : "",
-        callsPerWeek: calls,
-        note: note.value.trim()
-      })
+      body: JSON.stringify(body)
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (j) {
         if (!r.ok) throw new Error(j.error || ("The desk refused it (" + r.status + ")."));
@@ -277,11 +436,14 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
       var bits = [];
       if (j.startTime) bits.push("Calls start at " + j.startTime);
       if (j.callsPerWeek) bits.push(j.callsPerWeek + " a week");
+      if (j.busyDays && j.busyDays.length) {
+        bits.push("busy " + j.busyDays.join(", ") + (j.busyPart ? " " + j.busyPart : ""));
+      }
       if (j.note) bits.push("your note is with the desk");
-      $("#donetext").textContent = bits.length
-        ? bits.join(" · ") + "."
-        : "The desk has your changes.";
+      $("#donetext").textContent = bits.length ? bits.join(" · ") + "." : "The desk has your changes.";
       btn.disabled = false;
+      mine = email;
+      loadRoster();
       window.scrollTo({ top: 0, behavior: "smooth" });
     }).catch(function (e) {
       btn.disabled = false;

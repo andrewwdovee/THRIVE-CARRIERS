@@ -15,6 +15,7 @@
  *
  *   POST /onboarding/submit        no token, {record} -> {ok: true, id}
  *   POST /onboarding/preferences   no token, {email, ...} -> {ok: true, ...}
+ *   GET  /onboarding/roster        no token            -> {slots: [...]}
  *
  * It is the only unauthenticated write, because the person signing the
  * agreement has no account yet. It is not open: the CORS allow-list
@@ -43,6 +44,10 @@ const ONBOARD_MAX_PHOTO = 2.6 * 1024 * 1024;
 const ONBOARD_MAX_ROWS = 2000;
 const ONBOARD_PER_HOUR = 6;
 const PREFS_PER_HOUR = 20;
+/* The only weekly volumes on offer. */
+const CALL_TIERS = [15, 25, 35, 50];
+const BUSY_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const BUSY_PARTS = ["AM", "PM", "All day"];
 /* The only start times the desk runs. The signing page and the settings
    page both offer these two, and the relay accepts nothing else. */
 const ONBOARD_SLOTS = ["10:00 AM EST", "11:00 AM EST"];
@@ -436,13 +441,29 @@ async function handle(request, env) {
       let callsPerWeek = null;
       if (String(body.callsPerWeek || "").trim() !== "") {
         const n = Math.round(Number(body.callsPerWeek));
-        if (!isFinite(n) || n < 0 || n > 1000) {
-          return json({ error: "Calls per week has to be a number from 0 to 1000." }, 400, head);
+        if (CALL_TIERS.indexOf(n) < 0) {
+          return json({ error: `Calls a week has to be one of ${CALL_TIERS.join(", ")}.` }, 400, head);
         }
         callsPerWeek = n;
       }
+      /* Days off the fixed list, in week order however they arrive. */
+      let busyDays = null;
+      if (Array.isArray(body.busyDays)) {
+        const picked = body.busyDays.map((d) => String(d).trim());
+        if (picked.some((d) => BUSY_DAYS.indexOf(d) < 0)) {
+          return json({ error: "That is not a day of the week." }, 400, head);
+        }
+        busyDays = BUSY_DAYS.filter((d) => picked.indexOf(d) >= 0);
+      }
+      let busyPart = null;
+      if (body.busyPart != null && String(body.busyPart).trim() !== "") {
+        busyPart = String(body.busyPart).trim();
+        if (BUSY_PARTS.indexOf(busyPart) < 0) {
+          return json({ error: "Busy time has to be AM, PM or All day." }, 400, head);
+        }
+      }
       const note = String(body.note == null ? "" : body.note).trim().slice(0, 600);
-      if (!startTime && callsPerWeek === null && !note) {
+      if (!startTime && callsPerWeek === null && busyDays === null && !busyPart && !note) {
         return json({ error: "Nothing to change." }, 400, head);
       }
 
@@ -457,6 +478,8 @@ async function handle(request, env) {
       const at = new Date().toISOString();
       if (startTime) row.startTime = startTime;
       if (callsPerWeek !== null) row.callsPerWeek = callsPerWeek;
+      if (busyDays !== null) row.busyDays = busyDays;
+      if (busyPart) row.busyPart = busyPart;
       if (note) row.note = note;
       row.prefsUpdatedAt = at;
       row.prefsLog = [{ at, startTime: startTime || null, callsPerWeek, note: note || null }]
@@ -470,8 +493,40 @@ async function handle(request, env) {
         ok: true, at,
         startTime: row.startTime || "",
         callsPerWeek: row.callsPerWeek == null ? "" : row.callsPerWeek,
+        busyDays: row.busyDays || [],
+        busyPart: row.busyPart || "",
         note: row.note || "",
       }, 200, head);
+    }
+
+    /* The board that everyone can see: who is on which start time, what
+       they are taking, and when they are typically busy.
+
+       Deliberately narrow. The email is the key to changing somebody's
+       settings on the route above, so it never leaves here — and nor do
+       the phone number, the NPN, the agreements or anything else on the
+       record. Names and a schedule, nothing more. */
+    if (path === "/onboarding/roster" && request.method === "GET") {
+      let index = [];
+      try { index = JSON.parse((await env.THRIVE_KV.get(ONBOARD_INDEX)) || "[]"); } catch { index = []; }
+      if (!Array.isArray(index)) index = [];
+      const people = index
+        .filter((r) => r && r.legalName)
+        .map((r) => ({
+          id: String(r.id || ""),
+          name: String(r.legalName || ""),
+          startTime: ONBOARD_SLOTS.indexOf(r.startTime) >= 0 ? r.startTime : "",
+          callsPerWeek: CALL_TIERS.indexOf(r.callsPerWeek) >= 0 ? r.callsPerWeek : null,
+          busyDays: Array.isArray(r.busyDays) ? r.busyDays.filter((d) => BUSY_DAYS.indexOf(d) >= 0) : [],
+          busyPart: BUSY_PARTS.indexOf(r.busyPart) >= 0 ? r.busyPart : "",
+        }));
+      return json({
+        slots: ONBOARD_SLOTS,
+        tiers: CALL_TIERS,
+        days: BUSY_DAYS,
+        parts: BUSY_PARTS,
+        people,
+      }, 200, { ...head, "Cache-Control": "no-store" });
     }
 
     /* ---- key/value ---- */

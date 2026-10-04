@@ -20,7 +20,7 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
 const FLAGS = ["--entity", "--state", "--rules", "--welcome", "--settings",
-  "--portal", "--licences", "--course", "--training"];
+  "--portal", "--licences", "--course", "--training", "--discord"];
 const flag = (n, d) => { const i = args.indexOf(n); return i < 0 ? d : args[i + 1]; };
 /* The relay is the one URL given on its own. Everything a flag takes is
    skipped first — otherwise `--welcome https://...` is read as the relay,
@@ -40,7 +40,8 @@ if (!relay && !preview) {
                  [--entity "Thrive Companies LLC"] [--state Florida]
                  [--rules https://thrive-inbound.pages.dev/]
                  [--welcome <url>] [--settings <url>]
-                 [--portal <url>] [--licences <url>] [--course <url>] [--training <url>]
+                 [--portal <url>] [--licences <url>] [--course <url>]
+                 [--training <url>] [--discord <url>]
 
 The relay must be the same Worker the Lead Tech board posts to, or the
 board will never see the signed agreements.`);
@@ -62,6 +63,7 @@ const EXTRA_LINKS = [
   ["--licences", "LICENCE_URL"],
   ["--course", "COURSE_URL"],
   ["--training", "TRAINING_URL"],
+  ["--discord", "DISCORD_URL"],
 ];
 const src = readFileSync(join(here, "index.html"), "utf8");
 
