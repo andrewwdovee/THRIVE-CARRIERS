@@ -20,7 +20,7 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
 const FLAGS = ["--entity", "--state", "--rules", "--welcome", "--settings",
-  "--portal", "--licences", "--course", "--training", "--discord"];
+  "--portal", "--licences", "--course", "--training", "--discord", "--support"];
 const flag = (n, d) => { const i = args.indexOf(n); return i < 0 ? d : args[i + 1]; };
 /* The relay is the one URL given on its own. Everything a flag takes is
    skipped first — otherwise `--welcome https://...` is read as the relay,
@@ -41,7 +41,7 @@ if (!relay && !preview) {
                  [--rules https://thrive-inbound.pages.dev/]
                  [--welcome <url>] [--settings <url>]
                  [--portal <url>] [--licences <url>] [--course <url>]
-                 [--training <url>] [--discord <url>]
+                 [--training <url>] [--discord <url>] [--support <url>]
 
 The relay must be the same Worker the Lead Tech board posts to, or the
 board will never see the signed agreements.`);
@@ -64,6 +64,7 @@ const EXTRA_LINKS = [
   ["--course", "COURSE_URL"],
   ["--training", "TRAINING_URL"],
   ["--discord", "DISCORD_URL"],
+  ["--support", "SUPPORT_URL"],
 ];
 const src = readFileSync(join(here, "index.html"), "utf8");
 
@@ -117,6 +118,10 @@ if (relay) st = one(st, 'var RELAY  = "";', `var RELAY  = ${JSON.stringify(relay
 st = one(st, 'var ENTITY = "Thrive Companies LLC";', `var ENTITY = ${JSON.stringify(entity)};`, "start-time.html");
 st = one(st, 'var LOGOS  = {};', `var LOGOS  = ${JSON.stringify(logos)};`, "start-time.html");
 
+let tr = readFileSync(join(here, "training.html"), "utf8");
+tr = one(tr, 'var ENTITY = "Thrive Companies LLC";', `var ENTITY = ${JSON.stringify(entity)};`, "training.html");
+tr = one(tr, 'var LOGOS = {};', `var LOGOS = ${JSON.stringify(logos)};`, "training.html");
+
 let wc = readFileSync(join(here, "welcome.html"), "utf8");
 wc = one(wc, 'var ENTITY = "Thrive Companies LLC";', `var ENTITY = ${JSON.stringify(entity)};`, "welcome.html");
 wc = one(wc, 'var RULES_URL = "https://thrive-inbound.pages.dev/";', `var RULES_URL = ${JSON.stringify(rules)};`, "welcome.html");
@@ -141,10 +146,13 @@ mkdirSync(join(dist, "start-time"), { recursive: true });
 writeFileSync(join(dist, "start-time", name), st);
 mkdirSync(join(dist, "welcome"), { recursive: true });
 writeFileSync(join(dist, "welcome", name), wc);
+mkdirSync(join(dist, "training"), { recursive: true });
+writeFileSync(join(dist, "training", name), tr);
 
 console.log(`Wrote onboarding/dist/${name}  (${(out.length / 1024).toFixed(0)} KB)
   and  onboarding/dist/start-time/${name}  (${(st.length / 1024).toFixed(0)} KB)  ->  <url>/start-time
   and  onboarding/dist/welcome/${name}     (${(wc.length / 1024).toFixed(0)} KB)  ->  <url>/welcome
+  and  onboarding/dist/training/${name}    (${(tr.length / 1024).toFixed(0)} KB)  ->  <url>/training
   relay   ${relay || "(none — preview, submissions go nowhere)"}
   entity  ${entity}
   state   ${state}

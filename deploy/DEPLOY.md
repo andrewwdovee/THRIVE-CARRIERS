@@ -235,6 +235,7 @@ New since the rest of this file. Three pieces:
 |---|---|
 | `onboarding/index.html` | the public page a client signs — both agreements, the signature pads, the headshot |
 | `onboarding/welcome.html` | step two, at `/welcome` — the setup list they land on the moment the form is signed |
+| `onboarding/training.html` | the training calendar at `/training`, generated from the weekly pattern |
 | `onboarding/start-time.html` | the start-times board at `/start-time` — who is on at 10 and who at 11, and where an agent changes their own |
 | `POST /onboarding/submit` on the worker | no token, because the signer has no account yet |
 | `POST /onboarding/preferences` | no token either; it can only change a handful of fields on a row that already exists |
@@ -262,20 +263,23 @@ signed form can reach the setup list with a relative path.
 `STEPS` array, and the numbering, the progress bar and the saved ticks all come off
 it. Keep each `id` stable: somebody part-way through loses their ticks if it changes.
 
-The course link is baked into the page. Four of the seven steps still have none —
-pass them when the URLs exist, and the build names the ones still missing every
-time it runs:
+Six of the eight steps have their link baked in. Two are still missing — pass them
+when the URLs exist, and the build names them every time it runs:
 
 ```sh
 node build-onboarding.mjs https://stripe-sync.aandrewdavidson.workers.dev \
   --portal   https://...   # the inbound portal they log into
   --licences https://...   # wherever licences get sent
-  --training https://...   # the training schedule
-  --discord  https://...   # the Discord invite
 ```
 
 A flag overrides whatever the page already holds; an unset link loses its button
 and the step still reads.
+
+**The training calendar is a weekly pattern, not a month.** `onboarding/training.html`
+stores the five session types and what runs on each weekday, and generates whatever
+month you are looking at from that — so it cannot go out of date, and changing a
+trainer is one line. Below 980px the month grid is dropped and the week stands on
+its own, because seven columns at phone width is not a calendar.
 
 `--rules` is where the button on the thank-you page goes. `--preview` builds the
 same page with no relay instead, to show someone before any of this exists: it

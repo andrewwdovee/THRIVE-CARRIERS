@@ -178,8 +178,9 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
   var PORTAL_URL = "";
   var LICENCE_URL = "";
   var COURSE_URL = "https://whop.com/thrive-compnaies/exp_lA4u71LcI8r6pP/app/";
-  var TRAINING_URL = "";
-  var DISCORD_URL = "";
+  var TRAINING_URL = "../training/";
+  var DISCORD_URL = "https://discord.gg/DHN5EDN2y7";
+  var SUPPORT_URL = "https://discord.gg/keSnyfQ738";
   /* Sits beside this page in the deploy. Empty in a preview, where
      there is nothing to point at — the button is dropped rather than
      left dead. */
@@ -248,15 +249,25 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
       body: "Live sessions through the week — call reviews, objection work, and time " +
             "with the desk. Get them in your calendar now and come to the first one " +
             "you can.",
-      link: { href: TRAINING_URL, label: "See the schedule", quiet: true }
+      link: { href: TRAINING_URL, label: "See the training calendar" }
     },
     {
       id: "discord",
       who: "you",
       title: "Join our Discord server",
       body: "Where the floor actually talks — call reviews, carrier news, a question " +
-            "answered in two minutes instead of two days. Get in and say hello.",
-      link: { href: DISCORD_URL, label: "Join the Discord" }
+            "answered in two minutes instead of two days. Most of the training above " +
+            "runs in here, so you need to be in before your first session.",
+      link: { href: DISCORD_URL, label: "Join the Thrive Discord" }
+    },
+    {
+      id: "support",
+      who: "you",
+      title: "Join the Lead Tech support server",
+      body: "A separate server, and the fastest way to raise a problem — a bad " +
+            "transfer, a charge that looks wrong, routing that is not doing what it " +
+            "should. Open a ticket there and it is in front of the desk straight away.",
+      link: { href: SUPPORT_URL, label: "Join the support server", quiet: true }
     }
   ];
 

@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Training calendar</title>
+<meta name="description" content="Every training session we run, what time, where, and who takes it. All times Eastern.">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700;800&display=swap">
+<style>
+:root{
+  color-scheme: dark;
+  --ink:#07090E; --panel:#1A2130; --panel-2:#222B3C; --cell:#161D2B;
+  --line:#2E394B; --line-2:#667998; --fg:#F0F4F9; --muted:#A3B4C8;
+  --gold:#F0B429; --gold-hi:#FFE08A;
+  /* The five session types, in the hues the printed calendar uses.
+     Every chip carries dark ink: white on the amber reads at 1.9:1,
+     which is not a contrast you can put small bold type on. */
+  --s-blue:#3B82F6; --s-amber:#F0B429; --s-green:#13B981;
+  --s-violet:#8B5CF6; --s-rose:#F43F5E; --chip-ink:#140F02;
+  --display:'Anton','Arial Narrow',sans-serif;
+  --body:'Archivo',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--ink); color:var(--fg); font-family:var(--body); font-size:15px; line-height:1.6}
+body::before{
+  content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:
+    radial-gradient(1100px 620px at 78% -8%, rgba(240,180,41,.13), transparent 62%),
+    radial-gradient(900px 520px at 6% 4%, rgba(47,111,224,.10), transparent 58%);
+}
+.wrap{max-width:1280px; margin:0 auto; padding:0 16px 90px}
+
+.masthead{padding:40px 0 10px; text-align:center}
+.marks{display:flex; align-items:center; justify-content:center; gap:19px; margin:0 0 22px}
+.marks img.thrive{height:72px; width:auto}
+.marks img.lead{height:14px; width:auto}
+.marks .by{display:flex; align-items:center; gap:9px; padding-left:19px; border-left:1px solid var(--line-2)}
+.marks .by span{
+  font-size:8px; font-weight:700; letter-spacing:.26em;
+  text-transform:uppercase; color:var(--muted); white-space:nowrap;
+}
+.masthead h1{
+  font-family:var(--display); font-weight:400; margin:0;
+  font-size:clamp(32px,7.4vw,52px); line-height:1.06; letter-spacing:.012em;
+  background:linear-gradient(180deg,#FFFFFF 6%,#DCE3EC 58%,#9BA7B6 100%);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.rule{
+  display:flex; align-items:center; gap:14px; margin:16px auto 0; max-width:440px;
+  color:var(--gold); font-size:10.5px; font-weight:700; letter-spacing:.26em;
+}
+.rule::before,.rule::after{content:""; flex:1; height:1px; background:linear-gradient(90deg,transparent,rgba(240,180,41,.55))}
+.rule::after{background:linear-gradient(90deg,rgba(240,180,41,.55),transparent)}
+.lede{color:var(--muted); max-width:52ch; margin:16px auto 0; font-size:14.5px}
+
+/* ----------------------------------------------------------- legend */
+.legend{
+  display:grid; gap:10px; grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+  background:var(--panel); border:1px solid var(--line); border-radius:15px;
+  padding:17px 19px; margin:26px 0 0;
+}
+.legend div{display:flex; gap:10px; align-items:flex-start; min-width:0}
+.legend .dot{width:11px; height:11px; border-radius:50%; flex:none; margin-top:5px}
+.legend b{display:block; font-size:13px; font-weight:700}
+.legend small{display:block; font-size:12px; color:var(--muted)}
+
+/* -------------------------------------------------------- the week */
+.sectionhead{
+  display:flex; align-items:baseline; justify-content:space-between;
+  gap:14px; flex-wrap:wrap; margin:30px 0 12px;
+}
+.sectionhead h2{font-family:var(--display); font-weight:400; font-size:25px; margin:0; letter-spacing:.01em}
+.sectionhead p{margin:0; font-size:12.5px; color:var(--muted)}
+
+.week{display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(215px,1fr))}
+.daycard{background:var(--panel); border:1px solid var(--line); border-radius:15px; overflow:hidden}
+.daycard > h3{
+  margin:0; padding:12px 16px; border-bottom:1px solid var(--line);
+  font-size:12px; font-weight:800; letter-spacing:.17em; text-transform:uppercase; color:var(--gold);
+}
+.daycard.today > h3{background:rgba(240,180,41,.12)}
+.daycard ul{list-style:none; margin:0; padding:10px 12px; display:grid; gap:8px}
+
+/* A session, the same shape on the week cards and in the month grid. */
+.sess{
+  display:grid; grid-template-columns:auto 1fr; gap:10px; align-items:center;
+  border:1px solid var(--line-2); border-radius:10px; padding:7px 9px;
+  background:var(--cell); min-width:0;
+}
+.sess .t{
+  font-size:11.5px; font-weight:800; border-radius:6px; padding:3px 7px;
+  color:var(--chip-ink); white-space:nowrap; flex:none;
+}
+.sess .n{min-width:0}
+.sess .n b{display:block; font-size:12.5px; font-weight:700; line-height:1.3; overflow-wrap:anywhere}
+.sess .n small{display:block; font-size:11px; color:var(--muted); line-height:1.35}
+.sess.blue{border-color:rgba(59,130,246,.45)}   .sess.blue .t{background:var(--s-blue)}
+.sess.amber{border-color:rgba(240,180,41,.45)}  .sess.amber .t{background:var(--s-amber)}
+.sess.green{border-color:rgba(19,185,129,.45)}  .sess.green .t{background:var(--s-green)}
+.sess.violet{border-color:rgba(139,92,246,.45)} .sess.violet .t{background:var(--s-violet)}
+.sess.rose{border-color:rgba(244,63,94,.45)}    .sess.rose .t{background:var(--s-rose)}
+
+/* ------------------------------------------------------- the month */
+.monthbar{display:flex; align-items:center; gap:10px}
+.monthbar b{font-family:var(--display); font-weight:400; font-size:25px; min-width:9ch}
+.navbtn{
+  font:inherit; font-size:13px; font-weight:700; cursor:pointer; color:var(--fg);
+  background:var(--panel-2); border:1px solid var(--line-2); border-radius:9px;
+  padding:6px 12px; line-height:1.2;
+}
+.navbtn:hover{background:var(--panel)}
+.grid{
+  display:grid; grid-template-columns:repeat(7,1fr);
+  border:1px solid var(--line); border-radius:15px; overflow:hidden; background:var(--line);
+  gap:1px;
+}
+.grid .hd{
+  background:var(--panel); padding:10px 8px; text-align:center;
+  font-size:11px; font-weight:800; letter-spacing:.15em; text-transform:uppercase; color:var(--muted);
+}
+.grid .hd.wd{color:var(--gold)}
+.grid .cell{background:var(--panel); min-height:132px; padding:8px; display:grid; align-content:start; gap:6px}
+.grid .cell.out{background:#141A26}
+.grid .cell.today{background:rgba(240,180,41,.09)}
+.grid .cell .dnum{font-size:13px; font-weight:700; color:var(--fg)}
+.grid .cell.out .dnum{color:var(--muted); opacity:.5}
+.grid .cell .none{font-size:10px; color:var(--muted); letter-spacing:.09em; text-transform:uppercase; opacity:.65}
+.grid .sess{padding:5px 7px; gap:7px}
+.grid .sess .t{font-size:10.5px; padding:2px 5px}
+.grid .sess .n b{font-size:11px}
+.grid .sess .n small{font-size:10px}
+
+.monthwrap{display:none}
+@media (min-width:980px){ .monthwrap{display:block} .mobilenote{display:none} }
+.mobilenote{
+  margin-top:14px; font-size:12.5px; color:var(--muted); text-align:center;
+}
+footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16px 10px}
+@media (max-width:560px){ .marks{gap:14px} .marks img.thrive{height:62px} .marks .by{padding-left:14px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="marks">
+      <img class="thrive" id="mk-thrive" alt="Thrive Companies">
+      <span class="by"><span>Powered by</span><img class="lead" id="mk-lead" alt="Lead Tech"></span>
+    </div>
+    <h1>Training calendar</h1>
+    <p class="rule">ALL TIMES EASTERN</p>
+    <p class="lede">
+      The same every week. Nothing here is optional reading — the people who show up
+      close at a different rate than the people who do not.
+    </p>
+  </header>
+
+  <div class="legend" id="legend"></div>
+
+  <div class="sectionhead">
+    <h2>Every week</h2>
+    <p>Monday to Friday. Nothing scheduled at the weekend.</p>
+  </div>
+  <div class="week" id="week"></div>
+  <p class="mobilenote">The month view needs a wider screen — the week above is the whole schedule.</p>
+
+  <div class="monthwrap">
+    <div class="sectionhead">
+      <div class="monthbar">
+        <button type="button" class="navbtn" data-act="prev" aria-label="Previous month">&larr;</button>
+        <b id="monthname"></b>
+        <button type="button" class="navbtn" data-act="next" aria-label="Next month">&rarr;</button>
+        <button type="button" class="navbtn" data-act="today">This month</button>
+      </div>
+      <p>Generated from the weekly schedule, so it is never out of date.</p>
+    </div>
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <footer><span data-entity>Thrive Companies</span> &middot; Lead Tech inbound</footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var ENTITY = "Thrive Companies LLC";
+  var LOGOS = {};
+
+  /* ------------------------------------------------------ the schedule
+     The calendar is a weekly pattern, so that is what is stored — the
+     month below is generated from it and cannot go stale. Edit here and
+     every view follows.
+
+     tone: which of the five colours.  where: the room, when it has one. */
+  var TYPES = [
+    { tone: "blue",   time: "9:15 AM", title: "Call Review + Role Play", where: "A Team Discord" },
+    { tone: "amber",  time: "5:00 PM", title: "Company Training", where: "Company-wide" },
+    { tone: "green",  time: "6:00 PM", title: "New Agent Onboarding", where: "Mondays" },
+    { tone: "violet", time: "7:30 PM", title: "Late Night Training", where: "Premium Palace" },
+    { tone: "rose",   time: "8:30 PM", title: "Leadership Training", where: "Mondays" }
+  ];
+
+  var CALL = TYPES[0], COMPANY = TYPES[1], ONBOARD = TYPES[2], LATE = TYPES[3], LEAD = TYPES[4];
+  function s(type, lead) { return { tone: type.tone, time: type.time, title: type.title, lead: lead || "", where: type.where }; }
+
+  /* index 0 = Sunday, to match Date#getDay */
+  var WEEK = [
+    [],                                                          /* Sun */
+    [s(CALL, "Ryan"), s(COMPANY, "Ryan"), s(ONBOARD), s(LATE, "Rotating manager"), s(LEAD)],
+    [s(CALL, "Mike"), s(LATE, "Rotating manager")],              /* Tue */
+    [s(CALL, "Tristan"), s(COMPANY, "Rotating manager"), s(LATE, "Rotating manager")],
+    [s(CALL, "Ryan"), s(LATE, "Rotating manager")],              /* Thu */
+    [s(CALL, "Mike"), s(COMPANY, "Top producer"), s(LATE, "Rotating manager")],
+    []                                                           /* Sat */
+  ];
+  var DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  var SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  var $ = function (q) { return document.querySelector(q); };
+  Array.prototype.slice.call(document.querySelectorAll("[data-entity]"))
+    .forEach(function (el) { el.textContent = ENTITY; });
+  [["mk-thrive", "thriveV"], ["mk-lead", "leadWhite"]].forEach(function (p) {
+    var el = $("#" + p[0]);
+    if (el && LOGOS[p[1]]) el.src = LOGOS[p[1]];
+    else if (el) el.remove();
+  });
+
+  function esc(v) {
+    return String(v == null ? "" : v)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  function shortTime(t) { return String(t).replace(/\s*(AM|PM)$/, ""); }
+
+  function sessHtml(x, compact) {
+    return '<div class="sess ' + x.tone + '">' +
+      '<span class="t">' + esc(shortTime(x.time)) + "</span>" +
+      '<span class="n"><b>' + esc(x.title) + "</b>" +
+      (x.lead || (!compact && x.where)
+        ? "<small>" + esc([x.lead, compact ? "" : x.where].filter(Boolean).join(" · ")) + "</small>"
+        : "") +
+      "</span></div>";
+  }
+
+  /* ------------------------------------------------------------ legend */
+  $("#legend").innerHTML = TYPES.map(function (t) {
+    return '<div><span class="dot" style="background:var(--s-' + t.tone + ')"></span>' +
+      "<span><b>" + esc(t.time) + " &middot; " + esc(t.title) + "</b>" +
+      "<small>" + esc(t.where) + "</small></span></div>";
+  }).join("");
+
+  /* -------------------------------------------------------- the week */
+  var todayDow = new Date().getDay();
+  $("#week").innerHTML = [1, 2, 3, 4, 5].map(function (d) {
+    return '<section class="daycard' + (d === todayDow ? " today" : "") + '">' +
+      "<h3>" + esc(DAYS[d]) + (d === todayDow ? " &middot; today" : "") + "</h3>" +
+      "<ul>" + WEEK[d].map(function (x) { return "<li>" + sessHtml(x, false) + "</li>"; }).join("") + "</ul>" +
+      "</section>";
+  }).join("");
+
+  /* ------------------------------------------------------- the month */
+  var now = new Date();
+  var view = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  function drawMonth() {
+    var y = view.getFullYear(), m = view.getMonth();
+    $("#monthname").textContent =
+      view.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+    var first = new Date(y, m, 1);
+    var start = new Date(y, m, 1 - first.getDay());        /* back to the Sunday */
+    var html = SHORT.map(function (d, i) {
+      return '<div class="hd' + (i >= 1 && i <= 5 ? " wd" : "") + '">' + d + "</div>";
+    }).join("");
+    for (var i = 0; i < 42; i++) {
+      var d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+      var out = d.getMonth() !== m;
+      var isToday = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() &&
+        d.getDate() === now.getDate();
+      var list = WEEK[d.getDay()];
+      /* The days either side of the month keep the grid square but
+         carry nothing: the schedule for them belongs to another month. */
+      html += '<div class="cell' + (out ? " out" : "") + (isToday ? " today" : "") + '">' +
+        '<span class="dnum">' + d.getDate() + "</span>" +
+        (out ? ""
+          : list.length
+            ? list.map(function (x) { return sessHtml(x, true); }).join("")
+            : '<span class="none">No training</span>') +
+        "</div>";
+      /* stop once the month is done and the week is complete */
+      if (i >= 27 && d.getDay() === 6 && d.getMonth() !== m) break;
+    }
+    $("#grid").innerHTML = html;
+  }
+  drawMonth();
+
+  document.addEventListener("click", function (ev) {
+    var b = ev.target.closest("[data-act]");
+    if (!b) return;
+    var a = b.getAttribute("data-act");
+    if (a === "prev") view = new Date(view.getFullYear(), view.getMonth() - 1, 1);
+    if (a === "next") view = new Date(view.getFullYear(), view.getMonth() + 1, 1);
+    if (a === "today") view = new Date(now.getFullYear(), now.getMonth(), 1);
+    drawMonth();
+  });
+})();
+</script>
+</body>
+</html>
