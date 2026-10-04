@@ -2335,12 +2335,18 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     var tm = hasLT() ? ltMetrics(w.from, w.to) : null;
     var loaProfit = lm ? lm.net : 0;
     var ltPnl = tm ? tm.pnl : 0;
-    var companyNet = loaProfit + ltPnl;
+    /* Both businesses, less what it costs to keep the lights on. The two
+       portals only know their own marketing and call spend; rent, payroll
+       and software are entered on the Expenses tab and belong to neither,
+       so they come off here or they come off nowhere. */
+    var xm = expenseMetrics(w.from, w.to);
+    var companyNet = loaProfit + ltPnl - xm.total;
     /* The same three figures over the period before this one, so each
        section can say which way it is moving. */
     var pw = priorWindow(w);
     var plm = hasLOA() ? loaMetrics(pw.from, pw.to) : null;
     var ptm = hasLT() ? ltMetrics(pw.from, pw.to) : null;
+    var pxm = expenseMetrics(pw.from, pw.to);
     var org = loaOrg();
     var set = ltSettings();
 
@@ -2349,9 +2355,11 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     /* The period's bottom line, and beside it the whole history it came
        from — the tiles below answer "how", this answers "which way". */
     out += '<div class="headline">';
-    out += hero("Company net · " + w.label, money(companyNet), "LOA profit plus the Lead Tech call ledger.", [
+    out += hero("Company net · " + w.label, money(companyNet),
+      "Both businesses, less the company’s own overhead.", [
       { k: "LOA profit", v: lm ? money(loaProfit) : "—" },
-      { k: "Lead Tech P&L", v: tm ? money(ltPnl) : "—" }
+      { k: "Lead Tech P&L", v: tm ? money(ltPnl) : "—" },
+      { k: "Expenses", v: xm.total > 0 ? "−" + money(xm.total) : money(0) }
     ], companyNet < 0);
     out += lifetimePanel("company", "Company profit, day by day");
     out += "</div>";
@@ -2412,6 +2420,37 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       }
     }
 
+    /* ---- 4. Overhead ---- */
+    /* Neither portal can see these: rent and payroll belong to the
+       company rather than to one of its two businesses, which is why
+       they come off the top line here and nowhere else. */
+    out += sectionHead("Expenses", "Company overhead",
+      "What the company spends to exist, whichever side of the house it serves \u2014 entered on the " +
+      '<button class="linkbtn" data-act="tab" data-tab="expenses">Expenses</button> tab.',
+      growthChip(xm.total, pxm.total, "spend", pw.label, true));
+    if (!xm.all.length) {
+      out += '<div class="panel"><div class="empty"><strong>No expenses on file</strong>' +
+        "<p>Rent, payroll, software and anything else the company pays for goes on the Expenses tab, and comes off the company net above.</p>" +
+        '<p style="margin-top:14px"><button class="btn accent sm" data-act="tab" data-tab="expenses">Open Expenses</button></p></div></div>';
+    } else {
+      /* One box per category that actually has spend in the range, the
+         heaviest first, then the total. Categories with nothing in them
+         are not worth a box that says zero. */
+      var catBoxes = Object.keys(xm.byCat).map(function (k) {
+        return { k: k, v: xm.byCat[k] };
+      }).filter(function (c) { return c.v > 0; })
+        .sort(function (a, b) { return b.v - a.v; });
+
+      out += '<div class="tiles">';
+      out += tile("is-bad", "Total overhead", money(xm.total),
+        intf(xm.charges) + " charge" + (xm.charges === 1 ? "" : "s") + " \u00b7 " + money(xm.monthly) + " a month standing", "neg");
+      catBoxes.forEach(function (c) {
+        out += tile("src-all", c.k, money(c.v),
+          xm.total > 0 ? pct(ratio(c.v, xm.total), 0) + " of overhead" : "");
+      });
+      out += "</div>";
+    }
+
     return out;
   }
 
@@ -2422,6 +2461,11 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     loaDeals().forEach(function (d) { var x = toISODate(d.date); if (x && (!first || x < first)) first = x; });
     loaCalls().forEach(function (c) { var x = toISODate(c.date); if (x && (!first || x < first)) first = x; });
     ltCalls().forEach(function (c) { if (c.date && (!first || c.date < first)) first = c.date; });
+    /* Only the company line carries overhead, so only it is allowed to
+       be stretched back by a bill that predates the portals. */
+    if (scope === "company") {
+      expenseItems().forEach(function (x) { if (x.date && (!first || x.date < first)) first = x.date; });
+    }
     if (!first) return null;
 
     var to = todayISO();
@@ -2458,6 +2502,17 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       });
       ltRefunds().forEach(function (r) { var i = index[r.date]; if (i != null) days[i].value -= r.amount; });
       ltWipes().forEach(function (x) { var i = index[x.date]; if (i != null) days[i].value += x.amount; });
+    }
+    /* Charged on the day it is actually taken, not spread, so this line
+       integrates to the company net the hero above it states. The smooth
+       run-rate view of the same money is on the Expenses tab. */
+    if (scope === "company") {
+      expenseItems().forEach(function (x) {
+        expenseHits(x, first, to).forEach(function (d) {
+          var i = index[d];
+          if (i != null) days[i].value -= x.amount;
+        });
+      });
     }
     return days;
   }
@@ -3088,7 +3143,11 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
 
     var loaProfit = lm ? lm.net : 0;
     var ltPnl = tm ? tm.pnl : 0;
-    var companyNet = loaProfit + ltPnl;
+    /* Same net as the Overview states, and it has to be: two pages
+       disagreeing about what the company made is worse than either
+       number being wrong on its own. */
+    var xm = expenseMetrics(w.from, w.to);
+    var companyNet = loaProfit + ltPnl - xm.total;
     /* The carrier keeps 25% of first-year commission back and pays it as
        the policy earns. It is real money already written, just not yet
        in the bank — so it is a memo line, never in the net. */
@@ -3156,6 +3215,14 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       out += plRow("Wiped wallets", intf(tm.wipeRows.length) + " wipes — credit kept, no calls owed against it", tm.wiped, "in");
       out += plRow("Lead Tech profit & loss", "", ltPnl, "total");
       if (tm.collected > 0) out += plRow("Product & subscription orders", intf(tm.count) + " orders — fulfillment side, not in this ledger", tm.collected, "memo");
+    }
+    if (xm.all.length) {
+      out += '<tr><td colspan="3" style="background:var(--mist);font-family:\'IBM Plex Mono\',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)">Company overhead</td></tr>';
+      Object.keys(xm.byCat).map(function (k) { return { k: k, v: xm.byCat[k] }; })
+        .filter(function (c) { return c.v > 0; })
+        .sort(function (a, b) { return b.v - a.v; })
+        .forEach(function (c) { out += plRow(c.k, "", -c.v, "out"); });
+      out += plRow("Total overhead", intf(xm.charges) + " charge" + (xm.charges === 1 ? "" : "s"), -xm.total, "total");
     }
     out += plRow("Company net", w.label, companyNet, "total");
     out += "</tbody></table></div></div></div>";
@@ -3515,7 +3582,11 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     return ((cur - prior) / Math.abs(prior)) * 100;
   }
 
-  function growthChip(cur, prior, what, priorLabel) {
+  /* `inverse` is for a figure where up is bad. Passing the cost in as a
+     negative would colour it correctly and then describe a rise in spend
+     as a fall, so the direction and the wording come from the real
+     movement and only the colour is flipped. */
+  function growthChip(cur, prior, what, priorLabel, inverse) {
     /* All time has nothing before it to compare against. */
     if (ui.range === "all") return "";
     var g = growthPct(cur, prior);
@@ -3523,8 +3594,9 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       var note = prior === 0 && cur !== 0 ? "no " + esc(what) + " in the " + esc(priorLabel) : "vs the " + esc(priorLabel);
       return '<div class="growth"><span class="g flat">\u2014</span><span class="gn">' + note + "</span></div>";
     }
-    var cls = Math.abs(g) < 0.05 ? "flat" : g > 0 ? "up" : "down";
-    var arrow = cls === "flat" ? "" : g > 0 ? "\u25B2 " : "\u25BC ";
+    var flat = Math.abs(g) < 0.05;
+    var cls = flat ? "flat" : (g > 0) === !inverse ? "up" : "down";
+    var arrow = flat ? "" : g > 0 ? "\u25B2 " : "\u25BC ";
     return '<div class="growth"><span class="g ' + cls + '">' + arrow + esc(pct(Math.abs(g), 1)) + "</span>" +
       '<span class="gn">' + esc(what) + " vs the " + esc(priorLabel) + "</span></div>";
   }
