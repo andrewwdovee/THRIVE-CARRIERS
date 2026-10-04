@@ -1,0 +1,850 @@
+<title>Thrive Call Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,650&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: sticky top bar with tabs; KPI strip; call table (main) beside an agent-score rail; call detail opens as a right-hand drawer. */
+:root{
+  --bg:#f2f5f5; --surface:#ffffff; --surface-2:#e9eff0; --line:#d4dde0; --fg:#13222a; --muted:#566a72;
+  --accent:#0b6e69; --accent-ink:#ffffff; --accent-soft:#dbefed;
+  --close:#5a3ccf; --close-soft:#ece7fc; --watch:#8a74e0; --watch-soft:#f4f1fe;
+  --crit:#c12a3a; --crit-soft:#fbe6e8; --warn:#9c5e07; --warn-soft:#fbefd9; --ok:#277a40; --ok-soft:#e0f1e5; --info:#4a6170; --info-soft:#e7edf0;
+  --scrim:rgba(10,22,28,.38); --shadow:0 18px 50px rgba(10,30,40,.18);
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0d1518; --surface:#142024; --surface-2:#1a282d; --line:#283a40; --fg:#e2ebed; --muted:#8ea1a8;
+  --accent:#40b8ad; --accent-ink:#03201d; --accent-soft:#11312e;
+  --close:#a690ff; --close-soft:#251e47; --watch:#8d7fd6; --watch-soft:#1c1a33;
+  --crit:#ff7884; --crit-soft:#3b1a20; --warn:#efb455; --warn-soft:#33270f; --ok:#62cf8c; --ok-soft:#12301f; --info:#9fb3bd; --info-soft:#1d2a30;
+  --scrim:rgba(0,0,0,.55); --shadow:0 18px 50px rgba(0,0,0,.5); color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0d1518; --surface:#142024; --surface-2:#1a282d; --line:#283a40; --fg:#e2ebed; --muted:#8ea1a8;
+  --accent:#40b8ad; --accent-ink:#03201d; --accent-soft:#11312e;
+  --close:#a690ff; --close-soft:#251e47; --watch:#8d7fd6; --watch-soft:#1c1a33;
+  --crit:#ff7884; --crit-soft:#3b1a20; --warn:#efb455; --warn-soft:#33270f; --ok:#62cf8c; --ok-soft:#12301f; --info:#9fb3bd; --info-soft:#1d2a30;
+  --scrim:rgba(0,0,0,.55); --shadow:0 18px 50px rgba(0,0,0,.5); color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 var(--f-body)}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{font-family:var(--f-display);font-weight:650;margin:0;text-wrap:balance;letter-spacing:-.01em}
+.mono,.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* top bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
+.top-in{max-width:1440px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto}
+.mark{width:30px;height:30px;border-radius:8px;background:var(--accent);display:grid;place-items:center}
+.mark svg{display:block}
+.brand h1{font-size:19px}
+.brand small{display:block;color:var(--muted);font-size:12px;font-family:var(--f-body);font-weight:500;letter-spacing:0}
+.tabs{display:flex;gap:4px;background:var(--surface-2);padding:3px;border-radius:9px}
+.tab{border:0;background:none;padding:6px 12px;border-radius:7px;cursor:pointer;color:var(--muted);font-weight:600}
+.tab[aria-selected="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);padding:7px 12px;border-radius:8px;cursor:pointer;font-weight:600;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.danger{color:var(--crit)}
+.btn.danger.armed{background:var(--crit);color:#fff;border-color:var(--crit)}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.sm{padding:4px 9px;font-size:13px}
+
+.wrap{max-width:1440px;margin:0 auto;padding-inline:16px;padding-block:18px 48px}
+.notice{border:1px dashed var(--line);border-radius:var(--r);padding:12px 14px;margin-bottom:14px;background:var(--surface);color:var(--muted)}
+.notice b{color:var(--fg)}
+
+/* KPI strip */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;min-width:0}
+.kpi .lab{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+.kpi .val{font-family:var(--f-mono);font-size:26px;font-weight:600;line-height:1.2;margin-top:2px}
+.kpi .sub{font-size:12px;color:var(--muted)}
+.kpi.k-close{border-color:var(--close);background:var(--close-soft)}
+.kpi.k-close .val{color:var(--close)}
+.kpi.k-crit .val{color:var(--crit)}
+@media (max-width:820px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+@media (max-width:1100px){.layout{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);min-width:0}
+
+/* filters */
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px;border-bottom:1px solid var(--line)}
+.filters input[type=search]{flex:1 1 200px;min-width:0}
+.field{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 10px}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 10px;font-size:13px;cursor:pointer;font-weight:600;color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.chip.c-close[aria-pressed="true"]{background:var(--close);border-color:var(--close);color:#fff}
+.chip.c-watch[aria-pressed="true"]{background:var(--watch);border-color:var(--watch);color:#fff}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line)}
+.toolbar .count{margin-right:auto;color:var(--muted);font-size:13px}
+.progress{font-size:13px;color:var(--accent);font-weight:600}
+
+/* table */
+.tablewrap{overflow-x:auto}
+table.calls{width:100%;border-collapse:separate;border-spacing:0;min-width:900px}
+.calls th{position:sticky;top:0;background:var(--surface-2);text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.calls th button{all:unset;cursor:pointer;display:inline-flex;gap:4px;align-items:center}
+.calls th button:focus-visible{outline:2px solid var(--accent)}
+.calls th .arr{opacity:.35}
+.calls th[aria-sort] .arr{opacity:1;color:var(--fg)}
+.calls td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle}
+.calls tr.row{cursor:pointer}
+.calls tr.row:hover td{background:var(--surface-2)}
+.calls tr.row.sel td{background:var(--accent-soft)}
+.calls td:first-child{border-left:4px solid transparent}
+.calls tr.t-close td{background:var(--close-soft)}
+.calls tr.t-close td:first-child{border-left-color:var(--close)}
+.calls tr.t-watch td:first-child{border-left-color:var(--watch)}
+.calls tr.t-watch td{background:var(--watch-soft)}
+.who{font-weight:600}
+.sub2{font-size:12px;color:var(--muted)}
+.dur{display:flex;align-items:center;gap:8px;min-width:150px}
+.dbar{flex:0 0 64px;height:6px;border-radius:3px;background:var(--surface-2);position:relative;overflow:hidden}
+.dbar i{position:absolute;inset:0 auto 0 0;background:var(--muted);border-radius:3px}
+.t-close .dbar i{background:var(--close)}
+.t-watch .dbar i{background:var(--watch)}
+.t-close .dbar{background:var(--surface)}
+.t-watch .dbar{background:var(--surface)}
+
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:700;white-space:nowrap;border:1px solid transparent}
+.pill.close{background:var(--close);color:#fff}
+.pill.watch{background:var(--watch-soft);color:var(--close);border-color:var(--watch)}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.crit{background:var(--crit-soft);color:var(--crit)}
+.pill.info{background:var(--info-soft);color:var(--info)}
+.pill.ex{background:transparent;border-color:var(--line);color:var(--muted);font-weight:600}
+.pill.need{background:var(--close-soft);color:var(--close);border-color:var(--close)}
+.score{font-family:var(--f-mono);font-weight:600;font-size:15px;display:inline-flex;align-items:center;gap:6px}
+.score .dot{width:9px;height:9px;border-radius:50%}
+.flagct{display:flex;gap:4px}
+.empty{padding:40px 16px;text-align:center;color:var(--muted)}
+.empty h3{color:var(--fg);font-size:17px;margin-bottom:4px}
+
+/* rail */
+.rail{display:flex;flex-direction:column;gap:16px}
+.rail .panel{padding:14px}
+.rail h2{font-size:15px;margin-bottom:10px}
+.agent{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;margin-bottom:10px}
+.agent .nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.agent .sc{font-family:var(--f-mono);font-weight:600}
+.agent .bar{grid-column:1/-1;height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden}
+.agent .bar i{display:block;height:100%;border-radius:3px}
+.agent .meta{grid-column:1/-1;font-size:12px;color:var(--muted)}
+.legend{display:flex;flex-direction:column;gap:8px;font-size:13px}
+.legend div{display:flex;gap:8px;align-items:flex-start}
+.sw{flex:0 0 14px;height:14px;border-radius:3px;margin-top:3px}
+
+/* drawer */
+.scrim{position:fixed;inset:0;background:var(--scrim);z-index:40}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(760px,100%);background:var(--bg);z-index:41;box-shadow:var(--shadow);display:flex;flex-direction:column;border-left:1px solid var(--line)}
+.dhead{padding:calc(14px + env(safe-area-inset-top,0px)) 18px 12px;background:var(--surface);border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.dhead .row1{display:flex;gap:12px;align-items:flex-start}
+.dhead h2{font-size:22px}
+.dhead .x{margin-left:auto}
+.dtags{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.dactions{display:flex;flex-wrap:wrap;gap:6px}
+.dbody{overflow-y:auto;padding:16px 18px calc(32px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:16px}
+.sec{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.sec h3{font-size:15px;margin-bottom:10px;display:flex;gap:8px;align-items:center}
+.sec h3 .muted{font-family:var(--f-body);font-weight:500;font-size:13px}
+.verdict{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center}
+.ring{width:96px;height:96px;border-radius:50%;display:grid;place-items:center;position:relative}
+.ring::after{content:"";position:absolute;inset:9px;border-radius:50%;background:var(--surface)}
+.ring b{position:relative;z-index:1;font-family:var(--f-mono);font-size:28px;font-weight:600;line-height:1}
+.ring span{position:relative;z-index:1;display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);text-align:center;margin-top:2px}
+.flag{border:1px solid var(--line);border-left:4px solid var(--info);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+.flag.critical{border-left-color:var(--crit)}
+.flag.warning{border-left-color:var(--warn)}
+.flag .ft{font-weight:700;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.flag blockquote{margin:2px 0;padding:4px 10px;border-left:2px solid var(--line);font-style:italic;color:var(--fg);cursor:pointer}
+.flag blockquote:hover{border-left-color:var(--accent)}
+.flags{display:flex;flex-direction:column;gap:8px}
+.check{width:100%;border-collapse:collapse;font-size:13px}
+.check td{padding:7px 6px;border-top:1px solid var(--line);vertical-align:top}
+.check td:first-child{width:78px}
+.kd{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.kd div{background:var(--surface-2);border-radius:8px;padding:8px 10px;min-width:0}
+.kd dt{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.kd dd{margin:0;font-weight:600;overflow-wrap:anywhere}
+.meta-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.meta-grid dt{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.meta-grid dd{margin:0}
+.transcript{display:flex;flex-direction:column;gap:6px;max-height:520px;overflow-y:auto;font-size:13.5px}
+.tl{display:grid;grid-template-columns:86px minmax(0,1fr);gap:8px}
+.tl .sp{font-weight:700;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding-top:2px;overflow:hidden;text-overflow:ellipsis}
+.tl.agent .sp{color:var(--accent)}
+.tl p{margin:0;overflow-wrap:anywhere}
+mark{background:var(--warn-soft);color:var(--fg);border-bottom:2px solid var(--warn);padding:0 1px}
+mark.critical{background:var(--crit-soft);border-bottom-color:var(--crit)}
+mark.flash{outline:2px solid var(--accent)}
+textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--surface);resize:vertical;min-height:70px}
+.thinking{display:flex;gap:10px;align-items:center;color:var(--accent);font-weight:600}
+.spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--accent-soft);border-top-color:var(--accent);animation:sp 0.8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+
+/* dialog */
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--fg);padding:0;width:min(640px,calc(100% - 32px));box-shadow:var(--shadow)}
+dialog::backdrop{background:var(--scrim)}
+.dlg-h{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center}
+.dlg-h h2{font-size:18px}
+.dlg-b{padding:16px 18px;display:grid;grid-template-columns:1fr 1fr;gap:12px;max-height:70vh;overflow-y:auto}
+.dlg-b .full{grid-column:1/-1}
+.dlg-f{padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px;align-items:center}
+.dlg-f .err{margin-right:auto;color:var(--crit);font-size:13px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--muted);min-width:0}
+label.f input,label.f select{border:1px solid var(--line);border-radius:8px;padding:7px 10px;background:var(--surface);font-weight:400;font-size:14px;width:100%}
+.hint{font-weight:400;font-size:12px;color:var(--muted)}
+@media (max-width:560px){.dlg-b{grid-template-columns:1fr}}
+
+/* rules view */
+.rules-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:980px){.rules-grid{grid-template-columns:minmax(0,1fr)}}
+.rules-grid .panel{padding:16px}
+.rules-grid h2{font-size:17px;margin-bottom:4px}
+.rules-grid p.lead{margin:0 0 12px;color:var(--muted);max-width:65ch}
+.rule{display:grid;grid-template-columns:minmax(0,1fr) 120px auto;gap:8px;align-items:start;margin-bottom:8px}
+.rule textarea{min-height:42px}
+.rule select{border:1px solid var(--line);border-radius:8px;padding:7px 8px;background:var(--surface)}
+@media (max-width:560px){.rule{grid-template-columns:minmax(0,1fr) auto}.rule textarea{grid-column:1/-1}}
+.thr{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.savebar{display:flex;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:9px;font-weight:600;z-index:60;max-width:calc(100% - 32px);box-shadow:var(--shadow)}
+</style>
+
+<header class="top">
+  <div class="top-in">
+    <div class="brand">
+      <div class="mark" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6l7-3z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg></div>
+      <div><h1>Thrive Call Review</h1><small>Inbound life insurance · compliance QA</small></div>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tab-calls" aria-selected="true" data-view="calls">Calls</button>
+      <button class="tab" role="tab" id="tab-rules" aria-selected="false" data-view="rules">Review rules</button>
+    </div>
+    <button class="btn primary" id="addBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add call</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="notice" id="offline" hidden><b>Calls load when this page is opened in Claude.</b> The call log and review rules are stored with this artifact, so every admin sees the same list.</div>
+
+  <section id="view-calls">
+    <div class="kpis" id="kpis"></div>
+    <div class="layout">
+      <div class="panel">
+        <div class="filters">
+          <input type="search" id="q" class="field" placeholder="Search agent, caller, transcript…" aria-label="Search calls">
+          <select id="fAgent" class="field" aria-label="Agent"><option value="">All agents</option></select>
+          <select id="fStatus" class="field" aria-label="Status">
+            <option value="all">Any status</option>
+            <option value="needs">Needs review</option>
+            <option value="new">Not AI-reviewed</option>
+            <option value="ai">AI-reviewed</option>
+            <option value="approved">Approved</option>
+            <option value="escalated">Escalated</option>
+          </select>
+          <div class="chips" role="group" aria-label="Call length">
+            <button class="chip" data-tier="all" aria-pressed="true">All lengths</button>
+            <button class="chip c-close" data-tier="close" aria-pressed="false" id="chipClose">20+ min</button>
+            <button class="chip c-watch" data-tier="watch" aria-pressed="false" id="chipWatch">15–20 min</button>
+            <button class="chip" data-tier="std" aria-pressed="false" id="chipStd">Under 15</button>
+          </div>
+          <button class="chip" id="fFlag" aria-pressed="false">Critical flags only</button>
+        </div>
+        <div class="toolbar">
+          <span class="count" id="count"></span>
+          <span class="progress" id="batchMsg" hidden></span>
+          <button class="btn sm" id="batchBtn">Run AI review on unreviewed</button>
+          <button class="btn sm ghost" id="exportBtn" hidden>Export CSV</button>
+          <button class="btn sm ghost" id="clearEx" hidden>Remove example calls</button>
+        </div>
+        <div class="tablewrap">
+          <table class="calls">
+            <thead><tr>
+              <th data-sort="startedAt"><button>Date <span class="arr">↕</span></button></th>
+              <th data-sort="agent"><button>Agent <span class="arr">↕</span></button></th>
+              <th>Caller</th>
+              <th data-sort="durationSec"><button>Length <span class="arr">↕</span></button></th>
+              <th>Outcome</th>
+              <th data-sort="trust"><button>Trust score <span class="arr">↕</span></button></th>
+              <th>Flags</th>
+              <th>Status</th>
+            </tr></thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="empty" hidden></div>
+      </div>
+      <aside class="rail">
+        <div class="panel"><h2>Agent trust scores</h2><div id="agents"></div></div>
+        <div class="panel">
+          <h2>How calls are marked</h2>
+          <div class="legend" id="legend"></div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <section id="view-rules" hidden>
+    <div class="rules-grid">
+      <div class="panel">
+        <h2>Compliance rules</h2>
+        <p class="lead">The AI checks every call against these rules. A missed critical rule drops the trust score hard; warnings cost less. Write them the way you'd explain them to a new QA hire.</p>
+        <div id="ruleList"></div>
+        <button class="btn sm" id="addRule">Add rule</button>
+      </div>
+      <div class="panel">
+        <h2>What else to look for</h2>
+        <p class="lead">Anything that should feel off to a reviewer, even if no rule covers it.</p>
+        <textarea id="instr" rows="6" aria-label="Extra instructions for the AI"></textarea>
+        <h2 style="margin-top:16px">Details to pull from each call</h2>
+        <p class="lead">One per line. These appear as the key details on every reviewed call.</p>
+        <textarea id="kdList" rows="8" aria-label="Key details to extract"></textarea>
+        <h2 style="margin-top:16px">Call length thresholds</h2>
+        <p class="lead">Calls at or above the “always review” length are marked and stay in the review queue until an admin signs off.</p>
+        <div class="thr">
+          <label class="f">Highlight at (minutes)<input type="number" id="watchMin" min="1" max="180"></label>
+          <label class="f">Always review at (minutes)<input type="number" id="mustMin" min="1" max="180"></label>
+        </div>
+        <div class="savebar">
+          <button class="btn primary" id="saveRules">Save rules</button>
+          <button class="btn ghost" id="resetRules">Restore defaults</button>
+          <span class="muted" id="rulesMsg"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-label="Call detail"></aside>
+
+<dialog id="addDlg">
+  <form id="addForm" method="dialog">
+    <div class="dlg-h"><h2>Add a call</h2></div>
+    <div class="dlg-b">
+      <label class="f">Agent<input id="a-agent" list="agentList" required placeholder="e.g. Dana Ortiz"></label>
+      <datalist id="agentList"></datalist>
+      <label class="f">Caller<input id="a-caller" placeholder="Name or last 4 of phone"></label>
+      <label class="f">Date and time<input id="a-date" type="datetime-local" required></label>
+      <label class="f">Length (mm:ss)<input id="a-dur" placeholder="21:45" required><span class="hint" id="a-durhint">Or pick the recording below and it fills in.</span></label>
+      <label class="f">Outcome<select id="a-outcome"><option>Sold</option><option>Not sold</option><option>Callback set</option><option>Transferred</option><option>Unknown</option></select></label>
+      <label class="f">Product<input id="a-product" placeholder="Final expense, term, IUL…"></label>
+      <label class="f full">Call recording (optional, reads the length only)<input id="a-audio" type="file" accept="audio/*,video/*"></label>
+      <label class="f full">Transcript file (.txt, .vtt, .srt)<input id="a-tfile" type="file" accept=".txt,.vtt,.srt,text/plain"></label>
+      <label class="f full">Transcript<textarea id="a-transcript" rows="9" placeholder="Agent: Thank you for calling, this call is on a recorded line…&#10;Customer: Hi, I saw an ad about…"></textarea><span class="hint">Label each line with the speaker (Agent: / Customer:) for the best review.</span></label>
+    </div>
+    <div class="dlg-f">
+      <span class="err" id="a-err"></span>
+      <button class="btn" type="button" id="a-cancel">Cancel</button>
+      <button class="btn" type="submit" id="a-save" value="save">Save call</button>
+      <button class="btn primary" type="submit" id="a-saverun" value="run">Save and review</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script>
+(() => {
+const DEFAULTS = {
+  watchMin: 15, mustMin: 20,
+  rules: [
+    {severity:"critical", text:"Agent states the call is being recorded near the start of the call."},
+    {severity:"critical", text:"Agent gives their name, says they are a licensed insurance agent, and names the agency."},
+    {severity:"critical", text:"No promise of \"guaranteed approval\" unless the product really is guaranteed issue, and no claim that coverage starts before the carrier approves it."},
+    {severity:"critical", text:"Agent never says or implies the policy is a government, Medicare, Social Security or state benefit program."},
+    {severity:"critical", text:"Health questions are read as written. Agent does not coach answers, skip questions or suggest leaving conditions out."},
+    {severity:"critical", text:"Client gives clear verbal authorization for the bank draft, with premium amount and draft date read back."},
+    {severity:"critical", text:"The person consenting is the proposed insured or owner. No one else answers or authorizes on their behalf."},
+    {severity:"warning", text:"Agent asks whether this policy replaces or changes any existing life insurance or annuity, and follows replacement steps if yes."},
+    {severity:"warning", text:"Coverage amount, monthly premium, policy type, and any waiting or graded period are stated clearly before the client agrees."},
+    {severity:"warning", text:"No pressure tactics: no false deadlines (\"rates go up tomorrow\"), no talking over a client who wants to think about it or end the call."},
+    {severity:"warning", text:"Full SSN and full bank or card numbers are not read back aloud."},
+    {severity:"info", text:"Agent mentions the free-look period or the right to cancel."}
+  ],
+  instructions: "Flag anything that seems off even if no rule covers it: a third party in the background prompting the client, a client who sounds confused about what they bought, an agent rushing through disclosures, or statements about price or coverage that contradict each other.",
+  keyDetails: ["Product type","Carrier","Coverage amount","Monthly premium","Draft date","Beneficiary","Client age","Client state","Existing coverage / replacement","Sale made"]
+};
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const S = {
+  db:null, sample:null, user:null, downloads:null, myId:null,
+  calls:new Map(), settingsDoc:null, loaded:false,
+  sort:{key:"startedAt", dir:"desc"},
+  f:{q:"", agent:"", status:"all", tier:"all", crit:false},
+  openId:null, busy:new Map(), notes:{}, names:{}, batch:null, sampleOff:false, view:"calls"
+};
+const cfg = () => {
+  const d = S.settingsDoc || {};
+  return {
+    watchMin: +d.watchMin || DEFAULTS.watchMin,
+    mustMin: +d.mustMin || DEFAULTS.mustMin,
+    rules: Array.isArray(d.rules) && d.rules.length ? d.rules : DEFAULTS.rules,
+    instructions: typeof d.instructions === "string" ? d.instructions : DEFAULTS.instructions,
+    keyDetails: Array.isArray(d.keyDetails) && d.keyDetails.length ? d.keyDetails : DEFAULTS.keyDetails
+  };
+};
+
+/* ---------- helpers ---------- */
+function fmtDur(sec){ sec = Math.max(0, Math.round(sec||0)); const h=Math.floor(sec/3600), m=Math.floor(sec%3600/60), s=sec%60;
+  return h ? `${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}` : `${m}:${String(s).padStart(2,"0")}`; }
+function parseDur(v){ v = String(v||"").trim(); if(!v) return NaN;
+  if(/^\d+(\.\d+)?$/.test(v)) return Math.round(parseFloat(v)*60);
+  const p = v.split(":").map(Number); if(p.some(isNaN)) return NaN;
+  return p.length===3 ? p[0]*3600+p[1]*60+p[2] : p.length===2 ? p[0]*60+p[1] : NaN; }
+function tier(c){ const m=(c.durationSec||0)/60, k=cfg(); return m>=k.mustMin ? "close" : m>=k.watchMin ? "watch" : "std"; }
+function fmtDate(iso){ const d=new Date(iso); if(isNaN(d)) return "—";
+  return d.toLocaleDateString(undefined,{month:"short",day:"numeric"}) + " · " + d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}); }
+function band(score){ return score==null ? "info" : score>=80 ? "ok" : score>=60 ? "warn" : "crit"; }
+function scoreColor(score){ return `var(--${band(score)})`; }
+function needsReview(c){ return tier(c)==="close" && c.status!=="approved" && c.status!=="escalated"; }
+function critCount(c){ return (c.review?.flags||[]).filter(f=>f.severity==="critical").length; }
+function warnCount(c){ return (c.review?.flags||[]).filter(f=>f.severity==="warning").length; }
+const STATUS = {
+  new:{label:"Not reviewed", cls:"info"}, ai:{label:"AI-reviewed", cls:"info"},
+  approved:{label:"Approved", cls:"ok"}, escalated:{label:"Escalated", cls:"crit"}
+};
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast.t); toast.t=setTimeout(()=>t.hidden=true,3800); }
+const ref = id => S.db.collection("calls").doc(id);
+
+/* ---------- filtering / sorting ---------- */
+function visible(){
+  const q=S.f.q.toLowerCase();
+  let list=[...S.calls.values()].filter(c=>{
+    if(S.f.agent && c.agent!==S.f.agent) return false;
+    if(S.f.tier!=="all" && tier(c)!==S.f.tier) return false;
+    if(S.f.crit && !critCount(c)) return false;
+    const st=S.f.status;
+    if(st==="needs" && !needsReview(c)) return false;
+    if(["new","ai","approved","escalated"].includes(st) && (c.status||"new")!==st) return false;
+    if(q && !`${c.agent} ${c.caller} ${c.product} ${c.outcome} ${c.transcript}`.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const {key,dir}=S.sort, m=dir==="asc"?1:-1;
+  const val=c=> key==="trust" ? (c.review?.trustScore ?? -1) : key==="startedAt" ? +new Date(c.startedAt) : key==="agent" ? (c.agent||"").toLowerCase() : (c[key]||0);
+  list.sort((a,b)=>{ const x=val(a), y=val(b); return x<y?-m:x>y?m:0; });
+  return list;
+}
+
+/* ---------- render ---------- */
+function render(){
+  renderKpis(); renderTable(); renderAgents(); renderLegend();
+  if(S.openId) renderDrawer();
+}
+function renderKpis(){
+  const all=[...S.calls.values()], reviewed=all.filter(c=>c.review);
+  const avg = reviewed.length ? Math.round(reviewed.reduce((s,c)=>s+c.review.trustScore,0)/reviewed.length) : null;
+  const crit = all.filter(c=>critCount(c)).length;
+  const need = all.filter(needsReview).length, longAll = all.filter(c=>tier(c)==="close").length;
+  const k=cfg();
+  $("#kpis").innerHTML = `
+    <div class="kpi"><div class="lab">Calls logged</div><div class="val">${all.length}</div><div class="sub">${reviewed.length} AI-reviewed</div></div>
+    <div class="kpi"><div class="lab">Average trust score</div><div class="val" style="color:${scoreColor(avg)}">${avg ?? "—"}</div><div class="sub">across reviewed calls, out of 100</div></div>
+    <div class="kpi k-crit"><div class="lab">Calls with critical flags</div><div class="val">${crit}</div><div class="sub">compliance risk, check these first</div></div>
+    <div class="kpi k-close"><div class="lab">${k.mustMin}+ min calls to sign off</div><div class="val">${need}</div><div class="sub">of ${longAll} long calls · likely closes</div></div>`;
+}
+function renderTable(){
+  const list=visible(), k=cfg(), maxDur=Math.max(k.mustMin*60*1.5, ...list.map(c=>c.durationSec||0));
+  $("#count").textContent = `${list.length} of ${S.calls.size} calls`;
+  document.querySelectorAll(".calls th[data-sort]").forEach(th=>{
+    const on=th.dataset.sort===S.sort.key;
+    th.toggleAttribute("aria-sort",on); if(on) th.setAttribute("aria-sort", S.sort.dir==="asc"?"ascending":"descending");
+    th.querySelector(".arr").textContent = on ? (S.sort.dir==="asc"?"↑":"↓") : "↕";
+  });
+  $("#rows").innerHTML = list.map(c=>{
+    const t=tier(c), r=c.review, busy=S.busy.has(c.id), st=STATUS[c.status||"new"];
+    const tchip = t==="close" ? `<span class="pill close">${k.mustMin}+ min</span>` : t==="watch" ? `<span class="pill watch">${k.watchMin}+ min</span>` : "";
+    const score = busy ? `<span class="thinking"><span class="spin"></span></span>` : r ? `<span class="score"><span class="dot" style="background:${scoreColor(r.trustScore)}"></span>${r.trustScore}</span>` : `<span class="muted">—</span>`;
+    const cc=critCount(c), wc=warnCount(c);
+    const flags = r ? (cc||wc ? `<span class="flagct">${cc?`<span class="pill crit">${cc} critical</span>`:""}${wc?`<span class="pill warn">${wc}</span>`:""}</span>` : `<span class="pill ok">Clean</span>`) : `<span class="muted">—</span>`;
+    const status = needsReview(c) ? `<span class="pill need">Review required</span>` : `<span class="pill ${st.cls}">${st.label}</span>`;
+    return `<tr class="row t-${t}${S.openId===c.id?" sel":""}" data-id="${esc(c.id)}" tabindex="0">
+      <td><div class="num">${esc(fmtDate(c.startedAt))}</div>${c.example?`<span class="pill ex">Example</span>`:""}</td>
+      <td class="who">${esc(c.agent||"—")}</td>
+      <td><div>${esc(c.caller||"—")}</div><div class="sub2">${esc(c.product||"")}</div></td>
+      <td><div class="dur"><span class="dbar"><i style="width:${Math.min(100,(c.durationSec||0)/maxDur*100)}%"></i></span><span class="num">${fmtDur(c.durationSec)}</span>${tchip}</div></td>
+      <td>${esc(c.outcome||"—")}</td>
+      <td>${score}</td><td>${flags}</td><td>${status}</td></tr>`;
+  }).join("");
+  const empty=$("#empty");
+  if(!S.loaded){ empty.hidden=false; empty.innerHTML = S.db===false ? `<h3>No call log here</h3><p>Open this dashboard in Claude to see and review calls.</p>` : `<p>Loading calls…</p>`; }
+  else if(!S.calls.size){ empty.hidden=false; empty.innerHTML=`<h3>No calls yet</h3><p>Use <b>Add call</b> to log a call with its transcript. The AI then scores it and flags anything off.</p>`; }
+  else if(!list.length){ empty.hidden=false; empty.innerHTML=`<h3>No calls match these filters</h3><p>Clear a filter to see more.</p>`; }
+  else empty.hidden=true;
+  const unrev=[...S.calls.values()].filter(c=>!c.review && (c.transcript||"").trim()).length;
+  const bb=$("#batchBtn");
+  if(S.batch){ bb.textContent="Stop reviewing"; bb.disabled=false; }
+  else { bb.textContent = unrev ? `Run AI review on ${unrev} unreviewed` : "All calls reviewed"; bb.disabled = !unrev || !S.sample || S.sampleOff; }
+  $("#clearEx").hidden = ![...S.calls.values()].some(c=>c.example);
+  $("#exportBtn").hidden = !S.downloads || !S.calls.size;
+  // agent filter options
+  const agents=[...new Set([...S.calls.values()].map(c=>c.agent).filter(Boolean))].sort();
+  const sel=$("#fAgent"), cur=sel.value;
+  sel.innerHTML = `<option value="">All agents</option>` + agents.map(a=>`<option${a===cur?" selected":""}>${esc(a)}</option>`).join("");
+  $("#agentList").innerHTML = agents.map(a=>`<option value="${esc(a)}">`).join("");
+  $("#chipClose").textContent=`${k.mustMin}+ min`; $("#chipWatch").textContent=`${k.watchMin}–${k.mustMin} min`; $("#chipStd").textContent=`Under ${k.watchMin}`;
+}
+function renderAgents(){
+  const by={};
+  for(const c of S.calls.values()){ const a=c.agent||"Unknown"; (by[a] ||= {n:0, rev:[], crit:0, long:0}); by[a].n++; if(c.review){by[a].rev.push(c.review.trustScore);} if(critCount(c)) by[a].crit++; if(tier(c)==="close") by[a].long++; }
+  const rows=Object.entries(by).map(([a,v])=>({a, n:v.n, crit:v.crit, long:v.long, avg: v.rev.length? Math.round(v.rev.reduce((s,x)=>s+x,0)/v.rev.length):null}))
+    .sort((x,y)=>(x.avg??101)-(y.avg??101));
+  $("#agents").innerHTML = rows.length ? rows.map(r=>`<div class="agent">
+      <span class="nm">${esc(r.a)}</span><span class="sc" style="color:${scoreColor(r.avg)}">${r.avg??"—"}</span>
+      <span class="bar"><i style="width:${r.avg??0}%;background:${scoreColor(r.avg)}"></i></span>
+      <span class="meta">${r.n} call${r.n>1?"s":""} · ${r.long} long · ${r.crit} with critical flags</span></div>`).join("")
+    : `<p class="muted" style="margin:0">Scores appear once calls are reviewed. Lowest scores sort to the top.</p>`;
+}
+function renderLegend(){
+  const k=cfg();
+  $("#legend").innerHTML = `
+    <div><span class="sw" style="background:var(--close)"></span><span><b>${k.mustMin}+ minutes.</b> Most likely a close. Always reviewed: stays in the queue until an admin approves or escalates it.</span></div>
+    <div><span class="sw" style="background:var(--watch)"></span><span><b>${k.watchMin}–${k.mustMin} minutes.</b> Highlighted as a possible close.</span></div>
+    <div><span class="sw" style="background:var(--ok)"></span><span><b>80–100 trust.</b> Compliant, nothing serious found.</span></div>
+    <div><span class="sw" style="background:var(--warn)"></span><span><b>60–79 trust.</b> Gaps worth coaching.</span></div>
+    <div><span class="sw" style="background:var(--crit)"></span><span><b>Below 60.</b> Likely compliance problem. Listen to the recording.</span></div>`;
+}
+
+/* ---------- drawer ---------- */
+function openDrawer(id){ S.openId=id; $("#drawer").hidden=false; $("#scrim").hidden=false; renderDrawer(); renderTable(); $("#drawer").querySelector(".x")?.focus(); }
+function closeDrawer(){ S.openId=null; $("#drawer").hidden=true; $("#scrim").hidden=true; renderTable(); }
+function highlight(text, flags){
+  // returns html for one line with flagged quotes marked
+  let ranges=[]; const low=text.toLowerCase();
+  flags.forEach((f,i)=>{ const q=(f.quote||"").trim().toLowerCase().replace(/^["“]|["”]$/g,""); if(q.length<4) return;
+    let at=low.indexOf(q); if(at>=0) ranges.push([at, at+q.length, f.severity, i]); });
+  ranges.sort((a,b)=>a[0]-b[0]); let out="", pos=0;
+  for(const [s,e,sev,i] of ranges){ if(s<pos) continue; out+=esc(text.slice(pos,s))+`<mark class="${sev==="critical"?"critical":""}" data-flag="${i}">${esc(text.slice(s,e))}</mark>`; pos=e; }
+  return out+esc(text.slice(pos));
+}
+function renderTranscript(c){
+  const flags=c.review?.flags||[], txt=(c.transcript||"").trim();
+  if(!txt) return `<p class="muted">No transcript saved for this call.</p>`;
+  return txt.split(/\n+/).map(line=>{
+    const m=line.match(/^\s*([A-Za-z][\w .'\-]{0,24}?)\s*:\s*(.*)$/);
+    const sp=m?m[1]:"", body=m?m[2]:line, isAgent=/agent|rep|^a$/i.test(sp) || (c.agent && sp && c.agent.toLowerCase().startsWith(sp.toLowerCase()));
+    return `<div class="tl${isAgent?" agent":""}"><span class="sp">${esc(sp)}</span><p>${highlight(body, flags)}</p></div>`;
+  }).join("");
+}
+function renderDrawer(){
+  const c=S.calls.get(S.openId), d=$("#drawer");
+  if(!c){ closeDrawer(); return; }
+  const k=cfg(), t=tier(c), r=c.review, busy=S.busy.get(c.id), st=STATUS[c.status||"new"];
+  const notesFocused = document.activeElement?.id==="d-notes";
+  const noteVal = S.notes[c.id] ?? c.notes ?? "";
+  const canAI = S.sample && !S.sampleOff && (c.transcript||"").trim();
+  const tchip = t==="close" ? `<span class="pill close">${fmtDur(c.durationSec)} · ${k.mustMin}+ min, likely close</span>` : t==="watch" ? `<span class="pill watch">${fmtDur(c.durationSec)} · ${k.watchMin}+ min</span>` : `<span class="pill info">${fmtDur(c.durationSec)}</span>`;
+  const reviewer = c.reviewedBy ? (S.names[c.reviewedBy] || "an admin") : null;
+  let verdict;
+  if(busy){ verdict = `<div class="sec"><div class="thinking"><span class="spin"></span>${esc(busy.msg)}</div><p class="muted" style="margin:8px 0 0">Reading the transcript against ${k.rules.length} rules. Long calls take up to a minute.</p></div>`; }
+  else if(r){
+    const deg=Math.round(r.trustScore*3.6);
+    verdict = `<div class="sec"><div class="verdict">
+      <div class="ring" style="background:conic-gradient(${scoreColor(r.trustScore)} ${deg}deg, var(--surface-2) 0)"><div><b>${r.trustScore}</b><span>Trust</span></div></div>
+      <div><h3 style="margin-bottom:4px">${r.trustScore>=80?"Looks compliant":r.trustScore>=60?"Needs coaching":"Compliance risk"}</h3><p style="margin:0">${esc(r.summary)}</p>
+      <p class="sub2" style="margin:6px 0 0">AI review ${r.reviewedAt?esc(fmtDate(r.reviewedAt)):""}${c.example?" · example data":""}</p></div></div></div>`;
+  } else {
+    verdict = `<div class="sec"><h3>Not reviewed yet</h3><p class="muted" style="margin:0">${(c.transcript||"").trim() ? (S.sample ? "Run the AI review to get a trust score, flags and key details." : "AI review runs when this page is open in Claude.") : "Add a transcript to this call to review it."}</p></div>`;
+  }
+  const flags = r ? (r.flags.length ? `<div class="sec"><h3>Flags <span class="muted">${r.flags.length} found · click a quote to find it</span></h3><div class="flags">${
+      r.flags.map((f,i)=>`<div class="flag ${esc(f.severity)}"><div class="ft"><span class="pill ${f.severity==="critical"?"crit":f.severity==="warning"?"warn":"info"}">${esc(f.severity)}</span>${esc(f.title)}</div>
+      ${f.quote?`<blockquote data-jump="${i}" tabindex="0">“${esc(f.quote)}”</blockquote>`:""}<div class="muted">${esc(f.explanation)}</div></div>`).join("")}</div></div>`
+    : `<div class="sec"><h3>Flags</h3><p style="margin:0"><span class="pill ok">Clean</span> Nothing off was found on this call.</p></div>`) : "";
+  const check = r && r.checklist.length ? `<div class="sec"><h3>Rule checklist <span class="muted">${r.checklist.filter(x=>x.status==="met").length} of ${r.checklist.length} met</span></h3><table class="check">${
+      r.checklist.map(x=>`<tr><td><span class="pill ${x.status==="met"?"ok":x.status==="missed"?"crit":"info"}">${esc(x.status==="na"?"n/a":x.status)}</span></td><td><div>${esc(x.rule)}</div>${x.evidence?`<div class="sub2">${esc(x.evidence)}</div>`:""}</td></tr>`).join("")}</table></div>` : "";
+  const kd = r && r.keyDetails.length ? `<div class="sec"><h3>Key details</h3><dl class="kd">${r.keyDetails.map(x=>`<div><dt>${esc(x.label)}</dt><dd>${esc(x.value||"Not mentioned")}</dd></div>`).join("")}</dl></div>` : "";
+  d.innerHTML = `
+    <div class="dhead">
+      <div class="row1"><div><h2>${esc(c.caller||"Unnamed caller")}</h2><div class="muted">${esc(c.agent||"Unknown agent")} · ${esc(fmtDate(c.startedAt))}</div></div>
+        <button class="btn ghost x" id="d-close" aria-label="Close">✕</button></div>
+      <div class="dtags">${tchip}<span class="pill ${needsReview(c)?"need":st.cls}">${needsReview(c)?"Review required":st.label}</span>${c.example?`<span class="pill ex">Example</span>`:""}
+        ${reviewer?`<span class="sub2">${c.status==="approved"?"Approved":"Escalated"} by ${esc(reviewer)}</span>`:""}</div>
+      <div class="dactions">
+        ${busy ? `<button class="btn" id="d-stop">Stop review</button>` : `<button class="btn primary" id="d-run" ${canAI?"":"disabled"}>${r?"Re-run AI review":"Run AI review"}</button>`}
+        <button class="btn" id="d-approve" ${c.status==="approved"?"disabled":""}>Approve call</button>
+        <button class="btn" id="d-escalate" ${c.status==="escalated"?"disabled":""}>Escalate</button>
+        ${c.status==="approved"||c.status==="escalated"?`<button class="btn ghost" id="d-reopen">Reopen</button>`:""}
+        <button class="btn danger ghost" id="d-del" style="margin-left:auto">Delete</button>
+      </div>
+    </div>
+    <div class="dbody">
+      ${verdict}${flags}${kd}${check}
+      <div class="sec"><h3>Call info</h3><dl class="meta-grid">
+        <div><dt>Outcome</dt><dd>${esc(c.outcome||"—")}</dd></div><div><dt>Product</dt><dd>${esc(c.product||"—")}</dd></div>
+        <div><dt>Length</dt><dd class="num">${fmtDur(c.durationSec)}</dd></div><div><dt>Agent</dt><dd>${esc(c.agent||"—")}</dd></div></dl></div>
+      <div class="sec"><h3>Admin notes</h3><textarea id="d-notes" rows="3" placeholder="What did you hear on the recording? Coaching for the agent?">${esc(noteVal)}</textarea>
+        <div style="margin-top:8px;display:flex;gap:8px;align-items:center"><button class="btn sm" id="d-savenotes">Save notes</button><span class="sub2" id="d-notesmsg"></span></div></div>
+      <div class="sec"><h3>Transcript</h3><div class="transcript" id="d-tx">${renderTranscript(c)}</div></div>
+    </div>`;
+  if(notesFocused){ const n=$("#d-notes"); n.focus(); n.setSelectionRange(n.value.length,n.value.length); }
+  if(c.reviewedBy && !S.names[c.reviewedBy] && S.user?.profiles){ S.user.profiles([c.reviewedBy]).then(p=>{ const n=p?.[c.reviewedBy]?.name; if(n){S.names[c.reviewedBy]=n; if(S.openId===c.id) renderDrawer();} }).catch(()=>{}); }
+}
+
+/* ---------- AI review ---------- */
+function buildPrompt(c){
+  const k=cfg(), tx=(c.transcript||"").slice(0,160000);
+  return `You are a senior compliance QA reviewer for an inbound call center that sells life insurance (final expense, term, whole life, IUL) over the phone. Review the call transcript below the way a careful, fair auditor would.
+
+AGENCY RULES (check every one; severity in brackets):
+${k.rules.map((r,i)=>`R${i+1} [${r.severity}] ${r.text}`).join("\n")}
+
+EXTRA INSTRUCTIONS FROM THE ADMIN:
+${k.instructions || "(none)"}
+
+KEY DETAILS TO EXTRACT (use exactly these labels, in this order): ${k.keyDetails.join(" | ")}
+
+CALL INFO: agent "${c.agent||"unknown"}", logged outcome "${c.outcome||"unknown"}", product "${c.product||"unknown"}", length ${fmtDur(c.durationSec)}.
+Note: the transcript may be machine-generated with errors, or an excerpt. Do not penalize for things the transcript cannot show; mark them "unclear" instead.
+
+TRANSCRIPT:
+"""
+${tx}
+"""
+
+Reply with ONLY one JSON object of this shape:
+{"trustScore": 0-100 integer,
+ "summary": "2-3 plain sentences: what happened on the call and the main compliance takeaway",
+ "keyDetails": [{"label": "...", "value": "... or empty string if not mentioned"}],
+ "checklist": [{"rule": "R1 short restatement", "status": "met" | "missed" | "unclear" | "na", "evidence": "short reason or quote"}],
+ "flags": [{"severity": "critical" | "warning" | "info", "title": "short headline", "quote": "exact words copied verbatim from ONE line of the transcript, under 25 words", "explanation": "why this is a problem and what the agent should have done"}]}
+
+Scoring: start at 100. Each missed critical rule or serious misrepresentation costs 20-35 points. Each missed warning rule or pressure moment costs 5-12. Info items cost 0-3. "unclear" costs nothing. Never go below 0. A clean, well-disclosed call should land 85-100.
+Flags: include every missed critical or warning rule, plus anything else that seems off per the admin's instructions. Quotes must match the transcript text exactly so they can be highlighted. Use an empty array if nothing is wrong.`;
+}
+function normalize(o){
+  const sev=s=>["critical","warning","info"].includes(s)?s:"warning";
+  const stat=s=>["met","missed","unclear","na"].includes(s)?s:(s==="n/a"?"na":"unclear");
+  const str=v=>v==null?"":String(v);
+  return {
+    trustScore: Math.max(0, Math.min(100, Math.round(Number(o?.trustScore)||0))),
+    summary: str(o?.summary).slice(0,1200),
+    keyDetails: (Array.isArray(o?.keyDetails)?o.keyDetails:[]).slice(0,30).map(x=>({label:str(x?.label).slice(0,80), value:str(x?.value).slice(0,300)})),
+    checklist: (Array.isArray(o?.checklist)?o.checklist:[]).slice(0,40).map(x=>({rule:str(x?.rule).slice(0,300), status:stat(x?.status), evidence:str(x?.evidence).slice(0,400)})),
+    flags: (Array.isArray(o?.flags)?o.flags:[]).slice(0,30).map(x=>({severity:sev(x?.severity), title:str(x?.title).slice(0,160), quote:str(x?.quote).slice(0,300), explanation:str(x?.explanation).slice(0,600)}))
+      .sort((a,b)=>["critical","warning","info"].indexOf(a.severity)-["critical","warning","info"].indexOf(b.severity)),
+    reviewedAt: new Date().toISOString()
+  };
+}
+const ERR = {
+  not_granted:"AI review needs your OK. Allow it from the artifact's Permissions menu, then reload.",
+  rate_limited:"Too many reviews at once. Wait a minute, then run it again.",
+  prompt_too_large:"This transcript is too long to review in one pass.",
+  invalid_json:"The review came back in an unexpected format. Run it again.",
+  refused:"The AI declined to review this transcript.",
+  session_expired:"Your Claude session expired. Reload the page.",
+  sampling_disabled:"AI review is turned off for this account.",
+  capability_disabled:"AI review is turned off for this artifact.",
+};
+async function runReview(id, signal){
+  const c=S.calls.get(id); if(!c || !S.sample) return false;
+  S.busy.set(id,{msg:"AI is reviewing this call…"}); render();
+  try{
+    const out=await S.sample.json(buildPrompt(c), {signal, modelTier:"default", cache:false});
+    const review=normalize(out);
+    const patch={review}; if(!c.status || c.status==="new") patch.status="ai";
+    await ref(id).update(patch);
+    return true;
+  }catch(e){
+    if(e?.code==="cancelled") return false;
+    if(["not_granted","sampling_disabled","capability_disabled","session_expired"].includes(e?.code)) S.sampleOff=true;
+    toast(ERR[e?.code] || "The review didn't finish. Try again in a moment.");
+    throw e;
+  }finally{ S.busy.delete(id); render(); }
+}
+async function runBatch(){
+  if(S.batch){ S.batch.abort(); return; }
+  const queue=[...S.calls.values()].filter(c=>!c.review && (c.transcript||"").trim())
+    .sort((a,b)=>(b.durationSec||0)-(a.durationSec||0));
+  if(!queue.length) return;
+  S.batch=new AbortController(); const msg=$("#batchMsg"); msg.hidden=false; let done=0;
+  try{
+    for(const c of queue){
+      if(S.batch.signal.aborted) break;
+      msg.textContent=`Reviewing ${done+1} of ${queue.length}, longest calls first…`; renderTable();
+      try{ await runReview(c.id, S.batch.signal); done++; }catch(e){ break; }
+    }
+  } finally {
+    S.batch=null; msg.hidden=true; renderTable();
+    if(done) toast(`Reviewed ${done} call${done>1?"s":""}.`);
+  }
+}
+
+/* ---------- status / notes / delete ---------- */
+async function setStatus(id, status){
+  const patch={status, reviewedBy: status==="ai"||status==="new" ? null : S.myId, signedAt: new Date().toISOString()};
+  try{ await ref(id).update(patch); toast(status==="approved"?"Call approved.":status==="escalated"?"Call escalated.":"Call reopened."); }
+  catch(e){ toast("Couldn't update the call. You may need edit access."); }
+}
+async function saveNotes(id){
+  const v=$("#d-notes").value;
+  try{ await ref(id).update({notes:v}); delete S.notes[id]; $("#d-notesmsg").textContent="Saved"; }
+  catch(e){ $("#d-notesmsg").textContent="Couldn't save. You may need edit access."; }
+}
+
+/* ---------- add call ---------- */
+function openAdd(){
+  const f=$("#addForm"); f.reset(); $("#a-err").textContent=""; $("#a-durhint").textContent="Or pick the recording below and it fills in.";
+  const now=new Date(); now.setMinutes(now.getMinutes()-now.getTimezoneOffset()); $("#a-date").value=now.toISOString().slice(0,16);
+  $("#a-saverun").hidden = !S.sample || S.sampleOff;
+  $("#addDlg").showModal();
+}
+$("#a-audio").addEventListener("change", e=>{
+  const file=e.target.files[0]; if(!file) return;
+  const url=URL.createObjectURL(file), a=document.createElement("audio"); a.preload="metadata";
+  a.onloadedmetadata=()=>{ if(isFinite(a.duration)){ $("#a-dur").value=fmtDur(a.duration); $("#a-durhint").textContent=`Read from ${file.name}.`; } URL.revokeObjectURL(url); };
+  a.onerror=()=>{ $("#a-durhint").textContent="Couldn't read that file's length. Type it in."; URL.revokeObjectURL(url); };
+  a.src=url;
+});
+$("#a-tfile").addEventListener("change", async e=>{
+  const file=e.target.files[0]; if(!file) return;
+  let t=await file.text();
+  if(/\.(vtt|srt)$/i.test(file.name) || /^WEBVTT/.test(t)){
+    t=t.replace(/^WEBVTT.*$/m,"").split(/\r?\n/).filter(l=>l.trim() && !/^\d+$/.test(l.trim()) && !/-->/.test(l) && !/^NOTE\b/.test(l)).join("\n");
+    t=t.replace(/<v\s+([^>]+)>/g,"$1: ").replace(/<\/?[^>]+>/g,"");
+  }
+  $("#a-transcript").value=t.trim();
+});
+$("#a-cancel").onclick=()=>$("#addDlg").close();
+$("#addForm").addEventListener("submit", async e=>{
+  e.preventDefault();
+  const run = e.submitter?.value==="run";
+  const dur=parseDur($("#a-dur").value), err=$("#a-err");
+  if(!$("#a-agent").value.trim()) return err.textContent="Add the agent's name.";
+  if(!isFinite(dur) || dur<=0) return err.textContent="Enter the length as mm:ss, like 21:45.";
+  if(!S.db) return err.textContent="Calls can only be saved when this page is open in Claude.";
+  const id = "c" + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  const doc={agent:$("#a-agent").value.trim(), caller:$("#a-caller").value.trim(), startedAt:new Date($("#a-date").value).toISOString(),
+    durationSec:dur, outcome:$("#a-outcome").value, product:$("#a-product").value.trim(), transcript:$("#a-transcript").value.slice(0,200000),
+    status:"new", createdAt:new Date().toISOString(), createdBy:S.myId||null};
+  try{ await ref(id).set(doc); }catch(x){ return err.textContent="Couldn't save the call. You may need edit access to this dashboard."; }
+  $("#addDlg").close(); toast("Call saved.");
+  if(run && doc.transcript.trim()){ openDrawer(id); runReview(id).catch(()=>{}); }
+});
+
+/* ---------- rules view ---------- */
+let ruleDraft=[];
+function loadRulesForm(){
+  const k=cfg(); ruleDraft=k.rules.map(r=>({...r}));
+  drawRules(); $("#instr").value=k.instructions; $("#kdList").value=k.keyDetails.join("\n");
+  $("#watchMin").value=k.watchMin; $("#mustMin").value=k.mustMin; $("#rulesMsg").textContent="";
+}
+function drawRules(){
+  $("#ruleList").innerHTML = ruleDraft.map((r,i)=>`<div class="rule">
+    <textarea id="rule-text-${i}" data-i="${i}" rows="2" aria-label="Rule ${i+1}">${esc(r.text)}</textarea>
+    <select id="rule-sev-${i}" data-i="${i}" aria-label="Severity">${["critical","warning","info"].map(s=>`<option${s===r.severity?" selected":""}>${s}</option>`).join("")}</select>
+    <button class="btn sm ghost" data-del="${i}" aria-label="Remove rule">Remove</button></div>`).join("");
+}
+$("#ruleList").addEventListener("input", e=>{ const i=e.target.dataset.i; if(i==null) return;
+  if(e.target.tagName==="TEXTAREA") ruleDraft[i].text=e.target.value; else ruleDraft[i].severity=e.target.value; });
+$("#ruleList").addEventListener("change", e=>{ const i=e.target.dataset.i; if(i!=null && e.target.tagName==="SELECT") ruleDraft[i].severity=e.target.value; });
+$("#ruleList").addEventListener("click", e=>{ const i=e.target.dataset.del; if(i==null) return; ruleDraft.splice(+i,1); drawRules(); });
+$("#addRule").onclick=()=>{ ruleDraft.push({severity:"warning",text:""}); drawRules(); $(`#rule-text-${ruleDraft.length-1}`).focus(); };
+$("#resetRules").onclick=()=>{ ruleDraft=DEFAULTS.rules.map(r=>({...r})); drawRules(); $("#instr").value=DEFAULTS.instructions; $("#kdList").value=DEFAULTS.keyDetails.join("\n"); $("#watchMin").value=15; $("#mustMin").value=20; $("#rulesMsg").textContent="Defaults restored. Save to keep them."; };
+$("#saveRules").onclick=async()=>{
+  const w=+$("#watchMin").value, m=+$("#mustMin").value, msg=$("#rulesMsg");
+  if(!(w>0 && m>0)) return msg.textContent="Both thresholds need a number of minutes.";
+  if(w>m) return msg.textContent="The highlight length should be shorter than the always-review length.";
+  if(!S.db) return msg.textContent="Rules can only be saved when this page is open in Claude.";
+  const doc={rules:ruleDraft.filter(r=>r.text.trim()).map(r=>({severity:r.severity,text:r.text.trim()})), instructions:$("#instr").value.trim(),
+    keyDetails:$("#kdList").value.split("\n").map(s=>s.trim()).filter(Boolean), watchMin:w, mustMin:m, updatedAt:new Date().toISOString()};
+  try{ await S.db.doc("config/settings").set(doc); msg.textContent="Saved. New reviews use these rules."; }
+  catch(e){ msg.textContent="Couldn't save. You may need edit access to this dashboard."; }
+};
+
+/* ---------- events ---------- */
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
+  S.view=b.dataset.view; document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected", t===b));
+  $("#view-calls").hidden=S.view!=="calls"; $("#view-rules").hidden=S.view!=="rules";
+  if(S.view==="rules") loadRulesForm();
+  try{ localStorage.setItem("tcr-view", S.view); }catch(e){}
+});
+$("#addBtn").onclick=openAdd;
+$("#q").addEventListener("input", e=>{ S.f.q=e.target.value; renderTable(); });
+$("#fAgent").onchange=e=>{ S.f.agent=e.target.value; renderTable(); };
+$("#fStatus").onchange=e=>{ S.f.status=e.target.value; renderTable(); };
+document.querySelectorAll(".chip[data-tier]").forEach(b=>b.onclick=()=>{
+  S.f.tier=b.dataset.tier; document.querySelectorAll(".chip[data-tier]").forEach(x=>x.setAttribute("aria-pressed", x===b)); renderTable(); });
+$("#fFlag").onclick=e=>{ S.f.crit=!S.f.crit; e.currentTarget.setAttribute("aria-pressed", S.f.crit); renderTable(); };
+document.querySelectorAll(".calls th[data-sort] button").forEach(b=>b.onclick=()=>{
+  const key=b.parentElement.dataset.sort;
+  S.sort = S.sort.key===key ? {key, dir:S.sort.dir==="asc"?"desc":"asc"} : {key, dir: key==="agent"?"asc":"desc"};
+  renderTable();
+});
+$("#rows").addEventListener("click", e=>{ const tr=e.target.closest("tr.row"); if(tr) openDrawer(tr.dataset.id); });
+$("#rows").addEventListener("keydown", e=>{ if(e.key==="Enter"){ const tr=e.target.closest("tr.row"); if(tr) openDrawer(tr.dataset.id); } });
+$("#scrim").onclick=closeDrawer;
+document.addEventListener("keydown", e=>{ if(e.key==="Escape" && S.openId && !$("#addDlg").open) closeDrawer(); });
+$("#batchBtn").onclick=runBatch;
+let delArm=null;
+$("#drawer").addEventListener("input", e=>{ if(e.target.id==="d-notes") S.notes[S.openId]=e.target.value; });
+$("#drawer").addEventListener("click", async e=>{
+  const id=S.openId, b=e.target.closest("button,blockquote"); if(!b) return;
+  if(b.id==="d-close") return closeDrawer();
+  if(b.id==="d-run"){ S.busy.get(id)?.ctl?.abort(); const ctl=new AbortController(); runReview(id, ctl.signal).catch(()=>{}); S.busy.get(id) && (S.busy.get(id).ctl=ctl); return; }
+  if(b.id==="d-stop"){ S.busy.get(id)?.ctl?.abort(); S.batch?.abort(); return; }
+  if(b.id==="d-approve") return setStatus(id,"approved");
+  if(b.id==="d-escalate") return setStatus(id,"escalated");
+  if(b.id==="d-reopen") return setStatus(id, S.calls.get(id)?.review ? "ai" : "new");
+  if(b.id==="d-savenotes") return saveNotes(id);
+  if(b.id==="d-del"){
+    if(delArm!==id){ delArm=id; b.classList.add("armed"); b.textContent="Confirm delete"; setTimeout(()=>{ if(delArm===id){ delArm=null; if(S.openId===id) renderDrawer(); } },4000); return; }
+    delArm=null; try{ await ref(id).delete(); closeDrawer(); toast("Call deleted."); }catch(x){ toast("Couldn't delete. You may need edit access."); } return;
+  }
+  if(b.dataset.jump!=null){ const m=$(`#d-tx mark[data-flag="${b.dataset.jump}"]`);
+    if(m){ m.scrollIntoView({block:"center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"}); m.classList.add("flash"); setTimeout(()=>m.classList.remove("flash"),1600); }
+    else toast("That exact quote isn't in the transcript text."); }
+});
+$("#drawer").addEventListener("keydown", e=>{ if(e.key==="Enter" && e.target.dataset?.jump!=null) e.target.click(); });
+let clearArm=false;
+$("#clearEx").onclick=async e=>{
+  const b=e.currentTarget;
+  if(!clearArm){ clearArm=true; b.textContent="Click again to remove examples"; setTimeout(()=>{clearArm=false; b.textContent="Remove example calls";},4000); return; }
+  clearArm=false; b.textContent="Remove example calls";
+  const ex=[...S.calls.values()].filter(c=>c.example);
+  try{ for(const c of ex) await ref(c.id).delete(); toast(`Removed ${ex.length} example calls.`); }catch(x){ toast("Couldn't remove them. You may need edit access."); }
+};
+$("#exportBtn").onclick=async()=>{
+  const cols=["Date","Agent","Caller","Product","Outcome","Length","Length (sec)","Length tier","Trust score","Critical flags","Warnings","Status","Summary","Flags"];
+  const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
+  const lines=[cols.join(",")].concat(visible().map(c=>[c.startedAt,c.agent,c.caller,c.product,c.outcome,fmtDur(c.durationSec),c.durationSec,tier(c),c.review?.trustScore??"",critCount(c),warnCount(c),needsReview(c)?"Review required":STATUS[c.status||"new"].label,c.review?.summary||"",(c.review?.flags||[]).map(f=>`[${f.severity}] ${f.title}`).join("; ")].map(q).join(",")));
+  try{ await S.downloads.save({filename:`call-review-${new Date().toISOString().slice(0,10)}.csv`, data:lines.join("\n")}); }catch(e){ if(e?.code!=="cancelled") toast("The export didn't save."); }
+};
+
+/* ---------- boot ---------- */
+try{ const v=localStorage.getItem("tcr-view"); if(v==="rules") $("#tab-rules").click(); }catch(e){}
+render();
+(async()=>{
+  const c=window.claude;
+  if(!c?.use){ S.db=false; $("#offline").hidden=false; render(); return; }
+  c.use("sample").then(s=>{ S.sample=s; render(); });
+  c.use("downloads").then(d=>{ S.downloads=d; renderTable(); });
+  c.use("user").then(async u=>{ S.user=u; if(u){ try{ S.myId=await u.id(); }catch(e){} } });
+  const db=await c.use("db");
+  if(!db){ S.db=false; $("#offline").hidden=false; render(); return; }
+  S.db=db;
+  db.collection("calls").onSnapshot(snap=>{
+    S.calls=new Map(snap.docs.map(d=>[d.id,{id:d.id,...d.data()}])); S.loaded=true; render();
+  }, err=>{ toast("Lost the connection to the call log. Reload the page."); });
+  db.doc("config/settings").onSnapshot(snap=>{
+    S.settingsDoc = snap.exists ? snap.data() : null; render(); if(S.view==="rules" && !document.activeElement?.closest("#view-rules")) loadRulesForm();
+  }, ()=>{});
+})();
+})();
+</script>
