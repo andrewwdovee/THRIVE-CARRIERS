@@ -136,6 +136,18 @@ body::before{
 .grid .sess .n b{font-size:10.5px; line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .grid .sess .n small{display:none}
 .grid .cell .none{font-size:9.5px}
+/* A holiday: no business that day, so the day is crossed off. */
+.grid .cell.holiday{
+  background:
+    linear-gradient(to top right, transparent calc(50% - 1.5px), rgba(240,115,106,.45) 50%, transparent calc(50% + 1.5px)),
+    linear-gradient(to top left, transparent calc(50% - 1.5px), rgba(240,115,106,.45) 50%, transparent calc(50% + 1.5px)),
+    #1F1A22;
+}
+.grid .cell.holiday .dnum{color:#F0736A; text-decoration:line-through}
+.grid .cell .hol{
+  font-size:10.5px; font-weight:700; color:#F0736A; line-height:1.25;
+}
+.grid .cell .hol small{display:block; font-size:9.5px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; opacity:.85}
 
 .monthwrap{display:none}
 @media (min-width:980px){ .monthwrap{display:block} .mobilenote{display:none} }
@@ -270,6 +282,51 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
   var now = new Date();
   var view = new Date(now.getFullYear(), now.getMonth(), 1);
 
+  /* American holidays: no business, so they are crossed off the month.
+     Worked out for whatever year is on screen, so it never goes stale. */
+  function nthWeekday(y, m, dow, n) {           /* n = 1..4, or -1 for the last */
+    if (n > 0) {
+      var d = new Date(y, m, 1);
+      d.setDate(1 + ((dow - d.getDay() + 7) % 7) + (n - 1) * 7);
+      return d;
+    }
+    var e = new Date(y, m + 1, 0);
+    e.setDate(e.getDate() - ((e.getDay() - dow + 7) % 7));
+    return e;
+  }
+  function easter(y) {                          /* anonymous Gregorian algorithm */
+    var a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4;
+    var f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+    var h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4;
+    var l = (32 + 2 * e + 2 * i - h - k) % 7, mm = Math.floor((a + 11 * h + 22 * l) / 451);
+    var month = Math.floor((h + l - 7 * mm + 114) / 31), day = ((h + l - 7 * mm + 114) % 31) + 1;
+    return new Date(y, month - 1, day);
+  }
+  var holidayCache = {};
+  function holidays(y) {
+    if (holidayCache[y]) return holidayCache[y];
+    var list = [
+      [new Date(y, 0, 1), "New Year's Day"],
+      [nthWeekday(y, 0, 1, 3), "Martin Luther King Jr. Day"],
+      [nthWeekday(y, 1, 1, 3), "Presidents' Day"],
+      [easter(y), "Easter"],
+      [nthWeekday(y, 4, 1, -1), "Memorial Day"],
+      [new Date(y, 5, 19), "Juneteenth"],
+      [new Date(y, 6, 4), "Independence Day"],
+      [nthWeekday(y, 8, 1, 1), "Labor Day"],
+      [nthWeekday(y, 9, 1, 2), "Columbus Day"],
+      [new Date(y, 9, 31), "Halloween"],
+      [new Date(y, 10, 11), "Veterans Day"],
+      [nthWeekday(y, 10, 4, 4), "Thanksgiving"],
+      [new Date(y, 11, 24), "Christmas Eve"],
+      [new Date(y, 11, 25), "Christmas Day"],
+      [new Date(y, 11, 31), "New Year's Eve"]
+    ];
+    var map = {};
+    list.forEach(function (h) { map[h[0].getMonth() + "-" + h[0].getDate()] = h[1]; });
+    return (holidayCache[y] = map);
+  }
+
   function drawMonth() {
     var y = view.getFullYear(), m = view.getMonth();
     $("#monthname").textContent =
@@ -287,15 +344,18 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
       var list = WEEK[d.getDay()];
       /* The days either side of the month keep the grid square but
          carry nothing: the schedule for them belongs to another month. */
-      html += '<div class="cell' + (out ? " out" : "") + (isToday ? " today" : "") + '">' +
+      var hol = out ? "" : holidays(d.getFullYear())[d.getMonth() + "-" + d.getDate()];
+      html += '<div class="cell' + (out ? " out" : "") + (isToday ? " today" : "") + (hol ? " holiday" : "") + '"' +
+        (hol ? ' title="' + esc(hol) + ' - closed"' : "") + '>' +
         '<span class="dnum">' + d.getDate() + "</span>" +
         (out ? ""
+          : hol ? '<span class="hol">' + esc(hol) + "<small>Closed</small></span>"
           : list.length
             ? list.map(function (x) { return sessHtml(x, true); }).join("")
             : '<span class="none">No training</span>') +
         "</div>";
       /* stop once the month is done and the week is complete */
-      if (i >= 27 && d.getDay() === 6 && d.getMonth() !== m) break;
+      if (i >= 27 && d.getDay() === 6 && d >= new Date(y, m + 1, 0)) break;
     }
     $("#grid").innerHTML = html;
   }
