@@ -233,9 +233,12 @@ New since the rest of this file. Three pieces:
 
 | | |
 |---|---|
-| `onboarding/index.html` | the public page a client signs — the agreement, the signature pad, the headshot |
-| `POST /onboarding/submit` on the worker | the only route with no token, because the signer has no account yet |
+| `onboarding/index.html` | the public page a client signs — both agreements, the signature pads, the headshot |
+| `onboarding/start-time.html` | the page they come back to, at `/start-time`, to change their start time, weekly volume and note |
+| `POST /onboarding/submit` on the worker | no token, because the signer has no account yet |
+| `POST /onboarding/preferences` | no token either; it can only change three fields on a row that already exists |
 | the **Onboarding** tab on the board | the link to send, and the grid of who has signed what |
+| the **Start times** tab | the settings link, the morning switch-off list, and who ends up off most often |
 
 ### 1. Put the signing page up
 
@@ -248,7 +251,9 @@ npx wrangler pages deploy ./dist --project-name thrive-onboarding --commit-dirty
 ```
 
 Pages prints a URL — `https://thrive-onboarding.pages.dev` if the project is named
-as above. That is the link the board hands out, so keep the name.
+as above. That is the link the board hands out, so keep the name. The settings page
+rides along in the same deploy at `/start-time`, which is why it needs no second
+project and no second allowed origin.
 
 `--rules` is where the button on the thank-you page goes. `--preview` builds the
 same page with no relay instead, to show someone before any of this exists: it
@@ -311,6 +316,11 @@ layer onto a bundle that already carries one of the two tabs but not the other.
 | `onboarding/doc/<id>` | one signed agreement, with the signature and the photo |
 | `starttimes/state` | who is switched off right now, and every switch-off ever |
 
+A start time, a weekly volume and a note live on the submission row itself, so the
+Start times tab reads them without a second fetch. `POST /onboarding/preferences`
+is the only thing that writes them, it can only touch those three fields on a row
+that already exists, and it stamps every change and keeps the last ten.
+
 The images live apart from the list so the grid is one small read however many people
 have signed. The board fetches a document only when you open that row.
 
@@ -320,9 +330,13 @@ have signed. The board fetches a document only when you open that row.
   the client waives chargebacks on it — is the operative clause and the one a lawyer
   should read before this goes to a single client. `onboarding/contract.md` is the
   same text in plain Markdown, for handing to one.
-- **The submit route is public on purpose.** Guards: the origin allow-list, a 3.2 MB
-  body cap, a six-an-hour throttle per address, required fields, and append-only
-  behaviour. Reading submissions back still needs the bearer token.
+- **Both public routes are public on purpose.** Guards: the origin allow-list, a
+  3.2 MB body cap, an hourly throttle per address, required fields, and no deletes.
+  Reading anything back still needs the bearer token.
+- **The settings page is keyed on the email alone.** Somebody who knows a client's
+  address could change their start time. That is the price of a link that works
+  without a login: it is reversible from the board, every change is stamped and
+  kept, and none of it is sensitive. Say the word and it goes behind a code.
 - **The artifact copy of the board cannot see submissions.** It stores in the browser,
   not the relay. The tab is only useful on the Pages copy.
 - **Headshots are not wired into the Social Studio roster yet.** They are stored and

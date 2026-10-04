@@ -43,10 +43,10 @@ const src = readFileSync(join(here, "index.html"), "utf8");
 
 /* Each of these is asserted to appear exactly once. A page that silently
    failed to take the relay URL would look fine and lose every signature. */
-function one(text, needle, replacement) {
+function one(text, needle, replacement, where = "index.html") {
   const hits = text.split(needle).length - 1;
   if (hits !== 1) {
-    console.error(`Expected one \`${needle}\` in index.html, found ${hits}. Do not guess — fix the page.`);
+    console.error(`Expected one \`${needle}\` in ${where}, found ${hits}. Do not guess — fix the page.`);
     process.exit(1);
   }
   return text.replace(needle, replacement);
@@ -82,12 +82,22 @@ if (drifted.length) {
   process.exit(1);
 }
 
+/* The settings page ships in the same deploy, at /start-time, so it
+   needs no second Pages project and no second allowed origin. */
+let st = readFileSync(join(here, "start-time.html"), "utf8");
+if (relay) st = one(st, 'var RELAY  = "";', `var RELAY  = ${JSON.stringify(relay)};`, "start-time.html");
+st = one(st, 'var ENTITY = "Thrive Companies LLC";', `var ENTITY = ${JSON.stringify(entity)};`, "start-time.html");
+st = one(st, 'var LOGOS  = {};', `var LOGOS  = ${JSON.stringify(logos)};`, "start-time.html");
+
 const dist = join(here, "dist");
 mkdirSync(dist, { recursive: true });
 const name = preview && !relay ? "preview.html" : "index.html";
 writeFileSync(join(dist, name), out);
+mkdirSync(join(dist, "start-time"), { recursive: true });
+writeFileSync(join(dist, "start-time", name), st);
 
 console.log(`Wrote onboarding/dist/${name}  (${(out.length / 1024).toFixed(0)} KB)
+  and  onboarding/dist/start-time/${name}  (${(st.length / 1024).toFixed(0)} KB)  ->  <url>/start-time
   relay   ${relay || "(none — preview, submissions go nowhere)"}
   entity  ${entity}
   state   ${state}

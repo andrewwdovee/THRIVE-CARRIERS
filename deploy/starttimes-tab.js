@@ -13,6 +13,9 @@
  */
 
 const ST_KEY = "starttimes/state";
+/* The settings page ships inside the onboarding deploy, so it is that
+   URL with /start-time on the end. */
+const ST_URL = String(__URL__).replace(/\/+$/, "") + "/start-time";
 const ST_SLOTS = ["10:00 AM EST", "11:00 AM EST"];
 const ST_GRACE = 15;            /* minutes after the start time */
 
@@ -93,6 +96,7 @@ function StPanel() {
   const [err, setErr] = __REACT__.useState("");
   const [busy, setBusy] = __REACT__.useState(false);
   const [window30, setWindow30] = __REACT__.useState(true);
+  const [copied, setCopied] = __REACT__.useState(false);
   const dark = stUseDark();
   const today = stToday();
 
@@ -134,6 +138,7 @@ function StPanel() {
       seen.set(email, {
         email, first: nm.first, last: nm.last, name: r.legalName || email,
         startTime: r.startTime || "", signedAt: r.signedAt,
+        callsPerWeek: r.callsPerWeek, note: r.note || "", prefsUpdatedAt: r.prefsUpdatedAt || "",
       });
     });
     return [...seen.values()].sort((a, b) =>
@@ -183,6 +188,17 @@ function StPanel() {
     write({ off: {}, log });
   }
 
+  function copyLink() {
+    const done = () => { setCopied(true); setTimeout(() => setCopied(false), 1800); };
+    const fallback = () => {
+      const el = document.getElementById("stUrlField");
+      if (!el) return;
+      el.focus(); el.select();
+      try { document.execCommand("copy"); done(); } catch { /* let them copy it */ }
+    };
+    try { navigator.clipboard.writeText(ST_URL).then(done, fallback); } catch { fallback(); }
+  }
+
   const offCount = Object.keys(state.off).length;
   const stale = Object.keys(state.off).filter((e) => state.off[e].date !== today).length;
 
@@ -205,6 +221,35 @@ function StPanel() {
   const cell = "px-3 py-2 text-sm text-slate-900 dark:text-white";
   const btn = "rounded-md border border-slate-200 dark:border-slate-800 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800";
   const card = "rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900";
+
+  /* --------------------------------------------------------- the link */
+  const linkCard = __JSX__.jsxs("div", {
+    className: "rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 mb-3",
+    children: [
+      __JSX__.jsx("h3", {
+        className: "text-sm font-semibold text-slate-900 dark:text-white",
+        children: "The settings link",
+      }, "a"),
+      __JSX__.jsx("p", {
+        className: "text-sm text-slate-600 dark:text-slate-300 mt-1 mb-3",
+        children: "Anyone can open this and change their own start time, how many calls they want a week, and leave the desk a note. Add ?email= to land them on their own row.",
+      }, "b"),
+      __JSX__.jsxs("div", {
+        className: "flex items-center gap-2 flex-wrap",
+        children: [
+          __JSX__.jsx("input", {
+            id: "stUrlField", readOnly: true, value: ST_URL,
+            onFocus: (e) => e.target.select(),
+            className: "flex-1 min-w-0 rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-sm font-mono text-slate-900 dark:text-white",
+          }, "u"),
+          __JSX__.jsx("button", { onClick: copyLink, className: btn, children: copied ? "Copied" : "Copy" }, "c"),
+          __JSX__.jsx("a", {
+            href: ST_URL, target: "_blank", rel: "noreferrer", className: btn, children: "Open",
+          }, "o"),
+        ],
+      }, "r"),
+    ],
+  });
 
   /* ------------------------------------------------------------ the day */
   const banner = __JSX__.jsxs("div", {
@@ -272,6 +317,7 @@ function StPanel() {
                       __JSX__.jsx("th", { className: head, children: "First" }, "f"),
                       __JSX__.jsx("th", { className: head, children: "Last" }, "l"),
                       __JSX__.jsx("th", { className: head, children: "Email" }, "e"),
+                      __JSX__.jsx("th", { className: head + " text-right", children: "Per wk" }, "w"),
                       __JSX__.jsx("th", { className: head + " text-right", children: "Calls" }, "c"),
                     ],
                   }),
@@ -284,10 +330,21 @@ function StPanel() {
                       children: [
                         __JSX__.jsx("td", { className: cell + " font-semibold", children: p.first || "—" }, "f"),
                         __JSX__.jsx("td", { className: cell, children: p.last || "—" }, "l"),
-                        __JSX__.jsx("td", {
-                          className: cell + " text-slate-600 dark:text-slate-300 truncate",
-                          children: p.email,
+                        __JSX__.jsxs("td", {
+                          className: cell + " text-slate-600 dark:text-slate-300",
+                          children: [
+                            __JSX__.jsx("div", { className: "truncate", children: p.email }, "a"),
+                            p.note ? __JSX__.jsx("div", {
+                              className: "text-xs text-slate-500 dark:text-slate-400 truncate",
+                              title: p.note,
+                              children: "“" + p.note + "”",
+                            }, "n") : null,
+                          ],
                         }, "e"),
+                        __JSX__.jsx("td", {
+                          className: cell + " text-right tabular-nums text-slate-600 dark:text-slate-300",
+                          children: p.callsPerWeek == null || p.callsPerWeek === "" ? "—" : p.callsPerWeek,
+                        }, "w"),
                         __JSX__.jsx("td", {
                           className: cell + " text-right",
                           children: __JSX__.jsxs("span", {
@@ -424,6 +481,7 @@ function StPanel() {
 
   return __JSX__.jsxs("div", {
     children: [
+      linkCard,
       banner,
       err && __JSX__.jsx("div", {
         className: card + " px-4 py-3 mb-3 text-sm text-rose-600 dark:text-rose-400",

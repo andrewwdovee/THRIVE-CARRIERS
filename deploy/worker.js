@@ -13,7 +13,8 @@
  *
  * Plus one route the board did not ask for, added for onboarding:
  *
- *   POST /onboarding/submit   no token, {record}  -> {ok: true, id}
+ *   POST /onboarding/submit        no token, {record} -> {ok: true, id}
+ *   POST /onboarding/preferences   no token, {email, ...} -> {ok: true, ...}
  *
  * It is the only unauthenticated write, because the person signing the
  * agreement has no account yet. It is not open: the CORS allow-list
@@ -41,6 +42,10 @@ const ONBOARD_MAX_SIG = 400 * 1024;
 const ONBOARD_MAX_PHOTO = 2.6 * 1024 * 1024;
 const ONBOARD_MAX_ROWS = 2000;
 const ONBOARD_PER_HOUR = 6;
+const PREFS_PER_HOUR = 20;
+/* The only start times the desk runs. The signing page and the settings
+   page both offer these two, and the relay accepts nothing else. */
+const ONBOARD_SLOTS = ["10:00 AM EST", "11:00 AM EST"];
 
 /* ---------------------------------------------------------------- utils */
 
@@ -391,6 +396,82 @@ async function handle(request, env) {
       await env.THRIVE_KV.put(bucket, String(seen + 1), { expirationTtl: 7200 });
 
       return json({ ok: true, id, signedAt }, 200, head);
+    }
+
+    /* Changing a start time, a weekly volume or a note, from the page
+       the desk hands out. Also unauthenticated, for the same reason, and
+       with the same guards. It can only touch a row that already exists:
+       no creating, no deleting, and nothing outside these three fields.
+       Every change is stamped and the last ten kept on the row, so the
+       desk can see what moved and when.
+
+       It is keyed on the email alone, which means somebody who knows a
+       client's address could change their start time. That is the price
+       of a link that works without a login; it is reversible from the
+       board, it is logged, and none of it is sensitive. Put it behind a
+       code if that trade stops being worth it. */
+    if (path === "/onboarding/preferences" && request.method === "POST") {
+      let body;
+      try { body = await request.json(); } catch { return json({ error: "Bad request" }, 400, head); }
+
+      const who = await hmac(
+        env.TOKEN_SECRET || "onboarding",
+        request.headers.get("CF-Connecting-IP") || "unknown"
+      );
+      const bucket = `rate:prefs:${who.slice(0, 24)}:${Math.floor(Date.now() / 36e5)}`;
+      const seen = Number(await env.THRIVE_KV.get(bucket)) || 0;
+      if (seen >= PREFS_PER_HOUR) {
+        return json({ error: "Too many changes from here in the last hour." }, 429, head);
+      }
+
+      const email = String(body.email || "").trim().toLowerCase().slice(0, 160);
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+        return json({ error: "That email does not look right." }, 400, head);
+      }
+
+      const startTime = String(body.startTime || "").trim();
+      if (startTime && ONBOARD_SLOTS.indexOf(startTime) < 0) {
+        return json({ error: "That is not one of the start times." }, 400, head);
+      }
+      let callsPerWeek = null;
+      if (String(body.callsPerWeek || "").trim() !== "") {
+        const n = Math.round(Number(body.callsPerWeek));
+        if (!isFinite(n) || n < 0 || n > 1000) {
+          return json({ error: "Calls per week has to be a number from 0 to 1000." }, 400, head);
+        }
+        callsPerWeek = n;
+      }
+      const note = String(body.note == null ? "" : body.note).trim().slice(0, 600);
+      if (!startTime && callsPerWeek === null && !note) {
+        return json({ error: "Nothing to change." }, 400, head);
+      }
+
+      let index = [];
+      try { index = JSON.parse((await env.THRIVE_KV.get(ONBOARD_INDEX)) || "[]"); } catch { index = []; }
+      if (!Array.isArray(index)) index = [];
+      const row = index.find((r) => String(r.email || "").toLowerCase() === email);
+      if (!row) {
+        return json({ error: "We cannot find that email on an onboarded account. Check it, or ask the desk." }, 404, head);
+      }
+
+      const at = new Date().toISOString();
+      if (startTime) row.startTime = startTime;
+      if (callsPerWeek !== null) row.callsPerWeek = callsPerWeek;
+      if (note) row.note = note;
+      row.prefsUpdatedAt = at;
+      row.prefsLog = [{ at, startTime: startTime || null, callsPerWeek, note: note || null }]
+        .concat(Array.isArray(row.prefsLog) ? row.prefsLog : [])
+        .slice(0, 10);
+
+      await env.THRIVE_KV.put(ONBOARD_INDEX, JSON.stringify(index));
+      await env.THRIVE_KV.put(bucket, String(seen + 1), { expirationTtl: 7200 });
+
+      return json({
+        ok: true, at,
+        startTime: row.startTime || "",
+        callsPerWeek: row.callsPerWeek == null ? "" : row.callsPerWeek,
+        note: row.note || "",
+      }, 200, head);
     }
 
     /* ---- key/value ---- */
