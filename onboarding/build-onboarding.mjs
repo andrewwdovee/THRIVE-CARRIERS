@@ -20,7 +20,8 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
 const FLAGS = ["--entity", "--state", "--rules", "--welcome", "--settings",
-  "--portal", "--licences", "--course", "--training", "--discord", "--support"];
+  "--portal", "--licences", "--course", "--training", "--discord", "--support",
+  "--states"];
 const flag = (n, d) => { const i = args.indexOf(n); return i < 0 ? d : args[i + 1]; };
 /* The relay is the one URL given on its own. Everything a flag takes is
    skipped first — otherwise `--welcome https://...` is read as the relay,
@@ -65,6 +66,7 @@ const EXTRA_LINKS = [
   ["--training", "TRAINING_URL"],
   ["--discord", "DISCORD_URL"],
   ["--support", "SUPPORT_URL"],
+  ["--states", "LICENCE_URL"],
 ];
 const src = readFileSync(join(here, "index.html"), "utf8");
 
@@ -118,6 +120,14 @@ if (relay) st = one(st, 'var RELAY  = "";', `var RELAY  = ${JSON.stringify(relay
 st = one(st, 'var ENTITY = "Thrive Companies LLC";', `var ENTITY = ${JSON.stringify(entity)};`, "start-time.html");
 st = one(st, 'var LOGOS  = {};', `var LOGOS  = ${JSON.stringify(logos)};`, "start-time.html");
 
+/* The map is 50 projected paths, generated once by mapgen and kept
+   beside the logos rather than inline, so states.html stays readable. */
+const usStates = JSON.parse(readFileSync(join(here, "us-states.json"), "utf8"));
+let stp = readFileSync(join(here, "states.html"), "utf8");
+stp = one(stp, 'var ENTITY = "Thrive Companies LLC";', `var ENTITY = ${JSON.stringify(entity)};`, "states.html");
+stp = one(stp, 'var LOGOS = {};', `var LOGOS = ${JSON.stringify(logos)};`, "states.html");
+stp = one(stp, 'var US = null;', `var US = ${JSON.stringify(usStates)};`, "states.html");
+
 let tr = readFileSync(join(here, "training.html"), "utf8");
 tr = one(tr, 'var ENTITY = "Thrive Companies LLC";', `var ENTITY = ${JSON.stringify(entity)};`, "training.html");
 tr = one(tr, 'var LOGOS = {};', `var LOGOS = ${JSON.stringify(logos)};`, "training.html");
@@ -148,11 +158,14 @@ mkdirSync(join(dist, "welcome"), { recursive: true });
 writeFileSync(join(dist, "welcome", name), wc);
 mkdirSync(join(dist, "training"), { recursive: true });
 writeFileSync(join(dist, "training", name), tr);
+mkdirSync(join(dist, "states"), { recursive: true });
+writeFileSync(join(dist, "states", name), stp);
 
 console.log(`Wrote onboarding/dist/${name}  (${(out.length / 1024).toFixed(0)} KB)
   and  onboarding/dist/start-time/${name}  (${(st.length / 1024).toFixed(0)} KB)  ->  <url>/start-time
   and  onboarding/dist/welcome/${name}     (${(wc.length / 1024).toFixed(0)} KB)  ->  <url>/welcome
   and  onboarding/dist/training/${name}    (${(tr.length / 1024).toFixed(0)} KB)  ->  <url>/training
+  and  onboarding/dist/states/${name}      (${(stp.length / 1024).toFixed(0)} KB)  ->  <url>/states
   relay   ${relay || "(none — preview, submissions go nowhere)"}
   entity  ${entity}
   state   ${state}

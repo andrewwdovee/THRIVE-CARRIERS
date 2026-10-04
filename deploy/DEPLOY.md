@@ -236,6 +236,7 @@ New since the rest of this file. Three pieces:
 | `onboarding/index.html` | the public page a client signs — both agreements, the signature pads, the headshot |
 | `onboarding/welcome.html` | step two, at `/welcome` — the setup list they land on the moment the form is signed |
 | `onboarding/training.html` | the training calendar at `/training`, generated from the weekly pattern |
+| `onboarding/states.html` | the states we target at `/states`, with the cost of a call in each |
 | `onboarding/start-time.html` | the start-times board at `/start-time` — who is on at 10 and who at 11, and where an agent changes their own |
 | `POST /onboarding/submit` on the worker | no token, because the signer has no account yet |
 | `POST /onboarding/preferences` | no token either; it can only change a handful of fields on a row that already exists |
@@ -263,17 +264,15 @@ signed form can reach the setup list with a relative path.
 `STEPS` array, and the numbering, the progress bar and the saved ticks all come off
 it. Keep each `id` stable: somebody part-way through loses their ticks if it changes.
 
-Six of the eight steps have their link baked in. Two are still missing — pass them
-when the URLs exist, and the build names them every time it runs:
+All eight steps have their link baked in. A flag still overrides any of them, and
+an unset link loses its button while the step keeps its words.
 
-```sh
-node build-onboarding.mjs https://stripe-sync.aandrewdavidson.workers.dev \
-  --portal   https://...   # the inbound portal they log into
-  --licences https://...   # wherever licences get sent
-```
-
-A flag overrides whatever the page already holds; an unset link loses its button
-and the step still reads.
+**The states page draws a real map.** `onboarding/us-states.json` is 50 SVG paths
+projected Albers USA, generated once by `onboarding/mapgen` and embedded at build
+time — no runtime d3, no CDN, nothing to break. The states we target and what a
+call costs in each live in `states.html`; the count and the total are worked out
+from that list, so editing one line keeps both honest. See `mapgen/README.md` only
+if the geometry itself has to change.
 
 **The training calendar is a weekly pattern, not a month.** `onboarding/training.html`
 stores the five session types and what runs on each weekday, and generates whatever

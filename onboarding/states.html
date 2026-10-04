@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>States we target</title>
+<meta name="description" content="The states Lead Tech runs campaigns in, and what a call costs in each.">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700;800&display=swap">
+<style>
+:root{
+  color-scheme: dark;
+  --ink:#080C14; --panel:#131A28; --panel-2:#1B2434; --cell:#1E2636;
+  --line:#242E40; --line-2:#667998; --fg:#F0F4F9; --muted:#A3B4C8;
+  --gold:#F0B429;
+  /* One hue doing one job: which states we run in, and how much a call
+     costs there. Validated against this surface — inside the dark
+     lightness band and past 3:1 on it. */
+  --on:#5A93F2; --on-hi:#9EC0FA; --off:#1E2636;
+  --display:'Anton','Arial Narrow',sans-serif;
+  --body:'Archivo',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--ink); color:var(--fg); font-family:var(--body); font-size:15px; line-height:1.6}
+.wrap{max-width:1300px; margin:0 auto; padding:34px 20px 80px}
+
+.marks{display:flex; align-items:center; gap:17px; margin:0 0 30px}
+.marks img.thrive{height:52px; width:auto}
+.marks img.lead{height:12px; width:auto}
+.marks .by{display:flex; align-items:center; gap:8px; padding-left:17px; border-left:1px solid var(--line-2)}
+.marks .by span{font-size:7.5px; font-weight:700; letter-spacing:.26em; text-transform:uppercase; color:var(--muted)}
+
+.eyebrow{
+  font-size:11px; font-weight:700; letter-spacing:.3em; text-transform:uppercase;
+  color:var(--muted); margin:0 0 10px;
+}
+h1{
+  font-family:var(--display); font-weight:400; margin:0 0 16px;
+  font-size:clamp(34px,5.6vw,52px); line-height:1.04; letter-spacing:.01em; color:#fff;
+}
+.lede{color:var(--muted); max-width:58ch; margin:0 0 26px; font-size:15.5px}
+.lede b{color:var(--fg); font-weight:700}
+
+.cols{display:grid; gap:20px; grid-template-columns:1fr}
+@media (min-width:1000px){ .cols{grid-template-columns:1.05fr .95fr} }
+.card{background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:22px}
+
+/* ---------------------------------------------------------- the map */
+.map svg{display:block; width:100%; height:auto}
+.st{fill:var(--off); stroke:var(--panel); stroke-width:1.1; transition:fill .12s}
+.st.on{fill:var(--on)}
+.st.hot{fill:var(--on-hi); stroke:#fff; stroke-width:1.6}
+.st.on, .lbl.on{cursor:pointer}
+.lbl{
+  font-family:var(--body); font-size:11px; font-weight:700; text-anchor:middle;
+  fill:#8795AC; pointer-events:none; user-select:none;
+}
+.lbl.on{fill:#0B1020}
+.legend{display:flex; gap:22px; align-items:center; margin-top:14px; font-size:13px; color:var(--muted)}
+.legend span{display:flex; gap:8px; align-items:center}
+.legend i{width:13px; height:13px; border-radius:3px; display:block}
+
+/* --------------------------------------------------------- the list */
+.listhead{display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin:0 0 16px}
+.listhead h2{font-size:19px; font-weight:700; margin:0}
+.listhead span{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--muted)}
+table{width:100%; border-collapse:collapse}
+td{padding:7px 0; vertical-align:middle}
+tr.row{cursor:pointer}
+tr.row:hover td, tr.row.hot td{background:rgba(90,147,242,.10)}
+td.ab{
+  font-family:ui-monospace,Menlo,monospace; font-size:12.5px; font-weight:700;
+  color:var(--on); width:3.4em; padding-left:8px; border-radius:7px 0 0 7px;
+}
+td.nm{font-size:15px; color:var(--fg)}
+td.br{width:38%; padding-left:14px}
+td.br span{display:block; height:7px; border-radius:999px; background:var(--cell)}
+td.br span i{display:block; height:7px; border-radius:999px; background:var(--on)}
+td.ct{
+  text-align:right; font-size:15px; font-weight:700; white-space:nowrap;
+  padding-right:8px; border-radius:0 7px 7px 0; font-variant-numeric:tabular-nums;
+}
+.total{display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+  border-top:1px solid var(--line-2); margin-top:14px; padding-top:16px}
+.total b{font-size:18px; font-weight:700}
+.total strong{font-family:var(--display); font-weight:400; font-size:30px; letter-spacing:.01em}
+.foot{font-size:12.5px; color:var(--muted); margin:14px 0 0}
+footer{color:var(--muted); font-size:11.5px; padding:30px 0 0; text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="marks">
+    <img class="thrive" id="mk-thrive" alt="Thrive Companies">
+    <span class="by"><span>Powered by</span><img class="lead" id="mk-lead" alt="Lead Tech"></span>
+  </div>
+
+  <p class="eyebrow">Geography</p>
+  <h1>States we target</h1>
+  <p class="lede">
+    These are the states we target. In the inbound portal,
+    <b>Google calls need all 50 states selected</b>. For Meta and TV calls you pick
+    your own states.
+  </p>
+
+  <div class="cols">
+    <section class="card map">
+      <div id="map"></div>
+      <div class="legend">
+        <span><i style="background:var(--on)"></i> Targeted</span>
+        <span><i style="background:var(--off)"></i> Not targeted</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="listhead">
+        <h2>Cost by state</h2>
+        <span id="count"></span>
+      </div>
+      <table><tbody id="rows"></tbody></table>
+      <div class="total"><b>Total for all states</b><strong id="total"></strong></div>
+      <p class="foot">Estimated costs. Tap a state on the map or in the list to highlight it.</p>
+    </section>
+  </div>
+
+  <footer><span data-entity>Thrive Companies</span> &middot; Lead Tech inbound</footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var ENTITY = "Thrive Companies LLC";
+  var LOGOS = {};
+  var US = null;            /* {viewBox, states, labels} — injected by the build */
+
+  /* ---------------------------------------------------- what we target
+     Code, name, and what a call costs there. The count and the total
+     are worked out from this, so editing one line keeps both honest. */
+  var TARGET = [
+    ["AL", "Alabama", 86],
+    ["AR", "Arkansas", 76],
+    ["FL", "Florida", 61],
+    ["GA", "Georgia", 126],
+    ["IN", "Indiana", 96],
+    ["KY", "Kentucky", 106],
+    ["MI", "Michigan", 16],
+    ["NC", "North Carolina", 76],
+    ["OH", "Ohio", 16],
+    ["PA", "Pennsylvania", 116],
+    ["SC", "South Carolina", 31],
+    ["TN", "Tennessee", 66],
+    ["TX", "Texas", 56]
+  ];
+
+  /* The small north-east states have no room for a label on a map this
+     size, so they go unlabelled rather than overlapping each other. */
+  var NO_LABEL = ["RI", "CT", "MA", "NH", "VT", "NJ", "DE", "MD"];
+
+  var $ = function (q) { return document.querySelector(q); };
+  Array.prototype.slice.call(document.querySelectorAll("[data-entity]"))
+    .forEach(function (el) { el.textContent = ENTITY; });
+  [["mk-thrive", "thriveV"], ["mk-lead", "leadWhite"]].forEach(function (p) {
+    var el = $("#" + p[0]);
+    if (el && LOGOS[p[1]]) el.src = LOGOS[p[1]];
+    else if (el) el.remove();
+  });
+
+  var byCode = {};
+  TARGET.forEach(function (t) { byCode[t[0]] = { code: t[0], name: t[1], cost: t[2] }; });
+  var max = TARGET.reduce(function (m, t) { return Math.max(m, t[2]); }, 0);
+  var total = TARGET.reduce(function (s, t) { return s + t[2]; }, 0);
+
+  function esc(v) {
+    return String(v == null ? "" : v)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  function money(n) { return "$" + Math.round(n).toLocaleString("en-US"); }
+
+  /* ------------------------------------------------------------- map */
+  if (US && US.states) {
+    var codes = Object.keys(US.states);
+    var svg = '<svg viewBox="' + US.viewBox + '" role="img" aria-label="Map of the United States with the targeted states filled">';
+    codes.forEach(function (c) {
+      var on = !!byCode[c];
+      svg += '<path class="st' + (on ? " on" : "") + '" data-c="' + c + '" d="' + US.states[c] + '">' +
+        "<title>" + esc(on ? byCode[c].name + " · " + money(byCode[c].cost) + " a call" : c) + "</title></path>";
+    });
+    codes.forEach(function (c) {
+      if (NO_LABEL.indexOf(c) >= 0) return;
+      var p = US.labels[c];
+      if (!p) return;
+      svg += '<text class="lbl' + (byCode[c] ? " on" : "") + '" data-c="' + c + '" x="' + p[0] + '" y="' + (p[1] + 4) + '">' + c + "</text>";
+    });
+    $("#map").innerHTML = svg + "</svg>";
+  } else {
+    $("#map").innerHTML = '<p style="color:var(--muted);font-size:13.5px;margin:0">' +
+      "The map could not be loaded. The list beside it is the whole answer.</p>";
+  }
+
+  /* ------------------------------------------------------------ list */
+  $("#count").textContent = TARGET.length + " of 50";
+  $("#total").textContent = money(total);
+  $("#rows").innerHTML = TARGET.map(function (t) {
+    return '<tr class="row" data-c="' + t[0] + '">' +
+      '<td class="ab">' + t[0] + "</td>" +
+      '<td class="nm">' + esc(t[1]) + "</td>" +
+      '<td class="br"><span><i style="width:' + (t[2] / max * 100).toFixed(1) + '%"></i></span></td>' +
+      '<td class="ct">' + money(t[2]) + "</td>" +
+      "</tr>";
+  }).join("");
+
+  /* ---------------------------------------------------- highlighting */
+  var hot = "";
+  function paint() {
+    Array.prototype.slice.call(document.querySelectorAll("[data-c]")).forEach(function (el) {
+      el.classList.toggle("hot", !!hot && el.getAttribute("data-c") === hot);
+    });
+  }
+  function pick(code) {
+    if (!code || !byCode[code]) { hot = ""; paint(); return; }
+    hot = hot === code ? "" : code;
+    paint();
+  }
+  document.addEventListener("click", function (ev) {
+    var el = ev.target.closest("[data-c]");
+    pick(el ? el.getAttribute("data-c") : "");
+  });
+  document.addEventListener("mouseover", function (ev) {
+    var el = ev.target.closest("tr.row, path.st.on");
+    if (!el) return;
+    var c = el.getAttribute("data-c");
+    if (byCode[c] && c !== hot) { hot = c; paint(); }
+  });
+})();
+</script>
+</body>
+</html>
