@@ -188,8 +188,7 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
     <h1 id="title">Start times</h1>
     <p class="rule" id="rule">PICK YOUR START TIME</p>
     <p class="lede" id="lede">
-      Choose when your calls start and how many you want a week. When you save,
-      you'll see who else is on at 10 and at 11.
+      Choose your calls and start time every week.
     </p>
   </header>
 
@@ -408,7 +407,7 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
     $("#toboard").hidden = false;
     $("#title").textContent = "Start times";
     $("#rule").textContent = "PICK YOUR START TIME";
-    $("#lede").textContent = "Choose when your calls start and how many you want a week. When you save, you'll see who else is on at 10 and at 11.";
+    $("#lede").textContent = "Choose your calls and start time every week.";
     if (location.hash) history.replaceState(null, "", location.pathname + location.search);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
