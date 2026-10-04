@@ -64,6 +64,7 @@
      --bad, which is a status token sized for text and sits outside the
      categorical lightness band on dark. */
   --s-refund: #B8362B;
+  --refund-fill: rgba(184,54,43,.12);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -102,6 +103,7 @@
     --loa-fill: rgba(57,135,229,.18);
     --lt-fill:  rgba(217,89,38,.16);
     --s-refund: #d9604f;
+    --refund-fill: rgba(217,96,79,.17);
   }
 }
 
@@ -140,6 +142,7 @@
   --loa-fill: rgba(57,135,229,.18);
   --lt-fill:  rgba(217,89,38,.16);
   --s-refund: #d9604f;
+  --refund-fill: rgba(217,96,79,.17);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -1017,8 +1020,20 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     /* What is left once the producer and the calls are paid for, on each
        basis. The producer's share is the advance either way: they are
        paid on nine months whether or not the house counts twelve. */
-    m.netWritten = (m.houseGrossWritten - m.agentCommWritten) - m.marketingCost;
-    m.netFullWritten = m.houseFullWritten - m.agentCommWritten - m.marketingCost;
+    /* The override is what Thrive keeps once the producer is paid, over
+       everything written rather than only what has settled: the question
+       a per-deal average answers is what a closed deal earns, and a deal
+       still in underwriting is one. Defined exactly as the Producer Desk
+       defines it, so the two apps cannot drift apart on it. */
+    m.overrideWritten = m.houseGrossWritten - m.agentCommWritten;
+    m.overrideFullWritten = m.houseFullWritten - m.agentCommWritten;
+    m.avgOverride = m.written ? m.overrideWritten / m.written : 0;
+    m.avgOverrideFull = m.written ? m.overrideFullWritten / m.written : 0;
+    /* What a call is worth in premium, whoever took it and whether or not
+       the policy has placed yet. */
+    m.apPerCall = m.callsTaken ? m.apWritten / m.callsTaken : 0;
+    m.netWritten = m.overrideWritten - m.marketingCost;
+    m.netFullWritten = m.overrideFullWritten - m.marketingCost;
     m.agentCommPaid = paid.reduce(function (t, d) { return t + agentCommOn(d); }, 0);
     m.houseGrossPaid = paid.reduce(function (t, d) { return t + houseCommOn(d); }, 0);
     m.houseFullPaid = paid.reduce(function (t, d) { return t + houseCommFullOn(d); }, 0);
@@ -1067,7 +1082,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     var days = [], index = {}, cur = from, guard = 0;
     while (cur <= to && guard++ < 400) {
       index[cur] = days.length;
-      days.push({ date: cur, label: prettyDate(cur), calls: 0, deals: 0 });
+      days.push({ date: cur, label: prettyDate(cur), calls: 0, deals: 0, ap: 0, apPaid: 0 });
       cur = addDays(cur, 1);
     }
     function want(x) { return !agentIds || agentIds.indexOf(x.agentId) >= 0; }
@@ -1079,7 +1094,14 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     loaDeals().forEach(function (d) {
       if (!want(d)) return;
       var i = index[toISODate(d.date)];
-      if (i != null) days[i].deals += 1;
+      if (i == null) return;
+      days[i].deals += 1;
+      days[i].ap += num(d.ap);
+      /* Counted on the day it was written, not the day the carrier paid:
+         the point of the pair is how much of a day's writing survived,
+         and crediting the settlement to a later day would compare one
+         day's paper against another day's money. */
+      if (statusOf(d.status).group === "paid") days[i].apPaid += num(d.ap);
     });
     return days;
   }
@@ -1569,8 +1591,13 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       var d = "";
       s.values.forEach(function (v, i) { d += (i ? " L" : "M") + x(i).toFixed(1) + " " + y(v).toFixed(1); });
       /* One series gets an area to read as a magnitude; two overlapping
-         fills just muddy each other, so a pair stays as lines. */
-      if (series.length === 1) {
+         fills just muddy each other, so a pair stays as lines \u2014 unless
+         one of the pair contains the other, as issued-and-paid premium
+         sits inside written premium. There the containing series is the
+         band and the other rides on top of it, because two bare lines
+         that touch wherever everything settled would hide the one drawn
+         first and read as the subset overtaking its own superset. */
+      if (s.fill) {
         var area = d + " L" + x(n - 1).toFixed(1) + " " + zeroY.toFixed(1) + " L" + x(0).toFixed(1) + " " + zeroY.toFixed(1) + " Z";
         out += '<path d="' + area + '" fill="' + s.fill + '" stroke="none"></path>';
       }
@@ -1814,6 +1841,73 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
   }
 
 
+  /* What the company costs to run, a day at a time. A bill lands on one
+     day but covers all of them, so a recurring charge is spread across
+     the days it buys: $300 a month is $3,600 a year, which is $9.86 a
+     day, not $300 on the first and nothing after. A one-off stays on
+     the day it was paid, because it covers nothing but itself.
+
+     Standing commitments only. A one-off purchase is not overhead, and
+     a $2,000 laptop on one day towers over a line that otherwise runs at
+     a couple of hundred \u2014 it flattens the very thing the chart is for.
+     One-offs keep their own day in the column chart further down, where
+     a spike is the point.
+
+     This is the same shape as the profit lines on the other tabs and
+     runs over the whole record rather than the selected range \u2014 a run
+     rate you can only see a month of is not a run rate. */
+  function overheadByDay() {
+    var items = expenseItems().filter(function (x) { return EX_PER_YEAR(x) > 0; });
+    if (!items.length) return null;
+    var today = todayISO(), first = "";
+    items.forEach(function (x) { if (x.date && (!first || x.date < first)) first = x.date; });
+    if (!first) return null;
+    if (first > today) first = today;
+    var span = Math.round((new Date(today + "T12:00:00") - new Date(first + "T12:00:00")) / 86400000);
+    if (span > 365) first = addDays(today, -365);
+
+    var days = [], index = {}, cur = first, guard = 0;
+    while (cur <= today && guard++ < 400) {
+      index[cur] = days.length;
+      days.push({ date: cur, label: prettyDate(cur), value: 0 });
+      cur = addDays(cur, 1);
+    }
+    items.forEach(function (x) {
+      var per = EX_PER_YEAR(x);
+      if (!per) return;
+      var daily = x.amount * per / 365;
+      var from = x.date > first ? x.date : first;
+      var to = (x.endsOn && x.endsOn < today) ? x.endsOn : today;
+      var d = from, g2 = 0;
+      while (d <= to && g2++ < 400) {
+        var j = index[d];
+        if (j != null) days[j].value += daily;
+        d = addDays(d, 1);
+      }
+    });
+    return days;
+  }
+
+  function overheadPanel() {
+    var days = overheadByDay();
+    if (!days || days.length < 2) {
+      return '<section class="panel"><div class="panel-head"><h3>Company overhead, day by day</h3></div>' +
+        '<div class="empty"><p>No standing bills on file yet \u2014 add a recurring expense to see the run rate.</p></div></section>';
+    }
+    var total = days.reduce(function (t, d) { return t + d.value; }, 0);
+    var now = days[days.length - 1].value;
+    return '<section class="panel"><div class="panel-head"><h3>Company overhead, day by day</h3>' +
+      '<span class="note">recurring bills, spread over the days they cover</span></div>' +
+      '<div class="panel-body">' +
+      lineChart(days, [{
+        label: "Overhead", color: "var(--s-refund)", fill: "var(--refund-fill)",
+        values: days.map(function (d) { return d.value; })
+      }], { legend: false, height: 168 }) +
+      '<p style="margin:10px 0 0;font-size:12px;color:var(--muted)">' +
+        esc(money(total)) + " of standing bills over the record \u00b7 running at " + esc(money(now, 2)) + " a day" +
+      "</p></div></section>";
+  }
+
   /* --------------------------------------------------------- expenses page */
   function expenseForm(m) {
     var editing = ui.expEdit ? m.all.filter(function (x) { return x.id === ui.expEdit; })[0] : null;
@@ -1858,12 +1952,15 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     var w = rangeWindow(), m = expenseMetrics(w.from, w.to);
     var out = pageHead("Expenses", rangePicker());
 
+    out += '<div class="headline">';
     out += hero("Expenses · " + w.label, money(m.total),
       "Everything the company paid out in this window, one-off and recurring together.", [
         { k: "Monthly run rate", v: money(m.monthly) },
         { k: "Standing bills", v: intf(m.live.length) },
         { k: "Charges", v: intf(m.charges) }
       ], m.total > 0);
+    out += overheadPanel();
+    out += "</div>";
 
     out += '<div class="tiles">';
     out += tile("src-all", "Total in range", money(m.total), intf(m.charges) + " charge" + (m.charges === 1 ? "" : "s"));
@@ -2301,8 +2398,9 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       out += tile("src-lt", "Total spent on calls", money(tm.callSpend),
         intf(tm.callsBillable) + " at " + money(set.callCost) + " \u00b7 " + money(tm.googleSpend) + " on Google");
       out += tile("src-lt", "Total cash collected", money(tm.callRevenue), intf(tm.callsSold) + " calls sold");
-      out += tile("is-warn", "Total refunds", money(tm.refunded),
-        tm.callsRefunded ? intf(tm.callsRefunded) + " calls refunded" : intf(tm.refunds.length) + " refunds");
+      out += tile(tm.refunded > 0 ? "is-bad" : "src-lt", "Total refunds", money(tm.refunded),
+        tm.callsRefunded ? intf(tm.callsRefunded) + " calls refunded" : intf(tm.refunds.length) + " refunds",
+        tm.refunded > 0 ? "neg" : "");
       out += tile("is-good", "Total wiped wallet", money(tm.wiped), intf(tm.wipeRows.length) + " wipes — unspent balance Lead Tech keeps", tm.wiped > 0 ? "pos" : "");
       out += tile(tm.pnl >= 0 ? "is-good" : "is-bad", "Lead Tech profit & loss", money(tm.pnl), "collected and wipes, less spend and refunds", tm.pnl < 0 ? "neg" : "pos");
       out += "</div>";
@@ -2451,12 +2549,19 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
 
     out += '<div class="tiles">';
     out += tile("src-loa", "Written premium", money(m.apWritten), intf(m.written) + " policies · " + money(m.mpWritten) + "/mo");
+    out += tile("src-loa", "Average premium a policy", m.written ? money(m.apWritten / m.written) : "—",
+      m.written ? "across " + intf(m.written) + " polic" + (m.written === 1 ? "y" : "ies") + " written" : "Nothing written yet");
+    out += tile("src-loa", "Premium sold per call", m.callsTaken ? money(m.apPerCall) : "—",
+      m.callsTaken ? intf(m.callsTaken) + " calls · " + money(m.apWritten) + " written" : "No calls logged yet");
     out += tile("src-loa", "Issued \u0026 paid business", money(m.apPaid),
       intf(m.paid.length) + " polic" + (m.paid.length === 1 ? "y" : "ies") + " \u00b7 " + money(m.mpPaid) + "/mo");
     out += tile("src-loa", "Thrive commission", money(m.houseGrossPaid), "", "",
       { value: money(m.houseGrossWritten), label: "projected commissions" });
     out += tile("src-loa", "Agent commission", money(m.agentCommPaid), "", "",
       { value: money(m.agentCommWritten), label: "projected agent commissions" });
+    out += tile("src-loa", "Average override per deal", m.written ? money(m.avgOverride) : "—",
+      m.written ? "what Thrive keeps on a deal after the producer" : "Nothing written yet", "",
+      m.written ? { value: money(m.avgOverrideFull), label: "over 12 months" } : null);
     out += tile("src-loa", "12-month commissions", money(m.houseFullPaid), "", "",
       { value: money(m.netFullWritten), label: "projected 12-month net" });
     out += tile("src-loa", "Call spend", money(m.marketingCost), intf(m.callsTaken) + " calls at " + money(org.costPerCall));
@@ -2536,6 +2641,26 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
           label: "Deals", color: "var(--s-lt)", fill: "var(--lt-fill)",
           values: dayRows.map(function (d) { return d.deals; })
         }], { legend: false, height: 190, fmt: "int" }) + "</div></section>";
+      out += "</div>";
+
+      /* Both series are annualized premium, so they share one axis and
+         the gap between them is the whole story: the distance from the
+         green line down to the blue is what was written that day and
+         has not been paid for. */
+      out += '<div class="charts">';
+      out += '<section class="panel"><div class="panel-head"><h3>Premium written per day</h3>' +
+        '<span class="note">' + esc(money(m.apWritten)) + " written \u00b7 " + esc(money(m.apPaid)) + " issued and paid</span></div>" +
+        '<div class="panel-body">' + lineChart(dayRows, [
+          { label: "Written", color: "var(--paid)", fill: "rgba(27,175,122,.15)",
+            values: dayRows.map(function (d) { return d.ap; }) },
+          { label: "Issued and paid", color: "var(--s-loa)", values: dayRows.map(function (d) { return d.apPaid; }) }
+        ], { height: 230, legend: true }) +
+        '<p style="margin:10px 0 0;font-size:12px;color:var(--muted)">' +
+          (m.apWritten > 0
+            ? esc(pct(ratio(m.apPaid, m.apWritten), 1)) + " of the premium written in this range has issued and paid. " +
+              "The gap between the lines is business still in the pipeline or already lost."
+            : "Nothing written in this range yet.") +
+        "</p></div></section>";
       out += "</div>";
     }
 
@@ -2760,8 +2885,9 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       intf(m.callsBillable) + " billable \u00b7 " + intf(m.callsGoogle) + " Google");
     out += tile(m.wiped > 0 ? "is-good" : "src-lt", "Wallet wipes", money(m.wiped),
       intf(m.wipeRows.length) + " wipes — unspent balance kept", m.wiped > 0 ? "pos" : "");
-    out += tile(m.refunded > 0 ? "is-warn" : "src-lt", "Total refunds", money(m.refunded),
-      (m.callsRefunded ? intf(m.callsRefunded) + " calls refunded" : intf(m.refunds.length) + " refunds"));
+    out += tile(m.refunded > 0 ? "is-bad" : "src-lt", "Total refunds", money(m.refunded), 
+      (m.callsRefunded ? intf(m.callsRefunded) + " calls refunded" : intf(m.refunds.length) + " refunds"),
+      m.refunded > 0 ? "neg" : "");
     out += '<div class="span2">' +
       tile(m.pnl >= 0 ? "is-good" : "is-bad", "Fulfillment net", money(m.pnl),
         "collected and wallet wipes, less spent and refunds", m.pnl < 0 ? "neg" : "pos") +
