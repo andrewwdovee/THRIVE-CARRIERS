@@ -24,7 +24,7 @@ const ST_GRACE = 15;            /* minutes after the start time */
 const ST_OFF_ROW = { outline: "2px solid #e11d48", outlineOffset: "-2px", background: "rgba(225,29,72,0.10)" };
 const ST_OFF_NAME = { color: "#e11d48" };
 const ST_OFF_PILL = {
-  display: "inline-block", marginLeft: "8px", padding: "1px 8px", borderRadius: "999px",
+  display: "inline-flex", marginLeft: "8px", padding: "1px 8px", borderRadius: "999px",
   background: "#e11d48", color: "#fff", fontSize: "11px", fontWeight: 700,
   letterSpacing: "0.04em", verticalAlign: "middle", whiteSpace: "nowrap",
 };
