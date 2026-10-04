@@ -1,0 +1,67 @@
+{
+ "watchMin": 15,
+ "mustMin": 20,
+ "rules": [
+  {
+   "severity": "critical",
+   "text": "Agent states the call is being recorded near the start of the call."
+  },
+  {
+   "severity": "critical",
+   "text": "Agent gives their name, says they are a licensed insurance agent, and names the agency."
+  },
+  {
+   "severity": "critical",
+   "text": "No promise of \"guaranteed approval\" unless the product really is guaranteed issue, and no claim that coverage starts before the carrier approves it."
+  },
+  {
+   "severity": "critical",
+   "text": "Agent never says or implies the policy is a government, Medicare, Social Security or state benefit program."
+  },
+  {
+   "severity": "critical",
+   "text": "Health questions are read as written. Agent does not coach answers, skip questions or suggest leaving conditions out."
+  },
+  {
+   "severity": "critical",
+   "text": "Client gives clear verbal authorization for the bank draft, with premium amount and draft date read back."
+  },
+  {
+   "severity": "critical",
+   "text": "The person consenting is the proposed insured or owner. No one else answers or authorizes on their behalf."
+  },
+  {
+   "severity": "warning",
+   "text": "Agent asks whether this policy replaces or changes any existing life insurance or annuity, and follows replacement steps if yes."
+  },
+  {
+   "severity": "warning",
+   "text": "Coverage amount, monthly premium, policy type, and any waiting or graded period are stated clearly before the client agrees."
+  },
+  {
+   "severity": "warning",
+   "text": "No pressure tactics: no false deadlines (\"rates go up tomorrow\"), no talking over a client who wants to think about it or end the call."
+  },
+  {
+   "severity": "warning",
+   "text": "Full SSN and full bank or card numbers are not read back aloud."
+  },
+  {
+   "severity": "info",
+   "text": "Agent mentions the free-look period or the right to cancel."
+  }
+ ],
+ "instructions": "Flag anything that seems off even if no rule covers it: a third party in the background prompting the client, a client who sounds confused about what they bought, an agent rushing through disclosures, or statements about price or coverage that contradict each other.",
+ "keyDetails": [
+  "Product type",
+  "Carrier",
+  "Coverage amount",
+  "Monthly premium",
+  "Draft date",
+  "Beneficiary",
+  "Client age",
+  "Client state",
+  "Existing coverage / replacement",
+  "Sale made"
+ ]
+}

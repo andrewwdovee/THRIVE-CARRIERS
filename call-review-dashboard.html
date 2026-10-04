@@ -230,6 +230,12 @@ label.f input,label.f select{border:1px solid var(--line);border-radius:8px;padd
 .preview th,.preview td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis}
 .preview th{background:var(--surface-2);color:var(--muted);font-weight:700}
 .stepnote{grid-column:1/-1;margin:0;color:var(--muted);font-size:13px}
+.sync{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:9px 14px;margin-bottom:14px;font-size:13px}
+.sync .led{width:9px;height:9px;border-radius:50%;background:var(--muted);flex:0 0 auto}
+.sync.on .led{background:var(--ok)}
+.sync.err .led{background:var(--crit)}
+.sync.err{border-color:var(--crit)}
+.sync b{font-weight:700}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:9px;font-weight:600;z-index:60;max-width:calc(100% - 32px);box-shadow:var(--shadow)}
 </style>
 
@@ -252,6 +258,7 @@ label.f input,label.f select{border:1px solid var(--line);border-radius:8px;padd
   <div class="notice" id="offline" hidden><b>Calls load when this page is opened in Claude.</b> The call log and review rules are stored with this artifact, so every admin sees the same list.</div>
 
   <section id="view-calls">
+    <div class="sync" id="sync" hidden></div>
     <div class="kpis" id="kpis"></div>
     <div class="layout">
       <div class="panel">
@@ -477,8 +484,19 @@ function visible(){
 
 /* ---------- render ---------- */
 function render(){
-  renderKpis(); renderTable(); renderAgents(); renderLegend();
+  renderSync(); renderKpis(); renderTable(); renderAgents(); renderLegend();
   if(S.openId) renderDrawer();
+}
+function renderSync(){
+  const el=$("#sync"); if(!S.db){ el.hidden=true; return; } el.hidden=false;
+  const d=S.syncDoc;
+  if(!d){ el.className="sync"; el.innerHTML=`<span class="led"></span><span><b>Hourly sync from Retreaver and CallGrid isn't running yet.</b> Calls will appear here automatically once it's connected. Until then, use Import CSV.</span>`; return; }
+  const errs=(d.errors||[]).filter(Boolean), when=d.lastRunAt?fmtDate(d.lastRunAt):"—";
+  const stale = d.lastRunAt && (Date.now()-new Date(d.lastRunAt))>3*3600e3;
+  el.className="sync "+(errs.length||stale?"err":"on");
+  el.innerHTML=`<span class="led"></span><span><b>Hourly sync</b> from Retreaver and CallGrid · last run ${esc(when)} · ${+d.newCalls||0} new call${d.newCalls==1?"":"s"}, ${+d.reviewed||0} reviewed${d.longCalls?` · <b style="color:var(--close)">${+d.longCalls} at ${cfg().mustMin}+ min</b>`:""}</span>`+
+    (stale?`<span style="color:var(--crit)">No run in over 3 hours.</span>`:"")+
+    (errs.length?`<span style="color:var(--crit)">${errs.map(esc).join(" · ")}</span>`:"");
 }
 function renderKpis(){
   const all=[...S.calls.values()], reviewed=all.filter(c=>c.review);
@@ -989,6 +1007,7 @@ render();
   db.collection("calls").onSnapshot(snap=>{
     S.calls=new Map(snap.docs.map(d=>[d.id,{id:d.id,...d.data()}])); S.loaded=true; render();
   }, err=>{ toast("Lost the connection to the call log. Reload the page."); });
+  db.doc("config/sync").onSnapshot(snap=>{ S.syncDoc = snap.exists ? snap.data() : null; renderSync(); }, ()=>{});
   db.doc("config/settings").onSnapshot(snap=>{
     S.settingsDoc = snap.exists ? snap.data() : null; render(); if(S.view==="rules" && !document.activeElement?.closest("#view-rules")) loadRulesForm();
   }, ()=>{});
