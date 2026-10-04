@@ -196,8 +196,8 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
   <div class="deadline" id="deadline" role="note">
     <span class="ic" aria-hidden="true">!</span>
     <div>
-      <b>Update by Saturday for the following week.</b>
-      Your start time and calls for each week need to be set by the Saturday before that Monday, every week.
+      <b>Update by Friday for the following week.</b>
+      Your start time and calls for each week need to be set by the Friday before that Monday, every week.
       <span class="when" id="deadlineWhen"></span>
     </div>
   </div>
@@ -416,14 +416,14 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
   }
   if (location.hash === "#board") showBoard();
 
-  /* The coming deadline: this Saturday (today, if it is Saturday), and the
+  /* The coming deadline: this Friday (today, if it is Friday), and the
      Monday after it is the week those settings are for. */
   (function () {
     var d = new Date(); d.setHours(0, 0, 0, 0);
-    var sat = new Date(d); sat.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7));
-    var mon = new Date(sat); mon.setDate(sat.getDate() + 2);
+    var fri = new Date(d); fri.setDate(d.getDate() + ((5 - d.getDay() + 7) % 7));
+    var mon = new Date(fri); mon.setDate(fri.getDate() + 3);
     var f = function (x) { return x.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }); };
-    $("#deadlineWhen").textContent = "Next deadline: " + f(sat) + ", for the week starting " + f(mon) + ".";
+    $("#deadlineWhen").textContent = "Next deadline: " + f(fri) + ", for the week starting " + f(mon) + ".";
   })();
 
   function setStatus(msg, kind) {
