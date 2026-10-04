@@ -1,0 +1,911 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lead Tech / Thrive Companies Onboarding</title>
+<meta name="description" content="Sign the Thrive Companies inbound programme agreement and get your account opened.">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700;800&display=swap">
+<style>
+:root{
+  color-scheme: dark;
+  --ink:#07090E; --stage:#0B0E14; --panel:#12161E; --panel-2:#171C26;
+  --line:#232B38; --line-2:#323C4C; --fg:#EDF1F6; --muted:#8D9AAC;
+  --gold:#F0B429; --gold-hi:#FFE08A; --gold-deep:#8A5A08;
+  --good:#35C892; --bad:#F0736A;
+  --paper:#F6F4EE; --paper-ink:#1B1A17; --paper-line:#D9D4C7; --paper-muted:#6A665C;
+  --display:'Anton','Arial Narrow',sans-serif;
+  --body:'Archivo',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--ink); color:var(--fg); font-family:var(--body);
+  font-size:15px; line-height:1.62; -webkit-text-size-adjust:100%;
+}
+body::before{
+  content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:
+    radial-gradient(1100px 620px at 78% -8%, rgba(240,180,41,.13), transparent 62%),
+    radial-gradient(900px 520px at 6% 4%, rgba(47,111,224,.10), transparent 58%);
+}
+.wrap{max-width:860px; margin:0 auto; padding:0 16px 96px}
+
+/* ------------------------------------------------------------ masthead */
+.masthead{padding:46px 0 26px; text-align:center}
+.eyebrow{
+  font-size:11px; font-weight:700; letter-spacing:.42em; text-transform:uppercase;
+  color:var(--gold); margin:0 0 14px;
+}
+.masthead h1{
+  font-family:var(--display); font-weight:400; margin:0;
+  font-size:clamp(34px,8.4vw,62px); line-height:1.02; letter-spacing:.012em;
+  background:linear-gradient(180deg,#FFFFFF 6%,#DCE3EC 58%,#9BA7B6 100%);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.rule{
+  display:flex; align-items:center; gap:14px; margin:18px auto 0; max-width:420px;
+  color:var(--gold); font-size:11px; font-weight:700; letter-spacing:.3em;
+}
+.rule::before,.rule::after{
+  content:""; flex:1; height:1px;
+  background:linear-gradient(90deg,transparent,rgba(240,180,41,.55));
+}
+.rule::after{background:linear-gradient(90deg,rgba(240,180,41,.55),transparent)}
+.lede{color:var(--muted); max-width:56ch; margin:18px auto 0; font-size:14.5px}
+
+/* --------------------------------------------------------------- steps */
+.rail{
+  display:flex; gap:6px; margin:30px 0 8px; padding:0; list-style:none;
+  flex-wrap:wrap; justify-content:center;
+}
+.rail li{
+  display:flex; align-items:center; gap:7px;
+  font-size:11.5px; font-weight:600; letter-spacing:.04em;
+  color:var(--muted); padding:5px 11px 5px 6px;
+  border:1px solid var(--line); border-radius:999px; background:var(--panel);
+}
+.rail li[hidden]{display:none}
+.rail li .dot{
+  width:17px; height:17px; border-radius:50%; display:grid; place-items:center;
+  border:1px solid var(--line-2); font-size:10px; color:var(--muted); flex:none;
+}
+.rail li.on{color:var(--fg); border-color:rgba(240,180,41,.45)}
+.rail li.on .dot{background:var(--gold); border-color:var(--gold); color:#2A1C01; font-weight:800}
+.rail li.on .dot::after{content:"\2713"}
+.rail li.on .dot span{display:none}
+
+/* -------------------------------------------------------------- panels */
+section.card{
+  background:var(--panel); border:1px solid var(--line); border-radius:15px;
+  padding:22px; margin:16px 0;
+}
+section.card>h2{
+  font-size:12px; font-weight:800; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--gold); margin:0 0 4px;
+}
+section.card>.sub{color:var(--muted); font-size:13.5px; margin:0 0 18px}
+.grid{display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.field{display:grid; gap:6px; min-width:0}
+.field.wide{grid-column:1/-1}
+label{font-size:12px; font-weight:600; color:var(--muted); letter-spacing:.03em}
+label .req{color:var(--gold)}
+input[type=text],input[type=email],input[type=tel],textarea,select{
+  width:100%; background:var(--panel-2); color:var(--fg);
+  border:1px solid var(--line-2); border-radius:9px; padding:10px 12px;
+  font:inherit; font-size:14.5px;
+}
+textarea{min-height:76px; resize:vertical}
+input:focus,textarea:focus,select:focus{outline:2px solid rgba(240,180,41,.55); outline-offset:1px}
+.hint{font-size:12px; color:var(--muted)}
+.err{font-size:12px; color:var(--bad); font-weight:600; min-height:0}
+.invalid input,.invalid textarea,.invalid select,.invalid .pad,.invalid .drop{border-color:var(--bad)}
+
+/* ------------------------------------------------------------- choices */
+.choices{display:flex; gap:10px; flex-wrap:wrap}
+.choice{
+  flex:1 1 200px; display:flex; gap:11px; align-items:flex-start; cursor:pointer;
+  border:1px solid var(--line-2); border-radius:11px; padding:13px 14px;
+  background:var(--panel-2);
+}
+.choice:has(input:checked){border-color:var(--gold); background:rgba(240,180,41,.08)}
+.choice input{margin:3px 0 0; accent-color:var(--gold); flex:none}
+.choice b{display:block; font-size:14px; font-weight:700; color:var(--fg)}
+.choice span{display:block; font-size:12.5px; color:var(--muted)}
+
+/* -------------------------------------------------------------- paper */
+.paper{
+  background:var(--paper); color:var(--paper-ink); border-radius:11px;
+  border:1px solid var(--paper-line);
+  max-height:430px; overflow:auto; padding:26px 28px; scroll-behavior:smooth;
+  box-shadow:inset 0 -26px 26px -26px rgba(0,0,0,.28);
+}
+.paper h3{
+  font-family:var(--display); font-weight:400; font-size:23px; letter-spacing:.01em;
+  margin:0 0 2px; color:#141310;
+}
+.paper h4{
+  font-size:12px; font-weight:800; letter-spacing:.14em; text-transform:uppercase;
+  margin:26px 0 7px; color:#8A6410;
+}
+.paper p,.paper li{font-size:14px; line-height:1.68; color:#2A2823}
+.paper p{margin:0 0 11px}
+.paper ol,.paper ul{margin:0 0 11px; padding-left:21px}
+.paper li{margin:0 0 7px}
+.paper .meta{font-size:12px; color:var(--paper-muted); margin:0 0 4px}
+.paper .flag{
+  background:#FBF0D4; border-left:3px solid var(--gold); border-radius:0 8px 8px 0;
+  padding:13px 16px; margin:0 0 13px;
+}
+.paper .flag p:last-child{margin:0}
+.paper hr{border:0; border-top:1px solid var(--paper-line); margin:22px 0}
+.scrollnote{
+  display:flex; align-items:center; gap:9px; justify-content:space-between;
+  font-size:12px; color:var(--muted); margin-top:11px; flex-wrap:wrap;
+}
+.scrollnote.read{color:var(--good)}
+.linkish{
+  background:none; border:0; color:var(--gold); font:inherit; font-size:12px;
+  font-weight:600; cursor:pointer; padding:0; text-decoration:underline;
+}
+.agree{
+  display:flex; gap:11px; align-items:flex-start; margin-top:14px;
+  border:1px solid var(--line-2); border-radius:11px; padding:14px; background:var(--panel-2);
+}
+.agree input{margin:2px 0 0; accent-color:var(--gold); width:17px; height:17px; flex:none}
+.agree.off{opacity:.5}
+.agree label{font-size:13.5px; color:var(--fg); font-weight:500; line-height:1.55}
+
+/* ----------------------------------------------------------- signature */
+.pad{
+  position:relative; background:#F6F4EE; border:1px solid var(--line-2);
+  border-radius:11px; height:190px; touch-action:none; overflow:hidden;
+}
+.pad canvas{display:block; width:100%; height:100%; cursor:crosshair}
+.pad .base{
+  position:absolute; left:28px; right:28px; bottom:46px; height:1px;
+  background:#C9C3B4; pointer-events:none;
+}
+.pad .x{
+  position:absolute; left:28px; bottom:50px; font-family:var(--display);
+  color:#B9B2A1; font-size:19px; pointer-events:none;
+}
+.pad .ghost{
+  position:absolute; inset:0; display:grid; place-items:center;
+  color:#A7A091; font-size:13px; pointer-events:none;
+}
+.padbar{display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:9px}
+
+/* ---------------------------------------------------------------- drop */
+.drop{
+  border:1px dashed var(--line-2); border-radius:11px; padding:18px;
+  display:flex; gap:16px; align-items:center; background:var(--panel-2);
+}
+.drop .ph{
+  width:84px; height:84px; border-radius:50%; flex:none; overflow:hidden;
+  background:#0D1118; border:1px solid var(--line-2); display:grid; place-items:center;
+  color:var(--muted); font-size:11px; text-align:center;
+}
+.drop .ph img{width:100%; height:100%; object-fit:cover; display:block}
+.drop .body{min-width:0}
+input[type=file]{font-size:12.5px; color:var(--muted); max-width:100%}
+input[type=file]::file-selector-button{
+  font:inherit; font-weight:600; background:var(--panel); color:var(--fg);
+  border:1px solid var(--line-2); border-radius:8px; padding:7px 12px;
+  margin-right:11px; cursor:pointer;
+}
+
+/* -------------------------------------------------------------- submit */
+.btn{
+  font:inherit; font-weight:700; font-size:15px; cursor:pointer;
+  border-radius:11px; padding:13px 26px; border:1px solid var(--line-2);
+  background:var(--panel-2); color:var(--fg);
+}
+.btn.gold{
+  background:linear-gradient(180deg,var(--gold-hi),var(--gold) 52%,#D99A12);
+  color:#2A1C01; border-color:rgba(255,224,138,.65); font-weight:800;
+}
+.btn.small{font-size:13px; padding:8px 14px}
+.btn:disabled{opacity:.45; cursor:not-allowed}
+.submitbar{display:flex; gap:14px; align-items:center; flex-wrap:wrap}
+.status{font-size:13px; color:var(--muted)}
+.status.bad{color:var(--bad); font-weight:600}
+
+/* ----------------------------------------------------------------- done */
+.done{text-align:center; padding:52px 20px}
+.done .tick{
+  width:68px; height:68px; margin:0 auto 20px; border-radius:50%;
+  background:rgba(53,200,146,.14); border:1px solid rgba(53,200,146,.5);
+  display:grid; place-items:center; font-size:30px; color:var(--good);
+}
+.done h2{font-family:var(--display); font-weight:400; font-size:34px; margin:0 0 10px}
+.done p{color:var(--muted); max-width:52ch; margin:0 auto 10px}
+.ref{
+  display:inline-block; margin-top:16px; font-family:ui-monospace,Menlo,monospace;
+  font-size:13px; letter-spacing:.08em; color:var(--gold);
+  border:1px dashed rgba(240,180,41,.45); border-radius:9px; padding:9px 15px;
+}
+footer{text-align:center; color:var(--muted); font-size:11.5px; padding:30px 16px 10px}
+
+@media (max-width:560px){
+  section.card{padding:17px}
+  .paper{padding:19px 17px; max-height:360px}
+  .drop{flex-direction:column; align-items:flex-start}
+}
+@media print{
+  body{background:#fff; color:#000}
+  body::before,.rail,.submitbar,.scrollnote,.agree,.padbar,footer{display:none!important}
+  .paper{max-height:none; overflow:visible; border:0; box-shadow:none; padding:0}
+  section.card{border:0; background:#fff; padding:0; margin:0 0 18px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Lead&nbsp;Tech</p>
+    <h1>Thrive Companies<br>Onboarding</h1>
+    <p class="rule">INBOUND PROGRAMME</p>
+    <p class="lede">
+      Fifteen minutes, once. Fill in who you are, read the agreement, sign it,
+      and your account is opened on the inbound board.
+    </p>
+  </header>
+
+  <ol class="rail" id="rail">
+    <li data-step="who"><span class="dot"><span>1</span></span> Your details</li>
+    <li data-step="read"><span class="dot"><span>2</span></span> Agreement read</li>
+    <li data-step="agree"><span class="dot"><span>3</span></span> Agreed</li>
+    <li data-step="sign"><span class="dot"><span>4</span></span> Signed</li>
+    <li data-step="photo" id="rail-photo" hidden><span class="dot"><span>5</span></span> Photo</li>
+  </ol>
+
+  <form id="form" novalidate>
+
+    <!-- ------------------------------------------------------- details -->
+    <section class="card" id="s-who">
+      <h2>1 &middot; Who you are</h2>
+      <p class="sub">The name here is the one that goes on the agreement and on your account.</p>
+      <div class="grid">
+        <div class="field">
+          <label for="legalName">Your full legal name <span class="req">*</span></label>
+          <input id="legalName" name="legalName" type="text" autocomplete="name" required>
+        </div>
+        <div class="field">
+          <label for="business">Business or agency name <span class="req">*</span></label>
+          <input id="business" name="business" type="text" autocomplete="organization" required>
+        </div>
+        <div class="field">
+          <label for="email">Email <span class="req">*</span></label>
+          <input id="email" name="email" type="email" autocomplete="email" required>
+        </div>
+        <div class="field">
+          <label for="phone">Phone <span class="req">*</span></label>
+          <input id="phone" name="phone" type="tel" autocomplete="tel" required>
+        </div>
+        <div class="field">
+          <label for="npn">NPN or producer number</label>
+          <input id="npn" name="npn" type="text">
+        </div>
+        <div class="field">
+          <label for="referrer">Who brought you in</label>
+          <input id="referrer" name="referrer" type="text" placeholder="The person at Thrive you spoke to">
+        </div>
+        <div class="field wide">
+          <label for="states">States you are licensed and appointed in <span class="req">*</span></label>
+          <input id="states" name="states" type="text" placeholder="FL, GA, TX" required>
+          <p class="hint">We only route transfers to states on this list. Tell us the day one changes.</p>
+        </div>
+        <div class="field wide">
+          <label for="hours">Hours you can take transfers</label>
+          <input id="hours" name="hours" type="text" placeholder="9am – 6pm ET, Mon–Fri">
+        </div>
+      </div>
+      <p class="err" data-err="who"></p>
+    </section>
+
+    <!-- --------------------------------------------------------- agency -->
+    <section class="card" id="s-agency">
+      <h2>2 &middot; Are you with the agency?</h2>
+      <p class="sub">
+        Thrive Companies agents appear on the leaderboards and in agent highlights,
+        so they need a headshot. Outside agencies buying calls do not.
+      </p>
+      <div class="choices">
+        <label class="choice">
+          <input type="radio" name="agency" value="yes" required>
+          <span>
+            <b>Yes — I write under Thrive Companies</b>
+            <span>Contracted through the agency. A headshot is needed.</span>
+          </span>
+        </label>
+        <label class="choice">
+          <input type="radio" name="agency" value="no">
+          <span>
+            <b>No — my own agency</b>
+            <span>Buying calls and transfers only. No photo needed.</span>
+          </span>
+        </label>
+      </div>
+      <p class="err" data-err="agency"></p>
+    </section>
+
+    <!-- ------------------------------------------------------- contract -->
+    <section class="card" id="s-contract">
+      <h2>3 &middot; The agreement</h2>
+      <p class="sub">Read it to the end. The checkbox opens when you get there.</p>
+
+      <article class="paper" id="paper" tabindex="0" aria-label="Inbound Programme Agreement">
+        <p class="meta" id="paper-date"></p>
+        <h3>Inbound Programme Agreement</h3>
+        <p>
+          This agreement is between <b data-entity>Thrive Companies</b> ("Thrive", "we",
+          "us"), which operates the Lead Tech inbound call programme, and the person or
+          business named on this form ("you"). It takes effect on the date you sign it.
+        </p>
+
+        <h4>1 &middot; What you are buying</h4>
+        <p>
+          Thrive buys advertising, answers the calls that advertising generates, and
+          transfers qualified callers to you. Depending on what you have ordered that may
+          include:
+        </p>
+        <ul>
+          <li><b>Google Calls Subscription</b> — inbound calls from paid search, routed to your line.</li>
+          <li><b>Inbound Final Expense Transfers</b> — live transfers from the inbound desk, to a daily cap.</li>
+          <li><b>Individual Call</b> — a single transferred call, billed on its own.</li>
+          <li><b>Recruiting Ad Campaign</b> — a campaign run on your behalf to recruit producers.</li>
+          <li><b>Instagram Software</b> — access to the messaging software and its templates.</li>
+        </ul>
+        <p>
+          What you have ordered, its price and its billing cycle are recorded on your
+          account and on your Stripe receipts. Those records control.
+        </p>
+
+        <h4>2 &middot; Ad spend is spent</h4>
+        <div class="flag">
+          <p>
+            <b>Most of what you pay is advertising spend, and it is paid out to Google and
+            the other ad platforms within hours of your payment clearing. Once it is spent
+            it is gone. It cannot be recalled by Thrive, by you, by your bank, or by
+            Google.</b>
+          </p>
+        </div>
+        <p>
+          <b>(a) Ad spend is non-refundable.</b> Once a campaign has run, the money behind
+          it is not recoverable and will not be returned, in whole or in part — including
+          on a decision to stop, a change of mind, a change in your licensing, poor call
+          outcomes, or your own close rate.
+        </p>
+        <p>
+          <b>(b) You agree not to charge back ad spend.</b> You will not start, and will
+          not ask anyone else to start, a chargeback, payment dispute, ACH return or
+          reversal against Thrive for any charge that is or includes advertising spend. If
+          you think you have been charged in error you will raise it with us first, in
+          writing, and give us ten (10) business days to put it right.
+        </p>
+        <p>
+          <b>(c) If a chargeback is filed anyway.</b> It is a breach of this agreement, and
+          we may suspend call delivery and every other service on your account at once, set
+          the disputed amount off against any wallet balance or credit you hold, and recover
+          that amount together with the card network's dispute fee and our reasonable costs
+          of collection. The account stays suspended until the balance is settled.
+        </p>
+        <p>
+          <b>(d) This is not a waiver of fraud protection.</b> Nothing here asks you to
+          give up a dispute over a charge you did not authorise, a duplicate charge, or a
+          charge for something never delivered. Those are section 4, and we refund them.
+        </p>
+
+        <h4>3 &middot; The inbound portal rules</h4>
+        <ol>
+          <li><b>The wallet runs the delivery.</b> Calls are delivered against a funded
+            wallet. At zero, delivery stops. Topping up restarts it. We do not deliver on
+            credit.</li>
+          <li><b>Payment is due the day it is raised.</b> An invoice unpaid after 12 hours
+            is past due, and a past-due account is paused: routing off for a subscription,
+            spend paused for a campaign.</li>
+          <li><b>You take the calls.</b> Transfers come during the hours you agreed. A call
+            you do not answer is still delivered and still billable. Tell us before your
+            hours change.</li>
+          <li><b>Licensing is yours to keep current.</b> Accept transfers only in states
+            where you hold an active, appointed licence. Tell us the same day one lapses and
+            we will stop routing those states.</li>
+          <li><b>Caps and coverage are set in writing.</b> Your daily transfer cap and
+            coverage area are recorded on your account. Ask for a change; never assume one
+            we have not confirmed.</li>
+          <li><b>Calls are recorded</b>, for quality and for settling disputes. Taking
+            transfers is your consent to that, and you confirm your own use of the
+            recordings follows the law in the states you work.</li>
+          <li><b>The callers are yours to work, not to sell.</b> You may not resell, share,
+            syndicate or re-transfer them to another agency, agent or lead buyer.</li>
+          <li><b>One account, one agency.</b> Your login and your routing are yours. Do not
+            share them.</li>
+          <li><b>Do not contact the ad platforms about our campaigns.</b> The ad accounts
+            are ours. Contacting Google about them, or complaining against them, is a breach
+            of this agreement.</li>
+          <li><b>Changes and cancellation.</b> Cancel a subscription in writing before the
+            next billing date. Cancelling mid-cycle stops delivery; ad spend already
+            committed for that cycle is not returned (section 2). Pro-rata credits are
+            section 4.</li>
+          <li><b>Raising a problem.</b> Email the fulfilment desk. We log it, listen back
+            and come back to you, and every credit decision is recorded on your account.</li>
+        </ol>
+
+        <h4>4 &middot; What we do refund</h4>
+        <p>Refunded or credited in Stripe, against the recorded account:</p>
+        <ul>
+          <li><b>An individual call</b> that was mis-transferred, silent, duplicated, or
+            outside your agreed states or hours — once we have listened back and confirmed it.</li>
+          <li><b>A cancelled membership</b>, pro-rata from the cancellation date, for the
+            part of the fee that is not ad spend.</li>
+          <li><b>Service quality</b>, where we agree with you that we did not deliver what
+            was ordered.</li>
+          <li><b>A duplicate charge</b>, in full, as soon as both charges are visible.</li>
+          <li><b>Goodwill</b>, at our discretion.</li>
+        </ul>
+        <p>
+          Raise a call credit within seven (7) days of the call. After that the recording
+          may have aged out of retention and we cannot verify it.
+        </p>
+
+        <h4>5 &middot; Your details, and your photo</h4>
+        <p>Keep your contact details, licensed states and hours current on the account.</p>
+        <p>
+          If you are an agent with Thrive Companies, you will give us a current headshot,
+          and we may use it in Thrive Companies marketing — agent highlights, leaderboards,
+          social posts — for as long as you are with the agency. Ask us and we will stop
+          using it. If you are not with the agency, no photo is needed and none is kept.
+        </p>
+
+        <h4>6 &middot; General</h4>
+        <p>
+          Governed by the laws of the State of <b data-state>Florida</b>. This is the whole
+          agreement between us about the inbound programme and it replaces anything said
+          beforehand. If a court finds part of it unenforceable the rest stands. We may
+          change these rules on thirty (30) days' notice; taking calls after that is
+          acceptance.
+        </p>
+        <hr>
+        <p class="meta" id="paper-end">You have reached the end of the agreement.</p>
+      </article>
+
+      <p class="scrollnote" id="scrollnote">
+        <span id="scrolltext">Scroll to the end of the agreement to continue.</span>
+        <button type="button" class="linkish" data-act="print">Print or save a copy</button>
+      </p>
+
+      <div class="agree off" id="agreewrap">
+        <input type="checkbox" id="agree" name="agree" disabled>
+        <label for="agree">
+          I have read the whole agreement. I understand that advertising spend is
+          non-refundable and I agree not to charge it back.
+        </label>
+      </div>
+      <p class="err" data-err="agree"></p>
+    </section>
+
+    <!-- ------------------------------------------------------ signature -->
+    <section class="card" id="s-sign">
+      <h2>4 &middot; Signature</h2>
+      <p class="sub">Sign with your mouse, trackpad or finger, then type your name to confirm it.</p>
+
+      <div class="pad" id="pad">
+        <canvas id="sig"></canvas>
+        <div class="base"></div>
+        <div class="x">&times;</div>
+        <div class="ghost" id="sigghost">Sign here</div>
+      </div>
+      <div class="padbar">
+        <span class="hint" id="sigdate"></span>
+        <button type="button" class="btn small" data-act="clear-sig">Clear</button>
+      </div>
+
+      <div class="grid" style="margin-top:14px">
+        <div class="field">
+          <label for="signedName">Type your full name <span class="req">*</span></label>
+          <input id="signedName" name="signedName" type="text" autocomplete="off" required>
+        </div>
+        <div class="field">
+          <label for="title">Your title</label>
+          <input id="title" name="title" type="text" placeholder="Owner, Agent, Principal">
+        </div>
+      </div>
+      <p class="hint" style="margin-top:10px">
+        Typing your name and submitting this form is your electronic signature, and it
+        binds you the same way ink would.
+      </p>
+      <p class="err" data-err="sign"></p>
+    </section>
+
+    <!-- ---------------------------------------------------------- photo -->
+    <section class="card" id="s-photo" hidden>
+      <h2>5 &middot; Your highlight photo</h2>
+      <p class="sub">
+        This is the headshot that goes on agent highlights and the leaderboards.
+        Face to camera, good light, shoulders up.
+      </p>
+      <div class="drop">
+        <div class="ph" id="photoprev">No photo</div>
+        <div class="body">
+          <input type="file" id="photo" name="photo" accept="image/*">
+          <p class="hint" style="margin-top:8px">
+            JPEG or PNG. It is shrunk in your browser before it is sent, so a phone
+            photo is fine.
+          </p>
+        </div>
+      </div>
+      <p class="err" data-err="photo"></p>
+    </section>
+
+    <!-- --------------------------------------------------------- submit -->
+    <section class="card">
+      <div class="submitbar">
+        <button type="submit" class="btn gold" id="submit">Sign and submit</button>
+        <span class="status" id="status"></span>
+      </div>
+    </section>
+  </form>
+
+  <div id="done" class="done" hidden>
+    <div class="tick">&#10003;</div>
+    <h2>You're onboarded</h2>
+    <p>
+      Your signed agreement is saved and the fulfilment desk can see it. Someone will
+      be in touch to set your coverage, your cap and your first live day.
+    </p>
+    <p>A copy has been emailed to nobody automatically — print one for yourself now if you want it.</p>
+    <p><button type="button" class="btn small" data-act="print">Print my copy</button></p>
+    <p class="ref" id="ref"></p>
+  </div>
+
+  <footer>
+    <span data-entity>Thrive Companies</span> &middot; Lead Tech inbound programme
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ------------------------------------------------------------- config
+     RELAY is rewritten by build-onboarding.mjs. Left empty the page
+     still works end to end but has nowhere to post, and says so rather
+     than pretending the submission landed. */
+  var RELAY  = "";
+  var ENTITY = "Thrive Companies LLC";
+  var STATE  = "Florida";
+  var AGREEMENT_VERSION = "2026-10-04";
+
+  var $  = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+
+  $$("[data-entity]").forEach(function (el) { el.textContent = ENTITY; });
+  $$("[data-state]").forEach(function (el) { el.textContent = STATE; });
+
+  var form = $("#form");
+  var today = new Date();
+  var human = today.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+  $("#paper-date").textContent = "Version " + AGREEMENT_VERSION;
+  $("#sigdate").textContent = "Dated " + human;
+
+  /* --------------------------------------------------------- the steps */
+  var state = { who: false, read: false, agree: false, sign: false, photo: false, agency: "" };
+
+  function tick() {
+    var f = fields();
+    state.who = !!(f.legalName && f.business && /.+@.+\..+/.test(f.email) && f.phone && f.states);
+    state.agree = $("#agree").checked;
+    state.sign = sig.has && !!f.signedName;
+    state.photo = !!photoData;
+    $$("#rail li").forEach(function (li) {
+      var k = li.getAttribute("data-step");
+      li.classList.toggle("on", !!state[k]);
+    });
+  }
+
+  function fields() {
+    var o = {};
+    ["legalName", "business", "email", "phone", "npn", "referrer", "states", "hours", "signedName", "title"]
+      .forEach(function (k) { o[k] = ($("#" + k).value || "").trim(); });
+    var a = $("input[name=agency]:checked");
+    o.agency = a ? a.value : "";
+    return o;
+  }
+
+  form.addEventListener("input", tick);
+  form.addEventListener("change", tick);
+
+  /* ------------------------------------------------- agency branch */
+  $$("input[name=agency]").forEach(function (r) {
+    r.addEventListener("change", function () {
+      state.agency = r.value;
+      var on = r.value === "yes";
+      $("#s-photo").hidden = !on;
+      $("#rail-photo").hidden = !on;
+      tick();
+    });
+  });
+
+  /* ----------------------------------------------- read-to-the-end */
+  var paper = $("#paper");
+  function checkRead() {
+    var atEnd = paper.scrollTop + paper.clientHeight >= paper.scrollHeight - 28;
+    /* A short viewport can show the whole thing without scrolling. */
+    var noScroll = paper.scrollHeight <= paper.clientHeight + 4;
+    if (!atEnd && !noScroll) return;
+    if (state.read) return;
+    state.read = true;
+    $("#agree").disabled = false;
+    $("#agreewrap").classList.remove("off");
+    $("#scrollnote").classList.add("read");
+    $("#scrolltext").textContent = "Read to the end — thank you.";
+    tick();
+  }
+  paper.addEventListener("scroll", checkRead, { passive: true });
+  window.addEventListener("resize", checkRead);
+  setTimeout(checkRead, 60);
+
+  /* -------------------------------------------------------- signature */
+  var sig = (function () {
+    var box = $("#pad"), cv = $("#sig"), ghost = $("#sigghost");
+    var ctx = cv.getContext("2d");
+    var drawing = false, has = false, dpr = 1, strokes = [], cur = null;
+
+    function size() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+      var r = box.getBoundingClientRect();
+      cv.width = Math.round(r.width * dpr);
+      cv.height = Math.round(r.height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      redraw();
+    }
+    function redraw() {
+      var r = box.getBoundingClientRect();
+      ctx.clearRect(0, 0, r.width, r.height);
+      ctx.lineCap = "round"; ctx.lineJoin = "round";
+      ctx.strokeStyle = "#141310"; ctx.lineWidth = 2.4;
+      strokes.forEach(function (s) {
+        if (s.length < 2) {
+          ctx.beginPath(); ctx.arc(s[0][0], s[0][1], 1.3, 0, Math.PI * 2);
+          ctx.fillStyle = "#141310"; ctx.fill(); return;
+        }
+        ctx.beginPath(); ctx.moveTo(s[0][0], s[0][1]);
+        for (var i = 1; i < s.length; i++) ctx.lineTo(s[i][0], s[i][1]);
+        ctx.stroke();
+      });
+    }
+    function at(ev) {
+      var r = cv.getBoundingClientRect();
+      return [ev.clientX - r.left, ev.clientY - r.top];
+    }
+    cv.addEventListener("pointerdown", function (ev) {
+      ev.preventDefault();
+      cv.setPointerCapture(ev.pointerId);
+      drawing = true; cur = [at(ev)]; strokes.push(cur);
+      has = true; ghost.style.display = "none";
+      redraw(); tick();
+    });
+    cv.addEventListener("pointermove", function (ev) {
+      if (!drawing) return;
+      ev.preventDefault();
+      cur.push(at(ev)); redraw();
+    });
+    ["pointerup", "pointercancel", "pointerleave"].forEach(function (t) {
+      cv.addEventListener(t, function () { drawing = false; });
+    });
+
+    window.addEventListener("resize", size);
+    size();
+
+    return {
+      get has() { return has; },
+      clear: function () {
+        strokes = []; has = false; ghost.style.display = ""; redraw(); tick();
+      },
+      /* A trimmed PNG on white, so it drops straight into a document. */
+      png: function () {
+        if (!has) return "";
+        var r = box.getBoundingClientRect();
+        var minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
+        strokes.forEach(function (s) {
+          s.forEach(function (p) {
+            if (p[0] < minX) minX = p[0]; if (p[0] > maxX) maxX = p[0];
+            if (p[1] < minY) minY = p[1]; if (p[1] > maxY) maxY = p[1];
+          });
+        });
+        var pad = 10;
+        minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad);
+        maxX = Math.min(r.width, maxX + pad); maxY = Math.min(r.height, maxY + pad);
+        var w = Math.max(10, maxX - minX), h = Math.max(10, maxY - minY);
+        var out = document.createElement("canvas");
+        var s = Math.min(2, 560 / w);
+        out.width = Math.round(w * s); out.height = Math.round(h * s);
+        var g = out.getContext("2d");
+        g.fillStyle = "#FFFFFF"; g.fillRect(0, 0, out.width, out.height);
+        g.scale(s, s); g.translate(-minX, -minY);
+        g.lineCap = "round"; g.lineJoin = "round";
+        g.strokeStyle = "#141310"; g.lineWidth = 2.4;
+        strokes.forEach(function (st) {
+          if (st.length < 2) return;
+          g.beginPath(); g.moveTo(st[0][0], st[0][1]);
+          for (var i = 1; i < st.length; i++) g.lineTo(st[i][0], st[i][1]);
+          g.stroke();
+        });
+        return out.toDataURL("image/png");
+      }
+    };
+  })();
+
+  /* ------------------------------------------------------------ photo */
+  var photoData = "";
+  $("#photo").addEventListener("change", function () {
+    var file = this.files && this.files[0];
+    err("photo", "");
+    if (!file) { photoData = ""; $("#photoprev").textContent = "No photo"; tick(); return; }
+    if (!/^image\//.test(file.type)) { err("photo", "That is not an image."); this.value = ""; return; }
+    var fr = new FileReader();
+    fr.onload = function () {
+      var im = new Image();
+      im.onload = function () {
+        /* Shrunk here so a 12-megapixel phone photo does not travel. */
+        var MAX = 1100;
+        var sc = Math.min(1, MAX / Math.max(im.width, im.height));
+        var c = document.createElement("canvas");
+        c.width = Math.round(im.width * sc); c.height = Math.round(im.height * sc);
+        var g = c.getContext("2d");
+        g.imageSmoothingQuality = "high";
+        g.drawImage(im, 0, 0, c.width, c.height);
+        photoData = c.toDataURL("image/jpeg", 0.85);
+        $("#photoprev").innerHTML = "";
+        var pv = new Image(); pv.src = photoData; pv.alt = "";
+        $("#photoprev").appendChild(pv);
+        tick();
+      };
+      im.onerror = function () { err("photo", "That image could not be read."); };
+      im.src = fr.result;
+    };
+    fr.onerror = function () { err("photo", "That image could not be read."); };
+    fr.readAsDataURL(file);
+  });
+
+  /* ---------------------------------------------------------- actions */
+  document.addEventListener("click", function (ev) {
+    var b = ev.target.closest("[data-act]");
+    if (!b) return;
+    var a = b.getAttribute("data-act");
+    if (a === "clear-sig") sig.clear();
+    if (a === "print") window.print();
+  });
+
+  /* ------------------------------------------------------- validation */
+  function err(key, msg) {
+    var el = $('[data-err="' + key + '"]');
+    if (el) el.textContent = msg || "";
+  }
+  function mark(sel, bad) {
+    var el = $(sel);
+    if (el) el.classList.toggle("invalid", !!bad);
+  }
+
+  function validate() {
+    var f = fields(), problems = [];
+    ["who", "agency", "agree", "sign", "photo"].forEach(function (k) { err(k, ""); });
+
+    if (!state.who) {
+      err("who", "Name, business, a valid email, phone and your licensed states are all needed.");
+      problems.push("#s-who");
+    }
+    if (!f.agency) {
+      err("agency", "Say whether you write under Thrive Companies.");
+      problems.push("#s-agency");
+    }
+    if (!state.read) {
+      err("agree", "Read the agreement to the end first.");
+      problems.push("#s-contract");
+    } else if (!$("#agree").checked) {
+      err("agree", "Tick the box to agree.");
+      problems.push("#s-contract");
+    }
+    if (!sig.has) {
+      err("sign", "Draw your signature in the box.");
+      problems.push("#s-sign");
+    } else if (!f.signedName) {
+      err("sign", "Type your full name to confirm the signature.");
+      problems.push("#s-sign");
+    }
+    if (f.agency === "yes" && !photoData) {
+      err("photo", "Agency agents need a headshot.");
+      problems.push("#s-photo");
+    }
+    ["#s-who", "#s-agency", "#s-contract", "#s-sign", "#s-photo"].forEach(function (s) {
+      mark(s, problems.indexOf(s) >= 0);
+    });
+    return problems;
+  }
+
+  /* ----------------------------------------------------------- submit */
+  function setStatus(msg, bad) {
+    var el = $("#status");
+    el.textContent = msg || "";
+    el.classList.toggle("bad", !!bad);
+  }
+
+  form.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var problems = validate();
+    if (problems.length) {
+      setStatus("Some of it still needs filling in.", true);
+      var first = $(problems[0]);
+      if (first) first.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    setStatus("");
+
+    var f = fields();
+    var body = {
+      version: AGREEMENT_VERSION,
+      signedAt: new Date().toISOString(),
+      legalName: f.legalName,
+      business: f.business,
+      email: f.email.toLowerCase(),
+      phone: f.phone,
+      npn: f.npn,
+      referrer: f.referrer,
+      states: f.states,
+      hours: f.hours,
+      agency: f.agency,
+      title: f.title,
+      signedName: f.signedName,
+      signature: sig.png(),
+      photo: f.agency === "yes" ? photoData : "",
+      steps: {
+        details: true,
+        read: true,
+        agreed: true,
+        signed: true,
+        photo: f.agency === "yes" ? !!photoData : null
+      },
+      agent: navigator.userAgent.slice(0, 200),
+      tz: (Intl.DateTimeFormat().resolvedOptions().timeZone || "")
+    };
+
+    if (!RELAY) {
+      setStatus("This page has not been pointed at the relay yet, so nothing was sent. Tell whoever sent you the link.", true);
+      return;
+    }
+
+    var btn = $("#submit");
+    btn.disabled = true;
+    setStatus("Sending…");
+
+    fetch(RELAY.replace(/\/+$/, "") + "/onboarding/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        if (!r.ok) throw new Error(j.error || ("The desk refused it (" + r.status + ")."));
+        return j;
+      });
+    }).then(function (j) {
+      $("#form").hidden = true;
+      $("#rail").hidden = true;
+      $("#done").hidden = false;
+      $("#ref").textContent = "Reference  " + (j.id || "saved");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }).catch(function (e) {
+      btn.disabled = false;
+      setStatus(String(e.message || e) + " Nothing was lost — try again, or send this to the desk.", true);
+    });
+  });
+
+  tick();
+})();
+</script>
+</body>
+</html>

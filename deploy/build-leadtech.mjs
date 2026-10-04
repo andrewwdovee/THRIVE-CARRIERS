@@ -2,7 +2,8 @@
  * Builds a Cloudflare Pages copy of the Lead Tech Fulfillment board with
  * the relay switched on.
  *
- *   node build-leadtech.mjs https://thrive-relay.you.workers.dev
+ *   node build-leadtech.mjs https://thrive-relay.you.workers.dev \
+ *     [--onboarding https://thrive-onboarding.pages.dev]
  *
  * The board was compiled with a relay client already in it, reading
  * VITE_RELAY_URL at build time. That variable was empty, so the client
@@ -15,6 +16,9 @@
  * exactly once, and the build fails loudly if the bundle ever changes
  * shape, rather than silently producing a board that saves nowhere.
  *
+ * With --onboarding it also splices in the Onboarding tab, which is a
+ * separate patch with its own assertions — see patch-onboarding.mjs.
+ *
  * Input:  deploy/_leadtech-content.html   (the published board's content)
  * Output: deploy/dist-leadtech/index.html
  */
@@ -23,11 +27,16 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { patchOnboarding } from "./patch-onboarding.mjs";
+
 const here = dirname(fileURLToPath(import.meta.url));
-const relay = (process.argv[2] || "").replace(/\/+$/, "");
+const argv = process.argv.slice(2);
+const relay = (argv.find((a) => /^https:\/\//.test(a)) || "").replace(/\/+$/, "");
+const onboardingArg = argv.indexOf("--onboarding");
+const onboardingUrl = onboardingArg < 0 ? "" : (argv[onboardingArg + 1] || "").replace(/\/+$/, "");
 
 if (!relay) {
-  console.error("Usage: node build-leadtech.mjs https://thrive-relay.<subdomain>.workers.dev");
+  console.error("Usage: node build-leadtech.mjs https://thrive-relay.<subdomain>.workers.dev [--onboarding https://thrive-onboarding.pages.dev]");
   process.exit(1);
 }
 if (!/^https:\/\//.test(relay)) {
@@ -57,7 +66,21 @@ re-derive the patch from the current bundle before deploying.`);
   process.exit(1);
 }
 
-const patched = source.replace(NEEDLE, `fn=String(${JSON.stringify(relay)})`);
+let patched = source.replace(NEEDLE, `fn=String(${JSON.stringify(relay)})`);
+
+if (onboardingUrl) {
+  if (!/^https:\/\//.test(onboardingUrl)) {
+    console.error("The onboarding URL must start with https://");
+    process.exit(1);
+  }
+  console.error("Splicing in the Onboarding tab:");
+  try {
+    patched = patchOnboarding(patched, onboardingUrl, { log: (m) => console.error(m) });
+  } catch (e) {
+    console.error("\n" + e.message + "\n");
+    process.exit(1);
+  }
+}
 
 const html = `<!doctype html>
 <html lang="en">
@@ -80,7 +103,7 @@ mkdirSync(join(here, "dist-leadtech"), { recursive: true });
 writeFileSync(join(here, "dist-leadtech", "index.html"), html);
 
 console.log(`Wrote deploy/dist-leadtech/index.html  (${(html.length / 1024).toFixed(0)} KB)
-Relay: ${relay}
+Relay: ${relay}${onboardingUrl ? "\nOnboarding: " + onboardingUrl : "\nOnboarding tab: not included (pass --onboarding <url>)"}
 
 Next:
   npx wrangler pages deploy ./dist-leadtech --project-name thrive-leadtech

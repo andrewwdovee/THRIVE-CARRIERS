@@ -227,6 +227,89 @@ bottleneck on syncing.
 
 If you want a URL to show someone this week and nothing more, **Route A**.
 
+## Onboarding — the signing link and the tab
+
+New since the rest of this file. Three pieces:
+
+| | |
+|---|---|
+| `onboarding/index.html` | the public page a client signs — the agreement, the signature pad, the headshot |
+| `POST /onboarding/submit` on the worker | the only route with no token, because the signer has no account yet |
+| the **Onboarding** tab on the board | the link to send, and the grid of who has signed what |
+
+### 1. Put the signing page up
+
+```sh
+cd ~/THRIVE-CARRIERS/onboarding
+node build-onboarding.mjs https://thrive-relay.<subdomain>.workers.dev \
+  --entity "Thrive Companies LLC" --state Florida
+npx wrangler pages deploy ./dist --project-name thrive-onboarding --commit-dirty=true
+```
+
+Pages prints a URL — something like `https://thrive-onboarding.pages.dev`. Keep it.
+
+### 2. Let the relay accept it
+
+The submit route is public but not open: the CORS allow-list still applies, so the
+page's own origin has to be on it or the browser refuses the POST. In
+`deploy/wrangler.toml`, add the Pages URL to `ALLOWED_ORIGINS` alongside the ones
+already there, then:
+
+```sh
+cd ../deploy
+npx wrangler deploy
+```
+
+Check it answers:
+
+```sh
+curl -s -X POST https://thrive-relay.<subdomain>.workers.dev/onboarding/submit \
+  -H 'Content-Type: application/json' -H 'Origin: https://thrive-onboarding.pages.dev' \
+  -d '{}'
+```
+
+`{"error":"Missing fields","missing":[...]}` is the right answer — it means the route
+is live and validating. `403` means the origin is not on the list yet.
+
+### 3. Put the tab on the board
+
+```sh
+node build-leadtech.mjs https://thrive-relay.<subdomain>.workers.dev \
+  --onboarding https://thrive-onboarding.pages.dev
+npx wrangler pages deploy ./dist-leadtech --project-name thrive-leadtech --commit-dirty=true
+```
+
+The board has no source, only the built bundle, so the tab is spliced in. The patch
+refuses rather than guesses: it finds the minified names for the jsx runtime, React
+and the storage object and fails if any is ambiguous, checks the tab array is the
+shape it expects, and checks every CSS class it uses is in the board's compiled
+stylesheet. If the board is ever rebuilt and the patch stops matching, it will say
+exactly what no longer fits instead of writing a broken board.
+
+### What lands where
+
+| key | holds |
+|---|---|
+| `onboarding/submissions` | the list the grid reads — names, steps, no images |
+| `onboarding/doc/<id>` | one signed agreement, with the signature and the photo |
+
+The images live apart from the list so the grid is one small read however many people
+have signed. The board fetches a document only when you open that row.
+
+### Things worth knowing
+
+- **The agreement is not legal advice.** Section 2 — ad spend is non-refundable, and
+  the client waives chargebacks on it — is the operative clause and the one a lawyer
+  should read before this goes to a single client. `onboarding/contract.md` is the
+  same text in plain Markdown, for handing to one.
+- **The submit route is public on purpose.** Guards: the origin allow-list, a 3.2 MB
+  body cap, a six-an-hour throttle per address, required fields, and append-only
+  behaviour. Reading submissions back still needs the bearer token.
+- **The artifact copy of the board cannot see submissions.** It stores in the browser,
+  not the relay. The tab is only useful on the Pages copy.
+- **Headshots are not wired into the Social Studio roster yet.** They are stored and
+  shown on the row; copying them across is a separate job.
+
 ## If something goes wrong
 
 **`cd: no such file or directory: deploy`** — you are not in the repo. Run step 0.
@@ -250,6 +333,10 @@ speaking this exact protocol: sign in, load both snapshots, render every page. I
 produced numbers identical to the artifact copy ($3,917 company net, $1,541 Lead Tech
 net on the current data), and the artifact mode still works unchanged. The worker's
 password hashing and token signing round-trip correctly against the generator.
+
+The onboarding route was driven end to end against a stand-in KV — eighteen cases,
+covering the happy path, every rejection, the origin gate and the throttle — and the
+signing page and the patched board were both driven in a real browser.
 
 **Not tested.** I have no Cloudflare account here, so `worker.js` has never run
 against real KV, and its routing and CORS handling are unverified. Deploy it under a

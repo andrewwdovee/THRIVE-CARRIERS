@@ -11,6 +11,15 @@
  *   GET  /kv/:key       Bearer token           -> {value} | 404
  *   PUT  /kv/:key       Bearer token, {value}  -> {ok: true}
  *
+ * Plus one route the board did not ask for, added for onboarding:
+ *
+ *   POST /onboarding/submit   no token, {record}  -> {ok: true, id}
+ *
+ * It is the only unauthenticated write, because the person signing the
+ * agreement has no account yet. It is not open: the CORS allow-list
+ * above still applies, so only the onboarding page's own origin can
+ * reach it from a browser. It only ever appends, never reads back.
+ *
  * Storage is a KV namespace. Tokens are stateless: an HMAC over the email
  * and an expiry, so there is no session table to keep and logging out is
  * client-side. That is a deliberate trade — see LOGOUT below.
@@ -22,6 +31,16 @@
 
 const TOKEN_TTL_DAYS = 30;
 const enc = new TextEncoder();
+
+/* Onboarding. The index key is written with the `kv:` prefix the board
+   uses, so an ordinary GET /kv/onboarding/submissions reads it. */
+const ONBOARD_INDEX = "kv:onboarding/submissions";
+const ONBOARD_DOC = "onboarding/doc/";
+const ONBOARD_MAX_BYTES = 3.2 * 1024 * 1024;
+const ONBOARD_MAX_SIG = 400 * 1024;
+const ONBOARD_MAX_PHOTO = 2.6 * 1024 * 1024;
+const ONBOARD_MAX_ROWS = 2000;
+const ONBOARD_PER_HOUR = 6;
 
 /* ---------------------------------------------------------------- utils */
 
@@ -253,6 +272,119 @@ async function handle(request, env) {
        keep an issued-at floor in KV and reject tokens older than it. */
     if (path === "/auth/logout" && request.method === "POST") {
       return json({ ok: true }, 200, head);
+    }
+
+    /* ---- onboarding ----
+       The signer has no login, so this one write carries no token. Four
+       things keep it from being a hole: the CORS allow-list above, a
+       size cap, a per-address hourly throttle, and the fact that it can
+       only append. Reading the submissions back is an ordinary
+       authenticated GET /kv/onboarding/submissions.
+
+       The index holds everything except the two images, so the board's
+       grid is one small read however many people have signed. The
+       signature and the photo go in their own document, fetched only
+       when a row is opened. */
+    if (path === "/onboarding/submit" && request.method === "POST") {
+      const raw = await request.text();
+      if (raw.length > ONBOARD_MAX_BYTES) {
+        return json({ error: "That submission is too large. Try a smaller photo." }, 413, head);
+      }
+      let body;
+      try { body = JSON.parse(raw); } catch { return json({ error: "Bad request" }, 400, head); }
+
+      /* Best effort only: KV is eventually consistent, so two requests
+         landing together can both read the same count. It is a brake on
+         a script, not a lock. */
+      const who = await hmac(
+        env.TOKEN_SECRET || "onboarding",
+        request.headers.get("CF-Connecting-IP") || "unknown"
+      );
+      const bucket = `rate:onboard:${who.slice(0, 24)}:${Math.floor(Date.now() / 36e5)}`;
+      const seen = Number(await env.THRIVE_KV.get(bucket)) || 0;
+      if (seen >= ONBOARD_PER_HOUR) {
+        return json({ error: "Too many submissions from here in the last hour." }, 429, head);
+      }
+
+      const text = (v, max) => String(v == null ? "" : v).trim().slice(0, max);
+      const rec = {
+        legalName: text(body.legalName, 160),
+        business:  text(body.business, 160),
+        email:     text(body.email, 160).toLowerCase(),
+        phone:     text(body.phone, 60),
+        npn:       text(body.npn, 60),
+        referrer:  text(body.referrer, 120),
+        states:    text(body.states, 400),
+        hours:     text(body.hours, 160),
+        title:     text(body.title, 80),
+        signedName: text(body.signedName, 160),
+        agency:    body.agency === "yes" ? "yes" : body.agency === "no" ? "no" : "",
+        version:   text(body.version, 40),
+        tz:        text(body.tz, 60),
+        agent:     text(body.agent, 200),
+      };
+      const signature = typeof body.signature === "string" ? body.signature : "";
+      const photo = typeof body.photo === "string" ? body.photo : "";
+
+      const missing = ["legalName", "business", "email", "phone", "states", "signedName"]
+        .filter((k) => !rec[k]);
+      if (missing.length) return json({ error: "Missing fields", missing }, 400, head);
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(rec.email)) {
+        return json({ error: "That email does not look right." }, 400, head);
+      }
+      if (!rec.agency) return json({ error: "Say whether you are with the agency." }, 400, head);
+      if (!signature.startsWith("data:image/png")) {
+        return json({ error: "The signature is missing." }, 400, head);
+      }
+      if (signature.length > ONBOARD_MAX_SIG) {
+        return json({ error: "That signature is too large." }, 413, head);
+      }
+      if (photo && !photo.startsWith("data:image/")) {
+        return json({ error: "That photo is not an image." }, 400, head);
+      }
+      if (photo.length > ONBOARD_MAX_PHOTO) {
+        return json({ error: "That photo is too large." }, 413, head);
+      }
+      if (rec.agency === "yes" && !photo) {
+        return json({ error: "Agency agents need a headshot." }, 400, head);
+      }
+
+      const id = "ob_" + Date.now().toString(36) + "_" + b64url(crypto.getRandomValues(new Uint8Array(6)));
+      const signedAt = new Date().toISOString();
+
+      let index = [];
+      try { index = JSON.parse((await env.THRIVE_KV.get(ONBOARD_INDEX)) || "[]"); } catch { index = []; }
+      if (!Array.isArray(index)) index = [];
+      if (index.length >= ONBOARD_MAX_ROWS) {
+        return json({ error: "The onboarding list is full. Clear it from the board." }, 507, head);
+      }
+
+      /* What the grid needs, and nothing that costs bytes. */
+      index.unshift({
+        id,
+        signedAt,
+        legalName: rec.legalName,
+        business: rec.business,
+        email: rec.email,
+        phone: rec.phone,
+        states: rec.states,
+        agency: rec.agency,
+        version: rec.version,
+        steps: {
+          details: true,
+          read: true,
+          agreed: true,
+          signed: true,
+          photo: rec.agency === "yes" ? !!photo : null,
+        },
+        reviewed: false,
+      });
+
+      await env.THRIVE_KV.put(`kv:${ONBOARD_DOC}${id}`, JSON.stringify({ ...rec, id, signedAt, signature, photo }));
+      await env.THRIVE_KV.put(ONBOARD_INDEX, JSON.stringify(index));
+      await env.THRIVE_KV.put(bucket, String(seen + 1), { expirationTtl: 7200 });
+
+      return json({ ok: true, id, signedAt }, 200, head);
     }
 
     /* ---- key/value ---- */
