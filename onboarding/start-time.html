@@ -129,7 +129,11 @@ input:focus,textarea:focus{outline:2px solid rgba(240,180,41,.55); outline-offse
 }
 .day input:checked + span{border-color:var(--gold); color:var(--gold-hi); background:rgba(240,180,41,.12)}
 .day input:focus-visible + span{outline:2px solid var(--gold); outline-offset:2px}
-.choices.tiers .choice{flex:1 1 90px; justify-content:center; text-align:center}
+.choices.tiers{display:grid; grid-template-columns:repeat(4,minmax(0,1fr))}
+.choices.tiers .choice{justify-content:center; text-align:center; min-width:0}
+/* 0 is the week off: one wide box under the four volumes. */
+.choices.tiers .choice.off{grid-column:1/-1}
+@media (max-width:420px){ .choices.tiers{grid-template-columns:repeat(2,minmax(0,1fr))} }
 .choices.tiers .choice b{font-family:var(--display); font-weight:400; font-size:24px; line-height:1.1}
 .choices.tiers .choice small{display:block; font-size:11px; color:var(--muted)}
 
@@ -225,7 +229,7 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
         <label class="choice"><input type="radio" name="callsPerWeek" value="25"><span><b>25</b><small>a week</small></span></label>
         <label class="choice"><input type="radio" name="callsPerWeek" value="35"><span><b>35</b><small>a week</small></span></label>
         <label class="choice"><input type="radio" name="callsPerWeek" value="50"><span><b>50</b><small>a week</small></span></label>
-        <label class="choice"><input type="radio" name="callsPerWeek" value="0"><span><b>0</b><small>Taking the week off</small></span></label>
+        <label class="choice off"><input type="radio" name="callsPerWeek" value="0"><span><b>0</b><small>Taking the week off</small></span></label>
       </div>
     </section>
 
