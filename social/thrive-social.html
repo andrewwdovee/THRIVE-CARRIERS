@@ -181,7 +181,7 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
     toast: null,
     /* The three forms keep their own state so switching template and
        back does not throw away what was typed. */
-    highlight: { name: "Renato", period: "1 Week Production", amount: "26841", unit: "AP SUBMITTED", kicker: "Keep crushing it!", photo: "" },
+    highlight: { name: "Renato", period: "1 Week Production", amount: "26841", unit: "AP SUBMITTED", kicker: "Keep crushing it!", photo: "", cutout: false },
     weekly: {
       title: "TOP 3 THIS WEEK",
       rows: [
@@ -254,6 +254,79 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
   }
 
   /* ========================================================== drawing */
+  /* Textures are built once onto offscreen canvases and reused: the
+     marble the display type is cut from, the honeycomb inside the money
+     on a highlight, and the veining in the podium. Regenerating them per
+     frame made typing in the form stutter. */
+  var tex = {};
+  function prng(seed) {
+    return function () { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  }
+
+  /* White marble with hairline crackle — what LEADERBOARD and the agent's
+     name are cut out of on the real posts. Flat white loses the whole
+     character of the type. */
+  function marbleTex() {
+    if (tex.marble) return tex.marble;
+    var c = document.createElement("canvas"); c.width = 560; c.height = 560;
+    var g = c.getContext("2d"), rnd = prng(7919);
+    g.fillStyle = "#F7F8FA"; g.fillRect(0, 0, 560, 560);
+    for (var i = 0; i < 70; i++) {
+      var x = rnd() * 560, y = rnd() * 560, r = 50 + rnd() * 150;
+      var v = 206 + Math.round(rnd() * 40);
+      var rg = g.createRadialGradient(x, y, 0, x, y, r);
+      rg.addColorStop(0, "rgba(" + v + "," + v + "," + (v + 6) + ",.5)");
+      rg.addColorStop(1, "rgba(255,255,255,0)");
+      g.fillStyle = rg; g.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+    g.lineCap = "round";
+    for (var k = 0; k < 190; k++) {
+      var x0 = rnd() * 560, y0 = rnd() * 560, seg = 5 + rnd() * 16, a = rnd() * Math.PI * 2;
+      g.strokeStyle = "rgba(118,126,140," + (0.10 + rnd() * 0.40).toFixed(2) + ")";
+      g.lineWidth = 0.4 + rnd() * 1.5;
+      g.beginPath(); g.moveTo(x0, y0);
+      var x = x0, y = y0;
+      for (var s = 0; s < 5; s++) {
+        a += (rnd() - 0.5) * 1.5;
+        x += Math.cos(a) * seg; y += Math.sin(a) * seg;
+        g.lineTo(x, y);
+      }
+      g.stroke();
+    }
+    tex.marble = c; return c;
+  }
+
+  /* The gold the big figure is filled with: a honeycomb lattice riding on
+     a gold gradient, the way the $26,841 reads on the highlight. */
+  function honeyTex() {
+    if (tex.honey) return tex.honey;
+    var c = document.createElement("canvas"); c.width = 360; c.height = 312;
+    var g = c.getContext("2d");
+    var lg = g.createLinearGradient(0, 0, 0, 312);
+    lg.addColorStop(0, "#FFF0BE"); lg.addColorStop(0.34, "#F8C944");
+    lg.addColorStop(0.68, "#D98E0C"); lg.addColorStop(1, "#FFD45F");
+    g.fillStyle = lg; g.fillRect(0, 0, 360, 312);
+    var R = 15, h = Math.sqrt(3) / 2 * R;
+    g.lineWidth = 2.4;
+    for (var row = -1; row * h * 2 < 360; row++) {
+      for (var col = -1; col * R * 1.5 < 400; col++) {
+        var cxh = col * R * 1.5;
+        var cyh = row * h * 2 + (col % 2 ? h : 0);
+        g.beginPath();
+        for (var i = 0; i < 6; i++) {
+          var a = Math.PI / 180 * (60 * i);
+          var px = cxh + R * Math.cos(a), py = cyh + R * Math.sin(a);
+          if (i) g.lineTo(px, py); else g.moveTo(px, py);
+        }
+        g.closePath();
+        g.strokeStyle = "rgba(125,78,4,.55)"; g.stroke();
+        g.strokeStyle = "rgba(255,246,206,.30)"; g.lineWidth = 1;
+        g.stroke(); g.lineWidth = 2.4;
+      }
+    }
+    tex.honey = c; return c;
+  }
+
   function rr(ctx, x, y, w, h, r) {
     var k = Math.min(r, w / 2, h / 2);
     ctx.beginPath();
@@ -266,14 +339,23 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
   }
   function goldGrad(ctx, y0, y1) {
     var g = ctx.createLinearGradient(0, y0, 0, y1);
-    g.addColorStop(0, "#FFF0C0");
-    g.addColorStop(0.38, "#F7C542");
-    g.addColorStop(0.72, "#E09A12");
-    g.addColorStop(1, "#FFD867");
+    g.addColorStop(0, "#FFF3CB"); g.addColorStop(0.36, "#F7C542");
+    g.addColorStop(0.70, "#D9930F"); g.addColorStop(1, "#FFDD79");
     return g;
   }
-  /* Shrink a line until it fits, rather than letting a long name run off
-     the artwork. Returns the size actually used. */
+  /* Ring and medal metal by place: gold, then silver, then bronze —
+     the three are different metals on the board, not three golds. */
+  var METAL = {
+    1: { a: "#FFF3CB", b: "#F7C542", c: "#D9930F", d: "#FFDD79", glow: "rgba(250,196,66,.95)" },
+    2: { a: "#FFFFFF", b: "#DCE4EE", c: "#93A1B4", d: "#F2F6FB", glow: "rgba(208,224,245,.85)" },
+    3: { a: "#FFE0BC", b: "#E79A4E", c: "#A85C17", d: "#FFC98A", glow: "rgba(231,154,78,.85)" }
+  };
+  function metalGrad(ctx, m, y0, y1) {
+    var g = ctx.createLinearGradient(0, y0, 0, y1);
+    g.addColorStop(0, m.a); g.addColorStop(0.36, m.b);
+    g.addColorStop(0.70, m.c); g.addColorStop(1, m.d);
+    return g;
+  }
   function fitFont(ctx, text, family, start, min, maxW, weight) {
     var size = start;
     while (size > min) {
@@ -292,149 +374,360 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
     ctx.restore();
   }
 
-  /* The ground every template shares: near-black, a warm bloom low and
-     centre, gold light streaks on one diagonal and a single blue one
-     crossing it, then a vignette. */
-  function paintGround(ctx, w, h) {
-    ctx.fillStyle = "#05070B";
-    ctx.fillRect(0, 0, w, h);
-
-    var bloom = ctx.createRadialGradient(w * 0.5, h * 0.62, 0, w * 0.5, h * 0.62, w * 0.95);
-    bloom.addColorStop(0, "rgba(176,104,18,.42)");
-    bloom.addColorStop(0.45, "rgba(90,52,8,.20)");
-    bloom.addColorStop(1, "rgba(5,7,11,0)");
-    ctx.fillStyle = bloom;
-    ctx.fillRect(0, 0, w, h);
-
+  /* Type filled with a texture rather than a colour. The glyphs are cut
+     out of a painted rectangle on an offscreen canvas, which is the only
+     way to carry marble or honeycomb through the letterforms and still
+     keep an outer glow on the result. */
+  function texText(ctx, o) {
     ctx.save();
-    ctx.globalCompositeOperation = "lighter";
-    var streaks = [
-      [-0.30, 0.016, "rgba(255,206,110,.55)"], [-0.18, 0.006, "rgba(255,226,150,.75)"],
-      [-0.07, 0.010, "rgba(255,190,80,.40)"],  [ 0.78, 0.008, "rgba(255,214,120,.55)"],
-      [ 0.92, 0.014, "rgba(255,190,80,.38)"],  [ 1.06, 0.005, "rgba(255,236,180,.70)"]
-    ];
-    streaks.forEach(function (s) {
-      var x = w * s[0], tw = w * s[1];
-      var g = ctx.createLinearGradient(x, 0, x + w * 0.55, h);
-      g.addColorStop(0, "rgba(255,255,255,0)");
-      g.addColorStop(0.35, s[2]);
-      g.addColorStop(0.65, s[2]);
-      g.addColorStop(1, "rgba(255,255,255,0)");
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.moveTo(x, 0); ctx.lineTo(x + tw, 0);
-      ctx.lineTo(x + tw + w * 0.55, h); ctx.lineTo(x + w * 0.55, h);
-      ctx.closePath(); ctx.fill();
-    });
-    [[-0.44, 0.009, "rgba(70,140,255,.65)"], [1.16, 0.006, "rgba(90,160,255,.55)"]].forEach(function (s) {
-      var x = w * s[0], tw = w * s[1];
-      var g = ctx.createLinearGradient(x, 0, x + w * 0.55, h);
-      g.addColorStop(0, "rgba(255,255,255,0)");
-      g.addColorStop(0.4, s[2]); g.addColorStop(0.6, s[2]);
-      g.addColorStop(1, "rgba(255,255,255,0)");
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.moveTo(x, 0); ctx.lineTo(x + tw, 0);
-      ctx.lineTo(x + tw + w * 0.55, h); ctx.lineTo(x + w * 0.55, h);
-      ctx.closePath(); ctx.fill();
-    });
+    ctx.font = o.font;
+    var m = ctx.measureText(o.text);
+    var fsize = parseInt(o.font.match(/(\d+)px/)[1], 10);
+    var asc = m.actualBoundingBoxAscent || fsize * 0.76;
+    var desc = m.actualBoundingBoxDescent || fsize * 0.22;
+    var pad = Math.ceil(fsize * 0.4) + 20;
+    var tw = Math.ceil(m.width) + pad * 2, th = Math.ceil(asc + desc) + pad * 2;
+    var off = document.createElement("canvas");
+    off.width = Math.max(2, tw); off.height = Math.max(2, th);
+    var g = off.getContext("2d");
+    g.font = o.font; g.textAlign = "left"; g.textBaseline = "alphabetic";
+    o.paint(g, tw, th, pad, asc);
+    g.globalCompositeOperation = "destination-in";
+    g.fillStyle = "#000";
+    g.fillText(o.text, pad, pad + asc);
+    var dx = o.align === "center" ? o.x - tw / 2 : (o.align === "right" ? o.x - tw + pad : o.x - pad);
+    var dy = o.y - asc - pad;
+    if (o.outline) {
+      ctx.save();
+      ctx.font = o.font;
+      ctx.textAlign = o.align === "center" ? "center" : (o.align === "right" ? "right" : "left");
+      ctx.textBaseline = "alphabetic";
+      ctx.lineWidth = o.outline;
+      ctx.strokeStyle = o.outlineColor || "rgba(0,0,0,.55)";
+      ctx.lineJoin = "round";
+      ctx.strokeText(o.text, o.x, o.y);
+      ctx.restore();
+    }
+    if (o.glow) { ctx.shadowColor = o.glowColor || "rgba(255,255,255,.5)"; ctx.shadowBlur = o.glow; }
+    ctx.drawImage(off, dx, dy);
     ctx.restore();
+    return m.width;
+  }
+  function marblePaint(g, tw, th) {
+    var pat = g.createPattern(marbleTex(), "repeat");
+    g.fillStyle = pat; g.fillRect(0, 0, tw, th);
+    /* a soft top-light so the letters are not evenly lit */
+    var sh = g.createLinearGradient(0, 0, 0, th);
+    sh.addColorStop(0, "rgba(255,255,255,.55)");
+    sh.addColorStop(0.5, "rgba(255,255,255,0)");
+    sh.addColorStop(1, "rgba(120,128,142,.30)");
+    g.fillStyle = sh; g.fillRect(0, 0, tw, th);
+  }
+  function honeyPaint(g, tw, th) {
+    var pat = g.createPattern(honeyTex(), "repeat");
+    g.fillStyle = pat; g.fillRect(0, 0, tw, th);
+  }
 
-    /* Gold dust, deterministic so a re-render does not shimmer. */
-    var seed = 20260101;
-    function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
+  /* ----------------------------------------------------- backgrounds */
+  /* Dark marbled smoke, light streaks gathered into the top corners the
+     way the posts have them, and gold dust low down. Running the streaks
+     the whole height, as a first pass did, striped the whole poster. */
+  function paintGround(ctx, w, h, opt) {
+    opt = opt || {};
+    ctx.fillStyle = "#06070A";
+    ctx.fillRect(0, 0, w, h);
+
+    var rnd = prng(31337);
     ctx.save();
-    ctx.globalCompositeOperation = "lighter";
-    for (var i = 0; i < 420; i++) {
-      var px = rnd() * w, py = rnd() * h;
-      var near = 1 - Math.min(1, Math.abs(py - h * 0.72) / (h * 0.5));
-      var a = 0.05 + near * 0.33 * rnd();
-      ctx.fillStyle = "rgba(255,206,110," + a.toFixed(3) + ")";
-      ctx.beginPath(); ctx.arc(px, py, rnd() * 2.1 + 0.4, 0, Math.PI * 2); ctx.fill();
+    for (var i = 0; i < 22; i++) {
+      var x = rnd() * w, y = rnd() * h, r = h * (0.08 + rnd() * 0.20);
+      var g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, "rgba(22,24,31," + (0.22 + rnd() * 0.26).toFixed(2) + ")");
+      g.addColorStop(1, "rgba(22,24,31,0)");
+      ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2);
     }
     ctx.restore();
 
-    var vig = ctx.createRadialGradient(w / 2, h / 2, h * 0.28, w / 2, h / 2, h * 0.78);
+    if (!opt.noBloom) {
+      var bloom = ctx.createRadialGradient(w * 0.5, h * 0.70, 0, w * 0.5, h * 0.70, w * 0.85);
+      bloom.addColorStop(0, "rgba(150,88,14,.34)");
+      bloom.addColorStop(0.5, "rgba(80,46,6,.16)");
+      bloom.addColorStop(1, "rgba(6,7,10,0)");
+      ctx.fillStyle = bloom;
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    /* Light streaks: all on ONE diagonal, gathered at the two top
+       corners and gone before mid-height. Mirroring the right-hand group
+       pointed every streak at the top centre, which read as a funnel
+       rather than as raking light. */
+    paintStreaks(ctx, w, h, opt.streakRun || 0.44, opt.blue !== false);
+
+    /* gold dust, heaviest in the lower half */
+    var rd = prng(20260101);
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for (var j = 0; j < 520; j++) {
+      var px = rd() * w, py = rd() * h;
+      var near = Math.max(0, 1 - Math.abs(py - h * 0.78) / (h * 0.56));
+      var a = 0.04 + near * 0.40 * rd();
+      ctx.fillStyle = "rgba(255,206,110," + a.toFixed(3) + ")";
+      ctx.beginPath(); ctx.arc(px, py, rd() * 2.2 + 0.4, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+
+    var vig = ctx.createRadialGradient(w / 2, h / 2, h * 0.30, w / 2, h / 2, h * 0.80);
     vig.addColorStop(0, "rgba(0,0,0,0)");
-    vig.addColorStop(1, "rgba(0,0,0,.72)");
+    vig.addColorStop(1, "rgba(0,0,0,.70)");
     ctx.fillStyle = vig;
     ctx.fillRect(0, 0, w, h);
   }
 
-  /* The wordmark, drawn rather than placed: the brand's V with its
-     spark, then THRIVE over COMPANIES. */
-  function paintLockup(ctx, cx, top, scale) {
+  /* One run of raking light, used by both grounds so the two posters
+     are lit from the same place. `drop` is how far down the slant
+     travels over the height it is drawn across. */
+  function paintStreaks(ctx, w, h, runTo, withBlue) {
+    var drop = w * 0.40, runY = h * runTo;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    [[-0.08, 0.0075, "rgba(255,206,110,.42)"], [0.00, 0.0030, "rgba(255,236,175,.62)"],
+     [0.07, 0.0050, "rgba(255,190,80,.30)"],   [0.15, 0.0022, "rgba(255,226,150,.44)"],
+     [0.70, 0.0028, "rgba(255,232,165,.50)"],  [0.78, 0.0062, "rgba(255,206,110,.34)"],
+     [0.88, 0.0024, "rgba(255,236,175,.46)"]
+    ].forEach(function (b) {
+      var x = w * b[0], tw = w * b[1];
+      var g = ctx.createLinearGradient(x, -h * 0.08, x + drop, runY);
+      g.addColorStop(0, "rgba(255,255,255,0)");
+      g.addColorStop(0.12, b[2]); g.addColorStop(0.40, b[2]);
+      g.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(x, -h * 0.08); ctx.lineTo(x + tw, -h * 0.08);
+      ctx.lineTo(x + tw + drop, runY); ctx.lineTo(x + drop, runY);
+      ctx.closePath(); ctx.fill();
+    });
+    if (withBlue) {
+      /* a hairline of electric blue at each outer edge, no more */
+      [-0.10, 0.955].forEach(function (p) {
+        var x = w * p, tw = w * 0.0035;
+        var g = ctx.createLinearGradient(x, 0, x + drop, h);
+        g.addColorStop(0, "rgba(60,130,255,0)");
+        g.addColorStop(0.26, "rgba(74,150,255,.40)");
+        g.addColorStop(0.52, "rgba(74,150,255,.20)");
+        g.addColorStop(1, "rgba(60,130,255,0)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(x, 0); ctx.lineTo(x + tw, 0);
+        ctx.lineTo(x + tw + drop, h); ctx.lineTo(x + drop, h);
+        ctx.closePath(); ctx.fill();
+      });
+    }
+    ctx.restore();
+  }
+
+  /* The skyline behind an agent highlight: a sunset sky, a city in
+     silhouette with lit windows, and water taking the light back. Drawn
+     rather than photographed, so it carries the poster without pretending
+     to be the original plate. */
+  function paintSkyline(ctx, w, h) {
+    var horizon = h * 0.58;
+    var sky = ctx.createLinearGradient(0, 0, 0, horizon);
+    sky.addColorStop(0, "#070B14");
+    sky.addColorStop(0.42, "#1B2236");
+    sky.addColorStop(0.72, "#6E4A28");
+    sky.addColorStop(0.9, "#D1821F");
+    sky.addColorStop(1, "#FFC25C");
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, w, horizon);
+
+    var rnd = prng(515);
+    ctx.save();
+    for (var i = 0; i < 26; i++) {
+      var cx2 = rnd() * w, cy2 = rnd() * horizon * 0.86, rw = w * (0.10 + rnd() * 0.26), rh = rw * (0.16 + rnd() * 0.18);
+      var warm = cy2 > horizon * 0.5;
+      var g = ctx.createRadialGradient(cx2, cy2, 0, cx2, cy2, rw);
+      g.addColorStop(0, warm ? "rgba(255,170,70,.34)" : "rgba(120,140,185,.22)");
+      g.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.save(); ctx.translate(cx2, cy2); ctx.scale(1, rh / rw); ctx.translate(-cx2, -cy2);
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx2, cy2, rw, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+
+    /* buildings, far bank then near bank */
+    function bank(baseY, maxH, shade, winAlpha, step) {
+      var x = -20, rb = prng(Math.round(maxH * 7 + 13));
+      while (x < w + 20) {
+        var bw = step * (0.55 + rb() * 1.1);
+        var bh = maxH * (0.30 + rb() * 0.70);
+        var bx = x, by = baseY - bh;
+        ctx.fillStyle = shade;
+        ctx.fillRect(bx, by, bw, bh);
+        /* a spire now and then */
+        if (rb() > 0.82) {
+          ctx.beginPath();
+          ctx.moveTo(bx + bw / 2, by - bh * 0.22);
+          ctx.lineTo(bx + bw * 0.62, by); ctx.lineTo(bx + bw * 0.38, by);
+          ctx.closePath(); ctx.fill();
+        }
+        var cols = Math.max(1, Math.floor(bw / 13));
+        var rows = Math.max(1, Math.floor(bh / 17));
+        for (var c = 0; c < cols; c++) {
+          for (var r = 0; r < rows; r++) {
+            if (rb() > 0.55) continue;
+            ctx.fillStyle = "rgba(255," + (175 + Math.round(rb() * 60)) + ",110," + (winAlpha * (0.4 + rb() * 0.6)).toFixed(2) + ")";
+            ctx.fillRect(bx + 5 + c * 13, by + 7 + r * 17, 5, 7);
+          }
+        }
+        x += bw + step * 0.18;
+      }
+    }
+    bank(horizon, h * 0.145, "#0F1420", 0.40, 44);
+    bank(horizon, h * 0.215, "#070A12", 0.70, 60);
+    /* haze pooling along the rooftops */
+    var haze = ctx.createLinearGradient(0, horizon - h * 0.24, 0, horizon);
+    haze.addColorStop(0, "rgba(206,126,40,0)");
+    haze.addColorStop(0.55, "rgba(206,126,40,.26)");
+    haze.addColorStop(1, "rgba(226,146,50,.40)");
+    ctx.fillStyle = haze; ctx.fillRect(0, horizon - h * 0.24, w, h * 0.24);
+
+    /* water */
+    var wat = ctx.createLinearGradient(0, horizon, 0, h);
+    wat.addColorStop(0, "#1A1308");
+    wat.addColorStop(0.35, "#0C0A07");
+    wat.addColorStop(1, "#05060A");
+    ctx.fillStyle = wat; ctx.fillRect(0, horizon, w, h - horizon);
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    var rw2 = prng(99);
+    for (var k = 0; k < 150; k++) {
+      var rx = rw2() * w, ry = horizon + rw2() * (h - horizon) * 0.62;
+      var fall = 1 - (ry - horizon) / ((h - horizon) * 0.62);
+      ctx.fillStyle = "rgba(255,176,70," + (0.05 + fall * 0.28 * rw2()).toFixed(3) + ")";
+      ctx.fillRect(rx, ry, 2 + rw2() * 44, 1.6);
+    }
+    ctx.restore();
+    var dim = ctx.createLinearGradient(0, horizon - h * 0.10, 0, h);
+    dim.addColorStop(0, "rgba(5,6,10,0)");
+    dim.addColorStop(0.45, "rgba(5,6,10,.70)");
+    dim.addColorStop(1, "rgba(5,6,10,.95)");
+    ctx.fillStyle = dim; ctx.fillRect(0, horizon - h * 0.10, w, h - horizon + h * 0.10);
+  }
+
+  /* ---------------------------------------------------------- pieces */
+  function paintLockup(ctx, cx, top, scale, align) {
     scale = scale || 1;
     ctx.save();
     ctx.translate(cx, top);
     ctx.scale(scale, scale);
 
-    var vW = 66, vH = 78, gap = 16;
-    ctx.font = "78px 'Anton', sans-serif";
+    var vW = 72, vH = 80, gap = 18;
+    ctx.font = "80px 'Anton', sans-serif";
     ctx.textBaseline = "alphabetic";
     var wordW = ctx.measureText("THRIVE").width;
     var total = vW + gap + wordW;
-    var x0 = -total / 2;
+    var x0 = align === "right" ? -total : -total / 2;
 
     ctx.fillStyle = "#FFFFFF";
+    /* the V, with the inner swoosh the mark carries */
     ctx.beginPath();
     ctx.moveTo(x0, 0);
-    ctx.lineTo(x0 + 17, 0);
-    ctx.lineTo(x0 + vW * 0.54, vH * 0.74);
-    ctx.lineTo(x0 + vW * 0.86, 0);
+    ctx.lineTo(x0 + 19, 0);
+    ctx.lineTo(x0 + vW * 0.53, vH * 0.72);
+    ctx.lineTo(x0 + vW * 0.84, 0);
     ctx.lineTo(x0 + vW, 0);
-    ctx.lineTo(x0 + vW * 0.60, vH);
-    ctx.lineTo(x0 + vW * 0.44, vH);
+    ctx.lineTo(x0 + vW * 0.59, vH);
+    ctx.lineTo(x0 + vW * 0.43, vH);
     ctx.closePath();
     ctx.fill();
-    /* the spark */
+    ctx.save();
+    ctx.globalAlpha = 0.9;
     ctx.beginPath();
-    var sx = x0 + vW * 0.80, sy = 9, s = 11;
-    ctx.moveTo(sx, sy - s); ctx.quadraticCurveTo(sx + s * 0.22, sy - s * 0.22, sx + s, sy);
-    ctx.quadraticCurveTo(sx + s * 0.22, sy + s * 0.22, sx, sy + s);
-    ctx.quadraticCurveTo(sx - s * 0.22, sy + s * 0.22, sx - s, sy);
-    ctx.quadraticCurveTo(sx - s * 0.22, sy - s * 0.22, sx, sy - s);
-    ctx.fill();
+    ctx.moveTo(x0 + vW * 0.60, vH * 0.10);
+    ctx.quadraticCurveTo(x0 + vW * 0.46, vH * 0.52, x0 + vW * 0.52, vH * 0.94);
+    ctx.lineTo(x0 + vW * 0.62, vH * 0.94);
+    ctx.quadraticCurveTo(x0 + vW * 0.56, vH * 0.52, x0 + vW * 0.70, vH * 0.10);
+    ctx.closePath();
+    ctx.fillStyle = "#06070A"; ctx.fill();
+    ctx.restore();
+    /* the four-point spark */
+    var sx = x0 + vW * 0.90, sy = 8, s = 13;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy - s);
+    ctx.quadraticCurveTo(sx + s * 0.18, sy - s * 0.18, sx + s, sy);
+    ctx.quadraticCurveTo(sx + s * 0.18, sy + s * 0.18, sx, sy + s);
+    ctx.quadraticCurveTo(sx - s * 0.18, sy + s * 0.18, sx - s, sy);
+    ctx.quadraticCurveTo(sx - s * 0.18, sy - s * 0.18, sx, sy - s);
+    ctx.fillStyle = "#FFFFFF"; ctx.fill();
 
     ctx.textAlign = "left";
     ctx.fillStyle = "#FFFFFF";
-    ctx.font = "78px 'Anton', sans-serif";
+    ctx.font = "80px 'Anton', sans-serif";
     ctx.fillText("THRIVE", x0 + vW + gap, vH * 0.80);
-    ctx.font = "600 27px 'Archivo', sans-serif";
-    ctx.letterSpacing = "7px";
-    ctx.fillText("COMPANIES", x0 + vW + gap + 3, vH * 0.80 + 31);
+    ctx.font = "600 28px 'Archivo', sans-serif";
+    ctx.letterSpacing = "8px";
+    var sub = ctx.measureText("COMPANIES").width;
+    ctx.fillText("COMPANIES", x0 + vW + gap + (wordW - sub) / 2 + 4, vH * 0.80 + 33);
     ctx.letterSpacing = "0px";
     ctx.restore();
-    return top + 78 * scale + 34 * scale;
+    return { next: top + (vH * 0.80 + 33) * scale + 30 * scale,
+             cx: cx + (align === "right" ? -total / 2 : 0) * scale,
+             w: total * scale };
   }
 
-  /* A gold rule with a label in the middle — the "AGENT HIGHLIGHT" and
-     "TOP 3 THIS WEEK" bar on both templates. */
-  function paintRuleLabel(ctx, cx, y, text, size, color) {
+  /* Gold eyebrow between two tapered rules with a diamond at the inner
+     end — the "AGENT HIGHLIGHT" and "TOP 3 THIS WEEK" bar. */
+  function paintRuleLabel(ctx, cx, y, text, size, color, arm) {
     ctx.save();
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.font = "700 " + size + "px 'Archivo', sans-serif";
     ctx.letterSpacing = Math.round(size * 0.30) + "px";
     var tw = ctx.measureText(text).width;
-    ctx.fillStyle = color || "#F3C049";
+    var grad = ctx.createLinearGradient(cx - tw / 2, y - size, cx + tw / 2, y + size);
+    grad.addColorStop(0, "#E8A62C"); grad.addColorStop(0.5, "#FFE49A"); grad.addColorStop(1, "#E8A62C");
+    ctx.fillStyle = color || grad;
+    ctx.shadowColor = "rgba(240,180,41,.5)"; ctx.shadowBlur = 16;
     ctx.fillText(text, cx + Math.round(size * 0.15), y);
+    ctx.shadowBlur = 0;
     ctx.letterSpacing = "0px";
-    var armFrom = tw / 2 + 26, armTo = armFrom + 62;
-    ctx.strokeStyle = color || "#F3C049";
-    ctx.lineWidth = 3; ctx.lineCap = "round";
+
+    var from = tw / 2 + 24, to = from + (arm || 74);
     [-1, 1].forEach(function (d) {
+      var g = ctx.createLinearGradient(cx + d * from, 0, cx + d * to, 0);
+      g.addColorStop(0, "#F3C049"); g.addColorStop(1, "rgba(243,192,73,0)");
+      ctx.fillStyle = g;
       ctx.beginPath();
-      ctx.moveTo(cx + d * armFrom, y); ctx.lineTo(cx + d * armTo, y);
-      ctx.stroke();
+      ctx.moveTo(cx + d * from, y - 1.8);
+      ctx.lineTo(cx + d * to, y - 0.7);
+      ctx.lineTo(cx + d * to, y + 0.7);
+      ctx.lineTo(cx + d * from, y + 1.8);
+      ctx.closePath(); ctx.fill();
     });
     ctx.restore();
   }
 
-  /* A portrait in a glowing gold ring. With no photo it falls back to the
-     initial, so an agent who has not had a headshot uploaded yet still
-     produces a usable graphic. */
-  function paintPortrait(ctx, cx, cy, r, img, name, ringW, glow) {
+  /* Four-point lens flare, as sits on the winner's ring. */
+  function paintFlare(ctx, x, y, r, color) {
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    var g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, color || "rgba(255,245,210,.95)");
+    g.addColorStop(0.25, "rgba(255,215,120,.45)");
+    g.addColorStop(1, "rgba(255,200,90,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = color || "rgba(255,248,222,.9)";
+    [[r * 2.6, r * 0.14], [r * 0.14, r * 1.5]].forEach(function (d) {
+      ctx.beginPath();
+      ctx.moveTo(x - d[0], y); ctx.lineTo(x, y - d[1]);
+      ctx.lineTo(x + d[0], y); ctx.lineTo(x, y + d[1]);
+      ctx.closePath(); ctx.fill();
+    });
+    ctx.restore();
+  }
+
+  function paintPortrait(ctx, cx, cy, r, img, name, place, flares) {
+    var m = METAL[place] || METAL[1];
     ctx.save();
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.closePath();
     ctx.save(); ctx.clip();
@@ -444,223 +737,373 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
       ctx.drawImage(img, cx - dw / 2, cy - dh / 2, dw, dh);
     } else {
       var g = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
-      g.addColorStop(0, "#1B2230"); g.addColorStop(1, "#0C1018");
+      g.addColorStop(0, "#1A2130"); g.addColorStop(1, "#0A0E16");
       ctx.fillStyle = g; ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
-      ctx.fillStyle = "rgba(240,180,41,.75)";
+      ctx.fillStyle = "rgba(240,180,41,.7)";
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.font = Math.round(r * 1.05) + "px 'Anton', sans-serif";
       ctx.fillText(String(name || "?").trim().charAt(0).toUpperCase(), cx, cy + r * 0.04);
     }
     ctx.restore();
-    ctx.shadowColor = "rgba(245,186,60,.85)";
-    ctx.shadowBlur = glow == null ? 30 : glow;
-    ctx.strokeStyle = goldGrad(ctx, cy - r, cy + r);
-    ctx.lineWidth = ringW || 7;
+
+    /* outer halo, then the metal ring, then a bright inner hairline */
+    ctx.shadowColor = m.glow; ctx.shadowBlur = r * 0.42;
+    ctx.strokeStyle = metalGrad(ctx, m, cy - r, cy + r);
+    ctx.lineWidth = Math.max(5, r * 0.065);
     ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.beginPath(); ctx.arc(cx, cy, r - Math.max(5, r * 0.065) * 0.9, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255,255,255,.35)"; ctx.lineWidth = 1.4; ctx.stroke();
     ctx.restore();
+
+    if (flares) {
+      paintFlare(ctx, cx - r * 0.99, cy - r * 0.22, r * 0.17, "rgba(255,248,222,.9)");
+      paintFlare(ctx, cx + r * 0.99, cy + r * 0.14, r * 0.14, "rgba(255,248,222,.85)");
+    }
   }
 
   function paintCrown(ctx, cx, y, w) {
-    var h = w * 0.72;
+    var h = w * 0.74;
     ctx.save();
-    ctx.shadowColor = "rgba(245,186,60,.8)"; ctx.shadowBlur = 22;
+    ctx.shadowColor = "rgba(250,196,66,.85)"; ctx.shadowBlur = 26;
     ctx.fillStyle = goldGrad(ctx, y, y + h);
     ctx.beginPath();
     ctx.moveTo(cx - w / 2, y + h);
-    ctx.lineTo(cx - w / 2, y + h * 0.30);
-    ctx.lineTo(cx - w * 0.26, y + h * 0.62);
-    ctx.lineTo(cx, y + h * 0.04);
-    ctx.lineTo(cx + w * 0.26, y + h * 0.62);
-    ctx.lineTo(cx + w / 2, y + h * 0.30);
+    ctx.lineTo(cx - w * 0.46, y + h * 0.26);
+    ctx.lineTo(cx - w * 0.23, y + h * 0.62);
+    ctx.lineTo(cx, y + h * 0.02);
+    ctx.lineTo(cx + w * 0.23, y + h * 0.62);
+    ctx.lineTo(cx + w * 0.46, y + h * 0.26);
     ctx.lineTo(cx + w / 2, y + h);
     ctx.closePath();
     ctx.fill();
     ctx.shadowBlur = 0;
-    ctx.fillStyle = "#FFF1C4";
-    [[cx - w / 2, y + h * 0.30], [cx, y + h * 0.04], [cx + w / 2, y + h * 0.30]].forEach(function (p) {
-      ctx.beginPath(); ctx.arc(p[0], p[1], w * 0.072, 0, Math.PI * 2); ctx.fill();
+    /* band across the base */
+    ctx.fillStyle = "#C98A14";
+    rr(ctx, cx - w / 2, y + h * 0.80, w, h * 0.22, h * 0.07); ctx.fill();
+    ctx.fillStyle = goldGrad(ctx, y + h * 0.80, y + h * 1.02);
+    rr(ctx, cx - w / 2, y + h * 0.78, w, h * 0.18, h * 0.06); ctx.fill();
+    /* the three pearls */
+    ctx.fillStyle = "#FFF6D8";
+    [[cx - w * 0.46, y + h * 0.26], [cx, y + h * 0.02], [cx + w * 0.46, y + h * 0.26]].forEach(function (p) {
+      ctx.beginPath(); ctx.arc(p[0], p[1], w * 0.070, 0, Math.PI * 2); ctx.fill();
     });
+    /* one jewel on the band */
+    ctx.fillStyle = "#B8140F";
+    ctx.beginPath(); ctx.arc(cx, y + h * 0.88, w * 0.055, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
 
+  /* A struck medal with two ribbon tails, as on second and third. */
   function paintMedal(ctx, cx, cy, r, place) {
-    var tone = place === 2 ? ["#F2F5FA", "#9AA6B6", "#D7DEE8"] : ["#F7C98B", "#B4702A", "#E9A862"];
+    var m = METAL[place] || METAL[2];
     ctx.save();
+    ctx.fillStyle = place === 2 ? "#8E99A8" : "#A26227";
+    [-1, 1].forEach(function (d) {
+      ctx.beginPath();
+      ctx.moveTo(cx + d * r * 0.34, cy + r * 0.30);
+      ctx.lineTo(cx + d * r * 1.18, cy + r * 1.20);
+      ctx.lineTo(cx + d * r * 0.72, cy + r * 1.28);
+      ctx.lineTo(cx + d * r * 0.30, cy + r * 0.74);
+      ctx.closePath(); ctx.fill();
+    });
+    ctx.shadowColor = "rgba(0,0,0,.5)"; ctx.shadowBlur = 8;
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    var g = ctx.createLinearGradient(cx, cy - r, cx, cy + r);
-    g.addColorStop(0, tone[0]); g.addColorStop(0.55, tone[2]); g.addColorStop(1, tone[1]);
-    ctx.fillStyle = g; ctx.fill();
-    ctx.strokeStyle = "rgba(0,0,0,.35)"; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = "#1A1206";
+    ctx.fillStyle = metalGrad(ctx, m, cy - r, cy + r);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.beginPath(); ctx.arc(cx, cy, r * 0.80, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(0,0,0,.26)"; ctx.lineWidth = Math.max(1.2, r * 0.07); ctx.stroke();
+    ctx.fillStyle = place === 2 ? "#39414E" : "#4A2C0C";
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.font = Math.round(r * 1.15) + "px 'Anton', sans-serif";
+    ctx.font = Math.round(r * 1.08) + "px 'Anton', sans-serif";
     ctx.fillText(String(place), cx, cy + r * 0.06);
     ctx.restore();
   }
 
-  /* ------------------------------------------------- agent highlight */
+  /* -------------------------------------------------- agent highlight */
   function drawHighlight(ctx, h, data, imgs) {
     var cx = W / 2;
-    paintGround(ctx, W, h);
-    var y = paintLockup(ctx, cx, 86, 0.92);
-    paintRuleLabel(ctx, cx, y + 4, "AGENT HIGHLIGHT", 27);
-
-    paintPortrait(ctx, cx, 520, 232, imgs[0], data.name, 10, 46);
-
-    /* the name */
+    paintSkyline(ctx, W, h);
     ctx.save();
-    ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-    var nm = String(data.name || "").toUpperCase() || "AGENT";
-    fitFont(ctx, nm, "'Anton', sans-serif", 182, 56, W - 120);
-    ctx.shadowColor = "rgba(245,186,60,.9)"; ctx.shadowBlur = 42;
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fillText(nm, cx, 905);
+    ctx.globalCompositeOperation = "source-over";
+    paintGroundOverlay(ctx, W, h);
     ctx.restore();
 
+    /* the agent: a cut-out stands in the scene, a headshot gets a ring */
+    var img = imgs[0];
+    if (img && data.cutout) {
+      var ar = img.width / img.height;
+      var dh = h * 0.80, dw = dh * ar;
+      if (dw > W * 0.86) { dw = W * 0.86; dh = dw / ar; }
+      ctx.save();
+      ctx.shadowColor = "rgba(255,170,60,.55)"; ctx.shadowBlur = 42;
+      ctx.drawImage(img, cx - dw * 0.56, h * 0.09, dw, dh);
+      ctx.restore();
+    } else {
+      paintPortrait(ctx, cx, h * 0.385, W * 0.215, img, data.name, 1, true);
+    }
+
+    /* the wordmark sits top right on this one */
+    var lk = paintLockup(ctx, W - 96, 62, 0.74, "right");
+    paintRuleLabel(ctx, lk.cx, lk.next + 14, "AGENT HIGHLIGHT", 24, null, 38);
+
+    /* the name, cut out of marble */
+    var nm = String(data.name || "").toUpperCase() || "AGENT";
+    ctx.save();
+    ctx.textAlign = "center";
+    var ns = fitFont(ctx, nm, "'Anton', sans-serif", 190, 56, W - 110);
+    ctx.restore();
+    texText(ctx, {
+      text: nm, x: cx, y: h * 0.655, align: "center",
+      font: ns + "px 'Anton', sans-serif", paint: marblePaint,
+      glow: 46, glowColor: "rgba(255,214,120,.75)",
+      outline: Math.max(3, ns * 0.022), outlineColor: "rgba(40,26,4,.55)"
+    });
+
     /* the figure box */
-    var bx = 92, bw = W - bx * 2, by = 928, bh = 262;
+    var bx = 92, bw = W - bx * 2, by = h * 0.688, bh = h * 0.194;
     ctx.save();
     rr(ctx, bx, by, bw, bh, 26);
-    ctx.fillStyle = "rgba(6,8,13,.80)";
+    ctx.fillStyle = "rgba(5,7,11,.84)";
     ctx.fill();
     ctx.strokeStyle = goldGrad(ctx, by, by + bh);
     ctx.lineWidth = 5;
-    ctx.shadowColor = "rgba(245,186,60,.55)"; ctx.shadowBlur = 26;
+    ctx.shadowColor = "rgba(250,196,66,.6)"; ctx.shadowBlur = 24;
     ctx.stroke();
     ctx.restore();
 
     ctx.save();
     ctx.textAlign = "center";
     ctx.fillStyle = "#FFFFFF";
-    fitFont(ctx, data.period || "", "'Archivo', sans-serif", 40, 20, bw - 70, "700");
-    ctx.fillText(data.period || "", cx, by + 60);
+    fitFont(ctx, data.period || "", "'Archivo', sans-serif", 40, 20, bw - 80, "700");
+    ctx.fillText(data.period || "", cx, by + bh * 0.235);
+    ctx.restore();
 
     var amt = money(data.amount);
-    fitFont(ctx, amt, "'Anton', sans-serif", 128, 44, bw - 64);
-    glowText(ctx, amt, cx, by + 186, goldGrad(ctx, by + 80, by + 196), 34);
+    ctx.save(); ctx.textAlign = "center";
+    var as = fitFont(ctx, amt, "'Anton', sans-serif", 132, 44, bw - 70);
+    ctx.restore();
+    texText(ctx, {
+      text: amt, x: cx, y: by + bh * 0.735, align: "center",
+      font: as + "px 'Anton', sans-serif", paint: honeyPaint,
+      glow: 40, glowColor: "rgba(250,196,66,.9)",
+      outline: Math.max(2.5, as * 0.02), outlineColor: "rgba(60,36,2,.6)"
+    });
 
+    ctx.save();
+    ctx.textAlign = "center";
     ctx.fillStyle = "#FFFFFF";
     ctx.font = "700 36px 'Archivo', sans-serif";
     ctx.letterSpacing = "3px";
-    ctx.fillText(String(data.unit || "").toUpperCase(), cx, by + 238);
+    ctx.fillText(String(data.unit || "").toUpperCase(), cx, by + bh * 0.925);
     ctx.letterSpacing = "0px";
     ctx.restore();
 
-    /* the sign-off */
     if (data.kicker) {
+      var ky = by + bh + h * 0.062;
       ctx.save();
       ctx.textAlign = "center";
-      fitFont(ctx, data.kicker, "'Kaushan Script', cursive", 76, 30, W - 180);
-      ctx.shadowColor = "rgba(0,0,0,.6)"; ctx.shadowBlur = 14;
+      var ks = fitFont(ctx, data.kicker, "'Kaushan Script', cursive", 78, 30, W - 200);
+      ctx.shadowColor = "rgba(0,0,0,.7)"; ctx.shadowBlur = 16;
       ctx.fillStyle = "#FFFFFF";
-      ctx.fillText(data.kicker, cx, by + bh + 92);
+      ctx.fillText(data.kicker, cx, ky);
       ctx.restore();
       ctx.save();
-      ctx.strokeStyle = goldGrad(ctx, by + bh + 100, by + bh + 120);
-      ctx.lineWidth = 7; ctx.lineCap = "round";
+      var sw = ctx.createLinearGradient(cx - 150, 0, cx + 150, 0);
+      sw.addColorStop(0, "rgba(243,192,73,0)");
+      sw.addColorStop(0.3, "#F7C542"); sw.addColorStop(0.75, "#FFE08A");
+      sw.addColorStop(1, "rgba(243,192,73,0)");
+      ctx.strokeStyle = sw; ctx.lineWidth = 8; ctx.lineCap = "round";
       ctx.beginPath();
-      ctx.moveTo(cx - 118, by + bh + 116);
-      ctx.quadraticCurveTo(cx, by + bh + 132, cx + 132, by + bh + 108);
+      ctx.moveTo(cx - 148, ky + 26);
+      ctx.quadraticCurveTo(cx - 10, ky + 44, cx + 158, ky + 16);
       ctx.stroke();
       ctx.restore();
     }
   }
 
+  /* The streaks and dust alone, laid over the skyline. */
+  function paintGroundOverlay(ctx, w, h) {
+    paintStreaks(ctx, w, h, 0.72, true);
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    var rd = prng(4242);
+    for (var j = 0; j < 460; j++) {
+      var px = rd() * w, py = rd() * h;
+      var near = Math.max(0, 1 - Math.abs(py - h * 0.80) / (h * 0.46));
+      var a = 0.03 + near * 0.45 * rd();
+      ctx.fillStyle = "rgba(255,206,110," + a.toFixed(3) + ")";
+      ctx.beginPath(); ctx.arc(px, py, rd() * 2.2 + 0.4, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+    var vig = ctx.createRadialGradient(w / 2, h * 0.46, h * 0.30, w / 2, h * 0.5, h * 0.82);
+    vig.addColorStop(0, "rgba(0,0,0,0)");
+    vig.addColorStop(1, "rgba(0,0,0,.62)");
+    ctx.fillStyle = vig; ctx.fillRect(0, 0, w, h);
+  }
+
   /* --------------------------------------------------- leaderboards */
-  /* One competitor: portrait, name, money, policies. Shared by the
-     podium and the two runner-up medallions on the monthly board, so a
-     fourth place is drawn by the same code as a first. */
   function paintCompetitor(ctx, c) {
-    paintPortrait(ctx, c.cx, c.cy, c.r, c.img, c.name, c.r > 120 ? 9 : 6, c.r > 120 ? 40 : 24);
-    if (c.place === 1) paintCrown(ctx, c.cx, c.cy - c.r - c.r * 0.52, c.r * 0.74);
-    else paintMedal(ctx, c.cx - c.r * 0.80, c.cy - c.r * 0.80, c.r * 0.26, c.place);
+    paintPortrait(ctx, c.cx, c.cy, c.r, c.img, c.name, c.place, c.place === 1);
+    if (c.place === 1) paintCrown(ctx, c.cx, c.cy - c.r - c.r * 0.56, c.r * 0.72);
+    else paintMedal(ctx, c.cx - c.r * 0.78, c.cy - c.r * 0.78, c.r * 0.25, c.place);
 
     var ty = c.cy + c.r + c.nameGap;
     ctx.save();
     ctx.textAlign = "center";
     ctx.fillStyle = "#FFFFFF";
     fitFont(ctx, c.name, "'Archivo', sans-serif", c.nameSize, 15, c.slotW, "700");
+    ctx.shadowColor = "rgba(0,0,0,.7)"; ctx.shadowBlur = 10;
     ctx.fillText(c.name, c.cx, ty);
+    ctx.shadowBlur = 0;
 
     var amt = money(c.amount);
     fitFont(ctx, amt, "'Anton', sans-serif", c.moneySize, 22, c.slotW);
-    glowText(ctx, amt, c.cx, ty + c.moneySize * 0.98, "#FFFFFF", 18, "rgba(255,255,255,.35)");
+    ctx.shadowColor = "rgba(0,0,0,.75)"; ctx.shadowBlur = 14;
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillText(amt, c.cx, ty + c.moneySize * 0.98);
+    ctx.shadowBlur = 0;
 
     if (c.policies !== "" && c.policies != null) {
-      ctx.fillStyle = "rgba(230,238,248,.74)";
+      ctx.fillStyle = "rgba(226,234,245,.78)";
       ctx.font = "500 " + Math.round(c.nameSize * 0.84) + "px 'Archivo', sans-serif";
       ctx.fillText(num(c.policies) + (num(c.policies) === 1 ? " policy" : " policies"), c.cx, ty + c.moneySize * 0.98 + c.nameSize * 1.18);
     }
     ctx.restore();
   }
 
-  function paintPodium(ctx, baseY) {
-    var blocks = [
-      { x: 56,  w: 316, hh: 186, label: "2ND", tone: ["#2A2F38", "#11141A"], ink: "#D9E0EA" },
-      { x: 382, w: 316, hh: 270, label: "1ST", tone: ["#4A3310", "#1A1206"], ink: "#F7C542" },
-      { x: 708, w: 316, hh: 154, label: "3RD", tone: ["#3A2415", "#150D07"], ink: "#E09A4C" }
+  /* Marble steps with gold veining, a lit top edge, and the ordinal set
+     smaller than its numeral the way the board has it. */
+  function podiumBlocks() {
+    return [
+      { x: 56,  w: 316, hh: 186, n: "2", suf: "ND", veins: "rgba(188,200,216,.45)",
+        tone: ["#2E343E", "#0E1116"], ink: ["#FFFFFF", "#C7D1DE", "#8B97A6"] },
+      { x: 382, w: 316, hh: 270, n: "1", suf: "ST", veins: "rgba(246,196,90,.45)",
+        tone: ["#2A2010", "#0C0904"], ink: ["#FFF0C0", "#F7C542", "#C98A14"] },
+      { x: 708, w: 316, hh: 154, n: "3", suf: "RD", veins: "rgba(226,150,78,.42)",
+        tone: ["#2C1C10", "#0E0905"], ink: ["#FFD6A8", "#E79A4E", "#A85C17"] }
     ];
-    blocks.forEach(function (b) {
-      var top = baseY - b.hh;
-      var g = ctx.createLinearGradient(b.x, top, b.x + b.w, baseY);
-      g.addColorStop(0, b.tone[0]); g.addColorStop(1, b.tone[1]);
-      ctx.save();
-      rr(ctx, b.x, top, b.w, b.hh, 10);
-      ctx.fillStyle = g; ctx.fill();
-      ctx.strokeStyle = "rgba(245,186,60,.30)"; ctx.lineWidth = 2; ctx.stroke();
-      ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.font = Math.round(b.hh * 0.40) + "px 'Anton', sans-serif";
-      ctx.fillStyle = b.ink;
-      ctx.fillText(b.label, b.x + b.w / 2, top + b.hh * 0.52);
-      ctx.restore();
-    });
-    /* The floor the podium stands on: a pool of light fading out in
-       every direction. A filled band left a hard lid across the art. */
+  }
+  function paintStep(ctx, b, baseY) {
+    var top = baseY - b.hh;
+    ctx.save();
+    rr(ctx, b.x, top, b.w, b.hh, 10);
+    ctx.save(); ctx.clip();
+    var g = ctx.createLinearGradient(b.x, top, b.x + b.w, baseY);
+    g.addColorStop(0, b.tone[0]); g.addColorStop(1, b.tone[1]);
+    ctx.fillStyle = g; ctx.fillRect(b.x, top, b.w, b.hh);
+    /* veining */
+    var rnd = prng(Math.round(b.x + b.hh));
+    ctx.lineCap = "round";
+    for (var i = 0; i < 26; i++) {
+      var x = b.x + rnd() * b.w, y = top + rnd() * b.hh, a = (rnd() - 0.5) * 2.4;
+      ctx.strokeStyle = b.veins;
+      ctx.globalAlpha = 0.25 + rnd() * 0.55;
+      ctx.lineWidth = 0.6 + rnd() * 1.8;
+      ctx.beginPath(); ctx.moveTo(x, y);
+      for (var s = 0; s < 4; s++) {
+        a += (rnd() - 0.5) * 1.1;
+        x += Math.cos(a) * (10 + rnd() * 26); y += Math.sin(a) * (10 + rnd() * 26);
+        ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    /* a lit front face at the top */
+    var lip = ctx.createLinearGradient(0, top, 0, top + 16);
+    lip.addColorStop(0, "rgba(255,236,190,.55)");
+    lip.addColorStop(1, "rgba(255,236,190,0)");
+    ctx.fillStyle = lip; ctx.fillRect(b.x, top, b.w, 16);
+    ctx.restore();
+    ctx.strokeStyle = "rgba(246,196,90,.38)"; ctx.lineWidth = 2; ctx.stroke();
+
+    /* the label */
+    ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    var big = Math.round(b.hh * 0.46), small = Math.round(big * 0.52);
+    ctx.font = big + "px 'Anton', sans-serif";
+    var wn = ctx.measureText(b.n).width;
+    ctx.font = small + "px 'Anton', sans-serif";
+    var ws = ctx.measureText(b.suf).width;
+    var startX = b.x + b.w / 2 - (wn + ws) / 2;
+    var baseLine = top + b.hh * 0.50 + big * 0.36;
+    var ig = ctx.createLinearGradient(0, baseLine - big, 0, baseLine);
+    ig.addColorStop(0, b.ink[0]); ig.addColorStop(0.55, b.ink[1]); ig.addColorStop(1, b.ink[2]);
+    ctx.fillStyle = ig;
+    ctx.textAlign = "left";
+    ctx.font = big + "px 'Anton', sans-serif";
+    ctx.fillText(b.n, startX, baseLine);
+    ctx.font = small + "px 'Anton', sans-serif";
+    ctx.fillText(b.suf, startX + wn, baseLine - big * 0.40);
+    ctx.restore();
+  }
+
+  function paintPodium(ctx, baseY, h) {
+    var blocks = podiumBlocks();
+
+    /* the reflection first, under the floor line */
+    ctx.save();
+    ctx.globalAlpha = 0.17;
+    ctx.translate(0, baseY * 2);
+    ctx.scale(1, -1);
+    blocks.forEach(function (b) { paintStep(ctx, b, baseY); });
+    ctx.restore();
+    ctx.save();
+    var fade = ctx.createLinearGradient(0, baseY, 0, baseY + 300);
+    fade.addColorStop(0, "rgba(6,7,10,.30)");
+    fade.addColorStop(0.32, "rgba(6,7,10,.88)");
+    fade.addColorStop(0.6, "rgba(6,7,10,1)");
+    ctx.fillStyle = fade;
+    ctx.fillRect(0, baseY, W, Math.max(300, h - baseY));
+    ctx.restore();
+
+    blocks.forEach(function (b) { paintStep(ctx, b, baseY); });
+
+    /* the pool of light the steps stand in */
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
     ctx.translate(W / 2, baseY);
-    ctx.scale(1, 0.26);
-    var fg = ctx.createRadialGradient(0, 0, 0, 0, 0, W * 0.62);
-    fg.addColorStop(0, "rgba(245,186,60,.40)");
+    ctx.scale(1, 0.22);
+    var fg = ctx.createRadialGradient(0, 0, 0, 0, 0, W * 0.60);
+    fg.addColorStop(0, "rgba(250,196,66,.44)");
     fg.addColorStop(0.45, "rgba(214,140,30,.16)");
     fg.addColorStop(1, "rgba(245,186,60,0)");
     ctx.fillStyle = fg;
-    ctx.beginPath(); ctx.arc(0, 0, W * 0.62, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, W * 0.60, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
     ctx.save();
-    var ln = ctx.createLinearGradient(80, 0, W - 80, 0);
+    var ln = ctx.createLinearGradient(60, 0, W - 60, 0);
     ln.addColorStop(0, "rgba(255,214,120,0)");
-    ln.addColorStop(0.5, "rgba(255,226,150,.55)");
+    ln.addColorStop(0.5, "rgba(255,236,180,.8)");
     ln.addColorStop(1, "rgba(255,214,120,0)");
     ctx.fillStyle = ln;
-    ctx.fillRect(80, baseY - 1, W - 160, 2);
+    ctx.fillRect(60, baseY - 1.5, W - 120, 3);
     ctx.restore();
   }
 
   function drawLeaderboard(ctx, h, data, imgs, mode) {
     var cx = W / 2;
-    paintGround(ctx, W, h);
-    var y = paintLockup(ctx, cx, 92, 0.86);
+    paintGround(ctx, W, h, { streakRun: 0.55 });
+    var y = paintLockup(ctx, cx, 96, 0.80).next;
 
-    ctx.save();
-    ctx.textAlign = "center";
-    ctx.font = "150px 'Anton', sans-serif";
-    ctx.shadowColor = "rgba(255,255,255,.28)"; ctx.shadowBlur = 26;
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fillText("LEADERBOARD", cx, y + 118);
+    var ls = 152;
+    ctx.save(); ctx.font = ls + "px 'Anton', sans-serif";
+    while (ctx.measureText("LEADERBOARD").width > W - 90 && ls > 80) { ls -= 2; ctx.font = ls + "px 'Anton', sans-serif"; }
     ctx.restore();
-    paintRuleLabel(ctx, cx, y + 168, data.title || "", 30);
+    texText(ctx, {
+      text: "LEADERBOARD", x: cx, y: y + 122, align: "center",
+      font: ls + "px 'Anton', sans-serif", paint: marblePaint,
+      glow: 34, glowColor: "rgba(255,255,255,.45)",
+      outline: 3.4, outlineColor: "rgba(20,24,32,.5)"
+    });
+    paintRuleLabel(ctx, cx, y + 176, data.title || "", 31);
 
     var rows = data.rows || [];
-    var podTop = y + 250;
+    var podTop = y + 258;
     var podBase = podTop + 695;
 
-    /* Scenery first, then the people on it: drawn the other way round,
-       the 1ST block sat on top of the winner's own figure. */
-    paintPodium(ctx, podBase);
+    paintPodium(ctx, podBase, h);
 
-    /* 2nd, 1st, 3rd — the centre one largest, exactly as the board reads.
-       Each block of text is sized to stop above its own podium step. */
     var spec = [
       { i: 1, cx: 214,     cy: podTop + 180, r: 96,  place: 2, slotW: 300, nameSize: 27, moneySize: 54, nameGap: 52 },
       { i: 0, cx: cx,      cy: podTop + 138, r: 124, place: 1, slotW: 330, nameSize: 30, moneySize: 62, nameGap: 56 },
@@ -693,7 +1136,6 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
       return;
     }
 
-    /* ---- monthly: 4th and 5th as medallions, then 6-10 as rows ---- */
     var rowY = podBase + 112;
     [3, 4].forEach(function (idx, k) {
       var r0 = rows[idx];
@@ -724,10 +1166,10 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
       ctx.save();
       rr(ctx, bx, ry, bw, rh, 12);
       var g = ctx.createLinearGradient(bx, ry, bx + bw, ry + rh);
-      g.addColorStop(0, "rgba(28,34,46,.92)");
-      g.addColorStop(1, "rgba(14,18,26,.92)");
+      g.addColorStop(0, "rgba(30,36,48,.94)");
+      g.addColorStop(1, "rgba(13,17,24,.94)");
       ctx.fillStyle = g; ctx.fill();
-      ctx.strokeStyle = "rgba(245,186,60,.26)"; ctx.lineWidth = 2; ctx.stroke();
+      ctx.strokeStyle = "rgba(246,196,90,.28)"; ctx.lineWidth = 2; ctx.stroke();
 
       ctx.textBaseline = "middle";
       ctx.textAlign = "center";
@@ -755,7 +1197,6 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
       ctx.restore();
     });
   }
-
   /* ========================================================== render */
   var canvas = null, renderToken = 0;
 
@@ -839,8 +1280,12 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
         '<div class="field"><label for="h-unit">Line below it</label><input type="text" id="h-unit" data-f="highlight.unit" value="' + esc(H.unit) + '"></div></div>';
       out += '<div class="row2"><div class="field"><label for="h-amount">Figure</label><input type="text" inputmode="decimal" id="h-amount" class="num" data-f="highlight.amount" value="' + esc(H.amount) + '"></div>' +
         '<div class="field"><label for="h-kicker">Sign-off</label><input type="text" id="h-kicker" data-f="highlight.kicker" value="' + esc(H.kicker) + '"></div></div>';
-      out += '<div class="field"><label for="h-photo">Headshot</label><input type="file" id="h-photo" accept="image/*" data-act="photo" data-slot="0">' +
+      out += '<div class="field"><label for="h-photo">Photo</label><input type="file" id="h-photo" accept="image/*" data-act="photo" data-slot="0">' +
         '<span class="hint">Used only for this graphic. Add it to the roster to keep it.</span></div>';
+      out += '<div class="field"><label for="h-style">How the photo sits</label><select id="h-style" data-act="cutout">' +
+        '<option value="">Headshot in a gold ring</option>' +
+        '<option value="1"' + (H.cutout ? " selected" : "") + ">Cut-out standing in the scene</option></select>" +
+        '<span class="hint">The second one needs a PNG with the background already removed, like the posts you sent.</span></div>';
       out += "</div></section>";
     } else {
       var D = ui[ui.template];
@@ -969,6 +1414,7 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
     var el = ev.target;
     var act = el.getAttribute && el.getAttribute("data-act");
     if (act === "tpl") { ui.template = el.value; render(); return; }
+    if (act === "cutout") { ui.highlight.cutout = !!el.value; ui.pristine = false; renderArt(); return; }
 
     if (act === "pick-h" || act === "pick-row") {
       var a = ui.agents.filter(function (x) { return x.id === el.value; })[0];
