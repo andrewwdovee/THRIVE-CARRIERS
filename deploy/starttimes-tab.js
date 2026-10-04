@@ -19,6 +19,16 @@ const ST_URL = String(__URL__).replace(/\/+$/, "") + "/start-time";
 const ST_SLOTS = ["10:00 AM EST", "11:00 AM EST"];
 const ST_GRACE = 15;            /* minutes after the start time */
 
+/* How a switched-off row looks: a red box around it, a faint red fill,
+   the name in red and a "Disabled" tag beside it. */
+const ST_OFF_ROW = { outline: "2px solid #e11d48", outlineOffset: "-2px", background: "rgba(225,29,72,0.10)" };
+const ST_OFF_NAME = { color: "#e11d48" };
+const ST_OFF_PILL = {
+  display: "inline-block", marginLeft: "8px", padding: "1px 8px", borderRadius: "999px",
+  background: "#e11d48", color: "#fff", fontSize: "11px", fontWeight: 700,
+  letterSpacing: "0.04em", verticalAlign: "middle", whiteSpace: "nowrap",
+};
+
 /* One series, so the colour job is magnitude, not identity: the default
    sequential blue, stepped for each surface. Both steps clear the 3:1
    contrast gate against the surface they sit on. */
@@ -326,11 +336,23 @@ function StPanel() {
                 __JSX__.jsx("tbody", {
                   children: mine.map((p) => {
                     const off = state.off[p.email];
+                    /* A switched-off account is boxed in red, name and all, so it
+                       reads as disabled at a glance. Inline styles, not Tailwind,
+                       because the compiled stylesheet only has the classes the
+                       original board used. */
                     return __JSX__.jsxs("tr", {
                       className: "border-b border-slate-200 dark:border-slate-800",
+                      style: off ? ST_OFF_ROW : undefined,
                       children: [
-                        __JSX__.jsx("td", { className: cell + " font-semibold", children: p.first || "—" }, "f"),
-                        __JSX__.jsx("td", { className: cell, children: p.last || "—" }, "l"),
+                        __JSX__.jsxs("td", {
+                          className: cell + " font-semibold",
+                          style: off ? ST_OFF_NAME : undefined,
+                          children: [
+                            p.first || "—",
+                            off ? __JSX__.jsx("span", { style: ST_OFF_PILL, children: "Disabled" }, "d") : null,
+                          ],
+                        }, "f"),
+                        __JSX__.jsx("td", { className: cell, style: off ? ST_OFF_NAME : undefined, children: p.last || "—" }, "l"),
                         __JSX__.jsxs("td", {
                           className: cell + " text-slate-600 dark:text-slate-300",
                           children: [

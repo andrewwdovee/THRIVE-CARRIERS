@@ -164,19 +164,27 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
       <img class="thrive" id="mk-thrive" alt="Thrive Companies">
       <span class="by"><span>Powered by</span><img class="lead" id="mk-lead" alt="Lead Tech"></span>
     </div>
-    <h1>Start times</h1>
-    <p class="rule">WHO IS ON WHEN</p>
-    <p class="lede">
-      Who is on at 10 and who is on at 11, and what everyone is taking. Change
-      yours at the bottom — it takes a minute.
+    <h1 id="title">Start times</h1>
+    <p class="rule" id="rule">PICK YOUR START TIME</p>
+    <p class="lede" id="lede">
+      Choose when your calls start and how many you want a week. When you save,
+      you'll see who else is on at 10 and at 11.
     </p>
   </header>
 
-  <div id="roster" class="roster" aria-live="polite">
-    <p class="loading">Loading the board…</p>
+  <div id="board" hidden>
+    <div id="saved" class="current" hidden></div>
+    <div id="roster" class="roster" aria-live="polite">
+      <p class="loading">Loading the board…</p>
+    </div>
+    <p style="text-align:center; margin-top:18px">
+      <button type="button" class="btn" data-act="change">Change your start time</button>
+    </p>
   </div>
 
-  <h2 class="sectionhead">Change yours</h2>
+  <p id="toboard" style="text-align:center; margin:0 0 8px">
+    <button type="button" class="btn" data-act="board">See who's on when</button>
+  </p>
 
   <form id="form" novalidate>
     <section class="card" id="s-you">
@@ -255,11 +263,6 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
     </section>
   </form>
 
-  <div id="done" class="card" hidden style="text-align:center">
-    <h2 style="color:var(--good)">Saved</h2>
-    <p class="sub" id="donetext" style="margin:10px 0 0"></p>
-    <p style="margin-top:18px"><button type="button" class="btn" data-act="again">Change something else</button></p>
-  </div>
 
   <footer><span data-entity>Thrive Companies</span> &middot; Lead Tech inbound</footer>
 </div>
@@ -319,10 +322,7 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
     slots.forEach(function (slot) {
       var inSlot = people.filter(function (p) { return p.startTime === slot; })
         .sort(function (a, b) { return a.name.localeCompare(b.name); });
-      var taking = inSlot.reduce(function (t, p) { return t + (p.callsPerWeek || 0); }, 0);
-      html += '<section class="slot"><div class="hd"><b>' + esc(slot) + "</b>" +
-        "<span>" + inSlot.length + (inSlot.length === 1 ? " agent" : " agents") +
-        (taking ? " · " + taking + " calls a week" : "") + "</span></div>";
+      html += '<section class="slot"><div class="hd"><b>' + esc(slot) + "</b></div>";
       if (!inSlot.length) {
         html += '<p class="empty">Nobody on this one yet.</p>';
       } else {
@@ -331,7 +331,7 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
           var busy = busyLine(p);
           html += "<li" + (p.me ? ' class="me"' : "") + '><div class="who"><b>' + esc(p.name) + "</b>" +
             '<span class="vol' + (p.callsPerWeek ? "" : " none") + '">' +
-            (p.callsPerWeek ? p.callsPerWeek + " a wk" : "not set") + "</span></div>" +
+            (p.callsPerWeek ? p.callsPerWeek + " calls a week" : "Calls not set") + "</span></div>" +
             (busy ? '<div class="busy">' + esc(busy) + "</div>" : "") + "</li>";
         });
         html += "</ul>";
@@ -341,7 +341,7 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
     var unslotted = people.filter(function (p) { return slots.indexOf(p.startTime) < 0; });
     if (unslotted.length) {
       html += '<section class="slot" style="grid-column:1/-1"><div class="hd"><b>No start time yet</b>' +
-        "<span>" + unslotted.length + "</span></div><p class=\"empty\">" +
+        "</div><p class=\"empty\">" +
         esc(unslotted.map(function (p) { return p.name; }).join(", ")) + "</p></section>";
     }
     $("#roster").innerHTML = html;
@@ -356,10 +356,34 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
       .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error("could not load")); })
       .then(drawRoster)
       .catch(function () {
-        $("#roster").innerHTML = '<p class="loading">The board could not be loaded. Your changes below still save.</p>';
+        $("#roster").innerHTML = '<p class="loading">The board could not be loaded. Try again in a minute.</p>';
       });
   }
-  loadRoster();
+  /* Two views on one page: the form first, and the board once they have
+     picked. "#board" in the address opens straight on the board. */
+  function showBoard() {
+    $("#form").hidden = true;
+    $("#toboard").hidden = true;
+    $("#board").hidden = false;
+    $("#title").textContent = "Who's on when";
+    $("#rule").textContent = "10:00 AM AND 11:00 AM";
+    $("#lede").textContent = "Everyone on each start time, and how many calls a week they take.";
+    if (location.hash !== "#board") history.replaceState(null, "", "#board");
+    loadRoster();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  function showForm() {
+    $("#board").hidden = true;
+    $("#saved").hidden = true;
+    $("#form").hidden = false;
+    $("#toboard").hidden = false;
+    $("#title").textContent = "Start times";
+    $("#rule").textContent = "PICK YOUR START TIME";
+    $("#lede").textContent = "Choose when your calls start and how many you want a week. When you save, you'll see who else is on at 10 and at 11.";
+    if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  if (location.hash === "#board") showBoard();
 
   function setStatus(msg, kind) {
     var el = $("#status");
@@ -378,11 +402,10 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
 
   document.addEventListener("click", function (ev) {
     var b = ev.target.closest("[data-act]");
-    if (b && b.getAttribute("data-act") === "again") {
-      $("#done").hidden = true;
-      $("#form").hidden = false;
-      setStatus("");
-    }
+    if (!b) return;
+    var act = b.getAttribute("data-act");
+    if (act === "change") showForm();
+    if (act === "board") showBoard();
   });
 
   $("#form").addEventListener("submit", function (ev) {
@@ -431,20 +454,20 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
         return j;
       });
     }).then(function (j) {
-      $("#form").hidden = true;
-      $("#done").hidden = false;
       var bits = [];
       if (j.startTime) bits.push("Calls start at " + j.startTime);
-      if (j.callsPerWeek) bits.push(j.callsPerWeek + " a week");
+      if (j.callsPerWeek) bits.push(j.callsPerWeek + " calls a week");
       if (j.busyDays && j.busyDays.length) {
         bits.push("busy " + j.busyDays.join(", ") + (j.busyPart ? " " + j.busyPart : ""));
       }
       if (j.note) bits.push("your note is with the desk");
-      $("#donetext").textContent = bits.length ? bits.join(" · ") + "." : "The desk has your changes.";
+      var saved = $("#saved");
+      saved.textContent = "Saved. " + (bits.length ? bits.join(" · ") + "." : "The desk has your changes.");
+      saved.hidden = false;
       btn.disabled = false;
+      setStatus("");
       mine = email;
-      loadRoster();
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      showBoard();
     }).catch(function (e) {
       btn.disabled = false;
       setStatus(String(e.message || e), "bad");
