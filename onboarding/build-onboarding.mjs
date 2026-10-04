@@ -55,7 +55,7 @@ function one(text, needle, replacement) {
 /* The two marks live in logos.json rather than inline, so index.html
    stays readable; the build is what makes the page self-contained. */
 const logos = JSON.parse(readFileSync(join(here, "logos.json"), "utf8"));
-for (const k of ["thriveWhite", "leadWhite", "leadInk"]) {
+for (const k of ["thriveV", "leadWhite", "leadInk"]) {
   if (!/^data:image\/png;base64,/.test(logos[k] || "")) {
     console.error(`logos.json is missing ${k}, or it is not a png data uri.`);
     process.exit(1);

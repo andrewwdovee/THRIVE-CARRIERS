@@ -12,8 +12,13 @@
 <style>
 :root{
   color-scheme: dark;
-  --ink:#07090E; --stage:#0B0E14; --panel:#12161E; --panel-2:#171C26;
-  --line:#232B38; --line-2:#323C4C; --fg:#EDF1F6; --muted:#8D9AAC;
+  /* The page stays dark; the cards sit a few steps lighter and bluer so
+     the type on them holds up on a phone in daylight. Muted text goes
+     from 6.3:1 to 7.6:1 on the card, and the control borders from 2.0:1
+     to 3.2:1, which is the floor for something you are meant to see the
+     edge of. */
+  --ink:#07090E; --stage:#0B0E14; --panel:#1A2130; --panel-2:#222B3C;
+  --line:#2E394B; --line-2:#667998; --fg:#F0F4F9; --muted:#A3B4C8;
   --gold:#F0B429; --gold-hi:#FFE08A;
   --good:#35C892; --bad:#F0736A;
   --paper:#F6F4EE; --paper-ink:#1B1A17; --paper-line:#D9D4C7; --paper-muted:#6A665C;
@@ -38,16 +43,18 @@ body::before{
 .masthead{padding:44px 0 22px; text-align:center}
 .marks{
   display:flex; align-items:center; justify-content:center;
-  gap:22px; flex-wrap:wrap; margin:0 0 26px;
+  gap:19px; flex-wrap:wrap; margin:0 0 24px;
 }
-.marks img.thrive{height:72px; width:auto}
-.marks img.lead{height:21px; width:auto}
+/* The mark alone, not the full lockup: the words "Thrive Companies"
+   are already the heading right underneath it. */
+.marks img.thrive{height:86px; width:auto}
+.marks img.lead{height:14px; width:auto}
 .marks .by{
-  display:flex; align-items:center; gap:13px;
-  padding-left:22px; border-left:1px solid var(--line-2);
+  display:flex; align-items:center; gap:9px;
+  padding-left:19px; border-left:1px solid var(--line-2);
 }
 .marks .by span{
-  font-size:9.5px; font-weight:700; letter-spacing:.3em;
+  font-size:8px; font-weight:700; letter-spacing:.26em;
   text-transform:uppercase; color:var(--muted); white-space:nowrap;
 }
 .masthead h1{
@@ -126,6 +133,24 @@ input:focus,textarea:focus,select:focus{outline:2px solid rgba(240,180,41,.55); 
 }
 .paper .flag p:last-child{margin:0}
 .paper hr{border:0; border-top:1px solid var(--paper-line); margin:22px 0}
+.execd{
+  background:#E7EFFA; border:1px solid #BBD0EC; border-left:3px solid #2F6FE0;
+  border-radius:0 9px 9px 0; padding:17px 19px; margin:20px 0 2px;
+}
+.execd-label{
+  font-size:10.5px; font-weight:800; letter-spacing:.17em; text-transform:uppercase;
+  color:#1E4E9E; margin:0 0 13px;
+}
+.execd-row{display:grid; grid-template-columns:1.15fr 1fr; gap:22px; align-items:end}
+.execd-sig{position:relative; min-height:78px; display:flex; flex-direction:column; justify-content:flex-end}
+.execd-sig img{max-height:60px; max-width:100%; width:auto; display:block; mix-blend-mode:multiply}
+.execd-ghost{font-size:11.5px; color:#6E8AB4; line-height:1.4; padding-bottom:8px}
+.execd-rule{border-top:1px solid #8FABD4; margin-top:5px}
+.execd-cap{font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:#5E7CA8; margin-top:5px}
+.execd-meta{display:grid; grid-template-columns:1fr 1fr; gap:11px 16px; margin:0}
+.execd-meta div{min-width:0}
+.execd-meta dt{font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:#5E7CA8; margin:0}
+.execd-meta dd{font-size:13.5px; font-weight:600; color:#17304F; margin:1px 0 0; overflow-wrap:anywhere}
 .scrollnote{
   display:flex; align-items:center; gap:9px; justify-content:space-between;
   font-size:12px; color:var(--muted); margin-top:11px; flex-wrap:wrap;
@@ -211,10 +236,12 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
 @media (max-width:620px){
   section.card{padding:17px}
   .paper{padding:19px 17px; max-height:380px}
+  .execd-row{grid-template-columns:1fr; gap:16px; align-items:stretch}
   .drop{flex-direction:column; align-items:flex-start}
   .signrow{grid-template-columns:1fr}
-  .marks{gap:16px}
-  .marks .by{padding-left:16px}
+  .marks{gap:14px}
+  .marks img.thrive{height:72px}
+  .marks .by{padding-left:14px}
 }
 
 /* The whole page is the record, so printing it has to produce the
@@ -232,6 +259,8 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
   section.card{border:0; background:#fff; padding:0; margin:0 0 16px; break-inside:avoid}
   section.card>h2{color:#8A6410}
   .paper{max-height:none; overflow:visible; border:1px solid #D9D4C7; box-shadow:none}
+  .execd{break-inside:avoid; -webkit-print-color-adjust:exact; print-color-adjust:exact}
+  #s-sign,#s-photo{display:none!important}
   .pad{background:#fff; border:0; border-bottom:1px solid #000; border-radius:0; height:150px}
   .pad .ghost{display:none}
   input,select{
@@ -251,7 +280,7 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
       <span class="by"><span>Powered by</span><img class="lead" id="mk-lead" alt="Lead Tech"></span>
     </div>
     <h1>Thrive Companies<br>Onboarding</h1>
-    <p class="rule">THE NUMBER ONE INBOUND AGENCY &middot; STEP 1 OF 2</p>
+    <p class="rule">THE NUMBER ONE INBOUND AGENCY</p>
     <p class="lede">
       Fill out this short onboarding form below to get access to the Lead Tech
       inbound portal.
@@ -444,6 +473,27 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
         </p>
         <hr>
         <p class="meta" id="paper-end">You have reached the end of the agreement.</p>
+
+        <!-- Where they are signing, on the document itself. It fills in
+             live from step 3, so the agreement they print carries the
+             signature rather than referring to one somewhere else. -->
+        <div class="execd" id="execd">
+          <div class="execd-label">Signed and agreed</div>
+          <div class="execd-row">
+            <div class="execd-sig">
+              <img id="sigmirror" alt="" hidden>
+              <span class="execd-ghost" id="execd-ghost">Your signature appears here once you sign in step 3</span>
+              <div class="execd-rule"></div>
+              <div class="execd-cap">Signature</div>
+            </div>
+            <dl class="execd-meta">
+              <div><dt>Name</dt><dd id="sm-name">&mdash;</dd></div>
+              <div><dt>Title</dt><dd id="sm-title">&mdash;</dd></div>
+              <div><dt>Business</dt><dd id="sm-business">&mdash;</dd></div>
+              <div><dt>Date</dt><dd id="sm-date">&mdash;</dd></div>
+            </dl>
+          </div>
+        </div>
       </article>
 
       <p class="scrollnote" id="scrollnote">
@@ -460,33 +510,13 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
       <p class="err" data-err="agree"></p>
     </section>
 
-    <!-- ---------------------------------------------------------- photo -->
-    <section class="card" id="s-photo">
-      <h2>3 &middot; Your photo <span class="opt">(optional — only for Thrive internal agents)</span></h2>
-      <p class="sub">
-        If you write under Thrive Companies, add a headshot. It is what goes on the
-        company leaderboard and on agent shout-outs. Face to camera, good light,
-        shoulders up. Everyone else can skip this.
-      </p>
-      <div class="drop">
-        <div class="ph" id="photoprev">No photo</div>
-        <div class="body">
-          <input type="file" id="photo" name="photo" accept="image/*">
-          <p class="hint" style="margin-top:8px">
-            JPEG or PNG. It is shrunk in your browser before it is sent, so a phone
-            photo is fine.
-          </p>
-        </div>
-      </div>
-      <p class="err" data-err="photo"></p>
-    </section>
-
     <!-- ------------------------------------------------------ signature -->
     <section class="card" id="s-sign">
-      <h2>4 &middot; Sign</h2>
+      <h2>3 &middot; Sign</h2>
       <p class="sub">
-        Sign below, then print or save this page — the whole thing, agreement and
-        signature together, is your copy.
+        What you sign here lands at the bottom of the agreement above, so you can
+        see exactly what you are putting your name to. Print or save the page when
+        you are done — agreement and signature together, that is your copy.
       </p>
 
       <div class="signrow">
@@ -524,6 +554,27 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
         binds you the same way ink would.
       </p>
       <p class="err" data-err="sign"></p>
+    </section>
+
+    <!-- ---------------------------------------------------------- photo -->
+    <section class="card" id="s-photo">
+      <h2>4 &middot; Your photo <span class="opt">(optional — only for Thrive internal agents)</span></h2>
+      <p class="sub">
+        If you write under Thrive Companies, add a headshot. It is what goes on the
+        company leaderboard and on agent shout-outs. Face to camera, good light,
+        shoulders up. Everyone else can skip this.
+      </p>
+      <div class="drop">
+        <div class="ph" id="photoprev">No photo</div>
+        <div class="body">
+          <input type="file" id="photo" name="photo" accept="image/*">
+          <p class="hint" style="margin-top:8px">
+            JPEG or PNG. It is shrunk in your browser before it is sent, so a phone
+            photo is fine.
+          </p>
+        </div>
+      </div>
+      <p class="err" data-err="photo"></p>
     </section>
 
     <!-- --------------------------------------------------------- submit -->
@@ -580,7 +631,7 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
   $$("[data-state]").forEach(function (el) { el.textContent = STATE; });
   $("#rules-link").href = RULES_URL;
 
-  [["mk-thrive", "thriveWhite"], ["mk-thrive-2", "thriveWhite"],
+  [["mk-thrive", "thriveV"], ["mk-thrive-2", "thriveV"],
    ["mk-lead", "leadWhite"], ["mk-lead-2", "leadWhite"], ["doc-lead", "leadInk"]]
     .forEach(function (p) {
       var el = $("#" + p[0]);
@@ -670,7 +721,11 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
       cur.push(at(ev)); redraw();
     });
     ["pointerup", "pointercancel", "pointerleave"].forEach(function (t) {
-      cv.addEventListener(t, function () { drawing = false; });
+      cv.addEventListener(t, function () {
+        if (!drawing) return;
+        drawing = false;
+        syncExecution();
+      });
     });
 
     window.addEventListener("resize", size);
@@ -678,7 +733,7 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
 
     return {
       get has() { return has; },
-      clear: function () { strokes = []; has = false; ghost.style.display = ""; redraw(); },
+      clear: function () { strokes = []; has = false; ghost.style.display = ""; redraw(); syncExecution(); },
       /* A trimmed PNG on white, so it drops straight into a document. */
       png: function () {
         if (!has) return "";
@@ -712,6 +767,33 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
       }
     };
   })();
+
+  /* The foot of the agreement follows what is typed and drawn in step 3,
+     so the document they print carries the signature rather than pointing
+     at one further down the page. */
+  function syncExecution() {
+    var f = fields();
+    var img = $("#sigmirror"), ghost = $("#execd-ghost");
+    var png = sig.has ? sig.png() : "";
+    if (png) { img.src = png; img.hidden = false; ghost.hidden = true; }
+    else { img.removeAttribute("src"); img.hidden = true; ghost.hidden = false; }
+    var dash = "\u2014";
+    $("#sm-name").textContent = f.signedName || f.legalName || dash;
+    $("#sm-title").textContent = f.title || dash;
+    $("#sm-business").textContent = f.business || dash;
+    $("#sm-date").textContent = f.signedDate ? longDate(f.signedDate) : dash;
+  }
+
+  function longDate(iso) {
+    var parts = String(iso).split("-");
+    if (parts.length !== 3) return iso;
+    var d = new Date(+parts[0], +parts[1] - 1, +parts[2]);
+    if (isNaN(d)) return iso;
+    return d.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+  }
+
+  form.addEventListener("input", syncExecution);
+  form.addEventListener("change", syncExecution);
 
   /* ------------------------------------------------------------ photo */
   var photoData = "";
@@ -801,6 +883,8 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
     el.textContent = msg || "";
     el.classList.toggle("bad", !!bad);
   }
+
+  syncExecution();
 
   form.addEventListener("submit", function (ev) {
     ev.preventDefault();
