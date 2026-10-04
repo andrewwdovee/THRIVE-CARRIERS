@@ -1,0 +1,1151 @@
+<title>Thrive Social Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700;800&family=Kaushan+Script&display=swap">
+<style>
+/* Layout: a working studio — controls in a left rail, the artwork on a
+   dark stage beside it, stacking to one column on a phone. The page
+   commits to the brand's single dark world; there is no light variant,
+   because the thing being made is always gold on black. */
+:root {
+  color-scheme: dark;
+  --ink:      #07090E;
+  --stage:    #0B0E14;
+  --panel:    #12161E;
+  --panel-2:  #171C26;
+  --line:     #232B38;
+  --line-2:   #323C4C;
+  --fg:       #EDF1F6;
+  --muted:    #8D9AAC;
+  --gold:     #F0B429;
+  --gold-hi:  #FFE08A;
+  --gold-deep:#8A5A08;
+  --blue:     #2F6FE0;
+  --good:     #35C892;
+  --bad:      #F0736A;
+  --display:  'Anton', 'Arial Narrow', sans-serif;
+  --body:     'Archivo', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --script:   'Kaushan Script', 'Brush Script MT', cursive;
+}
+* , *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--ink);
+  color: var(--fg);
+  font-family: var(--body);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; border: 0; background: none; }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 4px; }
+.num { font-variant-numeric: tabular-nums; }
+
+.wrap { max-width: 1340px; margin: 0 auto; padding-inline: 16px; padding-block: 22px 72px; }
+
+/* ---------- masthead ---------- */
+.mast { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; flex-wrap: wrap; margin-bottom: 18px; }
+.lockup { display: flex; align-items: center; gap: 12px; }
+.lockup .mark {
+  width: 38px; height: 38px; flex: none; border-radius: 9px;
+  background: linear-gradient(145deg, var(--gold-hi), var(--gold) 45%, var(--gold-deep));
+  color: #1A1206; font-family: var(--display); font-size: 24px; line-height: 38px; text-align: center;
+}
+.lockup h1 { margin: 0; font-family: var(--display); font-size: 25px; letter-spacing: .02em; font-weight: 400; }
+.lockup p { margin: 1px 0 0; font-size: 11.5px; letter-spacing: .17em; text-transform: uppercase; color: var(--muted); }
+
+.tabs { display: flex; gap: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 4px; }
+.tabs button { padding: 7px 15px; border-radius: 7px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.tabs button:hover { color: var(--fg); }
+.tabs button[aria-current="page"] { background: linear-gradient(145deg, var(--gold-hi), var(--gold)); color: #191204; }
+
+/* ---------- studio ---------- */
+.studio { display: grid; gap: 18px; grid-template-columns: 1fr; align-items: start; }
+@media (min-width: 940px) { .studio { grid-template-columns: minmax(0, 380px) minmax(0, 1fr); } }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 13px; }
+.panel + .panel { margin-top: 14px; }
+.panel-head { padding: 13px 16px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.panel-head h2 { margin: 0; font-size: 14px; font-weight: 700; letter-spacing: .01em; }
+.panel-head .note { font-size: 11.5px; color: var(--muted); }
+.panel-body { padding: 16px; display: grid; gap: 14px; min-width: 0; }
+
+.eyebrow { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); margin: 0; }
+
+.field { display: grid; gap: 5px; min-width: 0; }
+.field > label { font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.field .hint { font-size: 11.5px; color: var(--muted); }
+input[type=text], input[type=number], select, textarea {
+  width: 100%; padding: 9px 11px; border-radius: 8px; border: 1px solid var(--line-2);
+  background: var(--stage); color: var(--fg); font-size: 13.5px;
+}
+textarea { min-height: 96px; resize: vertical; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12.5px; line-height: 1.7; }
+select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: right 14px top 52%, right 9px top 52%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 30px; }
+.row2 { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+.row3 { display: grid; gap: 10px; grid-template-columns: 1.4fr 1fr .8fr; }
+@media (max-width: 560px) { .row3 { grid-template-columns: 1fr; } }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 10px 16px; border-radius: 9px; font-size: 13px; font-weight: 700;
+  background: var(--panel-2); border: 1px solid var(--line-2); color: var(--fg);
+}
+.btn:hover { border-color: var(--muted); }
+.btn.gold { background: linear-gradient(145deg, var(--gold-hi), var(--gold)); border-color: transparent; color: #191204; }
+.btn.gold:hover { filter: brightness(1.07); }
+.btn.sm { padding: 6px 11px; font-size: 12px; border-radius: 7px; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.actions { display: flex; gap: 9px; flex-wrap: wrap; }
+
+/* ---------- stage ---------- */
+.stage {
+  background: var(--stage); border: 1px solid var(--line); border-radius: 13px;
+  padding: 18px; display: grid; gap: 14px; justify-items: center; min-width: 0;
+}
+.stage canvas {
+  width: 100%; max-width: 440px; height: auto; display: block;
+  border-radius: 8px; box-shadow: 0 18px 50px rgba(0,0,0,.6);
+}
+.stage .cap { font-size: 11.5px; color: var(--muted); text-align: center; max-width: 52ch; }
+
+/* ---------- roster ---------- */
+.roster { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); }
+.agent {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px; display: grid; gap: 9px; justify-items: center; text-align: center; min-width: 0;
+}
+.agent .av {
+  width: 78px; height: 78px; border-radius: 50%; object-fit: cover; display: block;
+  background: var(--panel-2); border: 2px solid var(--gold);
+  box-shadow: 0 0 0 4px rgba(240,180,41,.12);
+}
+.agent .av.none { display: grid; place-items: center; color: var(--muted); font-family: var(--display); font-size: 26px; border-style: dashed; border-color: var(--line-2); box-shadow: none; }
+.agent .nm { font-weight: 700; font-size: 13.5px; width: 100%; overflow-wrap: anywhere; }
+.agent .ops { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+
+.empty { padding: 40px 20px; text-align: center; color: var(--muted); }
+.empty strong { display: block; color: var(--fg); font-size: 15px; margin-bottom: 6px; }
+.empty p { margin: 0 auto; max-width: 48ch; font-size: 13px; line-height: 1.65; }
+
+.msg { padding: 10px 12px; border-radius: 8px; font-size: 12.5px; border: 1px solid transparent; }
+.msg.err  { background: rgba(240,115,106,.12); color: var(--bad); }
+.msg.ok   { background: rgba(53,200,146,.12); color: var(--good); }
+.msg.info { background: rgba(47,111,224,.14); color: #9BC0FF; }
+.msg.warn { background: rgba(240,180,41,.13); color: var(--gold-hi); }
+
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+  background: var(--panel-2); border: 1px solid var(--line-2); color: var(--fg);
+  padding: 11px 17px; border-radius: 10px; font-size: 13px; z-index: 40; box-shadow: 0 12px 34px rgba(0,0,0,.55);
+}
+.vis-hide { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="mast">
+    <div class="lockup">
+      <span class="mark" aria-hidden="true">V</span>
+      <div>
+        <h1>Thrive Social Studio</h1>
+        <p>Agent highlights &amp; leaderboards</p>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs" aria-label="Sections">
+      <button data-tab="make" aria-current="page">Create</button>
+      <button data-tab="roster">Roster</button>
+    </nav>
+  </header>
+  <main id="app"></main>
+</div>
+<div id="toast" hidden></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ============================================================ state */
+  var W = 1080;
+  var TEMPLATES = {
+    highlight: { label: "Agent highlight", h: 1350, slots: 1 },
+    weekly:    { label: "Weekly leaderboard — top 3", h: 1350, slots: 3 },
+    monthly:   { label: "Monthly leaderboard — top 5 + next 5", h: 1920, slots: 10 }
+  };
+
+  var ui = {
+    tab: "make",
+    template: "weekly",
+    agents: [],          /* roster from the store */
+    agentsReady: false,
+    toast: null,
+    /* The three forms keep their own state so switching template and
+       back does not throw away what was typed. */
+    highlight: { name: "Renato", period: "1 Week Production", amount: "26841", unit: "AP SUBMITTED", kicker: "Keep crushing it!", photo: "" },
+    weekly: {
+      title: "TOP 3 THIS WEEK",
+      rows: [
+        { name: "Jacklyn Scala",  amount: "21729", policies: "13", photo: "" },
+        { name: "Jackson Lentini", amount: "18457", policies: "16", photo: "" },
+        { name: "Gavyn Moore",    amount: "12868", policies: "11", photo: "" }
+      ]
+    },
+    monthly: {
+      title: "TOP 5 THIS MONTH",
+      rows: [
+        { name: "Jacklyn Scala",   amount: "84120", policies: "52", photo: "" },
+        { name: "Jackson Lentini", amount: "71940", policies: "61", photo: "" },
+        { name: "Gavyn Moore",     amount: "58310", policies: "44", photo: "" },
+        { name: "Renato",          amount: "49885", policies: "38", photo: "" },
+        { name: "Marisol Vega",    amount: "41260", policies: "33", photo: "" },
+        { name: "Dev Okafor",      amount: "33415", policies: "29", photo: "" },
+        { name: "Priya Raman",     amount: "28970", policies: "24", photo: "" },
+        { name: "Cole Brennan",    amount: "24130", policies: "21", photo: "" },
+        { name: "Tasha Hill",      amount: "19880", policies: "18", photo: "" },
+        { name: "Owen Marsh",      amount: "15405", policies: "15", photo: "" }
+      ]
+    },
+    /* True until the operator edits a figure, so the stage can say the
+       numbers on screen are the sample from the brief, not this week's. */
+    pristine: true
+  };
+
+  var db = null, assets = null, downloads = null;
+  var imgCache = {};
+  var app = document.getElementById("app");
+  var toastEl = document.getElementById("toast");
+  var toastTimer = null;
+
+  /* ============================================================ utils */
+  function esc(v) {
+    return String(v == null ? "" : v)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  function num(v) {
+    var n = parseFloat(String(v == null ? "" : v).replace(/[$,\s]/g, ""));
+    return isFinite(n) ? n : 0;
+  }
+  function money(n) { return "$" + Math.round(num(n)).toLocaleString("en-US"); }
+  function toast(text) {
+    ui.toast = text;
+    toastEl.textContent = text;
+    toastEl.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.hidden = true; }, 2600);
+  }
+  function slug(s) {
+    return String(s || "thrive").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "thrive";
+  }
+
+  /* An image, cached by url. Resolves null rather than rejecting: a
+     missing portrait should leave a gold ring with an initial in it, not
+     take the whole render down with it. */
+  function loadImage(url) {
+    if (!url) return Promise.resolve(null);
+    if (imgCache[url]) return imgCache[url];
+    imgCache[url] = new Promise(function (resolve) {
+      var im = new Image();
+      im.onload = function () { resolve(im); };
+      im.onerror = function () { resolve(null); };
+      im.src = url;
+    });
+    return imgCache[url];
+  }
+
+  /* ========================================================== drawing */
+  function rr(ctx, x, y, w, h, r) {
+    var k = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + k, y);
+    ctx.arcTo(x + w, y, x + w, y + h, k);
+    ctx.arcTo(x + w, y + h, x, y + h, k);
+    ctx.arcTo(x, y + h, x, y, k);
+    ctx.arcTo(x, y, x + w, y, k);
+    ctx.closePath();
+  }
+  function goldGrad(ctx, y0, y1) {
+    var g = ctx.createLinearGradient(0, y0, 0, y1);
+    g.addColorStop(0, "#FFF0C0");
+    g.addColorStop(0.38, "#F7C542");
+    g.addColorStop(0.72, "#E09A12");
+    g.addColorStop(1, "#FFD867");
+    return g;
+  }
+  /* Shrink a line until it fits, rather than letting a long name run off
+     the artwork. Returns the size actually used. */
+  function fitFont(ctx, text, family, start, min, maxW, weight) {
+    var size = start;
+    while (size > min) {
+      ctx.font = (weight ? weight + " " : "") + size + "px " + family;
+      if (ctx.measureText(text).width <= maxW) break;
+      size -= 2;
+    }
+    ctx.font = (weight ? weight + " " : "") + size + "px " + family;
+    return size;
+  }
+  function glowText(ctx, text, x, y, color, blur, glowColor) {
+    ctx.save();
+    if (blur) { ctx.shadowColor = glowColor || "rgba(240,180,41,.75)"; ctx.shadowBlur = blur; }
+    ctx.fillStyle = color;
+    ctx.fillText(text, x, y);
+    ctx.restore();
+  }
+
+  /* The ground every template shares: near-black, a warm bloom low and
+     centre, gold light streaks on one diagonal and a single blue one
+     crossing it, then a vignette. */
+  function paintGround(ctx, w, h) {
+    ctx.fillStyle = "#05070B";
+    ctx.fillRect(0, 0, w, h);
+
+    var bloom = ctx.createRadialGradient(w * 0.5, h * 0.62, 0, w * 0.5, h * 0.62, w * 0.95);
+    bloom.addColorStop(0, "rgba(176,104,18,.42)");
+    bloom.addColorStop(0.45, "rgba(90,52,8,.20)");
+    bloom.addColorStop(1, "rgba(5,7,11,0)");
+    ctx.fillStyle = bloom;
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    var streaks = [
+      [-0.30, 0.016, "rgba(255,206,110,.55)"], [-0.18, 0.006, "rgba(255,226,150,.75)"],
+      [-0.07, 0.010, "rgba(255,190,80,.40)"],  [ 0.78, 0.008, "rgba(255,214,120,.55)"],
+      [ 0.92, 0.014, "rgba(255,190,80,.38)"],  [ 1.06, 0.005, "rgba(255,236,180,.70)"]
+    ];
+    streaks.forEach(function (s) {
+      var x = w * s[0], tw = w * s[1];
+      var g = ctx.createLinearGradient(x, 0, x + w * 0.55, h);
+      g.addColorStop(0, "rgba(255,255,255,0)");
+      g.addColorStop(0.35, s[2]);
+      g.addColorStop(0.65, s[2]);
+      g.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(x, 0); ctx.lineTo(x + tw, 0);
+      ctx.lineTo(x + tw + w * 0.55, h); ctx.lineTo(x + w * 0.55, h);
+      ctx.closePath(); ctx.fill();
+    });
+    [[-0.44, 0.009, "rgba(70,140,255,.65)"], [1.16, 0.006, "rgba(90,160,255,.55)"]].forEach(function (s) {
+      var x = w * s[0], tw = w * s[1];
+      var g = ctx.createLinearGradient(x, 0, x + w * 0.55, h);
+      g.addColorStop(0, "rgba(255,255,255,0)");
+      g.addColorStop(0.4, s[2]); g.addColorStop(0.6, s[2]);
+      g.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(x, 0); ctx.lineTo(x + tw, 0);
+      ctx.lineTo(x + tw + w * 0.55, h); ctx.lineTo(x + w * 0.55, h);
+      ctx.closePath(); ctx.fill();
+    });
+    ctx.restore();
+
+    /* Gold dust, deterministic so a re-render does not shimmer. */
+    var seed = 20260101;
+    function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for (var i = 0; i < 420; i++) {
+      var px = rnd() * w, py = rnd() * h;
+      var near = 1 - Math.min(1, Math.abs(py - h * 0.72) / (h * 0.5));
+      var a = 0.05 + near * 0.33 * rnd();
+      ctx.fillStyle = "rgba(255,206,110," + a.toFixed(3) + ")";
+      ctx.beginPath(); ctx.arc(px, py, rnd() * 2.1 + 0.4, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+
+    var vig = ctx.createRadialGradient(w / 2, h / 2, h * 0.28, w / 2, h / 2, h * 0.78);
+    vig.addColorStop(0, "rgba(0,0,0,0)");
+    vig.addColorStop(1, "rgba(0,0,0,.72)");
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, w, h);
+  }
+
+  /* The wordmark, drawn rather than placed: the brand's V with its
+     spark, then THRIVE over COMPANIES. */
+  function paintLockup(ctx, cx, top, scale) {
+    scale = scale || 1;
+    ctx.save();
+    ctx.translate(cx, top);
+    ctx.scale(scale, scale);
+
+    var vW = 66, vH = 78, gap = 16;
+    ctx.font = "78px 'Anton', sans-serif";
+    ctx.textBaseline = "alphabetic";
+    var wordW = ctx.measureText("THRIVE").width;
+    var total = vW + gap + wordW;
+    var x0 = -total / 2;
+
+    ctx.fillStyle = "#FFFFFF";
+    ctx.beginPath();
+    ctx.moveTo(x0, 0);
+    ctx.lineTo(x0 + 17, 0);
+    ctx.lineTo(x0 + vW * 0.54, vH * 0.74);
+    ctx.lineTo(x0 + vW * 0.86, 0);
+    ctx.lineTo(x0 + vW, 0);
+    ctx.lineTo(x0 + vW * 0.60, vH);
+    ctx.lineTo(x0 + vW * 0.44, vH);
+    ctx.closePath();
+    ctx.fill();
+    /* the spark */
+    ctx.beginPath();
+    var sx = x0 + vW * 0.80, sy = 9, s = 11;
+    ctx.moveTo(sx, sy - s); ctx.quadraticCurveTo(sx + s * 0.22, sy - s * 0.22, sx + s, sy);
+    ctx.quadraticCurveTo(sx + s * 0.22, sy + s * 0.22, sx, sy + s);
+    ctx.quadraticCurveTo(sx - s * 0.22, sy + s * 0.22, sx - s, sy);
+    ctx.quadraticCurveTo(sx - s * 0.22, sy - s * 0.22, sx, sy - s);
+    ctx.fill();
+
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "78px 'Anton', sans-serif";
+    ctx.fillText("THRIVE", x0 + vW + gap, vH * 0.80);
+    ctx.font = "600 27px 'Archivo', sans-serif";
+    ctx.letterSpacing = "7px";
+    ctx.fillText("COMPANIES", x0 + vW + gap + 3, vH * 0.80 + 31);
+    ctx.letterSpacing = "0px";
+    ctx.restore();
+    return top + 78 * scale + 34 * scale;
+  }
+
+  /* A gold rule with a label in the middle — the "AGENT HIGHLIGHT" and
+     "TOP 3 THIS WEEK" bar on both templates. */
+  function paintRuleLabel(ctx, cx, y, text, size, color) {
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "700 " + size + "px 'Archivo', sans-serif";
+    ctx.letterSpacing = Math.round(size * 0.30) + "px";
+    var tw = ctx.measureText(text).width;
+    ctx.fillStyle = color || "#F3C049";
+    ctx.fillText(text, cx + Math.round(size * 0.15), y);
+    ctx.letterSpacing = "0px";
+    var armFrom = tw / 2 + 26, armTo = armFrom + 62;
+    ctx.strokeStyle = color || "#F3C049";
+    ctx.lineWidth = 3; ctx.lineCap = "round";
+    [-1, 1].forEach(function (d) {
+      ctx.beginPath();
+      ctx.moveTo(cx + d * armFrom, y); ctx.lineTo(cx + d * armTo, y);
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
+
+  /* A portrait in a glowing gold ring. With no photo it falls back to the
+     initial, so an agent who has not had a headshot uploaded yet still
+     produces a usable graphic. */
+  function paintPortrait(ctx, cx, cy, r, img, name, ringW, glow) {
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.closePath();
+    ctx.save(); ctx.clip();
+    if (img) {
+      var ar = img.width / img.height, dw, dh;
+      if (ar > 1) { dh = r * 2; dw = dh * ar; } else { dw = r * 2; dh = dw / ar; }
+      ctx.drawImage(img, cx - dw / 2, cy - dh / 2, dw, dh);
+    } else {
+      var g = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
+      g.addColorStop(0, "#1B2230"); g.addColorStop(1, "#0C1018");
+      ctx.fillStyle = g; ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+      ctx.fillStyle = "rgba(240,180,41,.75)";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.font = Math.round(r * 1.05) + "px 'Anton', sans-serif";
+      ctx.fillText(String(name || "?").trim().charAt(0).toUpperCase(), cx, cy + r * 0.04);
+    }
+    ctx.restore();
+    ctx.shadowColor = "rgba(245,186,60,.85)";
+    ctx.shadowBlur = glow == null ? 30 : glow;
+    ctx.strokeStyle = goldGrad(ctx, cy - r, cy + r);
+    ctx.lineWidth = ringW || 7;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function paintCrown(ctx, cx, y, w) {
+    var h = w * 0.72;
+    ctx.save();
+    ctx.shadowColor = "rgba(245,186,60,.8)"; ctx.shadowBlur = 22;
+    ctx.fillStyle = goldGrad(ctx, y, y + h);
+    ctx.beginPath();
+    ctx.moveTo(cx - w / 2, y + h);
+    ctx.lineTo(cx - w / 2, y + h * 0.30);
+    ctx.lineTo(cx - w * 0.26, y + h * 0.62);
+    ctx.lineTo(cx, y + h * 0.04);
+    ctx.lineTo(cx + w * 0.26, y + h * 0.62);
+    ctx.lineTo(cx + w / 2, y + h * 0.30);
+    ctx.lineTo(cx + w / 2, y + h);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#FFF1C4";
+    [[cx - w / 2, y + h * 0.30], [cx, y + h * 0.04], [cx + w / 2, y + h * 0.30]].forEach(function (p) {
+      ctx.beginPath(); ctx.arc(p[0], p[1], w * 0.072, 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.restore();
+  }
+
+  function paintMedal(ctx, cx, cy, r, place) {
+    var tone = place === 2 ? ["#F2F5FA", "#9AA6B6", "#D7DEE8"] : ["#F7C98B", "#B4702A", "#E9A862"];
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    var g = ctx.createLinearGradient(cx, cy - r, cx, cy + r);
+    g.addColorStop(0, tone[0]); g.addColorStop(0.55, tone[2]); g.addColorStop(1, tone[1]);
+    ctx.fillStyle = g; ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,.35)"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = "#1A1206";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.font = Math.round(r * 1.15) + "px 'Anton', sans-serif";
+    ctx.fillText(String(place), cx, cy + r * 0.06);
+    ctx.restore();
+  }
+
+  /* ------------------------------------------------- agent highlight */
+  function drawHighlight(ctx, h, data, imgs) {
+    var cx = W / 2;
+    paintGround(ctx, W, h);
+    var y = paintLockup(ctx, cx, 86, 0.92);
+    paintRuleLabel(ctx, cx, y + 4, "AGENT HIGHLIGHT", 27);
+
+    paintPortrait(ctx, cx, 520, 232, imgs[0], data.name, 10, 46);
+
+    /* the name */
+    ctx.save();
+    ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    var nm = String(data.name || "").toUpperCase() || "AGENT";
+    fitFont(ctx, nm, "'Anton', sans-serif", 182, 56, W - 120);
+    ctx.shadowColor = "rgba(245,186,60,.9)"; ctx.shadowBlur = 42;
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillText(nm, cx, 905);
+    ctx.restore();
+
+    /* the figure box */
+    var bx = 92, bw = W - bx * 2, by = 928, bh = 262;
+    ctx.save();
+    rr(ctx, bx, by, bw, bh, 26);
+    ctx.fillStyle = "rgba(6,8,13,.80)";
+    ctx.fill();
+    ctx.strokeStyle = goldGrad(ctx, by, by + bh);
+    ctx.lineWidth = 5;
+    ctx.shadowColor = "rgba(245,186,60,.55)"; ctx.shadowBlur = 26;
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#FFFFFF";
+    fitFont(ctx, data.period || "", "'Archivo', sans-serif", 40, 20, bw - 70, "700");
+    ctx.fillText(data.period || "", cx, by + 60);
+
+    var amt = money(data.amount);
+    fitFont(ctx, amt, "'Anton', sans-serif", 128, 44, bw - 64);
+    glowText(ctx, amt, cx, by + 186, goldGrad(ctx, by + 80, by + 196), 34);
+
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "700 36px 'Archivo', sans-serif";
+    ctx.letterSpacing = "3px";
+    ctx.fillText(String(data.unit || "").toUpperCase(), cx, by + 238);
+    ctx.letterSpacing = "0px";
+    ctx.restore();
+
+    /* the sign-off */
+    if (data.kicker) {
+      ctx.save();
+      ctx.textAlign = "center";
+      fitFont(ctx, data.kicker, "'Kaushan Script', cursive", 76, 30, W - 180);
+      ctx.shadowColor = "rgba(0,0,0,.6)"; ctx.shadowBlur = 14;
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillText(data.kicker, cx, by + bh + 92);
+      ctx.restore();
+      ctx.save();
+      ctx.strokeStyle = goldGrad(ctx, by + bh + 100, by + bh + 120);
+      ctx.lineWidth = 7; ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(cx - 118, by + bh + 116);
+      ctx.quadraticCurveTo(cx, by + bh + 132, cx + 132, by + bh + 108);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  /* --------------------------------------------------- leaderboards */
+  /* One competitor: portrait, name, money, policies. Shared by the
+     podium and the two runner-up medallions on the monthly board, so a
+     fourth place is drawn by the same code as a first. */
+  function paintCompetitor(ctx, c) {
+    paintPortrait(ctx, c.cx, c.cy, c.r, c.img, c.name, c.r > 120 ? 9 : 6, c.r > 120 ? 40 : 24);
+    if (c.place === 1) paintCrown(ctx, c.cx, c.cy - c.r - c.r * 0.52, c.r * 0.74);
+    else paintMedal(ctx, c.cx - c.r * 0.80, c.cy - c.r * 0.80, c.r * 0.26, c.place);
+
+    var ty = c.cy + c.r + c.nameGap;
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#FFFFFF";
+    fitFont(ctx, c.name, "'Archivo', sans-serif", c.nameSize, 15, c.slotW, "700");
+    ctx.fillText(c.name, c.cx, ty);
+
+    var amt = money(c.amount);
+    fitFont(ctx, amt, "'Anton', sans-serif", c.moneySize, 22, c.slotW);
+    glowText(ctx, amt, c.cx, ty + c.moneySize * 0.98, "#FFFFFF", 18, "rgba(255,255,255,.35)");
+
+    if (c.policies !== "" && c.policies != null) {
+      ctx.fillStyle = "rgba(230,238,248,.74)";
+      ctx.font = "500 " + Math.round(c.nameSize * 0.84) + "px 'Archivo', sans-serif";
+      ctx.fillText(num(c.policies) + (num(c.policies) === 1 ? " policy" : " policies"), c.cx, ty + c.moneySize * 0.98 + c.nameSize * 1.18);
+    }
+    ctx.restore();
+  }
+
+  function paintPodium(ctx, baseY) {
+    var blocks = [
+      { x: 56,  w: 316, hh: 186, label: "2ND", tone: ["#2A2F38", "#11141A"], ink: "#D9E0EA" },
+      { x: 382, w: 316, hh: 270, label: "1ST", tone: ["#4A3310", "#1A1206"], ink: "#F7C542" },
+      { x: 708, w: 316, hh: 154, label: "3RD", tone: ["#3A2415", "#150D07"], ink: "#E09A4C" }
+    ];
+    blocks.forEach(function (b) {
+      var top = baseY - b.hh;
+      var g = ctx.createLinearGradient(b.x, top, b.x + b.w, baseY);
+      g.addColorStop(0, b.tone[0]); g.addColorStop(1, b.tone[1]);
+      ctx.save();
+      rr(ctx, b.x, top, b.w, b.hh, 10);
+      ctx.fillStyle = g; ctx.fill();
+      ctx.strokeStyle = "rgba(245,186,60,.30)"; ctx.lineWidth = 2; ctx.stroke();
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.font = Math.round(b.hh * 0.40) + "px 'Anton', sans-serif";
+      ctx.fillStyle = b.ink;
+      ctx.fillText(b.label, b.x + b.w / 2, top + b.hh * 0.52);
+      ctx.restore();
+    });
+    /* The floor the podium stands on: a pool of light fading out in
+       every direction. A filled band left a hard lid across the art. */
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.translate(W / 2, baseY);
+    ctx.scale(1, 0.26);
+    var fg = ctx.createRadialGradient(0, 0, 0, 0, 0, W * 0.62);
+    fg.addColorStop(0, "rgba(245,186,60,.40)");
+    fg.addColorStop(0.45, "rgba(214,140,30,.16)");
+    fg.addColorStop(1, "rgba(245,186,60,0)");
+    ctx.fillStyle = fg;
+    ctx.beginPath(); ctx.arc(0, 0, W * 0.62, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    ctx.save();
+    var ln = ctx.createLinearGradient(80, 0, W - 80, 0);
+    ln.addColorStop(0, "rgba(255,214,120,0)");
+    ln.addColorStop(0.5, "rgba(255,226,150,.55)");
+    ln.addColorStop(1, "rgba(255,214,120,0)");
+    ctx.fillStyle = ln;
+    ctx.fillRect(80, baseY - 1, W - 160, 2);
+    ctx.restore();
+  }
+
+  function drawLeaderboard(ctx, h, data, imgs, mode) {
+    var cx = W / 2;
+    paintGround(ctx, W, h);
+    var y = paintLockup(ctx, cx, 92, 0.86);
+
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.font = "150px 'Anton', sans-serif";
+    ctx.shadowColor = "rgba(255,255,255,.28)"; ctx.shadowBlur = 26;
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillText("LEADERBOARD", cx, y + 118);
+    ctx.restore();
+    paintRuleLabel(ctx, cx, y + 168, data.title || "", 30);
+
+    var rows = data.rows || [];
+    var podTop = y + 250;
+    var podBase = podTop + 695;
+
+    /* Scenery first, then the people on it: drawn the other way round,
+       the 1ST block sat on top of the winner's own figure. */
+    paintPodium(ctx, podBase);
+
+    /* 2nd, 1st, 3rd — the centre one largest, exactly as the board reads.
+       Each block of text is sized to stop above its own podium step. */
+    var spec = [
+      { i: 1, cx: 214,     cy: podTop + 180, r: 96,  place: 2, slotW: 300, nameSize: 27, moneySize: 54, nameGap: 52 },
+      { i: 0, cx: cx,      cy: podTop + 138, r: 124, place: 1, slotW: 330, nameSize: 30, moneySize: 62, nameGap: 56 },
+      { i: 2, cx: W - 214, cy: podTop + 196, r: 86,  place: 3, slotW: 300, nameSize: 26, moneySize: 50, nameGap: 48 }
+    ];
+    spec.forEach(function (s) {
+      var r0 = rows[s.i];
+      if (!r0 || !String(r0.name || "").trim()) return;
+      paintCompetitor(ctx, {
+        cx: s.cx, cy: s.cy, r: s.r, img: imgs[s.i], place: s.place,
+        name: r0.name, amount: r0.amount, policies: r0.policies,
+        slotW: s.slotW, nameSize: s.nameSize, moneySize: s.moneySize, nameGap: s.nameGap
+      });
+    });
+
+    if (mode === "weekly") {
+      ctx.save();
+      ctx.font = "700 27px 'Archivo', sans-serif";
+      ctx.letterSpacing = "9px";
+      var head = "WORK HARD. STAY FOCUSED. ", tail = "THRIVE.";
+      var wh = ctx.measureText(head).width, wt = ctx.measureText(tail).width;
+      var x0 = cx - (wh + wt) / 2, fy = h - 62;
+      ctx.textAlign = "left";
+      ctx.fillStyle = "rgba(237,241,246,.92)";
+      ctx.fillText(head, x0, fy);
+      ctx.fillStyle = "#F3C049";
+      ctx.fillText(tail, x0 + wh, fy);
+      ctx.letterSpacing = "0px";
+      ctx.restore();
+      return;
+    }
+
+    /* ---- monthly: 4th and 5th as medallions, then 6-10 as rows ---- */
+    var rowY = podBase + 112;
+    [3, 4].forEach(function (idx, k) {
+      var r0 = rows[idx];
+      if (!r0 || !String(r0.name || "").trim()) return;
+      paintCompetitor(ctx, {
+        cx: k === 0 ? 288 : W - 288, cy: rowY, r: 68, place: idx + 1,
+        img: imgs[idx], name: r0.name, amount: r0.amount, policies: r0.policies,
+        slotW: 400, nameSize: 24, moneySize: 42, nameGap: 40
+      });
+    });
+
+    var listTop = rowY + 221;
+    var rest = rows.slice(5, 10).filter(function (r0) { return r0 && String(r0.name || "").trim(); });
+    if (!rest.length) return;
+
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.font = "700 23px 'Archivo', sans-serif";
+    ctx.letterSpacing = "7px";
+    ctx.fillStyle = "rgba(240,180,41,.92)";
+    ctx.fillText("ALSO IN THE TOP TEN", cx + 4, listTop);
+    ctx.letterSpacing = "0px";
+    ctx.restore();
+
+    var bx = 72, bw = W - bx * 2, rh = 62, gap = 8, top = listTop + 30;
+    rest.forEach(function (r0, i) {
+      var ry = top + i * (rh + gap);
+      ctx.save();
+      rr(ctx, bx, ry, bw, rh, 12);
+      var g = ctx.createLinearGradient(bx, ry, bx + bw, ry + rh);
+      g.addColorStop(0, "rgba(28,34,46,.92)");
+      g.addColorStop(1, "rgba(14,18,26,.92)");
+      ctx.fillStyle = g; ctx.fill();
+      ctx.strokeStyle = "rgba(245,186,60,.26)"; ctx.lineWidth = 2; ctx.stroke();
+
+      ctx.textBaseline = "middle";
+      ctx.textAlign = "center";
+      ctx.fillStyle = "rgba(240,180,41,.95)";
+      ctx.font = "30px 'Anton', sans-serif";
+      ctx.fillText(String(i + 6), bx + 42, ry + rh / 2 + 1);
+
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#FFFFFF";
+      fitFont(ctx, r0.name, "'Archivo', sans-serif", 27, 15, bw - 380, "700");
+      ctx.fillText(r0.name, bx + 78, ry + rh / 2 + 1);
+
+      ctx.textAlign = "right";
+      var amt = money(r0.amount);
+      ctx.font = "33px 'Anton', sans-serif";
+      var amtW = ctx.measureText(amt).width;
+      ctx.fillStyle = "#FFE08A";
+      ctx.fillText(amt, bx + bw - 24, ry + rh / 2 + 1);
+
+      if (r0.policies !== "" && r0.policies != null && num(r0.policies) > 0) {
+        ctx.fillStyle = "rgba(230,238,248,.62)";
+        ctx.font = "500 19px 'Archivo', sans-serif";
+        ctx.fillText(num(r0.policies) + " pol", bx + bw - 44 - amtW, ry + rh / 2 + 1);
+      }
+      ctx.restore();
+    });
+  }
+
+  /* ========================================================== render */
+  var canvas = null, renderToken = 0;
+
+  function currentRows() {
+    if (ui.template === "highlight") return [{ photo: ui.highlight.photo, name: ui.highlight.name }];
+    return ui[ui.template].rows;
+  }
+
+  function renderArt() {
+    if (!canvas) return;
+    var token = ++renderToken;
+    var tpl = TEMPLATES[ui.template];
+    canvas.width = W; canvas.height = tpl.h;
+    var ctx = canvas.getContext("2d");
+
+    var rows = currentRows();
+    Promise.all(rows.map(function (r) { return loadImage(r.photo); })).then(function (imgs) {
+      if (token !== renderToken) return;           /* a newer render won */
+      ctx.clearRect(0, 0, W, tpl.h);
+      ctx.textBaseline = "alphabetic";
+      if (ui.template === "highlight") drawHighlight(ctx, tpl.h, ui.highlight, imgs);
+      else drawLeaderboard(ctx, tpl.h, ui[ui.template], imgs, ui.template);
+    });
+  }
+
+  function fileName() {
+    if (ui.template === "highlight") return "thrive-highlight-" + slug(ui.highlight.name) + ".png";
+    return "thrive-" + ui.template + "-leaderboard.png";
+  }
+
+  function download() {
+    if (!canvas) return;
+    canvas.toBlob(function (blob) {
+      if (!blob) { toast("The artwork could not be encoded."); return; }
+      if (!downloads) {
+        toast("Saving is not available in this view — right-click the artwork and choose Save image.");
+        return;
+      }
+      downloads.save({ filename: fileName(), data: blob }).then(function () {
+        toast("Saved " + fileName());
+      }).catch(function (e) {
+        var code = (e && e.code) || "";
+        if (code === "declined") return;
+        toast(code === "rate_limited"
+          ? "A save prompt is already open."
+          : "Could not save — right-click the artwork and choose Save image instead.");
+      });
+    }, "image/png");
+  }
+
+  /* ============================================================= UI */
+  function agentOptions(sel) {
+    var out = '<option value="">Type a name</option>';
+    ui.agents.forEach(function (a) {
+      out += '<option value="' + esc(a.id) + '"' + (sel === a.id ? " selected" : "") + ">" + esc(a.name) + "</option>";
+    });
+    return out;
+  }
+
+  function viewMake() {
+    var tpl = TEMPLATES[ui.template];
+    var out = '<div class="studio">';
+
+    /* ---- controls ---- */
+    out += "<div>";
+    out += '<section class="panel"><div class="panel-head"><h2>Template</h2>' +
+      '<span class="note">' + W + " &times; " + tpl.h + "</span></div>" +
+      '<div class="panel-body"><div class="field"><label for="f-tpl">What are you making</label>' +
+      '<select id="f-tpl" data-act="tpl">' +
+      Object.keys(TEMPLATES).map(function (k) {
+        return '<option value="' + k + '"' + (ui.template === k ? " selected" : "") + ">" + esc(TEMPLATES[k].label) + "</option>";
+      }).join("") + "</select></div></div></section>";
+
+    if (ui.template === "highlight") {
+      var H = ui.highlight;
+      out += '<section class="panel"><div class="panel-head"><h2>The agent</h2></div><div class="panel-body">';
+      out += '<div class="field"><label for="h-pick">From the roster</label><select id="h-pick" data-act="pick-h">' + agentOptions("") + "</select>" +
+        '<span class="hint">Picks up their name and headshot. You can still edit the name after.</span></div>';
+      out += '<div class="field"><label for="h-name">Name on the graphic</label><input type="text" id="h-name" data-f="highlight.name" value="' + esc(H.name) + '"></div>';
+      out += '<div class="row2"><div class="field"><label for="h-period">Line above the figure</label><input type="text" id="h-period" data-f="highlight.period" value="' + esc(H.period) + '"></div>' +
+        '<div class="field"><label for="h-unit">Line below it</label><input type="text" id="h-unit" data-f="highlight.unit" value="' + esc(H.unit) + '"></div></div>';
+      out += '<div class="row2"><div class="field"><label for="h-amount">Figure</label><input type="text" inputmode="decimal" id="h-amount" class="num" data-f="highlight.amount" value="' + esc(H.amount) + '"></div>' +
+        '<div class="field"><label for="h-kicker">Sign-off</label><input type="text" id="h-kicker" data-f="highlight.kicker" value="' + esc(H.kicker) + '"></div></div>';
+      out += '<div class="field"><label for="h-photo">Headshot</label><input type="file" id="h-photo" accept="image/*" data-act="photo" data-slot="0">' +
+        '<span class="hint">Used only for this graphic. Add it to the roster to keep it.</span></div>';
+      out += "</div></section>";
+    } else {
+      var D = ui[ui.template];
+      var count = ui.template === "weekly" ? 3 : 10;
+      out += '<section class="panel"><div class="panel-head"><h2>Heading</h2></div><div class="panel-body">' +
+        '<div class="field"><label for="l-title">Line under LEADERBOARD</label><input type="text" id="l-title" data-f="' + ui.template + '.title" value="' + esc(D.title) + '"></div></div></section>';
+
+      out += '<section class="panel"><div class="panel-head"><h2>Paste the numbers</h2><span class="note">one agent a line</span></div>' +
+        '<div class="panel-body"><div class="field"><label for="l-paste">Name, amount, policies</label>' +
+        '<textarea id="l-paste" placeholder="Jacklyn Scala  21729  13&#10;Jackson Lentini 18457 16&#10;Gavyn Moore, 12868, 11"></textarea>' +
+        '<span class="hint">Tabs, commas or spaces all work. Dollar signs and thousands separators are fine.</span></div>' +
+        '<div class="actions"><button class="btn gold sm" data-act="parse">Fill the rows</button>' +
+        '<button class="btn sm" data-act="sortamt">Sort by amount</button></div><div id="parse-msg"></div></div></section>';
+
+      out += '<section class="panel"><div class="panel-head"><h2>' + (ui.template === "weekly" ? "Top three" : "Top ten") + "</h2>" +
+        '<span class="note">1 is first place</span></div><div class="panel-body">';
+      for (var i = 0; i < count; i++) {
+        var r = D.rows[i] || { name: "", amount: "", policies: "", photo: "" };
+        var hi = i < (ui.template === "weekly" ? 3 : 5);
+        out += '<div class="field"><label>' + (i + 1) + (hi ? " &middot; on the podium" : " &middot; in the list") + "</label>" +
+          '<div class="row3">' +
+            '<input type="text" aria-label="Name ' + (i + 1) + '" data-f="' + ui.template + '.rows.' + i + '.name" placeholder="Name" value="' + esc(r.name) + '">' +
+            '<input type="text" inputmode="decimal" class="num" aria-label="Amount ' + (i + 1) + '" data-f="' + ui.template + '.rows.' + i + '.amount" placeholder="Amount" value="' + esc(r.amount) + '">' +
+            '<input type="text" inputmode="numeric" class="num" aria-label="Policies ' + (i + 1) + '" data-f="' + ui.template + '.rows.' + i + '.policies" placeholder="Pol." value="' + esc(r.policies) + '">' +
+          "</div>";
+        if (hi) {
+          out += '<div class="row2" style="margin-top:6px">' +
+            '<select data-act="pick-row" data-slot="' + i + '" aria-label="Roster ' + (i + 1) + '">' + agentOptions("") + "</select>" +
+            '<input type="file" accept="image/*" data-act="photo" data-slot="' + i + '" aria-label="Headshot ' + (i + 1) + '"></div>';
+        }
+        out += "</div>";
+      }
+      out += "</div></section>";
+    }
+    out += "</div>";
+
+    /* ---- stage ---- */
+    out += '<div><div class="stage">';
+    out += '<canvas id="art" width="' + W + '" height="' + tpl.h + '" role="img" aria-label="' + esc(tpl.label) + ' artwork"></canvas>';
+    out += '<div class="actions"><button class="btn gold" data-act="download">Download PNG</button>' +
+      '<button class="btn" data-act="refresh">Redraw</button></div>';
+    out += '<p class="cap">' + (ui.pristine
+      ? "These are the sample figures from your last post, so you can see the layout. Change any of them and the artwork follows."
+      : "Right-click the artwork to copy it, or download the PNG at full size.") + "</p>";
+    out += "</div></div>";
+
+    out += "</div>";
+    return out;
+  }
+
+  function viewRoster() {
+    var out = '<section class="panel"><div class="panel-head"><h2>Add an agent</h2>' +
+      '<span class="note">name and headshot</span></div><div class="panel-body">' +
+      '<div class="row2"><div class="field"><label for="r-name">Name</label><input type="text" id="r-name" placeholder="As it should read on the graphic"></div>' +
+      '<div class="field"><label for="r-photo">Headshot</label><input type="file" id="r-photo" accept="image/*"></div></div>' +
+      '<div id="r-msg"></div>' +
+      '<div class="actions"><button class="btn gold" data-act="add-agent">Add to roster</button></div>';
+    if (!assets || !db) {
+      out += '<div class="msg warn">The roster needs the artifact’s own storage, which this view cannot reach. ' +
+        "You can still make graphics — upload a headshot on the Create tab for one-off use.</div>";
+    }
+    out += "</div></section>";
+
+    out += '<div class="panel-head" style="border:0;padding-left:0;padding-right:0;margin-top:22px">' +
+      "<h2>The floor</h2><span class=\"note\">" + (ui.agentsReady ? ui.agents.length + (ui.agents.length === 1 ? " agent" : " agents") : "loading…") + "</span></div>";
+
+    if (!ui.agentsReady) {
+      out += '<div class="panel"><div class="empty"><strong>Opening the roster</strong><p>One moment.</p></div></div>';
+      return out;
+    }
+    if (!ui.agents.length) {
+      out += '<div class="panel"><div class="empty"><strong>No agents yet</strong>' +
+        "<p>Add everyone who might appear on a leaderboard or a highlight, with a headshot each. " +
+        "Then making a post is picking a name rather than hunting for a photo.</p></div></div>";
+      return out;
+    }
+    out += '<div class="roster">';
+    ui.agents.forEach(function (a) {
+      out += '<div class="agent">' +
+        (a.photoUrl
+          ? '<img class="av" src="' + esc(a.photoUrl) + '" alt="">'
+          : '<div class="av none" aria-hidden="true">' + esc(String(a.name || "?").charAt(0).toUpperCase()) + "</div>") +
+        '<div class="nm">' + esc(a.name) + "</div>" +
+        '<div class="ops">' +
+          '<button class="btn sm" data-act="use-agent" data-id="' + esc(a.id) + '">Use</button>' +
+          '<button class="btn sm" data-act="del-agent" data-id="' + esc(a.id) + '">Remove</button>' +
+        "</div></div>";
+    });
+    out += "</div>";
+    return out;
+  }
+
+  function render() {
+    document.querySelectorAll("#tabs button").forEach(function (b) {
+      if (b.getAttribute("data-tab") === ui.tab) b.setAttribute("aria-current", "page");
+      else b.removeAttribute("aria-current");
+    });
+    app.innerHTML = ui.tab === "roster" ? viewRoster() : viewMake();
+    canvas = document.getElementById("art");
+    if (canvas) renderArt();
+  }
+
+  /* ========================================================== events */
+  function setPath(path, value) {
+    var parts = path.split("."), o = ui;
+    for (var i = 0; i < parts.length - 1; i++) o = o[parts[i]];
+    o[parts[parts.length - 1]] = value;
+  }
+
+  document.getElementById("tabs").addEventListener("click", function (ev) {
+    var b = ev.target.closest("button[data-tab]");
+    if (!b) return;
+    ui.tab = b.getAttribute("data-tab");
+    render();
+  });
+
+  app.addEventListener("input", function (ev) {
+    var f = ev.target.getAttribute && ev.target.getAttribute("data-f");
+    if (!f) return;
+    setPath(f, ev.target.value);
+    ui.pristine = false;
+    renderArt();
+  });
+
+  app.addEventListener("change", function (ev) {
+    var el = ev.target;
+    var act = el.getAttribute && el.getAttribute("data-act");
+    if (act === "tpl") { ui.template = el.value; render(); return; }
+
+    if (act === "pick-h" || act === "pick-row") {
+      var a = ui.agents.filter(function (x) { return x.id === el.value; })[0];
+      if (!a) return;
+      if (act === "pick-h") { ui.highlight.name = a.name; ui.highlight.photo = a.photoUrl || ""; }
+      else {
+        var slot = +el.getAttribute("data-slot");
+        ui[ui.template].rows[slot].name = a.name;
+        ui[ui.template].rows[slot].photo = a.photoUrl || "";
+      }
+      ui.pristine = false;
+      render();
+      return;
+    }
+
+    if (act === "photo") {
+      var file = el.files && el.files[0];
+      if (!file) return;
+      var url = URL.createObjectURL(file);
+      var s = +el.getAttribute("data-slot");
+      if (ui.template === "highlight") ui.highlight.photo = url;
+      else ui[ui.template].rows[s].photo = url;
+      ui.pristine = false;
+      renderArt();
+    }
+  });
+
+  app.addEventListener("click", function (ev) {
+    var t = ev.target.closest("[data-act]");
+    if (!t) return;
+    var act = t.getAttribute("data-act");
+
+    if (act === "download") { download(); return; }
+    if (act === "refresh") { renderArt(); return; }
+    if (act === "parse") { parsePaste(); return; }
+    if (act === "sortamt") {
+      ui[ui.template].rows.sort(function (a, b) { return num(b.amount) - num(a.amount); });
+      ui.pristine = false;
+      render();
+      return;
+    }
+    if (act === "add-agent") { addAgent(); return; }
+    if (act === "del-agent") { removeAgent(t.getAttribute("data-id")); return; }
+    if (act === "use-agent") {
+      var a = ui.agents.filter(function (x) { return x.id === t.getAttribute("data-id"); })[0];
+      if (!a) return;
+      ui.tab = "make";
+      ui.template = "highlight";
+      ui.highlight.name = a.name;
+      ui.highlight.photo = a.photoUrl || "";
+      ui.pristine = false;
+      render();
+      return;
+    }
+  });
+
+  /* A forgiving reader for a block of rows pasted out of a spreadsheet
+     or typed by hand: the trailing numbers on a line are the amount and
+     the policy count, and whatever precedes them is the name. */
+  function parsePaste() {
+    var box = document.getElementById("l-paste");
+    var msg = document.getElementById("parse-msg");
+    var text = box ? box.value : "";
+    var lines = text.split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean);
+    var got = [];
+    lines.forEach(function (line) {
+      var clean = line.replace(/^\s*\d{1,2}[.)]\s+/, "");          /* drop "1." */
+      var nums = clean.match(/\$?\s?[\d][\d,\.]*/g) || [];
+      if (!nums.length) return;
+      var amount = "", policies = "";
+      if (nums.length >= 2) { amount = nums[nums.length - 2]; policies = nums[nums.length - 1]; }
+      else { amount = nums[0]; }
+      /* the biggest trailing number is the money, even if the columns
+         arrive the other way round */
+      if (policies !== "" && num(policies) > num(amount)) { var sw = amount; amount = policies; policies = sw; }
+      var name = clean;
+      [amount, policies].forEach(function (n) { if (n) name = name.replace(n, ""); });
+      name = name.replace(/[,\|\t]+/g, " ").replace(/\s{2,}/g, " ").replace(/[\s\-–—:]+$/, "").trim();
+      if (!name) return;
+      got.push({ name: name, amount: String(num(amount)), policies: policies ? String(num(policies)) : "", photo: "" });
+    });
+
+    if (!got.length) {
+      if (msg) msg.innerHTML = '<div class="msg err">No rows found. Each line needs a name and at least one number.</div>';
+      return;
+    }
+    var cap = ui.template === "weekly" ? 3 : 10;
+    var D = ui[ui.template];
+    for (var i = 0; i < cap; i++) {
+      if (got[i]) {
+        var keep = D.rows[i] ? D.rows[i].photo : "";
+        D.rows[i] = got[i];
+        /* a name that matches the roster brings its headshot along */
+        var hit = ui.agents.filter(function (x) { return x.name.toLowerCase() === got[i].name.toLowerCase(); })[0];
+        D.rows[i].photo = hit ? (hit.photoUrl || "") : keep;
+      }
+    }
+    ui.pristine = false;
+    render();
+    toast("Filled " + Math.min(got.length, cap) + " of " + cap + " places");
+  }
+
+  /* ============================================================ store */
+  function loadAgents() {
+    if (!db) { ui.agentsReady = true; if (ui.tab === "roster") render(); return; }
+    db.collection("agents").orderBy("name").onSnapshot(function (snap) {
+      var list = [];
+      snap.forEach(function (doc) {
+        var d = doc.data() || {};
+        list.push({ id: doc.id, name: d.name || "", photoId: d.photoId || "", photoUrl: d.photoUrl || "" });
+      });
+      ui.agents = list;
+      ui.agentsReady = true;
+      render();
+    }, function () {
+      ui.agentsReady = true;
+      render();
+    });
+  }
+
+  function addAgent() {
+    var nameEl = document.getElementById("r-name");
+    var fileEl = document.getElementById("r-photo");
+    var msg = document.getElementById("r-msg");
+    var name = nameEl ? nameEl.value.trim() : "";
+    function fail(text) { if (msg) msg.innerHTML = '<div class="msg err">' + esc(text) + "</div>"; }
+
+    if (!name) return fail("Give the agent a name.");
+    if (!db) return fail("The roster store is not available in this view.");
+    var file = fileEl && fileEl.files && fileEl.files[0];
+    if (msg) msg.innerHTML = '<div class="msg info">Saving…</div>';
+
+    var step = file && assets
+      ? assets.upload(file).then(function (a) { return { photoId: a.id, photoUrl: a.url }; })
+      : Promise.resolve({ photoId: "", photoUrl: "" });
+
+    step.then(function (ph) {
+      return db.collection("agents").add({
+        name: name, photoId: ph.photoId, photoUrl: ph.photoUrl, addedAt: new Date().toISOString()
+      });
+    }).then(function () {
+      if (msg) msg.innerHTML = "";
+      if (nameEl) nameEl.value = "";
+      if (fileEl) fileEl.value = "";
+      toast("Added " + name);
+    }).catch(function (e) {
+      fail((e && e.message) || "Could not save that agent.");
+    });
+  }
+
+  function removeAgent(id) {
+    var a = ui.agents.filter(function (x) { return x.id === id; })[0];
+    if (!a || !db) return;
+    db.doc("agents/" + id).delete().then(function () {
+      if (a.photoId && assets) assets.delete(a.photoId).catch(function () {});
+      toast("Removed " + a.name);
+    }).catch(function () { toast("Could not remove that agent."); });
+  }
+
+  /* ============================================================= boot */
+  render();
+
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(function () { renderArt(); });
+    /* Anton and the script face are only pulled in once something asks
+       for them, and canvas text does not count as asking. */
+    ["150px 'Anton'", "700 30px 'Archivo'", "60px 'Kaushan Script'"].forEach(function (f) {
+      if (document.fonts.load) document.fonts.load(f).then(function () { renderArt(); }).catch(function () {});
+    });
+  }
+
+  if (window.claude && typeof window.claude.use === "function") {
+    window.claude.use("db").then(function (d) { db = d; loadAgents(); }).catch(function () { loadAgents(); });
+    window.claude.use("assets").then(function (a) { assets = a; }).catch(function () {});
+    window.claude.use("downloads").then(function (d) { downloads = d; }).catch(function () {});
+  } else {
+    ui.agentsReady = true;
+  }
+})();
+</script>
