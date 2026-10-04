@@ -30,8 +30,12 @@ body::before{
 .wrap{max-width:620px; margin:0 auto; padding:0 16px 90px}
 .masthead{padding:44px 0 22px; text-align:center}
 .marks{display:flex; align-items:center; justify-content:center; gap:19px; margin:0 0 24px}
+.marks img.thrive{height:78px; width:auto}
 .marks img.lead{height:14px; width:auto}
-.marks .by{display:flex; align-items:center; gap:9px}
+.marks .by{
+  display:flex; align-items:center; gap:9px;
+  padding-left:19px; border-left:1px solid var(--line-2);
+}
 .marks .by span{
   font-size:8px; font-weight:700; letter-spacing:.26em;
   text-transform:uppercase; color:var(--muted); white-space:nowrap;
@@ -100,7 +104,12 @@ input:focus,textarea:focus{outline:2px solid rgba(240,180,41,.55); outline-offse
 }
 .current b{color:var(--fg)}
 footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16px 10px}
-@media (max-width:560px){ section.card{padding:17px} }
+@media (max-width:560px){
+  section.card{padding:17px}
+  .marks{gap:14px}
+  .marks img.thrive{height:66px}
+  .marks .by{padding-left:14px}
+}
 </style>
 </head>
 <body>
@@ -108,6 +117,7 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
 
   <header class="masthead">
     <div class="marks">
+      <img class="thrive" id="mk-thrive" alt="Thrive Companies">
       <span class="by"><span>Powered by</span><img class="lead" id="mk-lead" alt="Lead Tech"></span>
     </div>
     <h1>Thrive Companies</h1>
@@ -185,7 +195,7 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
   var $ = function (s) { return document.querySelector(s); };
   Array.prototype.slice.call(document.querySelectorAll("[data-entity]"))
     .forEach(function (el) { el.textContent = ENTITY; });
-  [["mk-lead", "leadWhite"]].forEach(function (p) {
+  [["mk-thrive", "thriveV"], ["mk-lead", "leadWhite"]].forEach(function (p) {
     var el = $("#" + p[0]);
     if (el && LOGOS[p[1]]) el.src = LOGOS[p[1]];
     else if (el) el.remove();
