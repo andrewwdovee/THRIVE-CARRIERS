@@ -56,17 +56,28 @@ between "<body>\\n" and "\\n</body></html>" from the saved HTML.`);
 
 const source = readFileSync(sourcePath, "utf8");
 
-/* The exact expression the Vite build emitted for the relay URL. */
-const NEEDLE = 'fn=String((Fn==null?void 0:Fn.VITE_RELAY_URL)||(Fn==null?void 0:Fn.VITE_STORAGE_URL)||"")';
-const hits = source.split(NEEDLE).length - 1;
-if (hits !== 1) {
-  console.error(`Expected exactly one relay-URL expression in the bundle, found ${hits}.
-The board has been rebuilt since this script was written. Do not guess —
+/* The relay URL the Vite build emitted. Minified names move between
+   builds, so the binding is derived rather than hardcoded: find the one
+   String(...) over VITE_RELAY_URL / VITE_STORAGE_URL and keep whatever
+   name it was assigned to. Anything after the closing paren -- a
+   .replace() trimming a trailing slash, say -- is outside the match and
+   survives untouched. */
+const RELAY_EXPR =
+  /([A-Za-z_$][\w$]*)=String\(\(([A-Za-z_$][\w$]*)==null\?void 0:\2\.VITE_RELAY_URL\)\|\|\(\2==null\?void 0:\2\.VITE_STORAGE_URL\)\|\|""\)/g;
+
+const found = [...source.matchAll(RELAY_EXPR)];
+if (found.length !== 1) {
+  const already = /=String\("https:\/\//.test(source);
+  console.error(`Expected exactly one relay-URL expression in the bundle, found ${found.length}.${
+    already ? "\nThe bundle already holds a literal https URL there, so it looks patched already." : ""
+  }
+The board has been rebuilt since this script was written. Do not guess --
 re-derive the patch from the current bundle before deploying.`);
   process.exit(1);
 }
 
-let patched = source.replace(NEEDLE, `fn=String(${JSON.stringify(relay)})`);
+const [relayExpr, relayBinding] = found[0];
+let patched = source.replace(relayExpr, `${relayBinding}=String(${JSON.stringify(relay)})`);
 
 if (onboardingUrl) {
   if (!/^https:\/\//.test(onboardingUrl)) {
