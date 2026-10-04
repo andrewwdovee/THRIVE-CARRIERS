@@ -64,7 +64,8 @@ body::before{
 .progress .count{font-family:var(--display); font-size:30px; line-height:1; color:var(--fg)}
 .progress .count small{font-family:var(--body); font-size:13px; font-weight:600; color:var(--muted); margin-left:4px}
 .progress .track{flex:1 1 180px; min-width:140px; height:10px; border-radius:999px; background:var(--panel-2); overflow:hidden}
-.progress .fill{height:100%; width:0; border-radius:999px; background:var(--good); transition:width .25s ease}
+.progress .fill{display:block; height:100%; width:0; border-radius:999px; background:linear-gradient(90deg,#1FA374,var(--good)); transition:width .9s cubic-bezier(.22,.8,.3,1)}
+@media (prefers-reduced-motion:reduce){ .progress .fill{transition:none} }
 .progress .msg{font-size:13px; color:var(--muted); flex-basis:100%}
 .progress.done .fill{background:var(--good)}
 .progress.done .msg{color:var(--good); font-weight:600}
@@ -124,6 +125,7 @@ body::before{
 }
 .endnote h3{margin:0 0 7px; font-size:15px; font-weight:700}
 .endnote p{margin:0; font-size:14px; color:var(--muted)}
+.ref[hidden]{display:none}
 .ref{
   display:inline-block; margin-top:14px; font-family:ui-monospace,Menlo,monospace;
   font-size:12px; letter-spacing:.07em; color:var(--gold);
@@ -165,7 +167,7 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
 
   <div class="endnote">
     <h3>Stuck on any of it?</h3>
-    <p>Reply to your onboarding email, or message the person who brought you in. The desk would rather answer early than fix it later.</p>
+    <p>Reach out to your hiring manager for any direct support.</p>
     <p class="ref" id="ref" hidden></p>
   </div>
 
@@ -186,6 +188,8 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
   var TRAINING_URL = "../training/";
   var DISCORD_URL = "https://discord.gg/DHN5EDN2y7";
   var SUPPORT_URL = "https://discord.gg/keSnyfQ738";
+  /* The Thrive Contracting ticket server, for step 10. */
+  var CONTRACTING_URL = "https://discord.gg/JeMcKjcxDG";
   /* Sits beside this page in the deploy. Empty in a preview, where
      there is nothing to point at — the button is dropped rather than
      left dead. */
@@ -290,7 +294,10 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
       who: "us",
       title: "Wait for your contracts to come back",
       body: "The carriers review what you submitted. Once your contracts come back " +
-            "approved, you are good to go and ready to start selling."
+            "approved, you are good to go and ready to start selling.",
+      note: "Questions while you wait? The <b>Thrive Contracting</b> ticket server on " +
+            "Discord is where we offer contracting support. Open a ticket there.",
+      link: { href: CONTRACTING_URL, label: "Join the Thrive Contracting server" }
     }
   ];
 
