@@ -132,6 +132,11 @@ let tr = readFileSync(join(here, "training.html"), "utf8");
 tr = one(tr, 'var ENTITY = "Thrive Companies LLC";', `var ENTITY = ${JSON.stringify(entity)};`, "training.html");
 tr = one(tr, 'var LOGOS = {};', `var LOGOS = ${JSON.stringify(logos)};`, "training.html");
 
+/* The links hub at /links: every page and server, to open or copy. */
+let lk = readFileSync(join(here, "links.html"), "utf8");
+lk = one(lk, 'var ENTITY = "Thrive Companies LLC";', `var ENTITY = ${JSON.stringify(entity)};`, "links.html");
+lk = one(lk, 'var LOGOS = {};', `var LOGOS = ${JSON.stringify(logos)};`, "links.html");
+
 let wc = readFileSync(join(here, "welcome.html"), "utf8");
 wc = one(wc, 'var ENTITY = "Thrive Companies LLC";', `var ENTITY = ${JSON.stringify(entity)};`, "welcome.html");
 wc = one(wc, 'var RULES_URL = "https://thrive-inbound.pages.dev/";', `var RULES_URL = ${JSON.stringify(rules)};`, "welcome.html");
@@ -160,12 +165,15 @@ mkdirSync(join(dist, "training"), { recursive: true });
 writeFileSync(join(dist, "training", name), tr);
 mkdirSync(join(dist, "states"), { recursive: true });
 writeFileSync(join(dist, "states", name), stp);
+mkdirSync(join(dist, "links"), { recursive: true });
+writeFileSync(join(dist, "links", name), lk);
 
 console.log(`Wrote onboarding/dist/${name}  (${(out.length / 1024).toFixed(0)} KB)
   and  onboarding/dist/start-time/${name}  (${(st.length / 1024).toFixed(0)} KB)  ->  <url>/start-time
   and  onboarding/dist/welcome/${name}     (${(wc.length / 1024).toFixed(0)} KB)  ->  <url>/welcome
   and  onboarding/dist/training/${name}    (${(tr.length / 1024).toFixed(0)} KB)  ->  <url>/training
   and  onboarding/dist/states/${name}      (${(stp.length / 1024).toFixed(0)} KB)  ->  <url>/states
+  and  onboarding/dist/links/${name}       (${(lk.length / 1024).toFixed(0)} KB)  ->  <url>/links
   relay   ${relay || "(none — preview, submissions go nowhere)"}
   entity  ${entity}
   state   ${state}

@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Thrive Links</title>
+<meta name="description" content="Every page and server Thrive agents use, in one place, with a link to open and a link to copy.">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: the Welcome to Thrive masthead, then groups of link cards in a
+   two-column grid; Discord opens as its own view of the same page. */
+:root{
+  color-scheme: dark;
+  --ink:#07090E; --panel:#1A2130; --panel-2:#222B3C;
+  --line:#2E394B; --line-2:#667998; --fg:#F0F4F9; --muted:#A3B4C8;
+  --gold:#F0B429; --gold-hi:#FFE08A; --good:#35C892; --discord:#7C86F7;
+  --display:'Anton','Arial Narrow',sans-serif;
+  --body:'Archivo',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:ui-monospace,'SFMono-Regular',Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--ink); color:var(--fg); font-family:var(--body); font-size:15px; line-height:1.6}
+body::before{
+  content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:
+    radial-gradient(1100px 620px at 78% -8%, rgba(240,180,41,.13), transparent 62%),
+    radial-gradient(900px 520px at 6% 4%, rgba(47,111,224,.10), transparent 58%);
+}
+.wrap{max-width:960px; margin:0 auto; padding:0 16px 90px}
+
+.masthead{padding:44px 0 10px; text-align:center}
+.marks{display:flex; align-items:center; justify-content:center; gap:19px; margin:0 0 24px}
+.marks img.thrive{height:64px; width:auto}
+.marks img.lead{height:14px; width:auto}
+.marks .by{display:flex; align-items:center; gap:9px; padding-left:19px; border-left:1px solid var(--line-2)}
+.marks .by span{font-size:8px; font-weight:700; letter-spacing:.26em; text-transform:uppercase; color:var(--muted); white-space:nowrap}
+.masthead h1{
+  font-family:var(--display); font-weight:400; margin:0;
+  font-size:clamp(32px,7.6vw,54px); line-height:1.06; letter-spacing:.012em;
+  background:linear-gradient(180deg,#FFFFFF 6%,#DCE3EC 58%,#9BA7B6 100%);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.rule{
+  display:flex; align-items:center; gap:14px; margin:16px auto 0; max-width:460px;
+  color:var(--gold); font-size:10.5px; font-weight:700; letter-spacing:.26em;
+}
+.rule::before,.rule::after{content:""; flex:1; height:1px; background:linear-gradient(90deg,transparent,rgba(240,180,41,.55))}
+.rule::after{background:linear-gradient(90deg,rgba(240,180,41,.55),transparent)}
+.lede{color:var(--muted); max-width:56ch; margin:18px auto 0; font-size:14.5px}
+
+/* ----------------------------------------------------------- groups */
+.group{margin-top:34px}
+.group > h2{
+  display:flex; align-items:center; gap:12px; margin:0 0 14px;
+  font-size:11.5px; font-weight:800; letter-spacing:.2em; text-transform:uppercase; color:var(--gold);
+}
+.group > h2::after{content:""; flex:1; height:1px; background:var(--line)}
+.cards{display:grid; gap:12px; grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (max-width:680px){ .cards{grid-template-columns:minmax(0,1fr)} }
+
+.card{
+  background:var(--panel); border:1px solid var(--line); border-radius:15px;
+  padding:18px 18px 16px; display:grid; gap:12px; align-content:start; min-width:0;
+}
+.card h3{margin:0; font-size:16.5px; font-weight:700; line-height:1.3}
+.card p{margin:4px 0 0; font-size:13.5px; color:var(--muted)}
+.card.discord{border-color:rgba(124,134,247,.45)}
+.card.discord h3{color:#C7CBFF}
+
+.url{
+  display:flex; align-items:center; gap:8px; min-width:0;
+  background:var(--panel-2); border:1px solid var(--line); border-radius:9px; padding:6px 6px 6px 11px;
+}
+.url code{
+  flex:1; min-width:0; font-family:var(--mono); font-size:12px; color:var(--muted);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.actions{display:flex; gap:8px; flex-wrap:wrap}
+.btn{
+  font:inherit; font-size:13.5px; font-weight:700; cursor:pointer; text-decoration:none;
+  display:inline-flex; align-items:center; gap:7px; border-radius:9px; padding:9px 15px;
+  border:1px solid var(--line-2); background:var(--panel-2); color:var(--fg);
+}
+.btn:hover{border-color:var(--gold)}
+.btn.gold{
+  background:linear-gradient(180deg,var(--gold-hi),var(--gold) 52%,#D99A12);
+  color:#2A1C01; border-color:rgba(255,224,138,.65);
+}
+.btn.discordbtn{background:rgba(124,134,247,.16); border-color:rgba(124,134,247,.55); color:#E1E3FF}
+.btn.copy{padding:5px 11px; font-size:12px; flex:none}
+.btn.copy.done{border-color:var(--good); color:var(--good)}
+.btn:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+.btn svg{width:14px; height:14px; flex:none}
+
+.back{margin:26px 0 0}
+.toast{
+  position:fixed; left:50%; bottom:calc(env(safe-area-inset-bottom,0px) + 20px); transform:translate(-50%,16px);
+  background:var(--fg); color:var(--ink); padding:9px 16px; border-radius:999px; font-size:13.5px; font-weight:700;
+  opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; z-index:5;
+}
+.toast.show{opacity:1; transform:translate(-50%,0)}
+footer{text-align:center; color:var(--muted); font-size:11.5px; padding:34px 16px 10px}
+@media (max-width:560px){
+  .marks{gap:14px}
+  .marks img.thrive{height:56px}
+  .marks .by{padding-left:14px}
+}
+@media (prefers-reduced-motion:reduce){ .toast{transition:none} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="marks">
+      <img class="thrive" id="mk-thrive" alt="Thrive Companies">
+      <span class="by"><span>Powered by</span><img class="lead" id="mk-lead" alt="Lead Tech"></span>
+    </div>
+    <h1 id="title">Thrive Links</h1>
+    <p class="rule" id="rule">EVERYTHING IN ONE PLACE</p>
+    <p class="lede" id="lede">
+      Every page and server we use. Open what you need, or copy a link to send to someone.
+    </p>
+  </header>
+
+  <div id="home"></div>
+  <div id="discord" hidden></div>
+
+  <footer><span data-entity>Thrive Companies</span> &middot; Lead Tech inbound</footer>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var ENTITY = "Thrive Companies LLC";
+  var LOGOS = {};
+
+  /* Every link on the page. To change one, change it here. */
+  var GROUPS = [
+    { title: "Getting started", items: [
+      { name: "How to get licensed", desc: "The pre-licensing course, the Life exam, fingerprints, your license and your NPN.",
+        url: "https://thrive-licensing.pages.dev" },
+      { name: "Thrive Companies onboarding", desc: "Your details and the two agreements to sign. Start here once you have your NPN.",
+        url: "https://thrive-onboarding.pages.dev" },
+      { name: "Welcome to Thrive", desc: "The setup list: everything to have in place before your first live day.",
+        url: "https://thrive-onboarding.pages.dev/welcome" }
+    ]},
+    { title: "Every week", items: [
+      { name: "Start times", desc: "Pick your start time and calls for the week, and see who is on at 10 and 11.",
+        url: "https://thrive-onboarding.pages.dev/start-time" },
+      { name: "Training calendar", desc: "Every training session, what time, and who runs it. All times Eastern.",
+        url: "https://thrive-training.pages.dev" }
+    ]},
+    { title: "Inbound", items: [
+      { name: "Inbound rules and how to buy", desc: "The wallet, the daily cut-off, and what gets credited.",
+        url: "https://thrive-inbound.pages.dev" },
+      { name: "Claim your free CRM", desc: "Your inbound portal login, where you see your calls and your wallet.",
+        url: "https://leadtech-crm.vercel.app/agent/login" },
+      { name: "The inbound course", desc: "How to work a transferred caller, from the open to the close.",
+        url: "https://whop.com/thrive-compnaies/exp_lA4u71LcI8r6pP/app/" },
+      { name: "States we target", desc: "Where we run calls, and what a call costs in each state.",
+        url: "https://thrive-onboarding.pages.dev/states" }
+    ]},
+    { title: "Licensing", items: [
+      { name: "Buy a state license on NIPR", desc: "Apply for or add a resident or non-resident license.",
+        url: "https://nipr.com/licensing-center/apply-for-a-license" },
+      { name: "Look up your NPN on NIPR", desc: "Check whether your NPN has come through.",
+        url: "https://nipr.com/help/look-up-your-npn" }
+    ]}
+  ];
+
+  var DISCORDS = [
+    { name: "Thrive Discord", desc: "The main floor: call reviews, carrier news, and most of the training.",
+      url: "https://discord.gg/DHN5EDN2y7" },
+    { name: "Lead Tech support", desc: "Open a ticket for a bad transfer, a charge that looks wrong, or routing problems.",
+      url: "https://discord.gg/keSnyfQ738" },
+    { name: "Thrive Contracting", desc: "Ticket server for contracting questions and support.",
+      url: "https://discord.gg/JeMcKjcxDG" }
+  ];
+
+  var $ = function (q) { return document.querySelector(q); };
+  Array.prototype.forEach.call(document.querySelectorAll("[data-entity]"), function (el) { el.textContent = ENTITY; });
+  [["mk-thrive", "thriveV"], ["mk-lead", "leadWhite"]].forEach(function (p) {
+    var el = $("#" + p[0]);
+    if (el && LOGOS[p[1]]) el.src = LOGOS[p[1]];
+    else if (el) el.remove();
+  });
+
+  function esc(v) {
+    return String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  var OUT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>';
+
+  function card(x, extra) {
+    return '<article class="card' + (extra ? " " + extra : "") + '">' +
+      "<div><h3>" + esc(x.name) + "</h3><p>" + esc(x.desc) + "</p></div>" +
+      '<div class="url"><code title="' + esc(x.url) + '">' + esc(x.url.replace(/^https:\/\//, "")) + "</code>" +
+      '<button type="button" class="btn copy" data-copy="' + esc(x.url) + '" aria-label="Copy link to ' + esc(x.name) + '">Copy</button></div>' +
+      '<div class="actions"><a class="btn ' + (extra === "discord" ? "discordbtn" : "gold") + '" href="' + esc(x.url) +
+      '" target="_blank" rel="noreferrer">Open' + OUT + "</a></div>" +
+      "</article>";
+  }
+
+  var home = GROUPS.map(function (g) {
+    return '<section class="group"><h2>' + esc(g.title) + '</h2><div class="cards">' +
+      g.items.map(function (x) { return card(x); }).join("") + "</div></section>";
+  }).join("");
+  home += '<section class="group"><h2>Community</h2><div class="cards">' +
+    '<article class="card discord"><div><h3>Join our Discords</h3>' +
+    "<p>Three servers: the main Thrive floor, Lead Tech support, and Thrive Contracting.</p></div>" +
+    '<div class="actions"><button type="button" class="btn discordbtn" data-act="discord">See all three servers' + OUT + "</button></div>" +
+    "</article></div></section>";
+  $("#home").innerHTML = home;
+
+  $("#discord").innerHTML =
+    '<section class="group"><h2>Our Discord servers</h2><div class="cards">' +
+    DISCORDS.map(function (x) { return card(x, "discord"); }).join("") + "</div></section>" +
+    '<p class="back"><button type="button" class="btn" data-act="home">&larr; Back to all links</button></p>';
+
+  /* Two views on one page. "#discord" in the address opens the servers. */
+  function show(view) {
+    var d = view === "discord";
+    $("#home").hidden = d;
+    $("#discord").hidden = !d;
+    $("#title").textContent = d ? "Join our Discords" : "Thrive Links";
+    $("#rule").textContent = d ? "THREE SERVERS" : "EVERYTHING IN ONE PLACE";
+    $("#lede").textContent = d
+      ? "Join all three. Copy a link to invite someone."
+      : "Every page and server we use. Open what you need, or copy a link to send to someone.";
+    try { history.replaceState(null, "", d ? "#discord" : location.pathname + location.search); } catch (e) {}
+    window.scrollTo(0, 0);
+  }
+  if (location.hash === "#discord") show("discord");
+
+  var timer;
+  function toast(t) {
+    var el = $("#toast"); el.textContent = t; el.classList.add("show");
+    clearTimeout(timer); timer = setTimeout(function () { el.classList.remove("show"); }, 1600);
+  }
+
+  document.addEventListener("click", function (ev) {
+    var b = ev.target.closest("[data-act],[data-copy]");
+    if (!b) return;
+    var act = b.getAttribute("data-act");
+    if (act) { show(act); return; }
+    var url = b.getAttribute("data-copy");
+    var done = function () {
+      b.textContent = "Copied"; b.classList.add("done"); toast("Link copied");
+      setTimeout(function () { b.textContent = "Copy"; b.classList.remove("done"); }, 1600);
+    };
+    var fallback = function () {
+      var code = b.parentNode.querySelector("code");
+      code.textContent = url;
+      var r = document.createRange(); r.selectNodeContents(code);
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      code.style.whiteSpace = "normal";
+      toast("Selected. Press Ctrl+C or ⌘C to copy");
+    };
+    try { navigator.clipboard.writeText(url).then(done, fallback); } catch (e) { fallback(); }
+  });
+})();
+</script>
+</body>
+</html>
