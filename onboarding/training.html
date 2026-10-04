@@ -119,20 +119,23 @@ body::before{
   gap:1px;
 }
 .grid .hd{
-  background:var(--panel); padding:10px 8px; text-align:center;
+  background:var(--panel); padding:7px 6px; text-align:center;
   font-size:11px; font-weight:800; letter-spacing:.15em; text-transform:uppercase; color:var(--muted);
 }
 .grid .hd.wd{color:var(--gold)}
-.grid .cell{background:var(--panel); min-height:132px; padding:8px; display:grid; align-content:start; gap:6px}
+.grid .cell{background:var(--panel); min-height:76px; padding:5px 6px; display:grid; align-content:start; gap:3px}
 .grid .cell.out{background:#141A26}
 .grid .cell.today{background:rgba(240,180,41,.09)}
-.grid .cell .dnum{font-size:13px; font-weight:700; color:var(--fg)}
+.grid .cell .dnum{font-size:12px; font-weight:700; color:var(--fg); line-height:1.2}
 .grid .cell.out .dnum{color:var(--muted); opacity:.5}
 .grid .cell .none{font-size:10px; color:var(--muted); letter-spacing:.09em; text-transform:uppercase; opacity:.65}
-.grid .sess{padding:5px 7px; gap:7px}
-.grid .sess .t{font-size:10.5px; padding:2px 5px}
-.grid .sess .n b{font-size:11px}
-.grid .sess .n small{font-size:10px}
+.grid .sess{padding:2px 5px; gap:5px; border-radius:7px}
+.grid .sess .t{font-size:10px; padding:1px 4px}
+/* One line per session in the month: the trainer is on the week cards
+   above, so the grid only needs what and when. */
+.grid .sess .n b{font-size:10.5px; line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.grid .sess .n small{display:none}
+.grid .cell .none{font-size:9.5px}
 
 .monthwrap{display:none}
 @media (min-width:980px){ .monthwrap{display:block} .mobilenote{display:none} }
