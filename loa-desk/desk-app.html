@@ -2086,6 +2086,37 @@
    * Line chart. `series` is [{name, color, values[], fmt, fill?, dash?}].
    * Every series must share one unit — this never draws a second y-axis.
    */
+  /* A straight least-squares fit through a series, so a chart says which
+     way the floor is moving instead of leaving it to be eyeballed off a
+     sawtooth. Clamped at zero: a downward fit runs negative past the end
+     of the data, and a negative number of calls is not a forecast, it is
+     an artifact of drawing a straight line through a short record. */
+  function trendValues(values) {
+    var n = values.length;
+    if (n < 2) return null;
+    var sx = 0, sy = 0, sxx = 0, sxy = 0;
+    for (var i = 0; i < n; i++) {
+      var v = num(values[i]);
+      sx += i; sy += v; sxx += i * i; sxy += i * v;
+    }
+    var den = n * sxx - sx * sx;
+    if (!den) return null;
+    var m = (n * sxy - sx * sy) / den, b = (sy - m * sx) / n;
+    var out = [];
+    for (var j = 0; j < n; j++) out.push(Math.max(0, m * j + b));
+    return out;
+  }
+  /* Which way that fit points, in a word. A hair either side of level is
+     level \u2014 "trending up" on a slope of nothing is noise dressed up
+     as a finding. */
+  function trendWord(t) {
+    if (!t || t.length < 2) return "";
+    var first = t[0], last = t[t.length - 1];
+    var base = Math.max(first, last);
+    if (base <= 0 || Math.abs(last - first) / base < 0.05) return "holding level";
+    return last > first ? "trending up" : "trending down";
+  }
+
   function svgLine(labels, series, opts) {
     opts = opts || {};
     var W = opts.width || 640, H = opts.height || 200, P = { t: 12, r: 14, b: 26, l: 52 };
@@ -2380,13 +2411,32 @@
 
     h += sectionHead("Volume", "Calls in, deals out",
       "What the floor did day by day, and how reliably calls turned into business.");
+
+    /* Averages run over the days the floor actually logged calls, not
+       calendar days: nobody works Sunday, and dividing by Sundays makes
+       a good week look like a bad one. The trend is fitted over the days
+       as plotted, zeros and all, because that is the shape it describes. */
+    var callVals = rows.map(function (d) { return d.calls; });
+    var dealVals = rows.map(function (d) { return d.deals; });
+    var callTrend = trendValues(callVals), dealTrend = trendValues(dealVals);
+    var dLogged = k.daysLogged || 0;
+    var perDay = function (total, dp) {
+      return dLogged
+        ? dec(total / dLogged, dp == null ? 1 : dp) + " a day over " + intf(dLogged) + " day" + (dLogged === 1 ? "" : "s") + " logged"
+        : "no days logged yet";
+    };
+    var callSeries = [{ name: "Calls", color: "var(--s1)", values: callVals, fill: true, fmt: intf }];
+    if (callTrend) callSeries.push({ name: "Trend", values: callTrend, dash: true, fmt: function (v) { return dec(v, 1); } });
+    var dealSeries = [{ name: "Deals", color: "var(--s1)", values: dealVals, fill: true, fmt: intf }];
+    if (dealTrend) dealSeries.push({ name: "Trend", values: dealTrend, dash: true, fmt: function (v) { return dec(v, 2); } });
+
     h += '<div class="charts c2">'
-      + panel("Calls per day", intf(k.callsTaken) + " calls · " + money(k.marketingCost) + " spent", svgLine(labels, [
-          { name: "Calls", color: "var(--s1)", values: rows.map(function (d) { return d.calls; }), fill: true, fmt: intf }
-        ], { alt: "Inbound calls taken per day", integer: true }))
-      + panel("Deals closed per day", intf(k.written) + " deals in range", svgLine(labels, [
-          { name: "Deals", color: "var(--s1)", values: rows.map(function (d) { return d.deals; }), fill: true, fmt: intf }
-        ], { alt: "Deals closed per day", integer: true }))
+      + panel("Calls per day", intf(k.callsTaken) + " calls · " + perDay(k.callsTaken)
+          + (callTrend ? " · " + trendWord(callTrend) : ""),
+          svgLine(labels, callSeries, { alt: "Inbound calls taken per day, with the trend", integer: true }))
+      + panel("Deals closed per day", intf(k.written) + " deals · " + perDay(k.written, 2)
+          + (dealTrend ? " · " + trendWord(dealTrend) : ""),
+          svgLine(labels, dealSeries, { alt: "Deals closed per day, with the trend", integer: true }))
       + "</div>";
 
     h += '<div class="charts">'
