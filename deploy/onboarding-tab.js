@@ -28,9 +28,10 @@ const OB_DOC = "onboarding/doc/";
    false for an outside agency: not missing, not required. */
 const OB_STEPS = [
   ["details", "Details"],
-  ["read", "Read"],
-  ["agreed", "Agreed"],
-  ["signed", "Signed"],
+  ["agreed", "LT read"],
+  ["signed", "LT signed"],
+  ["thriveRead", "TC read"],
+  ["thriveSigned", "TC signed"],
   ["photo", "Photo"],
 ];
 
@@ -232,27 +233,29 @@ function ObPanel() {
               pair("Email", doc.email), pair("Phone", doc.phone),
               pair("NPN", doc.npn), pair("Brought in by", doc.referrer),
               pair("Calls start", doc.startTime), pair("Dated", doc.signedDate),
-              pair("Title", doc.title), pair("Agreement", doc.version),
+              pair("Agreement", doc.version), pair("Signed at", obWhen(doc.signedAt)),
             ],
           }, "f"),
           __JSX__.jsxs("div", {
             className: "flex gap-4 flex-wrap items-center",
             children: [
-              __JSX__.jsxs("div", {
-                children: [
-                  __JSX__.jsx("div", { className: "text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1", children: "Signature" }, "l"),
-                  doc.signature
-                    ? __JSX__.jsx("img", {
-                        src: doc.signature, alt: "Signature of " + (doc.signedName || ""),
-                        style: { height: "72px", background: "#fff", borderRadius: "6px", padding: "4px" },
-                      }, "i")
-                    : __JSX__.jsx("div", { className: "text-sm text-slate-500 dark:text-slate-400", children: "none" }, "i"),
-                  __JSX__.jsxs("div", {
-                    className: "text-xs text-slate-500 dark:text-slate-400 mt-1",
-                    children: ["Typed as ", doc.signedName, " · ", obWhen(doc.signedAt)],
-                  }, "s"),
-                ],
-              }, "sig"),
+              ...[["Lead Tech agreement", doc.signature, doc.signedName, doc.signedDate],
+                  ["Thrive Companies agreement", doc.thriveSignature, doc.thriveSignedName, doc.thriveSignedDate]]
+                .map(([what, png, who, when]) => __JSX__.jsxs("div", {
+                  children: [
+                    __JSX__.jsx("div", { className: "text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1", children: what }, "l"),
+                    png
+                      ? __JSX__.jsx("img", {
+                          src: png, alt: "Signature of " + (who || ""),
+                          style: { height: "64px", background: "#fff", borderRadius: "6px", padding: "4px" },
+                        }, "i")
+                      : __JSX__.jsx("div", { className: "text-sm text-slate-500 dark:text-slate-400", children: "not signed" }, "i"),
+                    __JSX__.jsxs("div", {
+                      className: "text-xs text-slate-500 dark:text-slate-400 mt-1",
+                      children: ["Typed as ", who || "—", when ? " · " + when : ""],
+                    }, "s"),
+                  ],
+                }, what)),
               doc.photo && __JSX__.jsxs("div", {
                 children: [
                   __JSX__.jsx("div", { className: "text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1", children: "Highlight photo" }, "l"),

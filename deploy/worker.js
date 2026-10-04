@@ -315,27 +315,33 @@ async function handle(request, env) {
         npn:       text(body.npn, 60),
         referrer:  text(body.referrer, 120),
         startTime: text(body.startTime, 60),
-        title:     text(body.title, 80),
         signedName: text(body.signedName, 160),
         signedDate: text(body.signedDate, 20),
+        thriveSignedName: text(body.thriveSignedName, 160),
+        thriveSignedDate: text(body.thriveSignedDate, 20),
         version:   text(body.version, 40),
         tz:        text(body.tz, 60),
         agent:     text(body.agent, 200),
       };
       const signature = typeof body.signature === "string" ? body.signature : "";
+      const thriveSignature = typeof body.thriveSignature === "string" ? body.thriveSignature : "";
       const photo = typeof body.photo === "string" ? body.photo : "";
 
-      const missing = ["legalName", "business", "email", "phone", "startTime", "signedName"]
-        .filter((k) => !rec[k]);
+      const missing = ["legalName", "business", "email", "phone", "startTime",
+        "signedName", "thriveSignedName"].filter((k) => !rec[k]);
       if (missing.length) return json({ error: "Missing fields", missing }, 400, head);
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(rec.email)) {
         return json({ error: "That email does not look right." }, 400, head);
       }
-      if (!signature.startsWith("data:image/png")) {
-        return json({ error: "The signature is missing." }, 400, head);
-      }
-      if (signature.length > ONBOARD_MAX_SIG) {
-        return json({ error: "That signature is too large." }, 413, head);
+      /* Two agreements, two signatures. Both or neither — a record with
+         one of them signed is not a record of anything. */
+      for (const [what, png] of [["Lead Tech", signature], ["Thrive Companies", thriveSignature]]) {
+        if (!png.startsWith("data:image/png")) {
+          return json({ error: `The ${what} signature is missing.` }, 400, head);
+        }
+        if (png.length > ONBOARD_MAX_SIG) {
+          return json({ error: `That ${what} signature is too large.` }, 413, head);
+        }
       }
       if (photo && !photo.startsWith("data:image/")) {
         return json({ error: "That photo is not an image." }, 400, head);
@@ -372,12 +378,15 @@ async function handle(request, env) {
           read: true,
           agreed: true,
           signed: true,
+          thriveRead: true,
+          thriveSigned: true,
           photo: photo ? true : null,
         },
         reviewed: false,
       });
 
-      await env.THRIVE_KV.put(`kv:${ONBOARD_DOC}${id}`, JSON.stringify({ ...rec, id, signedAt, signature, photo }));
+      await env.THRIVE_KV.put(`kv:${ONBOARD_DOC}${id}`,
+        JSON.stringify({ ...rec, id, signedAt, signature, thriveSignature, photo }));
       await env.THRIVE_KV.put(ONBOARD_INDEX, JSON.stringify(index));
       await env.THRIVE_KV.put(bucket, String(seen + 1), { expirationTtl: 7200 });
 

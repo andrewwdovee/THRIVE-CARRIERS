@@ -10,6 +10,10 @@
   Two things to set before use, in both files:
     ENTITY  the legal name of the contracting company
     STATE   the governing-law state
+
+  Two agreements now: the Lead Tech one about buying calls, and the
+  Thrive Companies one about writing under the agency. They are signed
+  separately on the form.
 -->
 
 # Lead Tech Marketing Agreement
@@ -130,3 +134,79 @@ between us about the inbound call platform and it replaces anything said
 beforehand. If a court finds part of it unenforceable the rest stands. We may
 change these rules on thirty (30) days' notice; taking calls after that is
 acceptance.
+
+
+---
+
+# Thrive Companies Agency Agreement
+
+This agreement is between **{{ENTITY}}** ("Thrive", "we", "us") and the person
+named on the form ("you"), and it covers writing under the agency. It sits
+alongside the Lead Tech Marketing Agreement above; where that one is about
+buying calls, this one is about the agency relationship.
+
+## 1 · Your debt is yours
+
+**An advance is a loan against commission you have not earned yet. If the policy
+charges back, lapses, or never pays, the advance comes back — and it comes back
+from you.**
+
+**(a) A negative balance is a debt.** If chargebacks take your account below
+zero, that balance is yours. We set it off against future commission first. If
+you stop writing, move agencies or leave, whatever is left is payable on demand.
+
+**(b) Rolling it up does not clear it.** When a carrier rolls an unpaid balance
+up the hierarchy — to your upline, or to Thrive — the money moves but the
+responsibility does not. You still owe it. Thrive, or whoever absorbed it, may
+recover it from you directly and may set it off against any commission, bonus,
+override or other payment owed to you, now or later.
+
+**(c) You will not roll debt up on purpose.** That means not writing business you
+expect to charge back, not writing on people who cannot or will not pay, and not
+walking away from a negative balance for the upline to absorb. Doing any of those
+is a breach of this agreement, and the balance becomes immediately due in full.
+
+**(d) What it costs to collect.** If we have to chase a balance, you also cover
+the reasonable costs of collecting it, including legal fees.
+
+## 2 · What belongs to Thrive
+
+Everything the agency puts in your hands stays the agency's: scripts, rebuttals,
+training, recorded calls, the dialer build and its routing, lead sources and what
+they cost, carrier terms and commission levels, the software and its templates,
+the artwork, and anything else Thrive made or paid to have made.
+
+You may use it while you are with Thrive, and not after. You will not copy it,
+keep it, publish it, sell it, or take it to another agency, IMO or FMO. Anything
+you produce for Thrive in the course of the work belongs to Thrive.
+
+## 3 · No recruiting from inside
+
+**While you are with Thrive, and for twelve (12) months after you leave, you will
+not recruit or solicit any agent, producer or staff member of Thrive Companies to
+another agency, IMO or FMO — and you will not help anyone else do it.**
+
+**What it costs.** For each person you recruit or solicit in breach of this, you
+will pay Thrive **$5,000**, plus the reasonable costs of enforcing it. That figure
+is a genuine pre-estimate of what it costs the agency to replace and retrain
+somebody — the recruiting, the licensing, the onboarding, the production lost in
+between — and not a penalty. The actual loss is hard to measure, which is exactly
+why a figure is agreed up front.
+
+**What this does not stop.** A general advertisement that is not aimed at Thrive's
+people, and somebody who comes to you entirely on their own without any approach
+from you or anyone acting for you.
+
+## 4 · Confidentiality
+
+Agent lists and contact details, commission levels, carrier terms, lead costs,
+client and applicant data — all confidential, while you are here and after you
+leave. Client data also has its own rules under law, and nothing here reduces
+them.
+
+## 5 · General
+
+Governed by the laws of the State of {{STATE}}. Sections 1 to 4 carry on after
+you leave. If a court finds any part of this unenforceable — the twelve months,
+or the $5,000 — it may reduce it to what is enforceable rather than striking it
+out, and the rest stands.

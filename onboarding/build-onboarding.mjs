@@ -72,7 +72,9 @@ out = one(out, 'var LOGOS = {};', `var LOGOS = ${JSON.stringify(logos)};`);
 /* ---- the agreement in the page against the one in the repo ---- */
 const md = readFileSync(join(here, "contract.md"), "utf8");
 const headings = [...md.matchAll(/^## (\d) · (.+)$/gm)].map((m) => m[2].toLowerCase());
-const pageText = (src.match(/<article class="paper"[\s\S]*?<\/article>/) || [""])[0]
+/* Both agreements, not just the first: the page carries two. */
+const pageText = [...src.matchAll(/<article class="paper"[\s\S]*?<\/article>/g)]
+  .map((m) => m[0]).join(" ")
   .replace(/<[^>]+>/g, " ").replace(/&[a-z]+;/g, " ").replace(/\s+/g, " ").toLowerCase();
 const drifted = headings.filter((h) => !pageText.includes(h.replace(/\s+/g, " ")));
 if (drifted.length) {
