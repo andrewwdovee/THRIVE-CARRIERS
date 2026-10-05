@@ -267,7 +267,7 @@ function obPaginate(items) {
 
 /* ------------------------------------------------- the execution block */
 
-var OB_INITIAL_ROWS = [["access", "No access before signature (s.2)"], ["nda", "Strict NDA / protected reporting (s.7)"], ["nonsolicit", "12-month non-solicitation (s.11)"], ["debt", "Writing agent primary obligor (s.16)"], ["guaranty", "Personal & hierarchy-debt guaranty (s.17)"], ["jury", "Jury-trial waiver (s.31)"], ["book", "Protected book / no book stripping (s.38)"], ["eo", "E&O insurance (s.39)"], ["ip", "IP & successor rights (s.42)"], ["sp_nonsolicit", "Special \u2014 12-month non-solicitation"], ["sp_debt", "Special \u2014 debt + hierarchy guaranty"], ["sp_nda", "Special \u2014 NDA / protected reporting"], ["sp_book", "Special \u2014 protected book"], ["sp_eo", "Special \u2014 E&O insurance"], ["sp_ip", "Special \u2014 IP / change of control"]];
+var OB_INITIAL_ROWS = [["access", "No access before signature (s.2)"], ["nda", "Strict NDA / protected reporting (s.7)"], ["nonsolicit", "12-Month Non-Solicitation (s.11)"], ["debt", "Writing agent primary obligor (s.16)"], ["guaranty", "Personal & Hierarchy Debt guaranty (s.17)"], ["jury", "Jury-trial waiver (s.31)"], ["book", "Protected book / no book stripping (s.38)"], ["eo", "E&O insurance (s.39)"], ["ip", "IP & successor rights (s.42)"], ["sp_nonsolicit", "Special \u2014 12-Month Non-Solicitation"], ["sp_debt", "Special \u2014 debt + hierarchy guaranty"], ["sp_nda", "Special \u2014 NDA / protected reporting"], ["sp_book", "Special \u2014 protected book"], ["sp_eo", "Special \u2014 E&O insurance"], ["sp_ip", "Special \u2014 IP / change of control"]];
 
 function obExecution(rec, which) {
   var lt = which === "lt";
