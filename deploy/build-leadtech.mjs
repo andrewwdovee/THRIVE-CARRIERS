@@ -124,11 +124,28 @@ if (onboardingUrl) {
   }
 }
 
+/* Tab icon and link preview: the Lead Tech mark, the same images the
+   marketplace uses (onboarding/favicons.json). Written out as real files
+   because Messages on an iPhone fetches the icon by address for its link
+   preview and cannot read one inlined into the page. */
+const favs = JSON.parse(readFileSync(join(here, "..", "onboarding", "favicons.json"), "utf8"));
+const png = (k) => Buffer.from(favs[k].split(",")[1], "base64");
+const TITLE = "Lead Tech Fulfillment";
+const DESC = "Orders, refunds, wallets and start times for the Lead Tech inbound desk.";
+
 const html = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${TITLE}</title>
+<meta name="description" content="${DESC}">
+<link rel="icon" type="image/png" sizes="64x64" href="favicon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Lead Tech">
+<meta property="og:title" content="${TITLE}">
+<meta property="og:description" content="${DESC}">
 <style>
   html, body { margin: 0; padding: 0; }
   img { max-width: 100%; }
@@ -143,6 +160,8 @@ ${patched}
 
 mkdirSync(join(here, "dist-leadtech"), { recursive: true });
 writeFileSync(join(here, "dist-leadtech", "index.html"), html);
+writeFileSync(join(here, "dist-leadtech", "favicon.png"), png("favLead"));
+writeFileSync(join(here, "dist-leadtech", "apple-touch-icon.png"), png("favLead180"));
 
 console.log(`Wrote deploy/dist-leadtech/index.html  (${(html.length / 1024).toFixed(0)} KB)
 Relay: ${relay}${onboardingUrl ? "\nOnboarding: " + onboardingUrl : "\nOnboarding tab: not included (pass --onboarding <url>)"}
