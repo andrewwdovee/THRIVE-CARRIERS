@@ -232,6 +232,7 @@ footer img{height:16px; width:auto; opacity:.85}
     "google-training": "", "google-pro": "", "google-unlimited": "",
     "meta": "", "meta-spanish": "", "meta-qualified": "", "tv": "",
     "recruit-launch": "", "recruit-scale": "", "recruit-agency": "",
+    "instagram": "",
     "crm": ""
   };
 
@@ -254,6 +255,7 @@ footer img{height:16px; width:auto; opacity:.85}
     shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
     trend: '<path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/>',
     target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+    chat: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
     star: '<path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/>',
     check: '<path d="M20 6 9 17l-5-5"/>',
     circleCheck: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
@@ -493,10 +495,29 @@ footer img{height:16px; width:auto; opacity:.85}
       "Pricing is set with the desk.");
   };
   VIEWS.instagram = function () {
-    return simple("instagram", "Automate your agent pipeline on IG", "Recruit on Instagram.", "On Autopilot.",
-      "Powerful automation tools to prospect and recruit insurance agents through Instagram — save hours every week on outreach.",
-      ["Automated prospecting on Instagram", "Messaging templates built for recruiting agents", "Saves hours of manual outreach every week", "Software access for your account"],
-      "Pricing is set with the desk.");
+    return hero("Automate your agent pipeline on IG", "Recruit on Instagram.", "On Autopilot.",
+        "Powerful automation tools to prospect and recruit insurance agents through Instagram — save hours every week on outreach.") +
+      sechead("Monthly subscription", "Simple, Flat Pricing",
+        "Full software suite included. Cancel anytime. No long-term contracts.") +
+      '<div class="tiers" style="grid-template-columns:minmax(0,420px); justify-content:center">' +
+      tier({ name: "Instagram Recruiting Software", tag: "Everything you need to prospect and recruit insurance agents on Instagram — fully automated.",
+        price: "$350", unit: "/ month", key: "instagram", cls: "hot", btn: "pri",
+        items: ["Automated DM outreach", "Follow / unfollow automation", "Advanced prospect targeting filters", "Custom message sequences",
+          "Full analytics dashboard", "Compliance-aware daily limits", "Priority support", "Onboarding call included"] }) +
+      "</div>" +
+      sechead("How it works", "How It Works",
+        "Connect your Instagram, set your targeting, and let the software build your pipeline while you sleep.") +
+      feats([
+        ["chat", "Automated Outreach", "Send personalized DM sequences to targeted profiles automatically — no manual typing, no manual following."],
+        ["users", "Targeted Prospecting", "Filter by follower count, bio keywords, engagement, and more to find Instagram users most likely to be interested in insurance opportunities."],
+        ["zap", "Set It and Go", "Configure your sequences once and let the software run. You focus on conversations, we handle the cold outreach."],
+        ["trend", "Track Your Pipeline", "See response rates, conversion metrics, and campaign performance all in one clean dashboard."],
+        ["clock", "Saves Hours Weekly", "Agents using our software save 10+ hours per week compared to manual Instagram prospecting. That time goes back to closing."],
+        ["star", "Compliance Aware", "Our system operates within Instagram's daily limits to protect your account from restrictions or bans."]
+      ]) +
+      cta("Scale Your Instagram Recruiting",
+        "Stop spending hours manually DMing prospects. Let our software do the heavy lifting while you focus on the conversations that matter.",
+        '<a class="btn pri" href="#instagram" data-scrolltop="1">Choose a Plan' + ic("arrow") + "</a>");
   };
   VIEWS.crm = function () {
     return hero("Insurance CRM — $1 / month", "A Full Insurance CRM.", "For Just $1 a Month.",
