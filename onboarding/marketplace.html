@@ -105,6 +105,12 @@ a.card:focus-visible{outline:2px solid var(--cyan); outline-offset:3px}
 .card .sub{font-size:11px; font-weight:700; color:#7FB0FF}
 .card .price{font-size:22px; font-weight:900; letter-spacing:-.02em; color:#7FB0FF; margin-top:4px}
 .card .price small{font-size:12px; font-weight:600; color:var(--muted)}
+.card .buf{display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; color:var(--fg);
+  border:1px solid var(--line-2); border-radius:999px; padding:3px 10px; margin:4px 0 2px}
+.card .buf svg{width:12px; height:12px; color:var(--cyan)}
+.grid2{display:grid; gap:20px; grid-template-columns:repeat(2,minmax(0,1fr)); grid-auto-rows:1fr; max-width:700px; margin:0 auto}
+@media (max-width:600px){ .grid2{grid-template-columns:minmax(0,1fr)} }
+.solo{display:grid; grid-template-columns:minmax(0,380px); justify-content:center}
 
 /* ------------------------------------------------- the featured program */
 .feature{
@@ -236,7 +242,7 @@ footer img{height:16px; width:auto; opacity:.85}
   var CHECKOUT = {
     "transfers-starter": "", "transfers-growth": "", "transfers-pro": "",
     "google-training": "", "google-pro": "", "google-unlimited": "",
-    "meta": "", "meta-spanish": "", "meta-qualified": "", "tv": "",
+    "meta-standard": "", "meta-spanish": "", "meta-qualified": "", "meta-v2": "", "tv": "",
     "recruit-launch": "", "recruit-scale": "", "recruit-agency": "",
     "instagram": "",
     "crm": "",
@@ -394,35 +400,67 @@ footer img{height:16px; width:auto; opacity:.85}
         '<a class="btn pri" href="#transfers" data-scrolltop="1">Choose a Plan' + ic("arrow") + "</a>" + portalBtn("Open Transfer Portal"));
   };
 
-  var TYPES = [
-    { key: "meta", icon: "bars", name: "Meta Inbounds", sub: "Facebook & Instagram Ads", price: "$26",
-      desc: "High-intent prospects generated from Facebook and Instagram ad campaigns — actively searching for final expense coverage." },
-    { key: "meta-spanish", icon: "lang", name: "Spanish Meta Inbounds", sub: "Facebook & Instagram Ads — Spanish", price: "$26",
-      desc: "Same high-intent Meta prospects, targeted to Spanish-speaking seniors — a fast-growing, underserved market with strong response rates." },
-    { key: "meta-qualified", icon: "bot", name: "Meta Qualified Inbounds", sub: "AI-Screened Facebook & Instagram Leads", price: "$50", badge: "AI qualified",
-      desc: "Same high-intent Meta prospects — but pre-screened by an AI agent for age, state, and coverage reason before being transferred to you. Only qualified callers make it through." },
-    { key: "google", icon: "search", name: "Google Inbounds", sub: "Search & Display Ads", price: "$35", go: "google",
+  /* Inbound Calls: pick a source (Meta, Google, TV), then the call types
+     that source sells. Each type shows its price and its buffer: a call
+     shorter than the buffer is not billed. */
+  var SOURCES = [
+    { go: "meta", icon: "bars", name: "Meta Inbounds", sub: "Facebook & Instagram Ads", price: "From $20",
+      desc: "High-intent prospects from Facebook and Instagram ad campaigns — Standard, Spanish, Pre-Qualified and Standard FE V2." },
+    { go: "google", icon: "search", name: "Google Inbounds", sub: "Search & Display Ads", price: "$35",
       desc: "Prospects actively searching Google for final expense insurance — the highest purchase-intent traffic available online." },
-    { key: "tv", icon: "tv", name: "TV Inbounds", sub: "Television Direct Response", price: "$70",
+    { go: "tv", icon: "tv", name: "TV Inbounds", sub: "Television Direct Response", price: "$50",
       desc: "Callers responding to TV commercials — proven high-trust traffic with strong brand recognition and closing rates." }
   ];
-  function typeCard(t) {
-    var link = t.go ? '<a class="btn pri" style="margin-top:14px" href="#' + t.go + '" data-go="' + t.go + '">View Plans' + ic("arrow") + "</a>"
-      : '<div style="margin-top:14px; width:100%">' + buy(t.key, "Get Started") + "</div>";
+  var META_TYPES = [
+    { key: "meta-standard", icon: "phone", name: "FE Standard Inbounds", sub: "Facebook & Instagram Ads", price: "$20", buffer: "15-second buffer",
+      desc: "High-intent final expense prospects from Facebook and Instagram ad campaigns, calling you directly." },
+    { key: "meta-spanish", icon: "lang", name: "Spanish Inbounds", sub: "Facebook & Instagram Ads — Spanish", price: "$26", buffer: "15-second buffer",
+      desc: "High-intent Meta prospects targeted to Spanish-speaking seniors — a fast-growing, underserved market." },
+    { key: "meta-qualified", icon: "bot", name: "Pre-Qualified Inbounds", sub: "AI-Screened Facebook & Instagram Leads", price: "$50", buffer: "15-second buffer", badge: "AI qualified",
+      desc: "Pre-screened by an AI agent for age, state, and coverage reason before being transferred to you. Only qualified callers make it through." },
+    { key: "meta-v2", icon: "clock", name: "Standard FE V2", sub: "Facebook & Instagram Ads", price: "$47.50", buffer: "90-second buffer",
+      desc: "You only pay for calls that last over 90 seconds — anything shorter is free." }
+  ];
+  var TV_TYPES = [
+    { key: "tv", icon: "tv", name: "TV Inbounds", sub: "Television Direct Response", price: "$50", buffer: "10-second buffer",
+      desc: "Callers responding to TV commercials — proven high-trust traffic with strong brand recognition and closing rates." }
+  ];
+  function priceCard(t, foot) {
     return '<div class="card">' + (t.badge ? '<span class="badge mid new">' + esc(t.badge) + "</span>" : "") +
       '<div class="ic blue">' + ic(t.icon) + "</div><h3>" + esc(t.name) + '</h3><div class="sub">' + esc(t.sub) + "</div>" +
-      '<div class="price">' + esc(t.price) + " <small>/ call</small></div><p>" + esc(t.desc) + "</p>" + link + "</div>";
+      '<div class="price">' + esc(t.price) + (/^\$/.test(t.price) ? " <small>/ call</small>" : "") + "</div>" +
+      (t.buffer ? '<span class="buf">' + ic("clock") + esc(t.buffer) + "</span>" : "") +
+      "<p>" + esc(t.desc) + "</p>" + foot + "</div>";
   }
+  function sourceCard(t) {
+    return priceCard(t, '<a class="btn pri" style="margin-top:auto" href="#' + t.go + '" data-go="' + t.go + '">' +
+      (t.go === "google" ? "View Plans" : "View Calls") + ic("arrow") + "</a>");
+  }
+  function typeCard(t) {
+    return priceCard(t, '<div style="margin-top:auto; padding-top:10px; width:100%">' + buy(t.key, "Get Started") + "</div>");
+  }
+  function backToCalls() {
+    return '<div style="padding-top:20px"><a class="navback" href="#calls" data-go="calls">&larr; Back to Inbound Calls</a></div>';
+  }
+  var BUFFER_NOTE = '<p class="fine">The buffer is how long a call has to last before it is billed. A call that ends inside the buffer is free.</p>';
 
   VIEWS.calls = function () {
     return hero("Direct inbound call campaigns", "High-Intent Prospects.", "Calling You Directly.",
         "Our inbound call campaigns drive seniors actively searching for final expense coverage straight to your phone line — no transfers, no middlemen, just you and a live prospect.") +
-      sechead("Choose your lead source", "Select an Inbound Type", "Pick your preferred lead channel and get started today.") +
-      '<div class="grid3">' + TYPES.slice(0, 3).map(typeCard).join("") + "</div>" +
-      '<div class="grid3 center" style="margin-top:14px">' + TYPES.slice(3).map(typeCard).join("") + "</div>" +
-      '<section class="bigcta"><div class="ic">' + ic("search") + "</div><h3>Purchase Google Inbound Tiers</h3>" +
-      "<p>Subscribe to a weekly capacity plan and lock in your daily call volume — Training, Pro, or Unlimited.</p>" +
-      go("google", "View Plans", "pri") + "</section>";
+      sechead("Choose your lead source", "Where Should Your Calls Come From?", "Pick a source to see every call type and price.") +
+      '<div class="grid3">' + SOURCES.map(sourceCard).join("") + "</div>";
+  };
+  VIEWS.meta = function () {
+    return backToCalls() +
+      hero("Facebook & Instagram ads", "Meta Inbounds.", "Pick Your Call Type.",
+        "Every Meta call type, with its price and its buffer.") +
+      '<div class="grid2" style="margin-top:34px">' + META_TYPES.map(typeCard).join("") + "</div>" + BUFFER_NOTE;
+  };
+  VIEWS.tv = function () {
+    return backToCalls() +
+      hero("Television direct response", "TV Inbounds.", "High-Trust Callers.",
+        "Callers responding to TV commercials, sent straight to your phone line.") +
+      '<div class="solo" style="margin-top:34px">' + TV_TYPES.map(typeCard).join("") + "</div>" + BUFFER_NOTE;
   };
 
   VIEWS.google = function () {
@@ -572,7 +610,7 @@ footer img{height:16px; width:auto; opacity:.85}
     $("#navback").hidden = id === "home";
     var p = PRODUCTS.filter(function (x) { return x.id === id; })[0];
     document.title = id === "home" ? "Lead Tech Marketplace"
-      : (p ? p.name : id === "google" ? "Google Inbound Tiers" : "The Limitless Program") + " · Lead Tech Marketplace";
+      : (p ? p.name : { google: "Google Inbound Tiers", meta: "Meta Inbounds", tv: "TV Inbounds" }[id] || "The Limitless Program") + " · Lead Tech Marketplace";
   }
   document.addEventListener("click", function (ev) {
     var a = ev.target.closest("[data-go],[data-scrolltop]");
