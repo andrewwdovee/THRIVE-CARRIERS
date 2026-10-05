@@ -69,6 +69,13 @@ body::before{
 .card h3{margin:0; font-size:16.5px; font-weight:700; line-height:1.3}
 .card p{margin:4px 0 0; font-size:13.5px; color:var(--muted)}
 .card.discord{border-color:rgba(124,134,247,.45)}
+.card.soon{border-style:dashed; border-color:rgba(240,180,41,.45); background:rgba(26,33,48,.6)}
+.card.soon .btn[aria-disabled]{opacity:.55; cursor:default}
+.pill{
+  display:inline-block; vertical-align:middle; margin-left:6px; padding:2px 9px; border-radius:999px;
+  font-size:10.5px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--gold-hi); background:rgba(240,180,41,.12); border:1px solid rgba(240,180,41,.45);
+}
 .card.discord h3{color:#C7CBFF}
 
 .url{
@@ -168,6 +175,12 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:34px 16p
       { name: "States we target", desc: "Where we run calls, and what a call costs in each state.",
         url: "https://thrive-onboarding.pages.dev/states" }
     ]},
+    { title: "Lead Tech Marketplace", items: [
+      /* Add the address here once the marketplace page is live; until then
+         the card shows as coming soon. */
+      { name: "Lead Tech Marketplace", desc: "Everything you can buy from Lead Tech, in one place.",
+        url: "" }
+    ]},
     { title: "Licensing", items: [
       { name: "Buy a state license on NIPR", desc: "Apply for or add a resident or non-resident license.",
         url: "https://nipr.com/licensing-center/apply-for-a-license" },
@@ -200,6 +213,11 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:34px 16p
   var OUT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>';
 
   function card(x, extra) {
+    if (!x.url) {
+      return '<article class="card soon"><div><h3>' + esc(x.name) + ' <span class="pill">Coming soon</span></h3>' +
+        "<p>" + esc(x.desc) + "</p></div>" +
+        '<div class="actions"><span class="btn" aria-disabled="true">Not live yet</span></div></article>';
+    }
     return '<article class="card' + (extra ? " " + extra : "") + '">' +
       "<div><h3>" + esc(x.name) + "</h3><p>" + esc(x.desc) + "</p></div>" +
       '<div class="url"><code title="' + esc(x.url) + '">' + esc(x.url.replace(/^https:\/\//, "")) + "</code>" +
