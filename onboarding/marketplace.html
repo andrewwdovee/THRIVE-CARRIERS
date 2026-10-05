@@ -110,6 +110,15 @@ a.card:focus-visible{outline:2px solid var(--cyan); outline-offset:3px}
 .card .buf svg{width:12px; height:12px; color:var(--cyan)}
 .grid2{display:grid; gap:20px; grid-template-columns:repeat(2,minmax(0,1fr)); grid-auto-rows:1fr; max-width:700px; margin:0 auto}
 @media (max-width:600px){ .grid2{grid-template-columns:minmax(0,1fr)} }
+.sidebar{display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; margin-top:18px}
+.sidebar > span{font-size:10.5px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--faint)}
+.sidebar > small{font-size:11.5px; color:var(--faint)}
+.sidebar .seg{margin:0}
+.only{max-width:560px; margin:20px auto 0; border:1px solid rgba(234,179,8,.5); background:rgba(234,179,8,.10); color:#E9DDB4;
+  border-radius:12px; padding:12px 16px; font-size:13.5px}
+.only b{color:var(--gold)}
+.onlytag{display:inline-block; margin:8px 0 0; font-size:10px; font-weight:900; letter-spacing:.1em; text-transform:uppercase;
+  color:#231A00; background:var(--gold); border-radius:999px; padding:3px 10px}
 .walletnote{display:flex; gap:14px; align-items:center; max-width:640px; margin:24px auto 0; padding:14px 18px; border-radius:14px;
   border:1px solid rgba(34,195,238,.45); background:linear-gradient(180deg,rgba(34,195,238,.10),rgba(59,130,246,.04));
   box-shadow:0 10px 30px -14px rgba(34,195,238,.55); animation:pop .35s ease .15s both}
@@ -287,6 +296,16 @@ footer img{height:16px; width:auto; opacity:.85}
     "leads": ""
   };
 
+  /* Two price lists. Internal is Thrive Companies agents; external is
+     LeadTech. The switch at the top of every page picks one, and it is
+     remembered on this device. A price written as [internal, external]
+     shows whichever side is picked. A checkout link for the external side
+     goes in CHECKOUT under the same key with "-lt" on the end. */
+  var SIDES = [{ id: "thrive", label: "Thrive Companies" }, { id: "leadtech", label: "LeadTech" }];
+  var side = "thrive";
+  try { if (localStorage.getItem("mkSide") === "leadtech") side = "leadtech"; } catch (e) {}
+  function pv(v) { return Array.isArray(v) ? v[side === "leadtech" ? 1 : 0] : v; }
+
   /* ------------------------------------------------------------ icons */
   var P = {
     phoneIn: '<path d="M16 3h5v5M21 3l-6 6"/><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/>',
@@ -321,7 +340,7 @@ footer img{height:16px; width:auto; opacity:.85}
     return String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
   function buy(key, label, cls) {
-    var url = CHECKOUT[key];
+    var url = CHECKOUT[side === "leadtech" ? key + "-lt" : key];
     if (!url) return '<span class="btn wide off ' + (cls || "") + '">Checkout link coming soon</span>';
     return '<a class="btn wide ' + (cls || "") + '" href="' + esc(url) + '" target="_blank" rel="noreferrer">' + esc(label || "Get Started") + ic("arrow") + "</a>";
   }
@@ -342,13 +361,13 @@ footer img{height:16px; width:auto; opacity:.85}
   }
   function tier(t) {
     return '<div class="tier' + (t.cls ? " " + t.cls : "") + '">' +
-      (t.badge ? '<span class="badge mid' + (t.badgeCls ? " " + t.badgeCls : "") + '">' + esc(t.badge) + "</span>" : "") +
+      (pv(t.badge) ? '<span class="badge mid' + (t.badgeCls ? " " + t.badgeCls : "") + '">' + esc(pv(t.badge)) + "</span>" : "") +
       (t.icon ? '<div class="ic ' + (t.iconCls || "") + '" style="margin:0 0 10px">' + ic(t.icon) + "</div>" : "") +
       "<h3>" + esc(t.name) + "</h3>" +
-      '<div class="tl' + (t.tagC ? " c" : "") + '">' + esc(t.tag) + "</div>" +
-      '<div class="amt"><b class="' + (t.amtCls || "") + '">' + esc(t.price) + "</b><span>" + esc(t.unit) + "</span></div>" +
-      (t.per ? '<span class="per">' + ic("phone").replace('aria-hidden="true"', 'aria-hidden="true" style="width:11px;height:11px"') + esc(t.per) + "</span>" : "") +
-      "<ul>" + t.items.map(function (x) { return "<li>" + ic("circleCheck") + "<span>" + esc(x) + "</span></li>"; }).join("") + "</ul>" +
+      '<div class="tl' + (t.tagC ? " c" : "") + '">' + esc(pv(t.tag)) + "</div>" +
+      '<div class="amt"><b class="' + (t.amtCls || "") + '">' + esc(pv(t.price)) + "</b><span>" + esc(t.unit) + "</span></div>" +
+      (pv(t.per) ? '<span class="per">' + ic("phone").replace('aria-hidden="true"', 'aria-hidden="true" style="width:11px;height:11px"') + esc(pv(t.per)) + "</span>" : "") +
+      "<ul>" + (Array.isArray(t.items[0]) ? pv(t.items) : t.items).map(function (x) { return "<li>" + ic("circleCheck") + "<span>" + esc(x) + "</span></li>"; }).join("") + "</ul>" +
       '<div class="go">' + (t.href ? '<a class="btn wide ' + (t.btn || "") + '" href="' + esc(t.href) + '" target="_blank" rel="noreferrer">' + esc(t.hrefLabel) + ic("ext") + "</a>"
         : buy(t.key, "Get Started", t.btn)) + "</div></div>";
   }
@@ -400,7 +419,7 @@ footer img{height:16px; width:auto; opacity:.85}
       sechead("Our products", "Choose Your Solution", "Select any product below to view pricing and get started today.") +
       '<div class="grid3">' + PRODUCTS.map(card).join("") + "</div>" +
       '<a class="feature" href="#limitless" data-go="limitless"><div class="kicker">Exclusive program</div>' +
-      "<h3>The Limitless Program</h3>" +
+      '<span class="onlytag">Thrive agents only</span>' + "<h3>The Limitless Program</h3>" +
       "<p>Unlimited Google inbound calls for free.</p>" +
       '<span class="more">Learn more ' + ic("arrow").replace('aria-hidden="true"', 'aria-hidden="true" style="width:13px;height:13px"') + "</span></a>";
   };
@@ -412,14 +431,14 @@ footer img{height:16px; width:auto; opacity:.85}
       sechead("One-time packages", "Choose Your Volume",
         "All packages are a one-time charge. Scale up or down at any time through the transfer portal. Every tier includes the same premium inbound transfer quality.") +
       '<div class="tiers">' +
-      tier({ name: "Starter", tag: "Perfect for agents testing the waters with inbound final expense leads.", price: "$235", unit: "one-time",
-        per: "10 inbound calls · $23/call", key: "transfers-starter",
+      tier({ name: "Starter", tag: "Perfect for agents testing the waters with inbound final expense leads.", price: ["$235", "$350"], unit: "one-time",
+        per: ["10 inbound calls · $23/call", "10 inbound calls"], key: "transfers-starter",
         items: ["10 inbound calls (one-time)", "90-second warm transfers", "Real-time call routing", "Live transfer portal access", "Delivery guaranteed"] }) +
-      tier({ name: "Growth", tag: "The most popular plan for agents scaling their final expense book.", price: "$350", unit: "one-time",
-        per: "15 inbound calls · $23/call", key: "transfers-growth", cls: "hot", badge: "Most popular", btn: "pri",
+      tier({ name: "Growth", tag: "The most popular plan for agents scaling their final expense book.", price: ["$350", "$500"], unit: "one-time",
+        per: ["15 inbound calls · $23/call", "15 inbound calls"], key: "transfers-growth", cls: "hot", badge: "Most popular", btn: "pri",
         items: ["15 inbound calls (one-time)", "90-second warm transfers", "Real-time call routing", "Live transfer portal access", "Delivery guaranteed", "Priority call queue"] }) +
-      tier({ name: "Pro", tag: "Maximum volume for high-performing agents ready to dominate.", price: "$470", unit: "one-time",
-        per: "20 inbound calls · $23/call", key: "transfers-pro",
+      tier({ name: "Pro", tag: "Maximum volume for high-performing agents ready to dominate.", price: ["$470", "$750"], unit: "one-time",
+        per: ["20 inbound calls · $23/call", "20 inbound calls"], key: "transfers-pro",
         items: ["20 inbound calls (one-time)", "90-second warm transfers", "Real-time call routing", "Live transfer portal access", "Delivery guaranteed", "Priority call queue", "Dedicated account support"] }) +
       "</div>" +
       '<p class="fine">Already purchased? <a href="' + esc(PORTAL_URL) + '" target="_blank" rel="noreferrer">Open Live Transfer Portal &#8599;</a></p>' +
@@ -442,31 +461,31 @@ footer img{height:16px; width:auto; opacity:.85}
      that source sells. Each type shows its price and its buffer: a call
      shorter than the buffer is not billed. */
   var SOURCES = [
-    { go: "meta", icon: "bars", name: "Meta Inbounds", sub: "Facebook & Instagram Ads", price: "From $20",
+    { go: "meta", icon: "bars", name: "Meta Inbounds", sub: "Facebook & Instagram Ads", price: ["From $20", "From $25"],
       desc: "High-intent prospects from Facebook and Instagram ad campaigns — Standard, Spanish, Pre-Qualified and Standard FE V2." },
-    { go: "google", icon: "search", name: "Google Inbounds", sub: "Search & Display Ads", price: "From $33.50", buffer: "Billed on connect",
+    { go: "google", icon: "search", name: "Google Inbounds", sub: "Search & Display Ads", price: ["From $33.50", "$40"], buffer: "Billed on connect",
       desc: "Prospects actively searching Google for final expense insurance — the highest purchase-intent traffic available online." },
-    { go: "tv", icon: "tv", name: "TV Inbounds", sub: "Television Direct Response", price: "$50",
+    { go: "tv", icon: "tv", name: "TV Inbounds", sub: "Television Direct Response", price: ["$50", "$65"],
       desc: "Callers responding to TV commercials — proven high-trust traffic with strong brand recognition and closing rates." }
   ];
   var META_TYPES = [
-    { key: "meta-standard", icon: "phone", name: "FE Standard Inbounds", sub: "Facebook & Instagram Ads", price: "$20", buffer: "15-second buffer",
+    { key: "meta-standard", icon: "phone", name: "FE Standard Inbounds", sub: "Facebook & Instagram Ads", price: ["$20", "$25"], buffer: "15-second buffer",
       desc: "High-intent final expense prospects from Facebook and Instagram ad campaigns, calling you directly." },
-    { key: "meta-spanish", icon: "lang", name: "Spanish Inbounds", sub: "Facebook & Instagram Ads — Spanish", price: "$26", buffer: "15-second buffer",
+    { key: "meta-spanish", icon: "lang", name: "Spanish Inbounds", sub: "Facebook & Instagram Ads — Spanish", price: ["$26", "$31"], buffer: "15-second buffer",
       desc: "High-intent Meta prospects targeted to Spanish-speaking seniors — a fast-growing, underserved market." },
-    { key: "meta-qualified", icon: "bot", name: "Pre-Qualified Inbounds", sub: "AI-Screened Facebook & Instagram Leads", price: "$50", buffer: "15-second buffer", badge: "AI qualified",
+    { key: "meta-qualified", icon: "bot", name: "Pre-Qualified Inbounds", sub: "AI-Screened Facebook & Instagram Leads", price: ["$50", "$60"], buffer: "15-second buffer", badge: "AI qualified",
       desc: "Pre-screened by an AI agent for age, state, and coverage reason before being transferred to you. Only qualified callers make it through." },
-    { key: "meta-v2", icon: "clock", name: "Standard FE V2", sub: "Facebook & Instagram Ads", price: "$47.50", buffer: "90-second buffer",
+    { key: "meta-v2", icon: "clock", name: "Standard FE V2", sub: "Facebook & Instagram Ads", price: ["$47.50", "$55"], buffer: "90-second buffer",
       desc: "You only pay for calls that last over 90 seconds — anything shorter is free." }
   ];
   var TV_TYPES = [
-    { key: "tv", icon: "tv", name: "TV Inbounds", sub: "Television Direct Response", price: "$50", buffer: "10-second buffer",
+    { key: "tv", icon: "tv", name: "TV Inbounds", sub: "Television Direct Response", price: ["$50", "$65"], buffer: "10-second buffer",
       desc: "Callers responding to TV commercials — proven high-trust traffic with strong brand recognition and closing rates." }
   ];
   function priceCard(t, foot) {
     return '<div class="card">' + (t.badge ? '<span class="badge mid new">' + esc(t.badge) + "</span>" : "") +
       '<div class="ic blue">' + ic(t.icon) + "</div><h3>" + esc(t.name) + '</h3><div class="sub">' + esc(t.sub) + "</div>" +
-      '<div class="price">' + esc(t.price) + (/^\$/.test(t.price) ? " <small>/ call</small>" : "") + "</div>" +
+      '<div class="price">' + esc(pv(t.price)) + (/^\$/.test(pv(t.price)) ? " <small>/ call</small>" : "") + "</div>" +
       (t.buffer ? '<span class="buf">' + ic("clock") + esc(t.buffer) + "</span>" : "") +
       "<p>" + esc(t.desc) + "</p>" + foot + "</div>";
   }
@@ -527,7 +546,6 @@ footer img{height:16px; width:auto; opacity:.85}
         { name: "Legendary", calls: 50, perCall: 40, stripe: "https://buy.stripe.com/9B65kD6Yt4jaeZVe8l2VG2I", perk: "Wallet doesn't get wiped" }
       ] }
   ];
-  var gPlan = "thrive";
   function money(n) {
     return "$" + n.toLocaleString("en-US", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 });
   }
@@ -545,17 +563,14 @@ footer img{height:16px; width:auto; opacity:.85}
       '" target="_blank" rel="noreferrer">Subscribe' + ic("ext") + "</a></div></div>";
   }
   VIEWS.google = function () {
-    var plan = GOOGLE_PLANS.filter(function (p) { return p.id === gPlan; })[0] || GOOGLE_PLANS[0];
+    var plan = GOOGLE_PLANS.filter(function (p) { return p.id === side; })[0] || GOOGLE_PLANS[0];
     var rates = plan.tiers.map(function (t) { return t.perCall; });
     var lowest = Math.min.apply(null, rates);
     var onlyLowest = rates.filter(function (r) { return r === lowest; }).length === 1;
     return backToCalls() +
       hero("Google inbound subscriptions", "Lock In Your", "Weekly Call Volume.",
         "Top up manually at the standard rate, or buy a weekly call package for a lower price per call. Google calls are billed the moment a call connects.") +
-      sechead("Pricing tiers", "Choose Your Package", "Pick your pricing, then the package that fits your week.") +
-      '<div class="seg" role="tablist" aria-label="Pricing for">' + GOOGLE_PLANS.map(function (p) {
-        return '<button type="button" role="tab" data-plan="' + p.id + '" aria-selected="' + (p.id === plan.id) + '">' + esc(p.label) + "</button>";
-      }).join("") + "</div>" +
+      sechead("Pricing tiers", "Choose Your Package", "Pick the package that fits your week.") +
       (plan.notice ? '<div class="note">' + plan.notice + "</div>" : "") +
       '<div class="payg"><div><div class="kicker">Pay as you go · ' + esc(plan.label) + '</div><b class="t">' + esc(plan.topUp.name) + "</b><p>" +
       esc(plan.topUp.text) + '</p></div><div class="amt">' + money(plan.topUp.perCall) + "<span>per billable call</span></div></div>" +
@@ -606,13 +621,13 @@ footer img{height:16px; width:auto; opacity:.85}
       sechead("Monthly plans", "Select Your Growth Plan",
         "All plans include full campaign management. No ad spend included — you control your budget.") +
       '<div class="tiers">' +
-      tier({ name: "Launch", tag: "Start attracting agent leads with proven recruiting ad creative.", price: "$300", unit: "/ month",
+      tier({ name: "Launch", tag: "Start attracting agent leads with proven recruiting ad creative.", price: ["$300", "$500"], unit: "/ month",
         key: "recruit-launch",
         items: ["1 active ad campaign", "Facebook & Instagram ads", "Proven ad creative included", "Lead capture landing page", "Monthly performance report"] }) +
-      tier({ name: "Scale", tag: "Accelerate your team growth with multi-campaign ad management.", price: "$500", unit: "/ month",
+      tier({ name: "Scale", tag: "Accelerate your team growth with multi-campaign ad management.", price: ["$500", "$750"], unit: "/ month",
         key: "recruit-scale", cls: "hot", badge: "Most popular", btn: "pri",
         items: ["3 active ad campaigns", "Facebook, Instagram & TikTok", "A/B tested creative sets", "Custom lead capture funnel", "Weekly performance reports", "Dedicated ad manager"] }) +
-      tier({ name: "Agency", tag: "Full-scale recruiting engine for growing IMOs and agencies.", price: "$1,000", unit: "/ month",
+      tier({ name: "Agency", tag: "Full-scale recruiting engine for growing IMOs and agencies.", price: ["$1,000", "$1,250"], unit: "/ month",
         key: "recruit-agency",
         items: ["Unlimited ad campaigns", "All platforms covered", "Full creative production", "Custom multi-step funnel", "Daily reporting dashboard", "Dedicated ad manager", "Bi-weekly strategy calls"] }) +
       "</div>" +
@@ -637,7 +652,7 @@ footer img{height:16px; width:auto; opacity:.85}
         "Full software suite included. Cancel anytime. No long-term contracts.") +
       '<div class="tiers" style="grid-template-columns:minmax(0,420px); justify-content:center">' +
       tier({ name: "Instagram Recruiting Software", tag: "Everything you need to prospect and recruit insurance agents on Instagram — fully automated.",
-        price: "$350", unit: "/ month", key: "instagram", cls: "hot", btn: "pri",
+        price: ["$350", "$600"], unit: "/ month", key: "instagram", cls: "hot", btn: "pri",
         items: ["Automated DM outreach", "Follow / unfollow automation", "Advanced prospect targeting filters", "Custom message sequences",
           "Full analytics dashboard", "Compliance-aware daily limits", "Priority support", "Onboarding call included"] }) +
       "</div>" +
@@ -659,20 +674,22 @@ footer img{height:16px; width:auto; opacity:.85}
     return hero("Your tools", "Always Have the Edge", "on Your Competition.",
         "The best CRMs on the market. The LeadTech CRM to manage every client, and the Inbound Portal to take every call.") +
       '<div class="tiers duo" style="margin-top:34px">' +
-      tier({ name: "LeadTech CRM", tag: "Lead Tech clients only", tagC: true, price: "$1", unit: "/ month", amtCls: "t", icon: "grid", iconCls: "green",
-        per: "Normally $500 / month", key: "crm", cls: "best", badge: "Exclusive", badgeCls: "excl", btn: "teal",
-        items: ["Fully built CRM for insurance agents", "Made for final expense workflows", "Normally $500/month to the public", "$1/month for Lead Tech clients"] }) +
+      tier({ name: "LeadTech CRM", tag: ["Thrive Companies agents", "Full insurance CRM"], tagC: true, price: ["$1", "$500"], unit: "/ month", amtCls: "t", icon: "grid", iconCls: "green",
+        per: ["Normally $500 / month", ""], key: "crm", cls: "best", badge: ["Exclusive", ""], badgeCls: "excl", btn: "teal",
+        items: [["Fully built CRM for insurance agents", "Made for final expense workflows", "Normally $500/month to the public", "$1/month for Thrive Companies agents"],
+          ["Fully built CRM for insurance agents", "Made for final expense workflows", "Client and policy management", "Built-in pipeline and follow-ups"]] }) +
       tier({ name: "Inbound Portal", tag: "Every agent", tagC: true, price: "$0", unit: "/ month", amtCls: "c", icon: "phoneIn", iconCls: "blue",
         cls: "hot", badge: "Free", badgeCls: "new", btn: "pri", href: PORTAL_URL, hrefLabel: "Open Inbound Portal",
         items: ["Take all of your inbound calls", "See your calls and your wallet", "Free for every agent", "Sign in and start taking calls"] }) +
       "</div>" +
-      cta("Already a Lead Tech Client?", "Claim your CRM and sign in to the portal.",
+      cta("Already Signed Up?", "Sign in to the portal to reach your CRM and your inbound calls.",
         portalBtn("Open the portal", "pri") + go("home", "All products"));
   };
   VIEWS.limitless = function () {
     return '<section class="hero"><span class="chip" style="color:var(--gold); border-color:rgba(234,179,8,.5); background:rgba(234,179,8,.08)">Exclusive program</span>' +
       '<h1>The Limitless<br><span class="g" style="background:linear-gradient(90deg,#FDE68A,#EAB308 50%,#F59E0B); -webkit-background-clip:text; background-clip:text">Program.</span></h1>' +
-      "<p>Keep 30% of your commissions with no chargebacks, and take unlimited Google inbound calls every day. Built for agents who want to scale without limits.</p></section>" +
+      "<p>Keep 30% of your commissions with no chargebacks, and take unlimited Google inbound calls every day. Built for agents who want to scale without limits.</p>" +
+      '<div class="only"><b>Thrive agents only.</b> You must be contracted with Thrive Companies to join. External (LeadTech) agents are not eligible.</div></section>' +
       sechead("What you get", "Two Things, No Ceiling") +
       '<ul class="list gold">' +
       ["Keep 30% of your commissions", "No chargebacks on the commission you keep", "Unlimited Google inbound calls", "Take calls every day — no daily cap"]
@@ -686,15 +703,23 @@ footer img{height:16px; width:auto; opacity:.85}
   function render() {
     var id = (location.hash || "").replace(/^#\/?/, "") || "home";
     if (!VIEWS[id]) id = "home";
-    $("#view").innerHTML = '<div class="view">' + VIEWS[id]() + "</div>";
+    $("#view").innerHTML = '<div class="sidebar"><span>Pricing for</span><div class="seg" role="tablist" aria-label="Pricing for">' +
+      SIDES.map(function (x) {
+        return '<button type="button" role="tab" data-side="' + x.id + '" aria-selected="' + (x.id === side) + '">' + esc(x.label) + "</button>";
+      }).join("") + "</div><small>" + (side === "leadtech" ? "External pricing" : "Internal pricing") + "</small></div>" +
+      '<div class="view">' + VIEWS[id]() + "</div>";
     $("#navback").hidden = id === "home";
     var p = PRODUCTS.filter(function (x) { return x.id === id; })[0];
     document.title = id === "home" ? "Lead Tech Marketplace"
       : (p ? p.name : { google: "Google Inbound Tiers", meta: "Meta Inbounds", tv: "TV Inbounds" }[id] || "The Limitless Program") + " · Lead Tech Marketplace";
   }
   document.addEventListener("click", function (ev) {
-    var pb = ev.target.closest("[data-plan]");
-    if (pb) { gPlan = pb.getAttribute("data-plan"); render(); return; }
+    var sb = ev.target.closest("[data-side]");
+    if (sb) {
+      side = sb.getAttribute("data-side");
+      try { localStorage.setItem("mkSide", side); } catch (e) {}
+      render(); return;
+    }
     var a = ev.target.closest("[data-go],[data-scrolltop]");
     if (!a) return;
     ev.preventDefault();
