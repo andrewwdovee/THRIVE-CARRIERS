@@ -158,6 +158,20 @@ for (const [f, varName] of EXTRA_LINKS) {
   if (v) wc = one(wc, `var ${varName} = "${here}";`, `var ${varName} = ${JSON.stringify(v)};`, "welcome.html");
 }
 
+/* Tab icons: the Thrive V on every Thrive page, the Lead Tech mark on the
+   marketplace. They live in favicons.json, beside the logos. */
+const favs = JSON.parse(readFileSync(join(here, "favicons.json"), "utf8"));
+const favicon = (html, kind, name) => one(html, "</head>",
+  `<link rel="icon" type="image/png" sizes="64x64" href="${favs["fav" + kind]}">\n` +
+  `<link rel="apple-touch-icon" href="${favs["fav" + kind + "180"]}">\n</head>`, name);
+out = favicon(out, "Thrive", "index.html");
+st = favicon(st, "Thrive", "start-time.html");
+wc = favicon(wc, "Thrive", "welcome.html");
+tr = favicon(tr, "Thrive", "training.html");
+stp = favicon(stp, "Thrive", "states.html");
+lk = favicon(lk, "Thrive", "links.html");
+mk = favicon(mk, "Lead", "marketplace.html");
+
 const dist = join(here, "dist");
 mkdirSync(dist, { recursive: true });
 const name = preview && !relay ? "preview.html" : "index.html";
