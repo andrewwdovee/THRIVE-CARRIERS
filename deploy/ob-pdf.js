@@ -497,7 +497,7 @@ function obSafeName(s) {
 function obContractPdf(rec, which) {
   var lt = which === "lt";
   var md = lt ? OB_CONTRACT.lt : OB_CONTRACT.tc;
-  var title = lt ? "Lead Tech Marketing Services Agreement" : "Thrive Companies Agent & Manager Agreement";
+  var title = lt ? "Lead Tech Marketing Services Agreement" : "Thrive Companies Agreement";
   var sig = lt ? rec.signature : rec.thriveSignature;
   var name = lt ? rec.signedName : rec.thriveSignedName;
   var date = lt ? rec.signedDate : rec.thriveSignedDate;

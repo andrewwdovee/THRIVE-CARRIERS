@@ -192,7 +192,7 @@ By signing below, Client acknowledges that Client has read and understands this 
 
 ---
 
-# Thrive Companies Agent & Manager Agreement
+# Thrive Companies Agreement
 
 Agent & Manager Onboarding, Confidentiality, Restrictive Covenant, Production-Debt & Hierarchy-Debt Guaranty / Customer-Book Protection Agreement
 
