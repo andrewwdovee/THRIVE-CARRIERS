@@ -366,7 +366,7 @@ footer img{height:16px; width:auto; opacity:.85}
       (t.icon ? '<div class="ic ' + (t.iconCls || "") + '" style="margin:0 0 10px">' + ic(t.icon) + "</div>" : "") +
       "<h3>" + esc(t.name) + "</h3>" +
       '<div class="tl' + (t.tagC ? " c" : "") + '">' + esc(pv(t.tag)) + "</div>" +
-      '<div class="amt"><b class="' + (t.amtCls || "") + '">' + esc(pv(t.price)) + "</b><span>" + esc(t.unit) + "</span></div>" +
+      '<div class="amt"><b class="' + (t.amtCls || "") + '">' + esc(pv(t.price)) + "</b><span>" + esc(pv(t.unit)) + "</span></div>" +
       (pv(t.per) ? '<span class="per">' + ic("phone").replace('aria-hidden="true"', 'aria-hidden="true" style="width:11px;height:11px"') + esc(pv(t.per)) + "</span>" : "") +
       "<ul>" + (Array.isArray(t.items[0]) ? pv(t.items) : t.items).map(function (x) { return "<li>" + ic("circleCheck") + "<span>" + esc(x) + "</span></li>"; }).join("") + "</ul>" +
       '<div class="go">' + (t.href ? '<a class="btn wide ' + (t.btn || "") + '" href="' + esc(t.href) + '" target="_blank" rel="noreferrer">' + esc(t.hrefLabel) + ic("ext") + "</a>"
@@ -594,11 +594,13 @@ footer img{height:16px; width:auto; opacity:.85}
   VIEWS.leads = function () {
     return hero("Pay the true cost per lead", "High-Intent Leads.", "At True Cost.",
         "Generate high-intent final expense leads on Facebook and pay only what the lead actually costs — no markups and no agency fees.") +
-      sechead("How it works", "Free to Get Started",
-        "There is no subscription fee. You fund your own ad account and pay Facebook's true cost per lead — nothing more.") +
+      sechead("How it works", pv(["Free to Get Started", "One Flat Monthly Fee"]),
+        pv(["There is no subscription fee. You fund your own ad account and pay Facebook's true cost per lead — nothing more.",
+          "One flat monthly fee for the full done-for-you setup. You fund your own ad account and pay Facebook's true cost per lead — no markup on leads."])) +
       '<div class="tiers" style="grid-template-columns:minmax(0,420px); justify-content:center">' +
-      tier({ name: "High Intent Leads at Cost", tag: "Generate high-intent leads on Facebook and pay the true cost per lead — we manage everything, you pay nothing extra.",
-        price: "Free", unit: "— you pay only ad spend", key: "leads", cls: "best glow", btn: "teal",
+      tier({ name: "High Intent Leads at Cost", tag: ["Generate high-intent leads on Facebook and pay the true cost per lead — we manage everything, you pay nothing extra.",
+          "Generate high-intent leads on Facebook and pay the true cost per lead — we manage everything for one flat monthly fee."],
+        price: ["Free", "$500"], unit: ["— you pay only ad spend", "/ month + ad spend"], key: "leads", cls: "best glow", btn: "teal",
         items: ["Done-for-you Facebook campaign setup", "High-intent final expense targeting", "Proven ad creative included",
           "Exclusive leads — yours only", "Real-time lead delivery", "Full spend transparency"] }) +
       "</div>" +
@@ -614,7 +616,7 @@ footer img{height:16px; width:auto; opacity:.85}
       ], "teal") +
       cta("Stop Overpaying for Leads",
         "Let us run your Facebook lead campaigns and pass you every lead at cost. Keep more margin on every deal you close.",
-        '<a class="btn teal" href="#leads" data-scrolltop="1">Get Started Free' + ic("arrow") + "</a>", "teal");
+        '<a class="btn teal" href="#leads" data-scrolltop="1">' + pv(["Get Started Free", "Get Started"]) + ic("arrow") + "</a>", "teal");
   };
   VIEWS["recruiting-ads"] = function () {
     return hero("Build your sales team faster", "Recruit Agents.", "Done for You.",
