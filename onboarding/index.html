@@ -132,6 +132,11 @@ input:focus,textarea:focus,select:focus{outline:2px solid rgba(240,180,41,.55); 
   padding:13px 16px; margin:0 0 13px;
 }
 .paper .flag p:last-child{margin:0}
+.paper dl.ci{display:grid; grid-template-columns:max-content 1fr; gap:6px 16px; margin:0 0 12px; font-size:14px}
+.paper dl.ci div{display:contents}
+.paper dl.ci dt{color:var(--paper-muted); font-weight:600}
+.paper dl.ci dd{margin:0; color:var(--paper-ink); font-weight:600; border-bottom:1px solid var(--paper-line); min-width:0; overflow-wrap:anywhere}
+@media (max-width:620px){ .paper dl.ci{grid-template-columns:1fr; gap:2px} .paper dl.ci dd{margin-bottom:8px} }
 .paper hr{border:0; border-top:1px solid var(--paper-line); margin:22px 0}
 .execd{
   background:#E7EFFA; border:1px solid #BBD0EC; border-left:3px solid #2F6FE0;
@@ -374,141 +379,139 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
       <h2>3 &middot; The Lead Tech agreement</h2>
       <p class="sub">Read it to the end. The checkbox opens when you get there.</p>
 
-      <article class="paper" id="paper" tabindex="0" aria-label="Lead Tech Marketing Agreement">
+      <article class="paper" id="paper" tabindex="0" aria-label="Lead Tech Marketing Services Agreement">
         <div class="doctop">
           <img id="doc-lead" alt="Lead Tech">
           <span class="v" id="paper-date"></span>
         </div>
-        <h3>Lead Tech Marketing Agreement</h3>
-        <p>
-          This agreement is between <b data-entity>Thrive Companies</b> ("Thrive", "we",
-          "us"), which operates the Lead Tech inbound call platform, and the person or
-          business named on this form ("you"). It takes effect on the date you sign it.
-        </p>
+        <h3>Marketing Services Agreement</h3>
+        <p class="meta" style="margin-bottom:12px">Business-to-Business Marketing, Lead Generation &amp; Technology Services</p>
+        <p>This Marketing Services Agreement (the “Agreement”) is entered into as of the Effective Date below by and between Lead Tech (“Lead Tech,” “Company,” “we,” “us,” or “our”) and the client identified below (“Client,” “you,” or “your”).</p>
 
-        <h4>1 &middot; What you are buying</h4>
-        <p>
-          Thrive buys advertising, answers the calls that advertising generates, and
-          transfers qualified callers to you. Depending on what you have ordered that may
-          include:
-        </p>
+        <h4>1 &middot; Client information</h4>
+        <!-- Filled in live from step 1 and the signing date. -->
+        <dl class="ci">
+          <div><dt>Client / Legal Business Name</dt><dd id="ci-business">&mdash;</dd></div>
+          <div><dt>Authorized Representative</dt><dd id="ci-rep">&mdash;</dd></div>
+          <div><dt>Email Address</dt><dd id="ci-email">&mdash;</dd></div>
+          <div><dt>Phone Number</dt><dd id="ci-phone">&mdash;</dd></div>
+          <div><dt>Effective Date</dt><dd id="ci-date">&mdash;</dd></div>
+        </dl>
+
+        <h4>2 &middot; Purpose and scope of services</h4>
+        <p>Lead Tech provides marketing, advertising, lead-generation, inbound-call, recruiting-advertising, software, automation, technology, and related marketing services. Services may include, without limitation:</p>
         <ul>
-          <li><b>Google Calls Subscription</b> — inbound calls from paid search, routed to your line.</li>
-          <li><b>Inbound Final Expense Transfers</b> — live transfers from the inbound desk, to a daily cap.</li>
-          <li><b>Individual Call</b> — a single transferred call, billed on its own.</li>
-          <li><b>Recruiting Ad Campaign</b> — a campaign run on your behalf to recruit producers.</li>
-          <li><b>Instagram Software</b> — access to the messaging software and its templates.</li>
+          <li>Lead generation and lead acquisition;</li>
+          <li>Inbound calls and call-generation campaigns;</li>
+          <li>Advertising campaigns on third-party platforms;</li>
+          <li>Recruiting advertisements and recruiting funnels;</li>
+          <li>Social-media and Instagram-related marketing tools or software;</li>
+          <li>Landing pages, portals, forms, websites, funnels, and inbound systems;</li>
+          <li>Marketing automation, CRM integrations, tracking systems, and workflows;</li>
+          <li>Ad creatives, copy, keywords, targeting strategies, campaign structures, and related marketing assets; and</li>
+          <li>Other services specifically described in an order, proposal, invoice, statement of work, or written communication accepted by the parties.</li>
         </ul>
-        <p>
-          What you have ordered, its price and its billing cycle are recorded on your
-          account and on your Stripe receipts. Those records control.
-        </p>
+        <p>The specific services, quantities, campaign budgets, setup fees, recurring fees, and other commercial terms may be set forth in an invoice, proposal, order form, statement of work, or other written agreement incorporated into this Agreement.</p>
 
-        <h4>2 &middot; Ad spend is spent</h4>
-        <div class="flag">
-          <p>
-            <b>Most of what you pay is advertising spend, and it is paid out to Google and
-            the other ad platforms within hours of your payment clearing. Once it is spent
-            it is gone. It cannot be recalled by Thrive, by you, by your bank, or by
-            Google.</b>
-          </p>
-        </div>
-        <p>
-          <b>(a) Ad spend is non-refundable.</b> Once a campaign has run, the money behind
-          it is not recoverable and will not be returned, in whole or in part — including
-          on a decision to stop, a change of mind, a change in your licensing, poor call
-          outcomes, or your own close rate.
-        </p>
-        <p>
-          <b>(b) You agree not to charge back ad spend.</b> You will not start, and will
-          not ask anyone else to start, a chargeback, payment dispute, ACH return or
-          reversal against Thrive for any charge that is or includes advertising spend. If
-          you think you have been charged in error you will raise it with us first, in
-          writing, and give us ten (10) business days to put it right.
-        </p>
-        <p>
-          <b>(c) If a chargeback is filed anyway.</b> It is a breach of this agreement, and
-          we may suspend call delivery and every other service on your account at once, set
-          the disputed amount off against any wallet balance or credit you hold, and recover
-          that amount together with the card network's dispute fee and our reasonable costs
-          of collection. The account stays suspended until the balance is settled.
-        </p>
-        <p>
-          <b>(d) This is not a waiver of fraud protection.</b> Nothing here asks you to
-          give up a dispute over a charge you did not authorise, a duplicate charge, or a
-          charge for something never delivered. Those are section 4, and we refund them.
-        </p>
+        <h4>3 &middot; Marketing budgets and third-party platform spend</h4>
+        <p>Client understands and acknowledges that amounts designated for advertising, lead acquisition, inbound calls, software, media placement, platform fees, or other third-party services may be committed or spent by Lead Tech on Client’s behalf.</p>
+        <p>Such funds may be paid to, deposited with, or otherwise committed to third-party advertising platforms, publishers, lead vendors, software providers, call providers, technology providers, or other service providers.</p>
+        <p>Once Lead Tech has incurred, committed, allocated, or spent funds in connection with Client’s campaign or requested services, those funds may be non-refundable to the extent they have been spent or are non-recoverable by Lead Tech.</p>
+        <p>Lead Tech will not be responsible for refunds resulting from a third party’s policies, platform decisions, rejected advertisements, lead quality disputes, account restrictions, outages, or other matters outside Lead Tech’s reasonable control, except to the extent otherwise expressly agreed in writing.</p>
+        <p>Client authorizes Lead Tech to use the applicable marketing budget for the services purchased and acknowledges that marketing results are not guaranteed.</p>
+        <p>Unless expressly stated in writing, Lead Tech does not guarantee any particular number of leads, calls, appointments, recruits, sales, revenue, return on advertising spend, or other business result.</p>
 
-        <h4>3 &middot; The inbound portal rules</h4>
-        <ol>
-          <li><b>The wallet runs the delivery.</b> Calls are delivered against a funded
-            wallet. At zero, delivery stops. Topping up restarts it. We do not deliver on
-            credit.</li>
-          <li><b>Payment is due the day it is raised.</b> An invoice unpaid after 12 hours
-            is past due, and a past-due account is paused: routing off for a subscription,
-            spend paused for a campaign.</li>
-          <li><b>You take the calls.</b> Transfers start at the time you chose on this form
-            and run through the day. A call you do not answer is still delivered and still
-            billable. Tell us before your hours change.</li>
-          <li><b>Licensing is yours to keep current.</b> Accept transfers only in states
-            where you hold an active, appointed licence. Tell us the same day one lapses and
-            we will stop routing those states.</li>
-          <li><b>Caps and coverage are set in writing.</b> Your daily transfer cap and
-            coverage area are recorded on your account. Ask for a change; never assume one
-            we have not confirmed.</li>
-          <li><b>Calls are recorded</b>, for quality and for settling disputes. Taking
-            transfers is your consent to that, and you confirm your own use of the
-            recordings follows the law in the states you work.</li>
-          <li><b>The callers are yours to work, not to sell.</b> You may not resell, share,
-            syndicate or re-transfer them to another agency, agent or lead buyer.</li>
-          <li><b>One account, one agency.</b> Your login and your routing are yours. Do not
-            share them.</li>
-          <li><b>Do not contact the ad platforms about our campaigns.</b> The ad accounts
-            are ours. Contacting Google about them, or complaining against them, is a breach
-            of this agreement.</li>
-          <li><b>Changes and cancellation.</b> Cancel a subscription in writing before the
-            next billing date. Cancelling mid-cycle stops delivery; ad spend already
-            committed for that cycle is not returned (section 2). Pro-rata credits are
-            section 4.</li>
-          <li><b>Raising a problem.</b> Email the fulfilment desk. We log it, listen back
-            and come back to you, and every credit decision is recorded on your account.</li>
-        </ol>
+        <h4>4 &middot; Payment; no improper chargebacks or payment disputes</h4>
+        <p>Client agrees to pay all invoices, deposits, setup fees, recurring fees, campaign budgets, and other amounts when due.</p>
+        <p>Client acknowledges that Lead Tech may immediately begin work, reserve advertising inventory, purchase leads, commit third-party resources, create technology, or incur other expenses after payment or authorization.</p>
+        <p>Client agrees not to initiate or encourage a fraudulent, deceptive, or improper chargeback, payment reversal, or payment dispute for services that Lead Tech has provided, commenced, purchased, reserved, committed, or performed.</p>
+        <p>Before initiating any payment dispute concerning an amount that Client genuinely believes is erroneous, Client agrees to notify Lead Tech in writing and provide Lead Tech a reasonable opportunity to investigate and resolve the issue.</p>
+        <p>Nothing in this Agreement is intended to waive or restrict any non-waivable rights or remedies that Client may have under applicable law or the rules governing the applicable payment method.</p>
+        <p>If a chargeback or payment reversal is initiated in violation of this Agreement and Lead Tech incurs fees, penalties, administrative costs, or other losses as a result, Lead Tech may seek recovery of those amounts to the extent permitted by applicable law.</p>
 
-        <h4>4 &middot; What we do refund</h4>
-        <p>Refunded or credited in Stripe, against the recorded account:</p>
+        <h4>5 &middot; Client responsibilities</h4>
         <ul>
-          <li><b>An individual call</b> that was mis-transferred, silent, duplicated, or
-            outside your agreed states or hours — once we have listened back and confirmed it.</li>
-          <li><b>A cancelled membership</b>, pro-rata from the cancellation date, for the
-            part of the fee that is not ad spend.</li>
-          <li><b>Service quality</b>, where we agree with you that we did not deliver what
-            was ordered.</li>
-          <li><b>A duplicate charge</b>, in full, as soon as both charges are visible.</li>
-          <li><b>Goodwill</b>, at our discretion.</li>
+          <li>Client will provide accurate information, approvals, credentials, brand materials, and other items reasonably necessary for Lead Tech to perform the services.</li>
+          <li>Client is responsible for ensuring that information supplied to Lead Tech is accurate and that Client has the right to use any materials, trademarks, images, testimonials, data, or other content supplied to Lead Tech.</li>
+          <li>Client will timely review and approve advertisements, landing pages, scripts, creative materials, and other deliverables when approval is requested.</li>
+          <li>Client will comply with applicable laws, regulations, advertising rules, platform policies, licensing requirements, and industry requirements applicable to Client’s business and offers.</li>
         </ul>
-        <p>
-          Raise a call credit within seven (7) days of the call. After that the recording
-          may have aged out of retention and we cannot verify it.
-        </p>
 
-        <h4>5 &middot; Your details, and your photo</h4>
-        <p>Keep your contact details, licensing and hours current on the account.</p>
-        <p>
-          A headshot is optional and only applies to agents writing under Thrive
-          Companies. If you give us one, we may use it in Thrive Companies marketing —
-          the company leaderboard, agent shout-outs and social posts — for as long as you
-          are with the agency. Ask us and we will stop using it. If you are not an
-          internal agent, no photo is needed and none is kept.
-        </p>
+        <h4>6 &middot; Ownership of Lead Tech intellectual property</h4>
+        <p>Except for Client-owned materials expressly identified in writing, all intellectual property, systems, processes, technology, know-how, campaign structures, templates, methodologies, proprietary information, and other materials created, developed, licensed, or supplied by Lead Tech remain the property of Lead Tech or its licensors.</p>
+        <p>This includes:</p>
+        <ul>
+          <li>Ad creatives, graphic designs, videos, images, copy, scripts, headlines, and marketing concepts;</li>
+          <li>Keywords, targeting methods, campaign structures, audience strategies, and optimization methods;</li>
+          <li>Landing pages, funnels, portals, forms, websites, dashboards, automations, workflows, integrations, and software configurations;</li>
+          <li>Software, code, prompts, systems, databases, templates, documentation, processes, and technical architecture;</li>
+          <li>Lead-routing systems, inbound-call systems, tracking systems, and proprietary marketing infrastructure; and</li>
+          <li>Lead Tech’s methods, strategies, know-how, trade secrets, and other proprietary business information.</li>
+        </ul>
+        <p>Payment for services does not transfer ownership of Lead Tech’s proprietary systems, software, templates, methods, campaign architecture, or intellectual property unless Lead Tech expressly agrees to such transfer in a separate written instrument.</p>
 
-        <h4>6 &middot; General</h4>
-        <p>
-          Governed by the laws of the State of <b data-state>Florida</b>. This is the whole
-          agreement between us about the inbound call platform and it replaces anything
-          said beforehand. If a court finds part of it unenforceable the rest stands. We
-          may change these rules on thirty (30) days' notice; taking calls after that is
-          acceptance.
-        </p>
+        <h4>7 &middot; Limited license to client</h4>
+        <p>Subject to Client’s full and timely payment and continued compliance with this Agreement, Lead Tech may provide Client with a limited, non-exclusive, non-transferable, non-sublicensable license to use certain deliverables solely for Client’s internal business and marketing purposes during the applicable service period.</p>
+        <p>This license does not authorize Client to sell, license, distribute, copy, reverse engineer, reproduce, recreate, or provide Lead Tech materials to another marketing provider for duplication.</p>
+
+        <h4>8 &middot; Non-replication; protection of proprietary marketing systems</h4>
+        <p>During the term of Client’s relationship with Lead Tech and for twelve (12) months after the end of the applicable services, Client will not knowingly, directly or indirectly, use Lead Tech’s confidential or proprietary materials to recreate, duplicate, replicate, reverse engineer, or develop a substantially similar system for Client or for another person or business.</p>
+        <p>This restriction applies to proprietary ad creatives, campaign structures, keyword strategies, targeting systems, inbound portals, call-routing systems, software configurations, automations, workflows, funnels, templates, technical systems, and other proprietary materials provided by Lead Tech.</p>
+        <p>Client also agrees not to provide such materials to a competing agency, contractor, developer, marketing company, or other third party for the purpose of reproducing substantially similar proprietary systems.</p>
+        <p>This section does not prohibit Client from using general knowledge, independently developed materials, or information that is lawfully available to the public without breach of this Agreement.</p>
+        <p>Nothing in this Agreement restricts conduct that applicable law does not permit the parties to restrict.</p>
+
+        <h4>9 &middot; Confidentiality</h4>
+        <p>Each party may receive confidential or proprietary information belonging to the other party.</p>
+        <p>The receiving party will use reasonable care to protect such information and will not disclose it to third parties except to employees, contractors, professional advisers, or service providers who have a legitimate need to know and are subject to appropriate confidentiality obligations.</p>
+        <p>Lead Tech’s confidential information includes, without limitation, pricing structures, vendor information, lead sources, campaign data, software architecture, credentials, customer lists, marketing methods, campaign performance information, technical processes, and other non-public business information.</p>
+
+        <h4>10 &middot; Leads, data, and personal information</h4>
+        <p>Lead Tech and Client will handle lead information and personal information in accordance with applicable law and the parties’ respective obligations.</p>
+        <p>Client is responsible for determining whether its intended use of leads, calls, messages, advertisements, and consumer information complies with applicable federal and state laws, regulations, consent requirements, telemarketing requirements, privacy requirements, and platform rules.</p>
+        <p>Lead Tech may use third-party providers to provide advertising, calling, software, hosting, analytics, CRM, lead distribution, and other services.</p>
+        <p>Client acknowledges that third-party platforms may have their own terms, privacy policies, restrictions, and data practices.</p>
+
+        <h4>11 &middot; Third-party platforms and service providers</h4>
+        <p>Lead Tech may use third-party platforms and vendors in performing the services.</p>
+        <p>Lead Tech is not responsible for a third party’s downtime, policy changes, account suspension, advertising rejection, algorithm changes, pricing changes, technical failures, data loss, or other actions outside Lead Tech’s reasonable control.</p>
+        <p>Lead Tech may substitute comparable vendors or technology when reasonably necessary to perform the services.</p>
+
+        <h4>12 &middot; No guarantee of results</h4>
+        <p>Client acknowledges that marketing and advertising performance depends on numerous factors outside Lead Tech’s control.</p>
+        <p>Unless expressly guaranteed in a written statement signed by Lead Tech, all forecasts, estimates, projections, expected lead volumes, expected call volumes, and performance expectations are estimates only and are not guarantees.</p>
+
+        <h4>13 &middot; Term and termination</h4>
+        <p>This Agreement begins on the Effective Date and continues until terminated in accordance with the applicable service terms or by either party upon written notice, subject to any minimum term, campaign commitment, or cancellation terms stated in an applicable order, proposal, or statement of work.</p>
+        <p>Termination does not eliminate Client’s obligation to pay amounts already due or amounts already committed or incurred for Client’s services.</p>
+        <p>Sections concerning payment obligations, intellectual property, confidentiality, non-replication, limitations of liability, indemnification, dispute resolution, and other provisions that by their nature should survive termination will survive.</p>
+
+        <h4>14 &middot; Indemnification</h4>
+        <p>To the extent permitted by law, Client agrees to defend, indemnify, and hold harmless Lead Tech and its owners, officers, employees, contractors, and agents from claims, losses, damages, liabilities, penalties, costs, and reasonable attorneys’ fees arising out of Client’s products or services, Client-provided materials, Client’s violation of applicable law or platform rules, or Client’s misuse of leads, consumer information, software, or marketing materials.</p>
+
+        <h4>15 &middot; Limitation of liability</h4>
+        <p>To the maximum extent permitted by applicable law, Lead Tech will not be liable for indirect, incidental, special, consequential, exemplary, or punitive damages, including lost profits, lost revenue, lost business opportunities, or loss of data arising from or related to the services.</p>
+        <p>To the maximum extent permitted by law, Lead Tech’s aggregate liability arising from the Agreement will not exceed the amount actually paid by Client to Lead Tech for the specific services giving rise to the claim during the three (3) months preceding the event giving rise to the claim.</p>
+
+        <h4>16 &middot; Dispute resolution and governing law</h4>
+        <p>The parties will first attempt in good faith to resolve any dispute through direct written communication.</p>
+        <p>This Agreement will be governed by the laws of the State of Florida, without regard to conflict-of-law principles, unless applicable law requires otherwise.</p>
+        <p>Any court proceeding permitted under this Agreement will be brought in a court of competent jurisdiction in Florida, unless the parties later agree otherwise in writing.</p>
+        <p>Nothing in this section prevents either party from seeking temporary or emergency equitable relief where necessary to protect confidential information, intellectual property, trade secrets, or other proprietary rights.</p>
+
+        <h4>17 &middot; No waiver; severability</h4>
+        <p>A party’s failure to enforce any provision of this Agreement does not waive that party’s right to enforce the provision later.</p>
+        <p>If any provision is determined to be unenforceable, the remaining provisions will remain in effect, and the unenforceable provision will be modified only to the minimum extent necessary to make it enforceable, to the extent permitted by law.</p>
+
+        <h4>18 &middot; Entire agreement; amendments</h4>
+        <p>This Agreement, together with any applicable proposal, invoice, order form, statement of work, or written service terms incorporated into it, constitutes the entire agreement between the parties regarding the subject matter and supersedes prior discussions or understandings concerning that subject matter.</p>
+        <p>Any amendment must be in writing and accepted by both parties.</p>
+
+        <h4>19 &middot; Electronic signatures</h4>
+        <p>The parties agree that electronic signatures, digital signatures, scanned signatures, and electronically accepted versions of this Agreement may be used and will have the same legal effect as original signatures to the extent permitted by applicable law.</p>
+
+        <h4>20 &middot; Acknowledgment</h4>
+        <p>By signing below, Client acknowledges that Client has read and understands this Agreement; has had an opportunity to ask questions or seek independent legal advice; understands that marketing funds may be spent or committed to third-party platforms and vendors; understands that marketing results are not guaranteed; and agrees to comply with the payment, confidentiality, intellectual-property, and non-replication provisions of this Agreement.</p>
         <hr>
         <p class="meta" id="paper-end">You have reached the end of the agreement.</p>
 
@@ -540,8 +543,9 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
       <div class="agree off" id="agreewrap">
         <input type="checkbox" id="agree" name="agree" disabled>
         <label for="agree">
-          I have read the whole agreement. I understand that advertising spend is
-          non-refundable and I agree not to charge it back.
+          I have read the whole agreement. I understand that marketing funds may be
+          spent with third-party platforms and vendors, that results are not
+          guaranteed, and I agree not to file an improper chargeback.
         </label>
       </div>
       <p class="err" data-err="agree"></p>
@@ -600,7 +604,7 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
         <p>
           This agreement is between <b data-entity>Thrive Companies</b> ("Thrive", "we",
           "us") and the person named on this form ("you"), and it covers writing under
-          the agency. It sits alongside the Lead Tech Marketing Agreement above; where
+          the agency. It sits alongside the Lead Tech Marketing Services Agreement above; where
           that one is about buying calls, this one is about the agency relationship.
         </p>
 
@@ -807,7 +811,7 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
   /* Where a signed form sends them. Empty means there is nowhere to go
      -- a preview build -- and the thank-you panel below stands in. */
   var WELCOME_URL = "";
-  var AGREEMENT_VERSION = "2026-10-04";
+  var AGREEMENT_VERSION = "2026-10-05";
   var LOGOS = {};   /* filled in by the build; see build-onboarding.mjs */
 
   /* The steps, numbered once. Everything that has to name one -- the
@@ -1000,6 +1004,13 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
 
   function syncExecution() {
     var f = fields();
+    /* Section 1 of the Lead Tech agreement, filled in from step 1. */
+    var dash = "\u2014";
+    $("#ci-business").textContent = f.business || dash;
+    $("#ci-rep").textContent = f.legalName || dash;
+    $("#ci-email").textContent = f.email || dash;
+    $("#ci-phone").textContent = f.phone || dash;
+    $("#ci-date").textContent = f.signedDate ? longDate(f.signedDate) : dash;
     mirror(sigLT, "sigmirror", "execd-ghost", "sm-name", "sm-business", "sm-date",
       f.signedName || f.legalName, f.business, f.signedDate);
     mirror(sigTC, "sigmirror2", "execd-ghost2", "sm2-name", "sm2-business", "sm2-date",
