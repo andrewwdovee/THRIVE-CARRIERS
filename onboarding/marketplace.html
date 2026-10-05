@@ -231,6 +231,7 @@ footer img{height:16px; width:auto; opacity:.85}
     "transfers-starter": "", "transfers-growth": "", "transfers-pro": "",
     "google-training": "", "google-pro": "", "google-unlimited": "",
     "meta": "", "meta-spanish": "", "meta-qualified": "", "tv": "",
+    "recruit-launch": "", "recruit-scale": "", "recruit-agency": "",
     "crm": ""
   };
 
@@ -252,6 +253,7 @@ footer img{height:16px; width:auto; opacity:.85}
     clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
     shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
     trend: '<path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/>',
+    target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
     star: '<path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/>',
     check: '<path d="M20 6 9 17l-5-5"/>',
     circleCheck: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
@@ -455,10 +457,34 @@ footer img{height:16px; width:auto; opacity:.85}
       "Pricing follows your ad spend, so it is set with the desk.");
   };
   VIEWS["recruiting-ads"] = function () {
-    return simple("recruiting-ads", "Build your sales team faster", "Recruit Agents.", "Done for You.",
-      "Done-for-you recruiting ad campaigns that attract qualified insurance agents and grow your downline with proven ad creative.",
-      ["Recruiting campaigns run on your behalf", "Proven ad creative built for insurance agents", "Qualified agent prospects sent to you", "Grow your downline without running ads yourself"],
-      "Campaign pricing is set with the desk.");
+    return hero("Build your sales team faster", "Recruit Agents.", "Done for You.",
+        "Done-for-you recruiting ad campaigns that attract qualified insurance agents and grow your downline with proven ad creative.") +
+      sechead("Monthly plans", "Select Your Growth Plan",
+        "All plans include full campaign management. No ad spend included — you control your budget.") +
+      '<div class="tiers">' +
+      tier({ name: "Launch", tag: "Start attracting agent leads with proven recruiting ad creative.", price: "$300", unit: "/ month",
+        key: "recruit-launch",
+        items: ["1 active ad campaign", "Facebook & Instagram ads", "Proven ad creative included", "Lead capture landing page", "Monthly performance report"] }) +
+      tier({ name: "Scale", tag: "Accelerate your team growth with multi-campaign ad management.", price: "$500", unit: "/ month",
+        key: "recruit-scale", cls: "hot", badge: "Most popular", btn: "pri",
+        items: ["3 active ad campaigns", "Facebook, Instagram & TikTok", "A/B tested creative sets", "Custom lead capture funnel", "Weekly performance reports", "Dedicated ad manager"] }) +
+      tier({ name: "Agency", tag: "Full-scale recruiting engine for growing IMOs and agencies.", price: "$1,000", unit: "/ month",
+        key: "recruit-agency",
+        items: ["Unlimited ad campaigns", "All platforms covered", "Full creative production", "Custom multi-step funnel", "Daily reporting dashboard", "Dedicated ad manager", "Bi-weekly strategy calls"] }) +
+      "</div>" +
+      sechead("What's included", "What's Included",
+        "Everything needed to run a professional recruiting campaign — done completely for you.") +
+      feats([
+        ["target", "Agent-Specific Targeting", "Our audiences are built to target licensed insurance agents and aspiring producers — not generic job seekers."],
+        ["mega", "Proven Creative", "We run copy and creative that has already generated thousands of agent leads across our network — no guesswork."],
+        ["users", "Quality Over Quantity", "We optimize for quality applicants who are serious about building a book of business, not just browsing."],
+        ["bars", "Full Transparency", "You see every metric — ad spend, cost per lead, impressions, and conversions — all in plain language reports."],
+        ["trend", "Scalable Results", "Start small and scale as your budget grows. Our system is designed to compound as your team grows."],
+        ["star", "Managed for You", "We handle everything from ad creation to optimization. You focus on onboarding the agents we send you."]
+      ]) +
+      cta("Ready to Grow Your Team?",
+        "Let us build and manage your agent recruiting campaigns. You focus on leadership — we handle the lead generation.",
+        '<a class="btn pri" href="#recruiting-ads" data-scrolltop="1">Choose a Plan' + ic("arrow") + "</a>");
   };
   VIEWS.funnel = function () {
     return simple("funnel", "Turn recruiting into revenue", "A Recruiting Funnel", "That Pays for Itself.",
