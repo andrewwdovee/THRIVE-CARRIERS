@@ -158,12 +158,28 @@ for (const [f, varName] of EXTRA_LINKS) {
   if (v) wc = one(wc, `var ${varName} = "${here}";`, `var ${varName} = ${JSON.stringify(v)};`, "welcome.html");
 }
 
-/* Tab icons: the Thrive V on every Thrive page, the Lead Tech mark on the
-   marketplace. They live in favicons.json, beside the logos. */
+/* Tab icons and link previews: the Thrive V on every Thrive page, the Lead
+   Tech mark on the marketplace. The icons are written out as real files next
+   to each page (favicon.png, apple-touch-icon.png) because Messages on an
+   iPhone fetches the icon by address for its link preview and cannot read
+   one inlined into the page. The og: tags give the preview its title and
+   description. The images live in favicons.json, beside the logos. */
 const favs = JSON.parse(readFileSync(join(here, "favicons.json"), "utf8"));
-const favicon = (html, kind, name) => one(html, "</head>",
-  `<link rel="icon" type="image/png" sizes="64x64" href="${favs["fav" + kind]}">\n` +
-  `<link rel="apple-touch-icon" href="${favs["fav" + kind + "180"]}">\n</head>`, name);
+const png = (k) => Buffer.from(favs[k].split(",")[1], "base64");
+const attr = (v) => v.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+const KIND = {};
+const favicon = (html, kind, name) => {
+  const title = (html.match(/<title>([^<]*)<\/title>/) || [, ""])[1];
+  const desc = (html.match(/<meta name="description" content="([^"]*)"/) || [, ""])[1];
+  return one(html, "</head>",
+    `<link rel="icon" type="image/png" sizes="64x64" href="favicon.png">\n` +
+    `<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">\n` +
+    `<meta property="og:type" content="website">\n` +
+    `<meta property="og:site_name" content="${kind === "Lead" ? "Lead Tech" : "Thrive Companies"}">\n` +
+    `<meta property="og:title" content="${attr(title)}">\n` +
+    (desc ? `<meta property="og:description" content="${desc}">\n` : "") +
+    `</head>`, name);
+};
 out = favicon(out, "Thrive", "index.html");
 st = favicon(st, "Thrive", "start-time.html");
 wc = favicon(wc, "Thrive", "welcome.html");
@@ -171,6 +187,8 @@ tr = favicon(tr, "Thrive", "training.html");
 stp = favicon(stp, "Thrive", "states.html");
 lk = favicon(lk, "Thrive", "links.html");
 mk = favicon(mk, "Lead", "marketplace.html");
+Object.assign(KIND, { "": "Thrive", "start-time": "Thrive", welcome: "Thrive", training: "Thrive",
+  states: "Thrive", links: "Thrive", marketplace: "Lead" });
 
 const dist = join(here, "dist");
 mkdirSync(dist, { recursive: true });
@@ -188,6 +206,10 @@ mkdirSync(join(dist, "links"), { recursive: true });
 writeFileSync(join(dist, "links", name), lk);
 mkdirSync(join(dist, "marketplace"), { recursive: true });
 writeFileSync(join(dist, "marketplace", name), mk);
+for (const [dir, kind] of Object.entries(KIND)) {
+  writeFileSync(join(dist, dir, "favicon.png"), png("fav" + kind));
+  writeFileSync(join(dist, dir, "apple-touch-icon.png"), png("fav" + kind + "180"));
+}
 
 console.log(`Wrote onboarding/dist/${name}  (${(out.length / 1024).toFixed(0)} KB)
   and  onboarding/dist/start-time/${name}  (${(st.length / 1024).toFixed(0)} KB)  ->  <url>/start-time
