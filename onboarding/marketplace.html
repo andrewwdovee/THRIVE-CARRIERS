@@ -336,12 +336,9 @@ footer img{height:16px; width:auto; opacity:.85}
       badge: "New", badgeCls: "new" },
     { id: "instagram", icon: "insta", iconCls: "blue", kicker: "Automate your agent pipeline on IG", name: "Instagram Recruiting Software",
       desc: "Powerful automation tools to prospect and recruit insurance agents through Instagram — save hours every week on outreach." },
-    { id: "crm", icon: "grid", iconCls: "green", kicker: "Insurance CRM — $1 / month", name: "LeadTech CRM",
-      desc: "A fully built CRM designed for insurance agents. Normally $500/month to the public — available to LeadTech clients for just $1/month.",
-      badge: "Exclusive", badgeCls: "excl", cls: "crm" },
-    { id: "inbound-portal", url: PORTAL_URL, icon: "phoneIn", kicker: "Inbound portal — $0 / month", name: "Inbound Portal",
-      desc: "Where you take all of your inbound calls. Free for every agent — sign in and start taking calls.",
-      badge: "Free", badgeCls: "new", more: "Open Inbound Portal" }
+    { id: "crm", icon: "grid", iconCls: "green", kicker: "Insurance CRM — starting at $0 / month", name: "LeadTech CRMs",
+      desc: "Fully built CRMs designed for insurance agents, including the inbound portal where you take all of your inbound calls.",
+      badge: "Exclusive", badgeCls: "excl", cls: "crm" }
   ];
 
   function card(p) {
@@ -361,7 +358,7 @@ footer img{height:16px; width:auto; opacity:.85}
         "From live inbound transfers to recruiting tools and custom pages — Lead Tech has every solution an insurance agency needs to scale.") +
       sechead("Our products", "Choose Your Solution", "Select any product below to view pricing and get started today.") +
       '<div class="grid3">' + PRODUCTS.slice(0, 6).map(card).join("") + "</div>" +
-      '<div class="grid3 center" style="margin-top:14px">' + card(PRODUCTS[6]) + card(PRODUCTS[7]) + "</div>" +
+      '<div class="grid3 center" style="margin-top:14px">' + card(PRODUCTS[6]) + "</div>" +
       '<a class="feature" href="#limitless" data-go="limitless"><div class="kicker">Exclusive program</div>' +
       "<h3>The Limitless Program</h3>" +
       "<p>Unlimited Google inbound calls for free.</p>" +
