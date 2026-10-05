@@ -24,7 +24,7 @@ This Marketing Services Agreement (the “Agreement”) is entered into as of th
 
 ## 1 · Client information
 
-Client / Legal Business Name, Authorized Representative, Email Address, Phone Number and Effective Date are as given on the onboarding form and in the execution block below.
+Client / Legal Business Name and Effective Date are as given in the execution block below.
 
 ## 2 · Purpose and scope of services
 
@@ -226,8 +226,6 @@ Any manager or agent who invites, admits, shares credentials with, or otherwise 
 
 Agent acknowledges: no private Thrive system or Discord access before signature.
 
-Initials: ____
-
 ## 3 · INDEPENDENT CONTRACTOR; NO EMPLOYMENT OR INCOME GUARANTEE
 
 Unless a separate written employment agreement expressly states otherwise, Agent participates as an independent contractor and is responsible for Agent's own taxes, business expenses, licenses, appointments, continuing education, equipment, and lawful conduct.
@@ -279,8 +277,6 @@ The confidentiality obligations survive termination for as long as the informati
 
 Agent acknowledges the strict Thrive NDA and protected-reporting carve-out.
 
-Initials: ____
-
 ## 8 · PROTECTED REPORTING; LEGAL RIGHTS; NO RETALIATORY SUPPRESSION
 
 Nothing in this Agreement prohibits or restricts Agent from:
@@ -329,8 +325,6 @@ Nothing prohibits conduct that applicable law expressly protects.
 
 Agent agrees to the 12-month post-affiliation non-solicitation covenant.
 
-Initials: ____
-
 ## 12 · NON-INTERFERENCE; PROTECTION OF MANAGERS AND UPLINES
 
 Agent may not use Confidential Information or Company relationships to circumvent, undermine, bypass, or intentionally interfere with established Thrive manager/upline relationships, team structures, recruiting relationships, compensation relationships, carrier relationships, vendor relationships, or other legitimate business relationships.
@@ -375,8 +369,6 @@ A verbal statement, informal conversation, hierarchy change, transfer, payment b
 
 Agent acknowledges: Writing Agent is primary obligor for personal production debt.
 
-Initials: ____
-
 ## 17 · CONTINUING PERSONAL GUARANTY; MANAGER HIERARCHY DEBT GUARANTY
 
 If Agent writes, contracts, receives commissions, or incurs obligations through a corporation, LLC, partnership, agency, DBA, or other entity owned, managed, controlled, or used by Agent (an “Agent Entity”), the individual signatory personally, absolutely, unconditionally, and continuously guarantees the prompt payment and performance of all Agent Debt and other monetary obligations of that Agent Entity arising under this Agreement or from insurance business written or submitted by or for Agent.
@@ -408,8 +400,6 @@ Manager acknowledges that downline production can create chargeback and debit ex
 Manager knowingly accepts that risk as a condition of receiving, where applicable, hierarchy rights, override compensation, management economics, lead allocations, recruiting benefits, team-building rights, or other economic or organizational benefits associated with maintaining a downline organization.
 
 Individual signatory guarantees Agent Entity obligations and covered direct/indirect Hierarchy Debt.
-
-Initials: ____
 
 ## 18 · INDEMNIFICATION AND REIMBURSEMENT OF THRIVE, MANAGERS, AND UPLINES
 
@@ -527,8 +517,6 @@ THIS CLAUSE SHOULD BE SPECIFICALLY REVIEWED BY FLORIDA COUNSEL BEFORE USE.
 
 Agent acknowledges the jury-trial waiver, subject to law and counsel review.
 
-Initials: ____
-
 ## 32 · NO WAIVER OF NONWAIVABLE RIGHTS
 
 Nothing in this Agreement waives a right or remedy that applicable law does not allow a private contract to waive.
@@ -611,8 +599,6 @@ Agent may not use this carve-out as a pretext for a systematic book-stripping or
 
 Agent acknowledges Protected Book / no-book-stripping rules and resulting debt liability.
 
-Initials: ____
-
 ## 39 · ERRORS AND OMISSIONS INSURANCE REQUIREMENT
 
 Each producing Agent must maintain errors-and-omissions (“E&O”) insurance in force throughout Agent's active production relationship with Thrive at limits no lower than those required by applicable law, the applicable carrier, IMO, FMO, or such reasonable minimum limits as Thrive may designate in writing from time to time.
@@ -626,8 +612,6 @@ Thrive may suspend new production, lead access, appointments, or system access u
 If the applicable policy is claims-made, Agent must maintain any prior-acts protection, extended reporting coverage, or other post-termination protection required by applicable law, carrier rules, or a reasonable written Thrive policy applicable to similarly situated agents.
 
 Producing Agent acknowledges the E&O requirement and proof-of-coverage duty.
-
-Initials: ____
 
 ## 40 · NO EQUITY OR OWNERSHIP RIGHTS FROM PARTICIPATION, PRODUCTION, OR HIERARCHY
 
@@ -664,8 +648,6 @@ The confidentiality, non-solicitation, customer/book protection, debt reimbursem
 Such affected managers/uplines may be intended third-party beneficiaries of the applicable reimbursement and protective provisions to the extent permitted by law.
 
 Agent acknowledges Thrive IP/data ownership and permitted successor enforcement rights.
-
-Initials: ____
 
 ## 43 · NOTICES; ELECTRONIC TRANSACTIONS; RECORDS
 
@@ -704,15 +686,3 @@ By signing, Agent acknowledges and agrees that:
 - Agent understands that producing agents must maintain required E&O insurance and provide evidence of coverage upon request;
 - Agent understands that Company Work Product and Thrive-owned data, systems, goodwill, and other assets remain owned by Thrive as stated in this Agreement and that hierarchy position or production does not itself create equity or ownership rights; and
 - Agent understands that a permitted merger, acquisition, asset sale, reorganization, or change of control does not by itself terminate this Agreement or release surviving obligations, and that permitted successors or assigns may enforce assigned rights.
-
-Special Agent Initials - 12-Month Non-Solicitation: ____
-
-Special Agent Initials - Writing-Agent Debt + Manager Hierarchy Debt / Personal Guaranty: ____
-
-Special Agent Initials - Strict NDA / Protected Reporting Carve-Out: ____
-
-Special Agent Initials - Customer / Lead / Protected Book + No Book Stripping: ____
-
-Special Agent Initials - E&O Insurance Requirement: ____
-
-Special Agent Initials - IP / Work Product + Assignment / Change of Control: ____

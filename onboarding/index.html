@@ -137,13 +137,6 @@ input:focus,textarea:focus,select:focus{outline:2px solid rgba(240,180,41,.55); 
 .paper dl.ci dt{color:var(--paper-muted); font-weight:600}
 .paper dl.ci dd{margin:0; color:var(--paper-ink); font-weight:600; border-bottom:1px solid var(--paper-line); min-width:0; overflow-wrap:anywhere}
 @media (max-width:620px){ .paper dl.ci{grid-template-columns:1fr; gap:2px} .paper dl.ci dd{margin-bottom:8px} }
-.paper .initrow{display:flex; align-items:center; justify-content:flex-end; gap:10px; margin:2px 0 14px}
-.paper .initrow label{font-size:11.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--paper-muted)}
-.paper .initrow.special{justify-content:space-between; border-top:1px dashed var(--paper-line); padding-top:10px; margin:0 0 8px}
-.paper .initrow.special label{text-transform:none; letter-spacing:0; font-size:13px; color:var(--paper-ink)}
-.paper input.ini{width:74px; flex:none; font:inherit; font-size:15px; font-weight:700; text-align:center; text-transform:uppercase;
-  letter-spacing:.12em; color:var(--paper-ink); background:#fff; border:0; border-bottom:2px solid var(--paper-ink); border-radius:0; padding:4px 2px}
-.paper input.ini:focus{outline:2px solid var(--gold); outline-offset:2px}
 .paper hr{border:0; border-top:1px solid var(--paper-line); margin:22px 0}
 .execd{
   background:#E7EFFA; border:1px solid #BBD0EC; border-left:3px solid #2F6FE0;
@@ -396,12 +389,9 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
         <p>This Marketing Services Agreement (the “Agreement”) is entered into as of the Effective Date below by and between Lead Tech (“Lead Tech,” “Company,” “we,” “us,” or “our”) and the client identified below (“Client,” “you,” or “your”).</p>
 
         <h4>1 &middot; Client information</h4>
-        <!-- Filled in live from step 1 and the signing date. -->
+        <!-- Filled in live from the full name and date typed in step 4. -->
         <dl class="ci">
           <div><dt>Client / Legal Business Name</dt><dd id="ci-business">&mdash;</dd></div>
-          <div><dt>Authorized Representative</dt><dd id="ci-rep">&mdash;</dd></div>
-          <div><dt>Email Address</dt><dd id="ci-email">&mdash;</dd></div>
-          <div><dt>Phone Number</dt><dd id="ci-phone">&mdash;</dd></div>
           <div><dt>Effective Date</dt><dd id="ci-date">&mdash;</dd></div>
         </dl>
 
@@ -626,7 +616,6 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
         <p>Agent may not be given access to Thrive confidential systems, private Discord servers or channels, courses, call recordings, lead systems, training materials, internal documents, CRM data, recruiting systems, manager groups, proprietary links, credentials, dashboards, or other non-public resources until this Agreement has been fully executed and accepted by Thrive.</p>
         <p>Any manager or agent who invites, admits, shares credentials with, or otherwise provides restricted Thrive access to an unsigned person violates Company policy and may have access suspended.</p>
         <p>Agent acknowledges: no private Thrive system or Discord access before signature.</p>
-        <p class="initrow"><label for="ini-access">Initials</label> <input class="ini" id="ini-access" data-ini="access" maxlength="4" autocomplete="off" aria-label="Initials: Agent acknowledges: no private Thrive system or Discord access before signature."></p>
 
         <h4>3 &middot; INDEPENDENT CONTRACTOR; NO EMPLOYMENT OR INCOME GUARANTEE</h4>
         <p>Unless a separate written employment agreement expressly states otherwise, Agent participates as an independent contractor and is responsible for Agent's own taxes, business expenses, licenses, appointments, continuing education, equipment, and lawful conduct.</p>
@@ -662,7 +651,6 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
         <p>The confidentiality duty applies to conversations, phone calls, texts, email, Instagram, social media, Discord, private groups, screenshots, screen recordings, photographs, documents, demonstrations, software access, video calls, cloud drives, developer access, and any other transmission method.</p>
         <p>The confidentiality obligations survive termination for as long as the information remains a protectable trade secret, confidential information, or otherwise protected by law, and for at least five (5) years for other non-public Confidential Information to the extent permitted by law.</p>
         <p>Agent acknowledges the strict Thrive NDA and protected-reporting carve-out.</p>
-        <p class="initrow"><label for="ini-nda">Initials</label> <input class="ini" id="ini-nda" data-ini="nda" maxlength="4" autocomplete="off" aria-label="Initials: Agent acknowledges the strict Thrive NDA and protected-reporting carve-out."></p>
 
         <h4>8 &middot; PROTECTED REPORTING; LEGAL RIGHTS; NO RETALIATORY SUPPRESSION</h4>
         <p>Nothing in this Agreement prohibits or restricts Agent from:</p>
@@ -691,7 +679,6 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
         <p>General advertising not specifically targeted using Thrive Confidential Information is not prohibited merely because a Thrive-affiliated person independently responds, provided Agent did not directly or indirectly target, invite, induce, or use another person to target that individual.</p>
         <p>Nothing prohibits conduct that applicable law expressly protects.</p>
         <p>Agent agrees to the 12-month post-affiliation non-solicitation covenant.</p>
-        <p class="initrow"><label for="ini-nonsolicit">Initials</label> <input class="ini" id="ini-nonsolicit" data-ini="nonsolicit" maxlength="4" autocomplete="off" aria-label="Initials: Agent agrees to the 12-month post-affiliation non-solicitation covenant."></p>
 
         <h4>12 &middot; NON-INTERFERENCE; PROTECTION OF MANAGERS AND UPLINES</h4>
         <p>Agent may not use Confidential Information or Company relationships to circumvent, undermine, bypass, or intentionally interfere with established Thrive manager/upline relationships, team structures, recruiting relationships, compensation relationships, carrier relationships, vendor relationships, or other legitimate business relationships.</p>
@@ -719,7 +706,6 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
         <p>Agent is not released from Agent Debt unless the party legally entitled to the obligation provides an express written release identifying the specific obligation released.</p>
         <p>A verbal statement, informal conversation, hierarchy change, transfer, payment by an upline, or temporary roll-up is not a release.</p>
         <p>Agent acknowledges: Writing Agent is primary obligor for personal production debt.</p>
-        <p class="initrow"><label for="ini-debt">Initials</label> <input class="ini" id="ini-debt" data-ini="debt" maxlength="4" autocomplete="off" aria-label="Initials: Agent acknowledges: Writing Agent is primary obligor for personal production debt."></p>
 
         <h4>17 &middot; CONTINUING PERSONAL GUARANTY; MANAGER HIERARCHY DEBT GUARANTY</h4>
         <p>If Agent writes, contracts, receives commissions, or incurs obligations through a corporation, LLC, partnership, agency, DBA, or other entity owned, managed, controlled, or used by Agent (an “Agent Entity”), the individual signatory personally, absolutely, unconditionally, and continuously guarantees the prompt payment and performance of all Agent Debt and other monetary obligations of that Agent Entity arising under this Agreement or from insurance business written or submitted by or for Agent.</p>
@@ -737,7 +723,6 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
         <p>Manager acknowledges that downline production can create chargeback and debit exposure beyond Manager's direct day-to-day control.</p>
         <p>Manager knowingly accepts that risk as a condition of receiving, where applicable, hierarchy rights, override compensation, management economics, lead allocations, recruiting benefits, team-building rights, or other economic or organizational benefits associated with maintaining a downline organization.</p>
         <p>Individual signatory guarantees Agent Entity obligations and covered direct/indirect Hierarchy Debt.</p>
-        <p class="initrow"><label for="ini-guaranty">Initials</label> <input class="ini" id="ini-guaranty" data-ini="guaranty" maxlength="4" autocomplete="off" aria-label="Initials: Individual signatory guarantees Agent Entity obligations and covered direct/indirect Hierarchy Debt."></p>
 
         <h4>18 &middot; INDEMNIFICATION AND REIMBURSEMENT OF THRIVE, MANAGERS, AND UPLINES</h4>
         <p>If any Agent Debt or Hierarchy Debt is charged, rolled up, transferred, withheld, debited, collected from, or paid by Thrive, a manager, upline, agency, IMO, FMO, or other upstream party, the Writing Agent and every Manager responsible for that Hierarchy Debt under Section 17 must promptly reimburse and indemnify the affected party for the amount properly attributable to the applicable production, together with reasonable documented collection costs and attorneys' fees recoverable by law or contract.</p>
@@ -810,7 +795,6 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
         <p>TO THE FULLEST EXTENT PERMITTED BY LAW, EACH PARTY KNOWINGLY AND VOLUNTARILY WAIVES TRIAL BY JURY IN A CIVIL ACTION ARISING DIRECTLY FROM THIS AGREEMENT, EXCEPT WHERE A JURY-TRIAL WAIVER IS NOT ENFORCEABLE OR WHERE A CONTROLLING AGREEMENT OR LAW REQUIRES OTHERWISE.</p>
         <p>THIS CLAUSE SHOULD BE SPECIFICALLY REVIEWED BY FLORIDA COUNSEL BEFORE USE.</p>
         <p>Agent acknowledges the jury-trial waiver, subject to law and counsel review.</p>
-        <p class="initrow"><label for="ini-jury">Initials</label> <input class="ini" id="ini-jury" data-ini="jury" maxlength="4" autocomplete="off" aria-label="Initials: Agent acknowledges the jury-trial waiver, subject to law and counsel review."></p>
 
         <h4>32 &middot; NO WAIVER OF NONWAIVABLE RIGHTS</h4>
         <p>Nothing in this Agreement waives a right or remedy that applicable law does not allow a private contract to waive.</p>
@@ -859,7 +843,6 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
         <p>Nothing in this section requires Agent to recommend that a client keep unsuitable coverage or prohibits a bona fide, client-initiated or objectively client-beneficial replacement, exchange, surrender, transfer, or servicing action that is fully compliant with applicable replacement, suitability, best-interest, disclosure, consent, carrier, and regulatory requirements.</p>
         <p>Agent may not use this carve-out as a pretext for a systematic book-stripping or debt-evasion campaign.</p>
         <p>Agent acknowledges Protected Book / no-book-stripping rules and resulting debt liability.</p>
-        <p class="initrow"><label for="ini-book">Initials</label> <input class="ini" id="ini-book" data-ini="book" maxlength="4" autocomplete="off" aria-label="Initials: Agent acknowledges Protected Book / no-book-stripping rules and resulting debt liability."></p>
 
         <h4>39 &middot; ERRORS AND OMISSIONS INSURANCE REQUIREMENT</h4>
         <p>Each producing Agent must maintain errors-and-omissions (“E&amp;O”) insurance in force throughout Agent's active production relationship with Thrive at limits no lower than those required by applicable law, the applicable carrier, IMO, FMO, or such reasonable minimum limits as Thrive may designate in writing from time to time.</p>
@@ -868,7 +851,6 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
         <p>Thrive may suspend new production, lead access, appointments, or system access until required coverage is restored.</p>
         <p>If the applicable policy is claims-made, Agent must maintain any prior-acts protection, extended reporting coverage, or other post-termination protection required by applicable law, carrier rules, or a reasonable written Thrive policy applicable to similarly situated agents.</p>
         <p>Producing Agent acknowledges the E&amp;O requirement and proof-of-coverage duty.</p>
-        <p class="initrow"><label for="ini-eo">Initials</label> <input class="ini" id="ini-eo" data-ini="eo" maxlength="4" autocomplete="off" aria-label="Initials: Producing Agent acknowledges the E&amp;O requirement and proof-of-coverage duty."></p>
 
         <h4>40 &middot; NO EQUITY OR OWNERSHIP RIGHTS FROM PARTICIPATION, PRODUCTION, OR HIERARCHY</h4>
         <p>Unless a separate written equity, purchase, partnership, or ownership agreement signed by an authorized Thrive representative expressly states otherwise, Agent's production, recruiting, team-building, manager status, hierarchy position, receipt of overrides, contribution to training, participation in meetings, or development of goodwill does not give Agent any equity, membership, shareholder, partnership, voting, ownership, or control interest in Thrive, Thrive intellectual property, Thrive Data, Thrive systems, Thrive goodwill, Thrive recruiting pipelines, or Thrive-owned customer/lead relationships.</p>
@@ -890,7 +872,6 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
         <p>The confidentiality, non-solicitation, customer/book protection, debt reimbursement, guaranty, intellectual-property, data-protection, and related provisions are intended to benefit Thrive, its permitted successors and assigns, and, where the facts support it, affected Thrive managers/uplines who incur Agent Debt or Hierarchy Debt.</p>
         <p>Such affected managers/uplines may be intended third-party beneficiaries of the applicable reimbursement and protective provisions to the extent permitted by law.</p>
         <p>Agent acknowledges Thrive IP/data ownership and permitted successor enforcement rights.</p>
-        <p class="initrow"><label for="ini-ip">Initials</label> <input class="ini" id="ini-ip" data-ini="ip" maxlength="4" autocomplete="off" aria-label="Initials: Agent acknowledges Thrive IP/data ownership and permitted successor enforcement rights."></p>
 
         <h4>43 &middot; NOTICES; ELECTRONIC TRANSACTIONS; RECORDS</h4>
         <p>Electronic signatures, click acceptance, and electronic records may be used to the extent permitted by applicable law.</p>
@@ -923,12 +904,6 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
           <li>Agent understands that Company Work Product and Thrive-owned data, systems, goodwill, and other assets remain owned by Thrive as stated in this Agreement and that hierarchy position or production does not itself create equity or ownership rights; and</li>
           <li>Agent understands that a permitted merger, acquisition, asset sale, reorganization, or change of control does not by itself terminate this Agreement or release surviving obligations, and that permitted successors or assigns may enforce assigned rights.</li>
         </ul>
-        <p class="initrow special"><label for="ini-sp_nonsolicit">Special Agent Initials - 12-Month Non-Solicitation</label> <input class="ini" id="ini-sp_nonsolicit" data-ini="sp_nonsolicit" maxlength="4" autocomplete="off"></p>
-        <p class="initrow special"><label for="ini-sp_debt">Special Agent Initials - Writing-Agent Debt + Manager Hierarchy Debt / Personal Guaranty</label> <input class="ini" id="ini-sp_debt" data-ini="sp_debt" maxlength="4" autocomplete="off"></p>
-        <p class="initrow special"><label for="ini-sp_nda">Special Agent Initials - Strict NDA / Protected Reporting Carve-Out</label> <input class="ini" id="ini-sp_nda" data-ini="sp_nda" maxlength="4" autocomplete="off"></p>
-        <p class="initrow special"><label for="ini-sp_book">Special Agent Initials - Customer / Lead / Protected Book + No Book Stripping</label> <input class="ini" id="ini-sp_book" data-ini="sp_book" maxlength="4" autocomplete="off"></p>
-        <p class="initrow special"><label for="ini-sp_eo">Special Agent Initials - E&amp;O Insurance Requirement</label> <input class="ini" id="ini-sp_eo" data-ini="sp_eo" maxlength="4" autocomplete="off"></p>
-        <p class="initrow special"><label for="ini-sp_ip">Special Agent Initials - IP / Work Product + Assignment / Change of Control</label> <input class="ini" id="ini-sp_ip" data-ini="sp_ip" maxlength="4" autocomplete="off"></p>
         <hr>
         <p class="meta">You have reached the end of the agreement.</p>
 
@@ -957,8 +932,7 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
       <div class="agree off" id="agreewrap2">
         <input type="checkbox" id="agree2" name="agree2" disabled>
         <label for="agree2">
-          I have read the whole agreement and initialled every line marked Initials. I
-          understand I am the primary obligor for my production debt, that as a Manager I
+          I have read the whole agreement. I understand I am the primary obligor for my production debt, that as a Manager I
           guarantee my hierarchy's debt, and I agree to the confidentiality, 12-month
           non-solicitation and book-protection terms.
         </label>
@@ -1241,28 +1215,11 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
     $("#" + dateId).textContent = dateVal ? longDate(dateVal) : dash;
   }
 
-  /* The initials boxes inside the Thrive Companies agreement. Each one is
-     a separate acknowledgement, so each has to be filled in. */
-  function initials() {
-    var o = {};
-    Array.prototype.forEach.call(document.querySelectorAll("#paper2 input.ini"), function (el) {
-      o[el.getAttribute("data-ini")] = (el.value || "").trim().toUpperCase();
-    });
-    return o;
-  }
-  function missingInitials() {
-    var o = initials();
-    return Object.keys(o).filter(function (k) { return !/^[A-Z]{1,4}$/.test(o[k].replace(/[^A-Z]/g, "")); });
-  }
-
   function syncExecution() {
     var f = fields();
     /* Section 1 of the Lead Tech agreement, filled in from step 1. */
     var dash = "\u2014";
-    $("#ci-business").textContent = f.business || dash;
-    $("#ci-rep").textContent = f.legalName || dash;
-    $("#ci-email").textContent = f.email || dash;
-    $("#ci-phone").textContent = f.phone || dash;
+    $("#ci-business").textContent = f.signedName || f.legalName || dash;
     $("#ci-date").textContent = f.signedDate ? longDate(f.signedDate) : dash;
     mirror(sigLT, "sigmirror", "execd-ghost", "sm-name", "sm-business", "sm-date",
       f.signedName || f.legalName, f.business, f.signedDate);
@@ -1360,7 +1317,6 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
     else if (!f.signedDate) fail("sign", "Pick the date.");
 
     if (!gateTC.done) fail("agree2", "Read the agreement to the end first.");
-    else if (missingInitials().length) fail("agree2", "Initial every line marked Initials in the agreement (" + missingInitials().length + " left).");
     else if (!$("#agree2").checked) fail("agree2", "Tick the box to agree.");
 
     if (!sigTC.has) fail("sign2", "Draw your signature in the box.");
@@ -1434,7 +1390,6 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
       thriveSignedName: f.signedName2,
       thriveSignedDate: f.signedDate2,
       thriveSignature: sigTC.png(),
-      thriveInitials: initials(),
       photo: photoData,
       steps: {
         details: true,
