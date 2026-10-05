@@ -331,9 +331,6 @@ footer img{height:16px; width:auto; opacity:.85}
       desc: "Generate high-intent leads on Facebook and pay only the true cost per lead — no markups, no agency fees. You keep every dollar saved." },
     { id: "recruiting-ads", icon: "mega", iconCls: "blue", kicker: "Build your sales team faster", name: "Recruiting Ads",
       desc: "Done-for-you recruiting ad campaigns to attract qualified insurance agents and grow your downline with proven ad creative." },
-    { id: "funnel", icon: "users", kicker: "Turn recruiting into revenue", name: "Profitable Recruiting Funnel",
-      desc: "A done-for-you recruiting funnel that attracts, nurtures, and converts agent prospects — so your downline grows predictably and profitably.",
-      badge: "New", badgeCls: "new" },
     { id: "instagram", icon: "insta", iconCls: "blue", kicker: "Automate your agent pipeline on IG", name: "Instagram Recruiting Software",
       desc: "Powerful automation tools to prospect and recruit insurance agents through Instagram — save hours every week on outreach." },
     { id: "crm", icon: "grid", iconCls: "green", kicker: "Insurance CRM — starting at $0 / month", name: "LeadTech CRMs",
@@ -357,8 +354,7 @@ footer img{height:16px; width:auto; opacity:.85}
     return hero("Agency growth solutions", "Everything You Need", "to Grow Your Agency.",
         "From live inbound transfers to recruiting tools and custom pages — Lead Tech has every solution an insurance agency needs to scale.") +
       sechead("Our products", "Choose Your Solution", "Select any product below to view pricing and get started today.") +
-      '<div class="grid3">' + PRODUCTS.slice(0, 6).map(card).join("") + "</div>" +
-      '<div class="grid3 center" style="margin-top:14px">' + card(PRODUCTS[6]) + "</div>" +
+      '<div class="grid3">' + PRODUCTS.map(card).join("") + "</div>" +
       '<a class="feature" href="#limitless" data-go="limitless"><div class="kicker">Exclusive program</div>' +
       "<h3>The Limitless Program</h3>" +
       "<p>Unlimited Google inbound calls for free.</p>" +
@@ -515,12 +511,6 @@ footer img{height:16px; width:auto; opacity:.85}
       cta("Ready to Grow Your Team?",
         "Let us build and manage your agent recruiting campaigns. You focus on leadership — we handle the lead generation.",
         '<a class="btn pri" href="#recruiting-ads" data-scrolltop="1">Choose a Plan' + ic("arrow") + "</a>");
-  };
-  VIEWS.funnel = function () {
-    return simple("funnel", "Turn recruiting into revenue", "A Recruiting Funnel", "That Pays for Itself.",
-      "A done-for-you recruiting funnel that attracts, nurtures, and converts agent prospects — so your downline grows predictably and profitably.",
-      ["Attracts agent prospects", "Nurtures them until they are ready", "Converts them into producing agents", "Built and run for you"],
-      "Pricing is set with the desk.");
   };
   VIEWS.instagram = function () {
     return hero("Automate your agent pipeline on IG", "Recruit on Instagram.", "On Autopilot.",
