@@ -243,7 +243,9 @@ function Shell({ children }) {
         </div>
         {children}
         <p className={`mt-6 text-center text-xs ${F}`}>
-          Questions about a decision go to whoever sent you this form.
+          Questions about a decision? Contact Lead Tech support in the{" "}
+          <a href="https://discord.gg/keSnyfQ738" target="_blank" rel="noreferrer"
+            className="font-semibold text-cyan-400 hover:underline">Lead Tech support Discord&nbsp;&#8599;</a>
         </p>
       </div>
     </div>
