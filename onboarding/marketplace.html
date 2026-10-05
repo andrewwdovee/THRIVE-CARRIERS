@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lead Tech Marketplace</title>
+<meta name="description" content="Every Lead Tech product for insurance agencies: inbound transfers, inbound calls, recruiting tools, the CRM and the Limitless Program.">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
+<style>
+/* Layout: one page, many views. A centred hero, then a card grid; each
+   product opens its own view (#transfers, #google ...) with pricing
+   tiers, features and a closing call to action. Dark only, by design. */
+:root{
+  color-scheme: dark;
+  --bg:#07090D; --panel:#11141B; --panel-2:#161A23; --line:#262B36; --line-2:#3A414F;
+  --fg:#F4F6FA; --muted:#9AA3B2; --faint:#6B7383;
+  --cyan:#22C3EE; --blue:#3B82F6; --teal:#14B8A6; --green:#22C58B; --gold:#EAB308; --rose:#F43F5E;
+  --grad:linear-gradient(90deg,#22D3EE,#60A5FA 45%,#5EEAD4);
+  --btn:linear-gradient(90deg,#06B6D4,#3B82F6);
+  --font:'Inter',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg); color:var(--fg); font-family:var(--font); font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased}
+body::before{
+  content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:
+    radial-gradient(900px 520px at 50% -10%, rgba(34,195,238,.10), transparent 65%),
+    radial-gradient(700px 420px at 15% 0%, rgba(59,130,246,.08), transparent 60%);
+}
+a{color:inherit}
+.wrap{max-width:1040px; margin:0 auto; padding:0 16px 40px}
+
+/* ------------------------------------------------------------ top bar */
+.top{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:20px 0 0}
+.top img{height:18px; width:auto; display:block}
+.top .brand{display:flex; align-items:center; gap:10px; text-decoration:none; font-weight:700; font-size:13px; color:var(--muted)}
+.top .brand b{color:var(--fg); letter-spacing:.02em}
+.navback{
+  font:inherit; font-size:13px; font-weight:600; color:var(--muted); background:none; border:0; cursor:pointer;
+  display:inline-flex; align-items:center; gap:6px; padding:6px 2px;
+}
+.navback:hover{color:var(--fg)}
+
+/* --------------------------------------------------------------- hero */
+.hero{text-align:center; padding:46px 0 10px}
+.chip{
+  display:inline-flex; align-items:center; gap:7px; border:1px solid rgba(34,195,238,.45); color:var(--cyan);
+  border-radius:999px; padding:5px 13px; font-size:10.5px; font-weight:800; letter-spacing:.14em; text-transform:uppercase;
+  background:rgba(34,195,238,.06);
+}
+.chip::before{content:""; width:6px; height:6px; border-radius:50%; background:currentColor}
+.chip.plain{border-color:var(--line-2); color:var(--muted); background:transparent}
+.chip.plain::before{display:none}
+.hero h1{font-size:clamp(34px,6.4vw,58px); line-height:1.02; letter-spacing:-.035em; font-weight:900; margin:20px 0 0; text-wrap:balance}
+.hero h1 .g{background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; display:inline-block; padding-bottom:.06em}
+.hero p{color:var(--muted); max-width:56ch; margin:18px auto 0; font-size:15.5px}
+.hero .ctas{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:26px}
+
+.sechead{text-align:center; margin:64px 0 26px}
+.sechead h2{font-size:clamp(24px,3.6vw,30px); letter-spacing:-.02em; font-weight:800; margin:14px 0 0}
+.sechead p{color:var(--muted); font-size:14px; margin:8px auto 0; max-width:58ch}
+
+/* -------------------------------------------------------------- cards */
+.grid3{display:grid; gap:14px; grid-template-columns:repeat(3,minmax(0,1fr))}
+.grid3.center{display:flex; flex-wrap:wrap; justify-content:center}
+.grid3.center > *{flex:0 1 calc((100% - 28px) / 3); min-width:0}
+@media (max-width:900px){ .grid3{grid-template-columns:repeat(2,minmax(0,1fr))} .grid3.center > *{flex-basis:calc((100% - 14px) / 2)} }
+@media (max-width:600px){ .grid3{grid-template-columns:minmax(0,1fr)} .grid3.center > *{flex-basis:100%} }
+
+.card{
+  position:relative; background:var(--panel); border:1px solid var(--line-2); border-radius:14px;
+  padding:22px 20px 20px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:6px;
+  transition:border-color .15s, transform .15s, background .15s; min-width:0;
+}
+a.card{text-decoration:none; color:inherit; cursor:pointer}
+a.card:hover{border-color:var(--cyan); transform:translateY(-2px)}
+a.card:focus-visible{outline:2px solid var(--cyan); outline-offset:3px}
+.card.hot{border-color:rgba(34,195,238,.55); background:linear-gradient(180deg,rgba(34,195,238,.07),var(--panel) 55%)}
+.card.crm{border-color:rgba(34,197,139,.5); background:linear-gradient(180deg,rgba(34,197,139,.08),var(--panel) 55%)}
+.badge{
+  position:absolute; top:-9px; left:18px; font-size:9.5px; font-weight:900; letter-spacing:.1em; text-transform:uppercase;
+  border-radius:999px; padding:2px 9px; color:#04131A; background:var(--btn);
+}
+.badge.new{background:var(--teal); color:#03201C}
+.badge.excl{background:var(--green); color:#032015}
+.badge.mid{left:50%; transform:translateX(-50%)}
+.ic{
+  width:34px; height:34px; border-radius:9px; display:grid; place-items:center; margin-bottom:8px;
+  background:rgba(34,195,238,.10); border:1px solid rgba(34,195,238,.35); color:var(--cyan);
+}
+.ic svg{width:17px; height:17px}
+.ic.green{background:rgba(34,197,139,.10); border-color:rgba(34,197,139,.4); color:var(--green)}
+.ic.blue{background:rgba(59,130,246,.12); border-color:rgba(59,130,246,.4); color:#7FB0FF}
+.kicker{font-size:9.5px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--faint)}
+.card h3{margin:2px 0 4px; font-size:18px; font-weight:800; letter-spacing:-.015em; line-height:1.2; text-wrap:balance}
+.card p{margin:0; color:var(--muted); font-size:13px; line-height:1.55}
+.card .more{margin-top:auto; padding-top:14px; font-size:12.5px; font-weight:700; color:var(--muted); display:inline-flex; gap:6px; align-items:center}
+.card.hot .more{color:var(--cyan)}
+.card.crm .more{color:var(--green)}
+.card .sub{font-size:11px; font-weight:700; color:#7FB0FF}
+.card .price{font-size:22px; font-weight:900; letter-spacing:-.02em; color:#7FB0FF; margin-top:4px}
+.card .price small{font-size:12px; font-weight:600; color:var(--muted)}
+
+/* ------------------------------------------------- the featured program */
+.feature{
+  margin-top:22px; border:1px solid rgba(234,179,8,.5); border-radius:16px; padding:34px 22px; text-align:center;
+  background:linear-gradient(180deg,rgba(234,179,8,.12),rgba(234,179,8,.03)); box-shadow:0 0 80px -20px rgba(234,179,8,.35);
+  display:block; text-decoration:none; color:inherit; transition:border-color .15s;
+}
+.feature:hover{border-color:var(--gold)}
+.feature .kicker{color:var(--gold)}
+.feature h3{font-size:clamp(24px,3.6vw,30px); font-weight:900; letter-spacing:-.025em; margin:6px 0 8px}
+.feature p{color:#D6D2C2; max-width:60ch; margin:0 auto; font-size:14px}
+.feature .more{display:inline-flex; gap:6px; align-items:center; margin-top:16px; font-weight:800; font-size:13px; color:var(--gold)}
+
+/* ----------------------------------------------------------- pricing */
+.tiers{display:grid; gap:16px; grid-template-columns:repeat(3,minmax(0,1fr)); align-items:stretch}
+@media (max-width:860px){ .tiers{grid-template-columns:minmax(0,1fr); max-width:420px; margin:0 auto} }
+.tier{
+  position:relative; background:var(--panel); border:1px solid var(--line-2); border-radius:14px; padding:22px;
+  display:flex; flex-direction:column; gap:4px; min-width:0;
+}
+.tier.hot{border-color:rgba(34,195,238,.6); background:linear-gradient(180deg,rgba(34,195,238,.08),var(--panel) 60%); box-shadow:0 0 50px -18px rgba(34,195,238,.45)}
+.tier.best{border-color:rgba(20,184,166,.6)}
+.tier h3{margin:0; font-size:18px; font-weight:800}
+.tier .tl{font-size:12.5px; color:var(--muted)}
+.tier .tl.c{color:#7FB0FF; font-weight:700; font-size:11px}
+.tier .amt{display:flex; align-items:baseline; gap:6px; margin-top:12px}
+.tier .amt b{font-size:36px; font-weight:900; letter-spacing:-.03em}
+.tier .amt b.c{color:#60A5FA}
+.tier .amt b.t{color:#2DD4BF}
+.tier .amt span{font-size:12.5px; color:var(--muted)}
+.tier .per{
+  display:inline-flex; align-self:flex-start; gap:6px; align-items:center; margin-top:4px; font-size:11px; color:var(--muted);
+  border:1px solid var(--line-2); border-radius:999px; padding:2px 10px;
+}
+.tier ul{list-style:none; margin:16px 0 20px; padding:0; display:grid; gap:9px}
+.tier li{display:grid; grid-template-columns:16px 1fr; gap:8px; font-size:13px; align-items:start}
+.tier li svg{width:15px; height:15px; color:var(--cyan); margin-top:2px}
+.tier .go{margin-top:auto}
+
+.btn{
+  font:inherit; font-size:13.5px; font-weight:700; cursor:pointer; text-decoration:none; border-radius:9px;
+  display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:11px 18px;
+  border:1px solid var(--line-2); background:#1C212B; color:var(--fg);
+}
+.btn:hover{border-color:var(--fg)}
+.btn.pri{background:var(--btn); border-color:transparent; color:#fff; box-shadow:0 8px 24px -10px rgba(34,195,238,.7)}
+.btn.pri:hover{filter:brightness(1.08)}
+.btn.teal{background:linear-gradient(90deg,#14B8A6,#0E8FA8); border-color:transparent; color:#fff}
+.btn.gold{background:linear-gradient(90deg,#FACC15,#EAB308); border-color:transparent; color:#231A00}
+.btn.wide{width:100%}
+.btn.off{opacity:.6; cursor:default; pointer-events:none}
+.btn svg{width:15px; height:15px}
+.btn:focus-visible{outline:2px solid var(--cyan); outline-offset:2px}
+.fine{font-size:12px; color:var(--faint); text-align:center; max-width:70ch; margin:20px auto 0}
+.fine a{color:var(--cyan); font-weight:700; text-decoration:none}
+
+/* --------------------------------------------------------- features */
+.feats{display:grid; gap:14px; grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:860px){ .feats{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:560px){ .feats{grid-template-columns:minmax(0,1fr)} }
+.feat{background:var(--panel); border:1px solid var(--line-2); border-radius:12px; padding:18px; min-width:0}
+.feat .ic{margin:0 0 12px}
+.feat b{display:block; font-size:14.5px; margin-bottom:4px}
+.feat p{margin:0; font-size:13px; color:var(--muted)}
+
+.cta{
+  margin:64px auto 0; max-width:620px; text-align:center; border:1px solid rgba(34,195,238,.3); border-radius:16px;
+  padding:34px 22px; background:linear-gradient(180deg,rgba(34,195,238,.07),rgba(59,130,246,.03));
+}
+.cta.gold{border-color:rgba(234,179,8,.45); background:linear-gradient(180deg,rgba(234,179,8,.10),rgba(234,179,8,.02))}
+.cta h2{margin:0; font-size:clamp(22px,3.2vw,28px); font-weight:800; letter-spacing:-.02em}
+.cta p{color:var(--muted); font-size:14px; margin:10px auto 0; max-width:52ch}
+.cta .ctas{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:22px}
+
+.bigcta{
+  margin-top:22px; border:1px solid rgba(34,195,238,.35); border-radius:16px; padding:30px 22px; text-align:center;
+  background:linear-gradient(180deg,rgba(34,195,238,.08),rgba(34,195,238,.02));
+}
+.bigcta .ic{margin:0 auto 12px; width:40px; height:40px}
+.bigcta h3{margin:0; font-size:22px; font-weight:800}
+.bigcta p{color:var(--muted); font-size:13.5px; margin:8px auto 18px; max-width:52ch}
+
+.list{list-style:none; margin:0 auto; padding:0; display:grid; gap:10px; max-width:560px}
+.list li{display:grid; grid-template-columns:18px 1fr; gap:10px; background:var(--panel); border:1px solid var(--line-2); border-radius:10px; padding:12px 14px; font-size:14px}
+.list li svg{width:16px; height:16px; color:var(--cyan); margin-top:2px}
+.list.gold li svg{color:var(--gold)}
+
+footer{border-top:1px solid var(--line); margin-top:70px; padding:22px 16px 30px; color:var(--faint); font-size:12px}
+footer .in{max-width:1040px; margin:0 auto; display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap; align-items:center}
+footer img{height:16px; width:auto; opacity:.85}
+.view{animation:fade .25s ease}
+@keyframes fade{from{opacity:.0; transform:translateY(4px)} to{opacity:1; transform:none}}
+@media (prefers-reduced-motion:reduce){ .view{animation:none} a.card, .card{transition:none} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="brand" href="#" data-go="home"><img id="mk-lead" alt="Lead Tech"><span><b>Marketplace</b></span></a>
+    <button type="button" class="navback" id="navback" data-go="home" hidden>&larr; All products</button>
+  </div>
+  <main id="view"></main>
+</div>
+<footer>
+  <div class="in">
+    <img id="mk-lead-2" alt="Lead Tech">
+    <span>Lead Tech &middot; Products for final expense agencies</span>
+    <span id="entity"></span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var ENTITY = "Thrive Companies LLC";
+  var LOGOS = {};
+
+  /* ------------------------------------------------------------ links
+     Where each button goes. An empty checkout link shows the button as
+     "Checkout link coming soon" rather than going nowhere. */
+  var PORTAL_URL = "https://leadtech-crm.vercel.app/agent/login";
+  var SUPPORT_URL = "https://discord.gg/keSnyfQ738";
+  var CHECKOUT = {
+    "transfers-starter": "", "transfers-growth": "", "transfers-pro": "",
+    "google-training": "", "google-pro": "", "google-unlimited": "",
+    "meta": "", "meta-spanish": "", "meta-qualified": "", "tv": "",
+    "crm": ""
+  };
+
+  /* ------------------------------------------------------------ icons */
+  var P = {
+    phoneIn: '<path d="M16 3h5v5M21 3l-6 6"/><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/>',
+    phone: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/>',
+    zap: '<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>',
+    mega: '<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>',
+    users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>',
+    insta: '<rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5h.01"/>',
+    grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>',
+    infinity: '<path d="M12 12c-2-2.7-4-4-6-4a4 4 0 0 0 0 8c2 0 4-1.3 6-4zm0 0c2 2.7 4 4 6 4a4 4 0 0 0 0-8c-2 0-4 1.3-6 4z"/>',
+    bars: '<path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/>',
+    lang: '<path d="m5 8 6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6"/>',
+    bot: '<path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/>',
+    search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+    tv: '<rect x="2" y="7" width="20" height="15" rx="2"/><path d="m17 2-5 5-5-5"/>',
+    clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+    shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+    trend: '<path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/>',
+    star: '<path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    circleCheck: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+    arrow: '<path d="M5 12h14M12 5l7 7-7 7"/>',
+    ext: '<path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+    dollar: '<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'
+  };
+  function ic(name) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + P[name] + "</svg>";
+  }
+  function esc(v) {
+    return String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function buy(key, label, cls) {
+    var url = CHECKOUT[key];
+    if (!url) return '<span class="btn wide off ' + (cls || "") + '">Checkout link coming soon</span>';
+    return '<a class="btn wide ' + (cls || "") + '" href="' + esc(url) + '" target="_blank" rel="noreferrer">' + esc(label || "Get Started") + ic("arrow") + "</a>";
+  }
+  function portalBtn(label, cls) {
+    return '<a class="btn ' + (cls || "") + '" href="' + esc(PORTAL_URL) + '" target="_blank" rel="noreferrer">' + esc(label) + ic("ext") + "</a>";
+  }
+  function supportBtn(label, cls) {
+    return '<a class="btn ' + (cls || "") + '" href="' + esc(SUPPORT_URL) + '" target="_blank" rel="noreferrer">' + esc(label) + ic("ext") + "</a>";
+  }
+  function hero(chip, line1, line2, text, ctas) {
+    return '<section class="hero"><span class="chip">' + esc(chip) + "</span>" +
+      "<h1>" + esc(line1) + '<br><span class="g">' + esc(line2) + "</span></h1>" +
+      "<p>" + esc(text) + "</p>" + (ctas ? '<div class="ctas">' + ctas + "</div>" : "") + "</section>";
+  }
+  function sechead(chip, title, text) {
+    return '<div class="sechead"><span class="chip plain">' + esc(chip) + "</span><h2>" + esc(title) + "</h2>" +
+      (text ? "<p>" + esc(text) + "</p>" : "") + "</div>";
+  }
+  function tier(t) {
+    return '<div class="tier' + (t.cls ? " " + t.cls : "") + '">' +
+      (t.badge ? '<span class="badge mid' + (t.badgeCls ? " " + t.badgeCls : "") + '">' + esc(t.badge) + "</span>" : "") +
+      (t.icon ? '<div class="ic ' + (t.iconCls || "") + '" style="margin:0 0 10px">' + ic(t.icon) + "</div>" : "") +
+      "<h3>" + esc(t.name) + "</h3>" +
+      '<div class="tl' + (t.tagC ? " c" : "") + '">' + esc(t.tag) + "</div>" +
+      '<div class="amt"><b class="' + (t.amtCls || "") + '">' + esc(t.price) + "</b><span>" + esc(t.unit) + "</span></div>" +
+      (t.per ? '<span class="per">' + ic("phone").replace('aria-hidden="true"', 'aria-hidden="true" style="width:11px;height:11px"') + esc(t.per) + "</span>" : "") +
+      "<ul>" + t.items.map(function (x) { return "<li>" + ic("circleCheck") + "<span>" + esc(x) + "</span></li>"; }).join("") + "</ul>" +
+      '<div class="go">' + buy(t.key, "Get Started", t.btn) + "</div></div>";
+  }
+  function feats(list) {
+    return '<div class="feats">' + list.map(function (f) {
+      return '<div class="feat"><div class="ic">' + ic(f[0]) + "</div><b>" + esc(f[1]) + "</b><p>" + esc(f[2]) + "</p></div>";
+    }).join("") + "</div>";
+  }
+  function cta(title, text, buttons, cls) {
+    return '<section class="cta' + (cls ? " " + cls : "") + '"><h2>' + esc(title) + "</h2><p>" + esc(text) + '</p><div class="ctas">' + buttons + "</div></section>";
+  }
+  function go(view, label, cls) {
+    return '<a class="btn ' + (cls || "") + '" href="#' + view + '" data-go="' + view + '">' + esc(label) + ic("arrow") + "</a>";
+  }
+
+  /* ---------------------------------------------------------- products */
+  var PRODUCTS = [
+    { id: "transfers", icon: "phoneIn", kicker: "Live warm transfers — final expense", name: "Inbound Transfers",
+      desc: "Receive live inbound final expense calls transferred directly to you within 90 seconds. Prospects are pre-qualified and ready to talk.",
+      badge: "Most popular", cls: "hot" },
+    { id: "calls", icon: "phone", iconCls: "blue", kicker: "High-intent inbound leads", name: "Inbound Calls",
+      desc: "Direct inbound call campaigns that drive high-intent prospects straight to your phone line — no cold calling required." },
+    { id: "leads", icon: "zap", kicker: "Pay the true cost per lead", name: "High Intent Leads at Cost",
+      desc: "Generate high-intent leads on Facebook and pay only the true cost per lead — no markups, no agency fees. You keep every dollar saved." },
+    { id: "recruiting-ads", icon: "mega", iconCls: "blue", kicker: "Build your sales team faster", name: "Recruiting Ads",
+      desc: "Done-for-you recruiting ad campaigns to attract qualified insurance agents and grow your downline with proven ad creative." },
+    { id: "funnel", icon: "users", kicker: "Turn recruiting into revenue", name: "Profitable Recruiting Funnel",
+      desc: "A done-for-you recruiting funnel that attracts, nurtures, and converts agent prospects — so your downline grows predictably and profitably.",
+      badge: "New", badgeCls: "new" },
+    { id: "instagram", icon: "insta", iconCls: "blue", kicker: "Automate your agent pipeline on IG", name: "Instagram Recruiting Software",
+      desc: "Powerful automation tools to prospect and recruit insurance agents through Instagram — save hours every week on outreach." },
+    { id: "crm", icon: "grid", iconCls: "green", kicker: "Insurance CRM — $1 / month", name: "LeadTech CRM",
+      desc: "A fully built CRM designed for insurance agents. Normally $500/month to the public — available to LeadTech clients for just $1/month.",
+      badge: "Exclusive", badgeCls: "excl", cls: "crm" }
+  ];
+
+  function card(p) {
+    return '<a class="card' + (p.cls ? " " + p.cls : "") + '" href="#' + p.id + '" data-go="' + p.id + '">' +
+      (p.badge ? '<span class="badge ' + (p.badgeCls || "") + '">' + esc(p.badge) + "</span>" : "") +
+      '<div class="ic ' + (p.iconCls || "") + '">' + ic(p.icon) + "</div>" +
+      '<div class="kicker">' + esc(p.kicker) + "</div><h3>" + esc(p.name) + "</h3><p>" + esc(p.desc) + "</p>" +
+      '<span class="more">View Pricing ' + ic("arrow").replace('aria-hidden="true"', 'aria-hidden="true" style="width:13px;height:13px"') + "</span></a>";
+  }
+
+  /* ------------------------------------------------------------- views */
+  var VIEWS = {};
+
+  VIEWS.home = function () {
+    return hero("Agency growth solutions", "Everything You Need", "to Grow Your Agency.",
+        "From live inbound transfers to recruiting tools and custom pages — Lead Tech has every solution an insurance agency needs to scale.") +
+      sechead("Our products", "Choose Your Solution", "Select any product below to view pricing and get started today.") +
+      '<div class="grid3">' + PRODUCTS.slice(0, 6).map(card).join("") + "</div>" +
+      '<div class="grid3 center" style="margin-top:14px">' + card(PRODUCTS[6]) + "</div>" +
+      '<a class="feature" href="#limitless" data-go="limitless"><div class="kicker">Exclusive program</div>' +
+      "<h3>The Limitless Program</h3>" +
+      "<p>Keep 30% of your commissions with no chargebacks, and take unlimited Google inbound calls every day — built for agents who want to scale without limits.</p>" +
+      '<span class="more">Learn more ' + ic("arrow").replace('aria-hidden="true"', 'aria-hidden="true" style="width:13px;height:13px"') + "</span></a>";
+  };
+
+  VIEWS.transfers = function () {
+    return hero("Live inbound transfers — final expense", "Real Prospects.", "Live on the Line.",
+        "Stop chasing cold leads. Our inbound final expense transfers connect you directly with seniors who are actively looking for coverage — transferred to you live in under 90 seconds.",
+        portalBtn("Open Transfer Portal")) +
+      sechead("One-time packages", "Choose Your Volume",
+        "All packages are a one-time charge. Scale up or down at any time through the transfer portal. Every tier includes the same premium inbound transfer quality.") +
+      '<div class="tiers">' +
+      tier({ name: "Starter", tag: "Perfect for agents testing the waters with inbound final expense leads.", price: "$235", unit: "one-time",
+        per: "10 inbound calls · $23/call", key: "transfers-starter",
+        items: ["10 inbound calls (one-time)", "90-second warm transfers", "Real-time call routing", "Live transfer portal access", "Delivery guaranteed"] }) +
+      tier({ name: "Growth", tag: "The most popular plan for agents scaling their final expense book.", price: "$350", unit: "one-time",
+        per: "15 inbound calls · $23/call", key: "transfers-growth", cls: "hot", badge: "Most popular", btn: "pri",
+        items: ["15 inbound calls (one-time)", "90-second warm transfers", "Real-time call routing", "Live transfer portal access", "Delivery guaranteed", "Priority call queue"] }) +
+      tier({ name: "Pro", tag: "Maximum volume for high-performing agents ready to dominate.", price: "$470", unit: "one-time",
+        per: "20 inbound calls · $23/call", key: "transfers-pro",
+        items: ["20 inbound calls (one-time)", "90-second warm transfers", "Real-time call routing", "Live transfer portal access", "Delivery guaranteed", "Priority call queue", "Dedicated account support"] }) +
+      "</div>" +
+      '<p class="fine">Already purchased? <a href="' + esc(PORTAL_URL) + '" target="_blank" rel="noreferrer">Open Live Transfer Portal &#8599;</a></p>' +
+      sechead("Why it works", "Built for Final Expense Agents",
+        "We specialize exclusively in final expense inbound transfers. No health, no term — just seniors looking for burial and final expense coverage.") +
+      feats([
+        ["phone", "100% Inbound", "Every prospect called us first — you're never interrupting someone's day. These are warm, self-selected leads."],
+        ["clock", "Under 90 Seconds", "From qualification to bridge, the entire handoff is complete in under 90 seconds so the prospect stays engaged."],
+        ["shield", "Final Expense Only", "Our media targets final expense buyers exclusively. You're speaking to prospects with genuine interest in coverage."],
+        ["trend", "Consistent Volume", "Your contracted call count is guaranteed. We manage media spend and routing to ensure you receive every call you paid for."],
+        ["zap", "Real-Time Delivery", "Transfers happen during business hours in real time. No batched recordings — a live human is on the line."],
+        ["star", "Portal Control", "Manage your schedule, pause calls, and review call logs anytime through the self-serve transfer portal."]
+      ]) +
+      cta("Ready to Fill Your Pipeline?",
+        "Purchase a package today and start receiving live inbound final expense transfers. Choose your volume, access the portal, and close more business.",
+        '<a class="btn pri" href="#transfers" data-scrolltop="1">Choose a Plan' + ic("arrow") + "</a>" + portalBtn("Open Transfer Portal"));
+  };
+
+  var TYPES = [
+    { key: "meta", icon: "bars", name: "Meta Inbounds", sub: "Facebook & Instagram Ads", price: "$26",
+      desc: "High-intent prospects generated from Facebook and Instagram ad campaigns — actively searching for final expense coverage." },
+    { key: "meta-spanish", icon: "lang", name: "Spanish Meta Inbounds", sub: "Facebook & Instagram Ads — Spanish", price: "$26",
+      desc: "Same high-intent Meta prospects, targeted to Spanish-speaking seniors — a fast-growing, underserved market with strong response rates." },
+    { key: "meta-qualified", icon: "bot", name: "Meta Qualified Inbounds", sub: "AI-Screened Facebook & Instagram Leads", price: "$50", badge: "AI qualified",
+      desc: "Same high-intent Meta prospects — but pre-screened by an AI agent for age, state, and coverage reason before being transferred to you. Only qualified callers make it through." },
+    { key: "google", icon: "search", name: "Google Inbounds", sub: "Search & Display Ads", price: "$35", go: "google",
+      desc: "Prospects actively searching Google for final expense insurance — the highest purchase-intent traffic available online." },
+    { key: "tv", icon: "tv", name: "TV Inbounds", sub: "Television Direct Response", price: "$70",
+      desc: "Callers responding to TV commercials — proven high-trust traffic with strong brand recognition and closing rates." }
+  ];
+  function typeCard(t) {
+    var link = t.go ? '<a class="btn pri" style="margin-top:14px" href="#' + t.go + '" data-go="' + t.go + '">View Plans' + ic("arrow") + "</a>"
+      : '<div style="margin-top:14px; width:100%">' + buy(t.key, "Get Started") + "</div>";
+    return '<div class="card">' + (t.badge ? '<span class="badge mid new">' + esc(t.badge) + "</span>" : "") +
+      '<div class="ic blue">' + ic(t.icon) + "</div><h3>" + esc(t.name) + '</h3><div class="sub">' + esc(t.sub) + "</div>" +
+      '<div class="price">' + esc(t.price) + " <small>/ call</small></div><p>" + esc(t.desc) + "</p>" + link + "</div>";
+  }
+
+  VIEWS.calls = function () {
+    return hero("Direct inbound call campaigns", "High-Intent Prospects.", "Calling You Directly.",
+        "Our inbound call campaigns drive seniors actively searching for final expense coverage straight to your phone line — no transfers, no middlemen, just you and a live prospect.") +
+      sechead("Choose your lead source", "Select an Inbound Type", "Pick your preferred lead channel and get started today.") +
+      '<div class="grid3">' + TYPES.slice(0, 3).map(typeCard).join("") + "</div>" +
+      '<div class="grid3 center" style="margin-top:14px">' + TYPES.slice(3).map(typeCard).join("") + "</div>" +
+      '<section class="bigcta"><div class="ic">' + ic("search") + "</div><h3>Purchase Google Inbound Tiers</h3>" +
+      "<p>Subscribe to a weekly capacity plan and lock in your daily call volume — Training, Pro, or Unlimited.</p>" +
+      go("google", "View Plans", "pri") + "</section>";
+  };
+
+  VIEWS.google = function () {
+    return '<div style="padding-top:20px"><a class="navback" href="#calls" data-go="calls">&larr; Back to Inbound Calls</a></div>' +
+      hero("Google inbound subscriptions", "Lock In Your", "Weekly Call Volume.",
+        "Subscribe to a weekly Google inbound plan and guarantee your daily call capacity. All calls are $35 each — except on Unlimited, where you get all the calls you can handle for one flat price.") +
+      '<div class="tiers" style="margin-top:34px">' +
+      tier({ name: "Training Tier", tag: "3 calls/day · 15/week", tagC: true, price: "$525", unit: "/ week", amtCls: "c", icon: "zap", iconCls: "blue",
+        per: "$35 per call", key: "google-training", btn: "pri",
+        items: ["3 Google inbound calls per day", "15 calls guaranteed per week", "$35 per call", "Best for agents just starting with inbound", "No long-term commitment"] }) +
+      tier({ name: "Pro Tier", tag: "5 calls/day · 25/week", tagC: true, price: "$875", unit: "/ week", amtCls: "c", icon: "trend",
+        per: "$35 per call", key: "google-pro", btn: "pri",
+        items: ["5 Google inbound calls per day", "25 calls guaranteed per week", "$35 per call", "Balanced volume for growing agents", "Priority call routing"] }) +
+      tier({ name: "Unlimited Tier", tag: "Unlimited calls", tagC: true, price: "$1,350", unit: "/ week", amtCls: "t", icon: "infinity", iconCls: "green",
+        per: "Flat rate — no per-call charge", key: "google-unlimited", cls: "best", badge: "Best value", badgeCls: "new", btn: "teal",
+        items: ["Unlimited Google inbound calls", "No daily or weekly caps", "Flat $1,350 per week", "Best value — per-call cost drops as volume grows", "Dedicated campaign manager"] }) +
+      "</div>" +
+      '<p class="fine">All subscriptions are billed weekly. Google inbound calls are $35 per call on the Training and Pro tiers. The Unlimited tier includes unlimited calls for a flat $1,350 per week. Cancel anytime with 7 days\' notice.</p>' +
+      cta("Not Sure Which Tier Is Right?",
+        "Start with the Training Tier and scale up as your closing ratio grows. You can upgrade to Unlimited at any time.",
+        go("calls", "Back to Inbound Calls", "pri"));
+  };
+
+  /* Products whose pricing is set with the desk rather than on a card:
+     a page that explains them and a way to ask. */
+  function simple(id, chip, l1, l2, text, points, priceNote) {
+    var p = PRODUCTS.filter(function (x) { return x.id === id; })[0];
+    return hero(chip, l1, l2, text) +
+      sechead("What you get", p.name, priceNote) +
+      '<ul class="list">' + points.map(function (x) { return "<li>" + ic("circleCheck") + "<span>" + esc(x) + "</span></li>"; }).join("") + "</ul>" +
+      cta("Get Started with " + p.name, "Open a ticket in the Lead Tech support server and the desk will set it up with you.",
+        supportBtn("Talk to the desk", "pri") + go("home", "All products"));
+  }
+
+  VIEWS.leads = function () {
+    return simple("leads", "Pay the true cost per lead", "High-Intent Leads.", "At True Cost.",
+      "Generate high-intent final expense leads on Facebook and pay only what the lead actually costs — no markups and no agency fees.",
+      ["Facebook campaigns built for final expense buyers", "You pay the true cost per lead — no markup", "No agency fees on top of ad spend", "You keep every dollar saved"],
+      "Pricing follows your ad spend, so it is set with the desk.");
+  };
+  VIEWS["recruiting-ads"] = function () {
+    return simple("recruiting-ads", "Build your sales team faster", "Recruit Agents.", "Done for You.",
+      "Done-for-you recruiting ad campaigns that attract qualified insurance agents and grow your downline with proven ad creative.",
+      ["Recruiting campaigns run on your behalf", "Proven ad creative built for insurance agents", "Qualified agent prospects sent to you", "Grow your downline without running ads yourself"],
+      "Campaign pricing is set with the desk.");
+  };
+  VIEWS.funnel = function () {
+    return simple("funnel", "Turn recruiting into revenue", "A Recruiting Funnel", "That Pays for Itself.",
+      "A done-for-you recruiting funnel that attracts, nurtures, and converts agent prospects — so your downline grows predictably and profitably.",
+      ["Attracts agent prospects", "Nurtures them until they are ready", "Converts them into producing agents", "Built and run for you"],
+      "Pricing is set with the desk.");
+  };
+  VIEWS.instagram = function () {
+    return simple("instagram", "Automate your agent pipeline on IG", "Recruit on Instagram.", "On Autopilot.",
+      "Powerful automation tools to prospect and recruit insurance agents through Instagram — save hours every week on outreach.",
+      ["Automated prospecting on Instagram", "Messaging templates built for recruiting agents", "Saves hours of manual outreach every week", "Software access for your account"],
+      "Pricing is set with the desk.");
+  };
+  VIEWS.crm = function () {
+    return hero("Insurance CRM — $1 / month", "A Full Insurance CRM.", "For Just $1 a Month.",
+        "A fully built CRM designed for insurance agents. Normally $500/month to the public — available to Lead Tech clients for just $1/month.") +
+      '<div class="tiers" style="grid-template-columns:minmax(0,420px); justify-content:center; margin-top:34px">' +
+      tier({ name: "LeadTech CRM", tag: "Lead Tech clients only", tagC: true, price: "$1", unit: "/ month", amtCls: "t", icon: "grid", iconCls: "green",
+        per: "Normally $500 / month", key: "crm", cls: "best", badge: "Exclusive", badgeCls: "excl", btn: "teal",
+        items: ["Fully built CRM for insurance agents", "Made for final expense workflows", "Normally $500/month to the public", "$1/month for Lead Tech clients"] }) +
+      "</div>" +
+      cta("Already a Lead Tech Client?", "Claim your CRM and sign in to the portal.",
+        portalBtn("Open the portal", "pri") + go("home", "All products"));
+  };
+  VIEWS.limitless = function () {
+    return '<section class="hero"><span class="chip" style="color:var(--gold); border-color:rgba(234,179,8,.5); background:rgba(234,179,8,.08)">Exclusive program</span>' +
+      '<h1>The Limitless<br><span class="g" style="background:linear-gradient(90deg,#FDE68A,#EAB308 50%,#F59E0B); -webkit-background-clip:text; background-clip:text">Program.</span></h1>' +
+      "<p>Keep 30% of your commissions with no chargebacks, and take unlimited Google inbound calls every day. Built for agents who want to scale without limits.</p></section>" +
+      sechead("What you get", "Two Things, No Ceiling") +
+      '<ul class="list gold">' +
+      ["Keep 30% of your commissions", "No chargebacks on the commission you keep", "Unlimited Google inbound calls", "Take calls every day — no daily cap"]
+        .map(function (x) { return "<li>" + ic("circleCheck") + "<span>" + esc(x) + "</span></li>"; }).join("") + "</ul>" +
+      cta("Ready to Go Limitless?", "Talk to the desk to see if the Limitless Program is right for you.",
+        supportBtn("Talk to the desk", "gold") + go("home", "All products"), "gold");
+  };
+
+  /* ------------------------------------------------------------- router */
+  var $ = function (q) { return document.querySelector(q); };
+  function render() {
+    var id = (location.hash || "").replace(/^#\/?/, "") || "home";
+    if (!VIEWS[id]) id = "home";
+    $("#view").innerHTML = '<div class="view">' + VIEWS[id]() + "</div>";
+    $("#navback").hidden = id === "home";
+    var p = PRODUCTS.filter(function (x) { return x.id === id; })[0];
+    document.title = id === "home" ? "Lead Tech Marketplace"
+      : (p ? p.name : id === "google" ? "Google Inbound Tiers" : "The Limitless Program") + " · Lead Tech Marketplace";
+  }
+  document.addEventListener("click", function (ev) {
+    var a = ev.target.closest("[data-go],[data-scrolltop]");
+    if (!a) return;
+    ev.preventDefault();
+    if (a.hasAttribute("data-scrolltop")) { var t = document.querySelector(".tiers"); if (t) t.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+    var id = a.getAttribute("data-go");
+    try { history.pushState(null, "", id === "home" ? location.pathname + location.search : "#" + id); } catch (e) { location.hash = id; }
+    render();
+    window.scrollTo(0, 0);
+  });
+  window.addEventListener("popstate", render);
+  window.addEventListener("hashchange", render);
+
+  ["mk-lead", "mk-lead-2"].forEach(function (k) {
+    var el = $("#" + k);
+    if (el && LOGOS.leadWhite) el.src = LOGOS.leadWhite; else if (el) el.remove();
+  });
+  $("#entity").textContent = ENTITY;
+  render();
+})();
+</script>
+</body>
+</html>
