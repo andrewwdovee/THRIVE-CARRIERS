@@ -191,6 +191,25 @@ ul.list li::marker { color: var(--accent); }
   .rail a span:last-child { display: none; }
   .card { padding: 20px; }
 }
+/* Phones: one card padding, not two, so the text gets the full width;
+   facts and the NPN timeline stay side by side as small tiles; a step you
+   have marked complete folds to its header so the list shortens. */
+@media (max-width: 640px) {
+  .card.step { padding: 0; }
+  .step-head { padding: 16px 16px 12px; gap: 12px; }
+  .num { width: 36px; height: 36px; font-size: 13px; border-radius: 10px; }
+  .step-head h2 { font-size: 17px; }
+  .step-body { padding: 0 16px 18px; gap: 14px; }
+  .facts { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .fact { padding: 10px; }
+  .fact .v { font-size: 14px; }
+  .timeline { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .timeline div { border-right: 1px solid var(--line); border-bottom: 0; padding: 10px; }
+  .timeline div:last-child { border-right: 0; }
+  .timeline p { font-size: 12px; }
+  .btns .btn.primary { width: 100%; justify-content: center; padding: 12px 16px; }
+  .step.done .step-body { display: none; }
+}
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
