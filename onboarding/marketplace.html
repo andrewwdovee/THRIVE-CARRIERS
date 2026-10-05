@@ -168,6 +168,10 @@ a.card:focus-visible{outline:2px solid var(--cyan); outline-offset:3px}
 @media (max-width:560px){ .feats{grid-template-columns:minmax(0,1fr)} }
 .feat{background:var(--panel); border:1px solid var(--line-2); border-radius:12px; padding:18px; min-width:0}
 .feat .ic{margin:0 0 12px}
+.feats.teal .ic{background:rgba(20,184,166,.10); border-color:rgba(20,184,166,.4); color:#2DD4BF}
+.tier.best li svg{color:#2DD4BF}
+.tier.best.glow{background:linear-gradient(180deg,rgba(20,184,166,.08),var(--panel) 60%); box-shadow:0 0 50px -18px rgba(20,184,166,.45)}
+.cta.teal{border-color:rgba(20,184,166,.3); background:linear-gradient(180deg,rgba(20,184,166,.07),rgba(20,184,166,.02))}
 .feat b{display:block; font-size:14.5px; margin-bottom:4px}
 .feat p{margin:0; font-size:13px; color:var(--muted)}
 
@@ -235,7 +239,8 @@ footer img{height:16px; width:auto; opacity:.85}
     "meta": "", "meta-spanish": "", "meta-qualified": "", "tv": "",
     "recruit-launch": "", "recruit-scale": "", "recruit-agency": "",
     "instagram": "",
-    "crm": ""
+    "crm": "",
+    "leads": ""
   };
 
   /* ------------------------------------------------------------ icons */
@@ -303,8 +308,8 @@ footer img{height:16px; width:auto; opacity:.85}
       '<div class="go">' + (t.href ? '<a class="btn wide ' + (t.btn || "") + '" href="' + esc(t.href) + '" target="_blank" rel="noreferrer">' + esc(t.hrefLabel) + ic("ext") + "</a>"
         : buy(t.key, "Get Started", t.btn)) + "</div></div>";
   }
-  function feats(list) {
-    return '<div class="feats">' + list.map(function (f) {
+  function feats(list, cls) {
+    return '<div class="feats' + (cls ? " " + cls : "") + '">' + list.map(function (f) {
       return '<div class="feat"><div class="ic">' + ic(f[0]) + "</div><b>" + esc(f[1]) + "</b><p>" + esc(f[2]) + "</p></div>";
     }).join("") + "</div>";
   }
@@ -460,10 +465,29 @@ footer img{height:16px; width:auto; opacity:.85}
   }
 
   VIEWS.leads = function () {
-    return simple("leads", "Pay the true cost per lead", "High-Intent Leads.", "At True Cost.",
-      "Generate high-intent final expense leads on Facebook and pay only what the lead actually costs — no markups and no agency fees.",
-      ["Facebook campaigns built for final expense buyers", "You pay the true cost per lead — no markup", "No agency fees on top of ad spend", "You keep every dollar saved"],
-      "Pricing follows your ad spend, so it is set with the desk.");
+    return hero("Pay the true cost per lead", "High-Intent Leads.", "At True Cost.",
+        "Generate high-intent final expense leads on Facebook and pay only what the lead actually costs — no markups and no agency fees.") +
+      sechead("How it works", "Free to Get Started",
+        "There is no subscription fee. You fund your own ad account and pay Facebook's true cost per lead — nothing more.") +
+      '<div class="tiers" style="grid-template-columns:minmax(0,420px); justify-content:center">' +
+      tier({ name: "High Intent Leads at Cost", tag: "Generate high-intent leads on Facebook and pay the true cost per lead — we manage everything, you pay nothing extra.",
+        price: "Free", unit: "— you pay only ad spend", key: "leads", cls: "best glow", btn: "teal",
+        items: ["Done-for-you Facebook campaign setup", "High-intent final expense targeting", "Proven ad creative included",
+          "Exclusive leads — yours only", "Real-time lead delivery", "Full spend transparency"] }) +
+      "</div>" +
+      sechead("Why it works", "Why Agents Love This",
+        "No more overpaying for leads. We run the ads — you get the leads at Facebook's actual cost.") +
+      feats([
+        ["dollar", "Zero Markup", "You pay exactly what Facebook charges per lead — no agency markup, no hidden fees. Full transparency on every dollar spent."],
+        ["target", "High-Intent Targeting", "Campaigns are built to reach prospects who are actively interested in final expense coverage — not cold audiences."],
+        ["trend", "Facebook-Optimized Creative", "Proven ad creative built specifically for insurance lead generation on Facebook and Instagram."],
+        ["bars", "Real-Time Reporting", "See your spend, cost per lead, and volume in real time. No black boxes — just clear data you can act on."],
+        ["shield", "Exclusive Leads", "Every lead generated goes only to you. No shared leads, no recycled lists."],
+        ["users", "Done-For-You Setup", "We build and manage the entire campaign. You just receive the leads and work them."]
+      ], "teal") +
+      cta("Stop Overpaying for Leads",
+        "Let us run your Facebook lead campaigns and pass you every lead at cost. Keep more margin on every deal you close.",
+        '<a class="btn teal" href="#leads" data-scrolltop="1">Get Started Free' + ic("arrow") + "</a>", "teal");
   };
   VIEWS["recruiting-ads"] = function () {
     return hero("Build your sales team faster", "Recruit Agents.", "Done for You.",
