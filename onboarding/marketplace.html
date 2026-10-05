@@ -120,7 +120,8 @@ a.card:focus-visible{outline:2px solid var(--cyan); outline-offset:3px}
 
 /* ----------------------------------------------------------- pricing */
 .tiers{display:grid; gap:16px; grid-template-columns:repeat(3,minmax(0,1fr)); align-items:stretch}
-@media (max-width:860px){ .tiers{grid-template-columns:minmax(0,1fr); max-width:420px; margin:0 auto} }
+.tiers.duo{grid-template-columns:repeat(2,minmax(0,360px)); justify-content:center}
+@media (max-width:860px){ .tiers, .tiers.duo{grid-template-columns:minmax(0,1fr); max-width:420px; margin:0 auto} }
 .tier{
   position:relative; background:var(--panel); border:1px solid var(--line-2); border-radius:14px; padding:22px;
   display:flex; flex-direction:column; gap:4px; min-width:0;
@@ -299,7 +300,8 @@ footer img{height:16px; width:auto; opacity:.85}
       '<div class="amt"><b class="' + (t.amtCls || "") + '">' + esc(t.price) + "</b><span>" + esc(t.unit) + "</span></div>" +
       (t.per ? '<span class="per">' + ic("phone").replace('aria-hidden="true"', 'aria-hidden="true" style="width:11px;height:11px"') + esc(t.per) + "</span>" : "") +
       "<ul>" + t.items.map(function (x) { return "<li>" + ic("circleCheck") + "<span>" + esc(x) + "</span></li>"; }).join("") + "</ul>" +
-      '<div class="go">' + buy(t.key, "Get Started", t.btn) + "</div></div>";
+      '<div class="go">' + (t.href ? '<a class="btn wide ' + (t.btn || "") + '" href="' + esc(t.href) + '" target="_blank" rel="noreferrer">' + esc(t.hrefLabel) + ic("ext") + "</a>"
+        : buy(t.key, "Get Started", t.btn)) + "</div></div>";
   }
   function feats(list) {
     return '<div class="feats">' + list.map(function (f) {
@@ -331,15 +333,19 @@ footer img{height:16px; width:auto; opacity:.85}
       desc: "Powerful automation tools to prospect and recruit insurance agents through Instagram — save hours every week on outreach." },
     { id: "crm", icon: "grid", iconCls: "green", kicker: "Insurance CRM — $1 / month", name: "LeadTech CRM",
       desc: "A fully built CRM designed for insurance agents. Normally $500/month to the public — available to LeadTech clients for just $1/month.",
-      badge: "Exclusive", badgeCls: "excl", cls: "crm" }
+      badge: "Exclusive", badgeCls: "excl", cls: "crm" },
+    { id: "inbound-portal", url: PORTAL_URL, icon: "phoneIn", kicker: "Inbound portal — $0 / month", name: "Inbound Portal",
+      desc: "Where you take all of your inbound calls. Free for every agent — sign in and start taking calls.",
+      badge: "Free", badgeCls: "new", more: "Open Inbound Portal" }
   ];
 
   function card(p) {
-    return '<a class="card' + (p.cls ? " " + p.cls : "") + '" href="#' + p.id + '" data-go="' + p.id + '">' +
+    var link = p.url ? 'href="' + esc(p.url) + '" target="_blank" rel="noreferrer"' : 'href="#' + p.id + '" data-go="' + p.id + '"';
+    return '<a class="card' + (p.cls ? " " + p.cls : "") + '" ' + link + ">" +
       (p.badge ? '<span class="badge ' + (p.badgeCls || "") + '">' + esc(p.badge) + "</span>" : "") +
       '<div class="ic ' + (p.iconCls || "") + '">' + ic(p.icon) + "</div>" +
       '<div class="kicker">' + esc(p.kicker) + "</div><h3>" + esc(p.name) + "</h3><p>" + esc(p.desc) + "</p>" +
-      '<span class="more">View Pricing ' + ic("arrow").replace('aria-hidden="true"', 'aria-hidden="true" style="width:13px;height:13px"') + "</span></a>";
+      '<span class="more">' + esc(p.more || "View Pricing") + " " + ic(p.url ? "ext" : "arrow").replace('aria-hidden="true"', 'aria-hidden="true" style="width:13px;height:13px"') + "</span></a>";
   }
 
   /* ------------------------------------------------------------- views */
@@ -350,7 +356,7 @@ footer img{height:16px; width:auto; opacity:.85}
         "From live inbound transfers to recruiting tools and custom pages — Lead Tech has every solution an insurance agency needs to scale.") +
       sechead("Our products", "Choose Your Solution", "Select any product below to view pricing and get started today.") +
       '<div class="grid3">' + PRODUCTS.slice(0, 6).map(card).join("") + "</div>" +
-      '<div class="grid3 center" style="margin-top:14px">' + card(PRODUCTS[6]) + "</div>" +
+      '<div class="grid3 center" style="margin-top:14px">' + card(PRODUCTS[6]) + card(PRODUCTS[7]) + "</div>" +
       '<a class="feature" href="#limitless" data-go="limitless"><div class="kicker">Exclusive program</div>' +
       "<h3>The Limitless Program</h3>" +
       "<p>Unlimited Google inbound calls for free.</p>" +
@@ -521,12 +527,15 @@ footer img{height:16px; width:auto; opacity:.85}
         '<a class="btn pri" href="#instagram" data-scrolltop="1">Choose a Plan' + ic("arrow") + "</a>");
   };
   VIEWS.crm = function () {
-    return hero("Insurance CRM — $1 / month", "A Full Insurance CRM.", "For Just $1 a Month.",
-        "A fully built CRM designed for insurance agents. Normally $500/month to the public — available to Lead Tech clients for just $1/month.") +
-      '<div class="tiers" style="grid-template-columns:minmax(0,420px); justify-content:center; margin-top:34px">' +
+    return hero("Insurance CRMs", "A Full Insurance CRM.", "For Just $1 a Month.",
+        "A fully built CRM designed for insurance agents. Normally $500/month to the public — available to Lead Tech clients for just $1/month. And the inbound portal, where you take all of your inbound calls, is free.") +
+      '<div class="tiers duo" style="margin-top:34px">' +
       tier({ name: "LeadTech CRM", tag: "Lead Tech clients only", tagC: true, price: "$1", unit: "/ month", amtCls: "t", icon: "grid", iconCls: "green",
         per: "Normally $500 / month", key: "crm", cls: "best", badge: "Exclusive", badgeCls: "excl", btn: "teal",
         items: ["Fully built CRM for insurance agents", "Made for final expense workflows", "Normally $500/month to the public", "$1/month for Lead Tech clients"] }) +
+      tier({ name: "Inbound Portal", tag: "Every agent", tagC: true, price: "$0", unit: "/ month", amtCls: "c", icon: "phoneIn", iconCls: "blue",
+        cls: "hot", badge: "Free", badgeCls: "new", btn: "pri", href: PORTAL_URL, hrefLabel: "Open Inbound Portal",
+        items: ["Take all of your inbound calls", "See your calls and your wallet", "Free for every agent", "Sign in and start taking calls"] }) +
       "</div>" +
       cta("Already a Lead Tech Client?", "Claim your CRM and sign in to the portal.",
         portalBtn("Open the portal", "pri") + go("home", "All products"));
