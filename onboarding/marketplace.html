@@ -110,6 +110,15 @@ a.card:focus-visible{outline:2px solid var(--cyan); outline-offset:3px}
 .card .buf svg{width:12px; height:12px; color:var(--cyan)}
 .grid2{display:grid; gap:20px; grid-template-columns:repeat(2,minmax(0,1fr)); grid-auto-rows:1fr; max-width:700px; margin:0 auto}
 @media (max-width:600px){ .grid2{grid-template-columns:minmax(0,1fr)} }
+.walletnote{display:flex; gap:14px; align-items:center; max-width:640px; margin:24px auto 0; padding:14px 18px; border-radius:14px;
+  border:1px solid rgba(34,195,238,.45); background:linear-gradient(180deg,rgba(34,195,238,.10),rgba(59,130,246,.04));
+  box-shadow:0 10px 30px -14px rgba(34,195,238,.55); animation:pop .35s ease .15s both}
+.walletnote .wi{width:34px; height:34px; flex:none; border-radius:10px; display:grid; place-items:center; background:var(--btn); color:#fff}
+.walletnote .wi svg{width:17px; height:17px}
+.walletnote b{font-size:14px}
+.walletnote p{margin:2px 0 0; font-size:13px; color:var(--muted)}
+@keyframes pop{from{opacity:0; transform:translateY(8px) scale(.98)} to{opacity:1; transform:none}}
+@media (prefers-reduced-motion:reduce){ .walletnote{animation:none} }
 .solo{display:grid; grid-template-columns:minmax(0,380px); justify-content:center}
 
 /* ------------------------------------------------- the featured program */
@@ -150,6 +159,36 @@ a.card:focus-visible{outline:2px solid var(--cyan); outline-offset:3px}
 .tier li{display:grid; grid-template-columns:16px 1fr; gap:8px; font-size:13px; align-items:start}
 .tier li svg{width:15px; height:15px; color:var(--cyan); margin-top:2px}
 .tier .go{margin-top:auto}
+.tiers.four{grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px}
+.tiers.four .tier{padding:20px 18px}
+.tiers.four .amt{flex-wrap:nowrap}
+.tiers.four .amt b{font-size:30px}
+.tiers.four .amt span{white-space:nowrap}
+.badge{white-space:nowrap}
+@media (max-width:960px){ .tiers.four{grid-template-columns:repeat(2,minmax(0,1fr)); max-width:none} }
+@media (max-width:560px){ .tiers.four{grid-template-columns:minmax(0,1fr); max-width:420px} }
+.tier.std{border-color:rgba(34,197,139,.6); box-shadow:0 0 40px -18px rgba(34,197,139,.5)}
+.tier .meta2{display:grid; grid-template-columns:1fr 1fr; border:1px solid var(--line-2); border-radius:10px; overflow:hidden; margin-top:12px}
+.tier .meta2 div{padding:8px 10px; min-width:0}
+.tier .meta2 div+div{border-left:1px solid var(--line-2)}
+.tier .meta2 small{display:block; font-size:9.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--faint)}
+.tier .meta2 b{font-size:14px}
+.tier .meta2 .sv b{color:var(--green)}
+.tier .perk{display:flex; gap:8px; align-items:center; margin-top:12px; font-size:12.5px; font-weight:700; color:var(--green);
+  background:rgba(34,197,139,.10); border:1px solid rgba(34,197,139,.3); border-radius:9px; padding:7px 10px}
+.tier .perk svg{width:14px; height:14px; flex:none}
+.seg{display:flex; width:max-content; max-width:100%; margin:0 auto 18px; gap:4px; padding:4px; background:var(--panel); border:1px solid var(--line-2); border-radius:12px}
+.seg button{font:inherit; font-size:13px; font-weight:700; border:0; border-radius:9px; padding:8px 16px; background:none; color:var(--muted); cursor:pointer}
+.seg button[aria-selected="true"]{background:#1C212B; color:var(--fg); box-shadow:inset 0 0 0 1px var(--line-2)}
+.payg{display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; border:1px solid rgba(34,195,238,.3); border-radius:14px;
+  padding:16px 20px; margin-bottom:18px; background:linear-gradient(180deg,rgba(34,195,238,.07),rgba(59,130,246,.03))}
+.payg .kicker{color:var(--cyan)}
+.payg b.t{display:block; font-size:16px; margin-top:2px}
+.payg p{margin:2px 0 0; font-size:12.5px; color:var(--muted); max-width:60ch}
+.payg .amt{font-size:30px; font-weight:900; letter-spacing:-.03em}
+.payg .amt span{font-size:12px; font-weight:600; color:var(--muted); margin-left:6px; letter-spacing:0}
+.note{border:1px solid rgba(234,179,8,.45); background:rgba(234,179,8,.08); color:#E9DDB4; border-radius:12px; padding:12px 16px; font-size:13px; margin-bottom:18px}
+.note b{color:var(--gold)}
 
 .btn{
   font:inherit; font-size:13.5px; font-weight:700; cursor:pointer; text-decoration:none; border-radius:9px;
@@ -241,8 +280,7 @@ footer img{height:16px; width:auto; opacity:.85}
   var SUPPORT_URL = "https://discord.gg/keSnyfQ738";
   var CHECKOUT = {
     "transfers-starter": "", "transfers-growth": "", "transfers-pro": "",
-    "google-training": "", "google-pro": "", "google-unlimited": "",
-    "meta-standard": "", "meta-spanish": "", "meta-qualified": "", "meta-v2": "", "tv": "",
+        "meta-standard": "", "meta-spanish": "", "meta-qualified": "", "meta-v2": "", "tv": "",
     "recruit-launch": "", "recruit-scale": "", "recruit-agency": "",
     "instagram": "",
     "crm": "",
@@ -406,7 +444,7 @@ footer img{height:16px; width:auto; opacity:.85}
   var SOURCES = [
     { go: "meta", icon: "bars", name: "Meta Inbounds", sub: "Facebook & Instagram Ads", price: "From $20",
       desc: "High-intent prospects from Facebook and Instagram ad campaigns — Standard, Spanish, Pre-Qualified and Standard FE V2." },
-    { go: "google", icon: "search", name: "Google Inbounds", sub: "Search & Display Ads", price: "$35",
+    { go: "google", icon: "search", name: "Google Inbounds", sub: "Search & Display Ads", price: "From $33.50", buffer: "Billed on connect",
       desc: "Prospects actively searching Google for final expense insurance — the highest purchase-intent traffic available online." },
     { go: "tv", icon: "tv", name: "TV Inbounds", sub: "Television Direct Response", price: "$50",
       desc: "Callers responding to TV commercials — proven high-trust traffic with strong brand recognition and closing rates." }
@@ -448,7 +486,9 @@ footer img{height:16px; width:auto; opacity:.85}
     return hero("Direct inbound call campaigns", "High-Intent Prospects.", "Calling You Directly.",
         "Our inbound call campaigns drive seniors actively searching for final expense coverage straight to your phone line — no transfers, no middlemen, just you and a live prospect.") +
       sechead("Choose your lead source", "Where Should Your Calls Come From?", "Pick a source to see every call type and price.") +
-      '<div class="grid3">' + SOURCES.map(sourceCard).join("") + "</div>";
+      '<div class="grid3">' + SOURCES.map(sourceCard).join("") + "</div>" +
+      '<div class="walletnote" role="note"><span class="wi">' + ic("dollar") + '</span><div><b>One wallet, every call.</b>' +
+      "<p>Funds can be used on any calls once loaded into your wallet — Meta, Google or TV.</p></div></div>";
   };
   VIEWS.meta = function () {
     return backToCalls() +
@@ -463,25 +503,65 @@ footer img{height:16px; width:auto; opacity:.85}
       '<div class="solo" style="margin-top:34px">' + TV_TYPES.map(typeCard).join("") + "</div>" + BUFFER_NOTE;
   };
 
+  /* Google pricing, taken from the Thrive Inbound Program page (Pricing
+     tiers). Keep the two in step: same plans, same per-call rates, same
+     Stripe links. */
+  var GOOGLE_PLANS = [
+    { id: "thrive", label: "Thrive Companies",
+      topUp: { name: "Manual top-up", perCall: 40,
+        text: "Add funds to your wallet whenever you like and pay the standard rate for each billable call. No package needed." },
+      tiers: [
+        { name: "Training", calls: 15, perCall: 38, stripe: "https://buy.stripe.com/14A14n1E98zq8Bx2pD2VG2B" },
+        { name: "Pro", calls: 25, perCall: 35, stripe: "https://buy.stripe.com/4gMcN5aaF16Y9FBfcp2VG2C" },
+        { name: "Thrive", calls: 35, perCall: 34, stripe: "https://buy.stripe.com/4gMfZh1E9eXO9FBd4h2VG2D", badge: "The Thrive Standard" },
+        { name: "Legendary", calls: 50, perCall: 33.5, stripe: "https://buy.stripe.com/28E9AT82x5ne5pld4h2VG2E", perk: "Wallet doesn't get wiped" }
+      ] },
+    { id: "leadtech", label: "LeadTech",
+      notice: "<b>External pricing is limited to 60 days.</b> LeadTech pricing runs at $40 a call for your first 60 days. After that, you move to $50 a call, or you can switch to internal (Thrive Companies) contracts only.",
+      topUp: { name: "Manual top-up", perCall: 40,
+        text: "Add funds to your wallet whenever you like and pay the standard rate for each billable call. No package needed." },
+      tiers: [
+        { name: "Training", calls: 15, perCall: 40, stripe: "https://buy.stripe.com/7sY5kDeqV7vm7xt8O12VG2F" },
+        { name: "Pro", calls: 25, perCall: 40, stripe: "https://buy.stripe.com/eVqeVdciNbLC7xtc0d2VG2G" },
+        { name: "Thrive", calls: 35, perCall: 40, stripe: "https://buy.stripe.com/aFacN5eqV5necRN4xL2VG2H" },
+        { name: "Legendary", calls: 50, perCall: 40, stripe: "https://buy.stripe.com/9B65kD6Yt4jaeZVe8l2VG2I", perk: "Wallet doesn't get wiped" }
+      ] }
+  ];
+  var gPlan = "thrive";
+  function money(n) {
+    return "$" + n.toLocaleString("en-US", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 });
+  }
+  function googleTier(t, plan, lowest, onlyLowest) {
+    var best = onlyLowest && t.perCall === lowest;
+    var save = (plan.topUp.perCall - t.perCall) * t.calls;
+    var flag = best ? '<span class="badge mid">Lowest per call</span>' : t.badge ? '<span class="badge mid excl">' + esc(t.badge) + "</span>" : "";
+    return '<div class="tier' + (best ? " hot" : "") + (t.badge ? " std" : "") + '">' + flag +
+      "<h3>" + esc(t.name) + '</h3><div class="tl c">' + t.calls + " calls per week</div>" +
+      '<div class="amt"><b>' + money(t.perCall) + "</b><span>per call</span></div>" +
+      '<div class="meta2"><div><small>Total</small><b>' + money(t.perCall * t.calls) + '</b></div><div class="sv"><small>You save</small><b>' +
+      (save > 0 ? money(save) : "—") + "</b></div></div>" +
+      (t.perk ? '<div class="perk">' + ic("shield") + esc(t.perk) + "</div>" : "") +
+      '<div class="go" style="padding-top:16px"><a class="btn wide' + (best || t.badge ? " pri" : "") + '" href="' + esc(t.stripe) +
+      '" target="_blank" rel="noreferrer">Subscribe' + ic("ext") + "</a></div></div>";
+  }
   VIEWS.google = function () {
-    return '<div style="padding-top:20px"><a class="navback" href="#calls" data-go="calls">&larr; Back to Inbound Calls</a></div>' +
+    var plan = GOOGLE_PLANS.filter(function (p) { return p.id === gPlan; })[0] || GOOGLE_PLANS[0];
+    var rates = plan.tiers.map(function (t) { return t.perCall; });
+    var lowest = Math.min.apply(null, rates);
+    var onlyLowest = rates.filter(function (r) { return r === lowest; }).length === 1;
+    return backToCalls() +
       hero("Google inbound subscriptions", "Lock In Your", "Weekly Call Volume.",
-        "Subscribe to a weekly Google inbound plan and guarantee your daily call capacity. All calls are $35 each — except on Unlimited, where you get all the calls you can handle for one flat price.") +
-      '<div class="tiers" style="margin-top:34px">' +
-      tier({ name: "Training Tier", tag: "3 calls/day · 15/week", tagC: true, price: "$525", unit: "/ week", amtCls: "c", icon: "zap", iconCls: "blue",
-        per: "$35 per call", key: "google-training", btn: "pri",
-        items: ["3 Google inbound calls per day", "15 calls guaranteed per week", "$35 per call", "Best for agents just starting with inbound", "No long-term commitment"] }) +
-      tier({ name: "Pro Tier", tag: "5 calls/day · 25/week", tagC: true, price: "$875", unit: "/ week", amtCls: "c", icon: "trend",
-        per: "$35 per call", key: "google-pro", btn: "pri",
-        items: ["5 Google inbound calls per day", "25 calls guaranteed per week", "$35 per call", "Balanced volume for growing agents", "Priority call routing"] }) +
-      tier({ name: "Unlimited Tier", tag: "Unlimited calls", tagC: true, price: "$1,350", unit: "/ week", amtCls: "t", icon: "infinity", iconCls: "green",
-        per: "Flat rate — no per-call charge", key: "google-unlimited", cls: "best", badge: "Best value", badgeCls: "new", btn: "teal",
-        items: ["Unlimited Google inbound calls", "No daily or weekly caps", "Flat $1,350 per week", "Best value — per-call cost drops as volume grows", "Dedicated campaign manager"] }) +
-      "</div>" +
-      '<p class="fine">All subscriptions are billed weekly. Google inbound calls are $35 per call on the Training and Pro tiers. The Unlimited tier includes unlimited calls for a flat $1,350 per week. Cancel anytime with 7 days\' notice.</p>' +
-      cta("Not Sure Which Tier Is Right?",
-        "Start with the Training Tier and scale up as your closing ratio grows. You can upgrade to Unlimited at any time.",
-        go("calls", "Back to Inbound Calls", "pri"));
+        "Top up manually at the standard rate, or buy a weekly call package for a lower price per call. Google calls are billed the moment a call connects.") +
+      sechead("Pricing tiers", "Choose Your Package", "Pick your pricing, then the package that fits your week.") +
+      '<div class="seg" role="tablist" aria-label="Pricing for">' + GOOGLE_PLANS.map(function (p) {
+        return '<button type="button" role="tab" data-plan="' + p.id + '" aria-selected="' + (p.id === plan.id) + '">' + esc(p.label) + "</button>";
+      }).join("") + "</div>" +
+      (plan.notice ? '<div class="note">' + plan.notice + "</div>" : "") +
+      '<div class="payg"><div><div class="kicker">Pay as you go · ' + esc(plan.label) + '</div><b class="t">' + esc(plan.topUp.name) + "</b><p>" +
+      esc(plan.topUp.text) + '</p></div><div class="amt">' + money(plan.topUp.perCall) + "<span>per billable call</span></div></div>" +
+      '<div class="tiers four">' + plan.tiers.map(function (t) { return googleTier(t, plan, lowest, onlyLowest); }).join("") + "</div>" +
+      '<p class="fine">Packages are billed weekly. To cancel or change a subscription, message support in the <a href="' + esc(SUPPORT_URL) +
+      '" target="_blank" rel="noreferrer">Lead Tech Discord &#8599;</a></p>';
   };
 
   /* Products whose pricing is set with the desk rather than on a card:
@@ -613,6 +693,8 @@ footer img{height:16px; width:auto; opacity:.85}
       : (p ? p.name : { google: "Google Inbound Tiers", meta: "Meta Inbounds", tv: "TV Inbounds" }[id] || "The Limitless Program") + " · Lead Tech Marketplace";
   }
   document.addEventListener("click", function (ev) {
+    var pb = ev.target.closest("[data-plan]");
+    if (pb) { gPlan = pb.getAttribute("data-plan"); render(); return; }
     var a = ev.target.closest("[data-go],[data-scrolltop]");
     if (!a) return;
     ev.preventDefault();
