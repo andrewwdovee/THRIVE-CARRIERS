@@ -379,6 +379,16 @@ async function handle(request, env) {
         tz:        text(body.tz, 60),
         agent:     text(body.agent, 200),
       };
+      /* Initials from the Thrive Companies agreement: short keys to a few
+         letters each, and no more of them than the agreement asks for. */
+      rec.thriveInitials = {};
+      if (body.thriveInitials && typeof body.thriveInitials === "object") {
+        Object.keys(body.thriveInitials).slice(0, 24).forEach((k) => {
+          const key = String(k).replace(/[^a-z0-9_]/gi, "").slice(0, 24);
+          const val = text(body.thriveInitials[k], 6).toUpperCase().replace(/[^A-Z]/g, "");
+          if (key && val) rec.thriveInitials[key] = val;
+        });
+      }
       const signature = typeof body.signature === "string" ? body.signature : "";
       const thriveSignature = typeof body.thriveSignature === "string" ? body.thriveSignature : "";
       const photo = typeof body.photo === "string" ? body.photo : "";
