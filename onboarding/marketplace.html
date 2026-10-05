@@ -120,6 +120,50 @@ a.card:focus-visible{outline:2px solid var(--cyan); outline-offset:3px}
 .only b{color:var(--gold)}
 .onlytag{display:inline-block; margin:8px 0 0; font-size:10px; font-weight:900; letter-spacing:.1em; text-transform:uppercase;
   color:#231A00; background:var(--gold); border-radius:999px; padding:3px 10px}
+/* ---------------------------------------------------- the Limitless page */
+.lx-hero{position:relative; text-align:center; padding:52px 0 8px; isolation:isolate}
+.lx-glow{position:absolute; z-index:-1; left:50%; top:-40px; width:min(760px,100%); height:420px; transform:translateX(-50%);
+  background:radial-gradient(closest-side, rgba(234,179,8,.32), rgba(245,158,11,.10) 55%, transparent); filter:blur(10px);
+  animation:lxpulse 5s ease-in-out infinite}
+@keyframes lxpulse{0%,100%{opacity:.75; transform:translateX(-50%) scale(1)} 50%{opacity:1; transform:translateX(-50%) scale(1.06)}}
+.lx-chip{color:var(--gold); border-color:rgba(234,179,8,.55); background:rgba(234,179,8,.08)}
+.lx-hero h1{font-size:clamp(38px,7vw,68px); line-height:.98; letter-spacing:-.04em; font-weight:900; margin:20px 0 0}
+.lx-g{background:linear-gradient(90deg,#FDE68A,#FACC15 30%,#F59E0B 60%,#FDE68A); background-size:200% auto; -webkit-background-clip:text; background-clip:text;
+  color:transparent; animation:lxshine 4s linear infinite}
+@keyframes lxshine{to{background-position:200% center}}
+.lx-hero p{color:#D6D2C2; max-width:58ch; margin:18px auto 0; font-size:15px}
+.lx-hero .ctas{display:flex; justify-content:center; margin-top:24px}
+.lx-stats{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin-top:40px}
+@media (max-width:700px){ .lx-stats{grid-template-columns:minmax(0,1fr)} }
+.lx-stat{position:relative; text-align:center; border-radius:16px; padding:24px 18px; background:linear-gradient(180deg,rgba(234,179,8,.10),var(--panel) 70%);
+  border:1px solid rgba(234,179,8,.45); box-shadow:0 18px 50px -24px rgba(234,179,8,.55); transition:transform .2s, border-color .2s}
+.lx-stat:hover{transform:translateY(-3px); border-color:var(--gold)}
+.lx-stat b{display:block; font-size:48px; line-height:1; font-weight:900; letter-spacing:-.04em;
+  background:linear-gradient(180deg,#FEF3C7,#EAB308); -webkit-background-clip:text; background-clip:text; color:transparent}
+.lx-stat span{display:block; margin-top:8px; font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--gold)}
+.lx-stat p{margin:8px 0 0; font-size:13px; color:var(--muted)}
+.lx-steps{list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; counter-reset:none}
+@media (max-width:860px){ .lx-steps{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:520px){ .lx-steps{grid-template-columns:minmax(0,1fr)} }
+.lx-steps li{position:relative; background:var(--panel); border:1px solid rgba(255,255,255,.22); border-radius:14px; padding:18px}
+.lx-steps .n{display:grid; place-items:center; width:30px; height:30px; border-radius:50%; font-weight:900; font-size:13px; color:#231A00;
+  background:linear-gradient(135deg,#FDE68A,#EAB308); box-shadow:0 0 0 4px rgba(234,179,8,.15); margin-bottom:12px}
+.lx-steps b{display:block; font-size:14.5px}
+.lx-steps p{margin:4px 0 0; font-size:13px; color:var(--muted)}
+.lx-table{max-width:720px; margin:0 auto; border:1px solid rgba(255,255,255,.22); border-radius:14px; overflow:hidden; background:var(--panel)}
+.lx-table .r{display:grid; grid-template-columns:1.1fr 1fr 1.1fr; align-items:center}
+.lx-table .r + .r{border-top:1px solid var(--line)}
+.lx-table span{padding:13px 16px; font-size:13.5px; min-width:0}
+.lx-table .r > span:first-child{color:var(--muted); font-weight:600}
+.lx-table .r > span:nth-child(2){color:var(--faint)}
+.lx-table .h span{font-size:10.5px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--faint); padding-top:11px; padding-bottom:11px}
+.lx-table .h span:last-child{color:var(--gold)}
+.lx-table .win{display:flex; gap:8px; align-items:center; font-weight:800; color:var(--fg); background:rgba(234,179,8,.07); height:100%}
+.lx-table .h span:last-child{background:rgba(234,179,8,.07)}
+.lx-table .win svg{width:15px; height:15px; color:var(--gold); flex:none}
+@media (max-width:520px){ .lx-table span{padding:11px 10px; font-size:12.5px} }
+.lx-cta{box-shadow:0 0 90px -30px rgba(234,179,8,.6)}
+@media (prefers-reduced-motion:reduce){ .lx-glow, .lx-g{animation:none} }
 .walletnote{display:flex; gap:14px; align-items:center; max-width:640px; margin:24px auto 0; padding:14px 18px; border-radius:14px;
   border:1px solid rgba(34,195,238,.45); background:linear-gradient(180deg,rgba(34,195,238,.10),rgba(59,130,246,.04));
   box-shadow:0 10px 30px -14px rgba(34,195,238,.55); animation:pop .35s ease .15s both}
@@ -689,16 +733,43 @@ footer img{height:16px; width:auto; opacity:.85}
         portalBtn("Open the portal", "pri") + go("home", "All products"));
   };
   VIEWS.limitless = function () {
-    return '<section class="hero"><span class="chip" style="color:var(--gold); border-color:rgba(234,179,8,.5); background:rgba(234,179,8,.08)">Exclusive program</span>' +
-      '<h1>The Limitless<br><span class="g" style="background:linear-gradient(90deg,#FDE68A,#EAB308 50%,#F59E0B); -webkit-background-clip:text; background-clip:text">Program.</span></h1>' +
-      "<p>Keep 30% of your commissions with no chargebacks, and take unlimited Google inbound calls every day. Built for agents who want to scale without limits.</p>" +
-      '<div class="only"><b>Thrive agents only.</b> You must be contracted with Thrive Companies to join. External (LeadTech) agents are not eligible.</div></section>' +
-      sechead("What you get", "Two Things, No Ceiling") +
-      '<ul class="list gold">' +
-      ["Keep 30% of your commissions", "No chargebacks on the commission you keep", "Unlimited Google inbound calls", "Take calls every day — no daily cap"]
-        .map(function (x) { return "<li>" + ic("circleCheck") + "<span>" + esc(x) + "</span></li>"; }).join("") + "</ul>" +
-      cta("Ready to Go Limitless?", "Talk to the desk to see if the Limitless Program is right for you.",
-        supportBtn("Talk to the desk", "gold") + go("home", "All products"), "gold");
+    var stats = [
+      ["30%", "Compensation level", "You're moved to Thrive directly at a 30% comp level."],
+      ["∞", "Google inbound calls", "Take as many Google inbounds as you can handle, Monday through Friday."],
+      ["$0", "Chargebacks", "Thrive covers every chargeback. You never pay one back."]
+    ];
+    var steps = [
+      ["Move to Thrive directly", "Your contract moves straight to Thrive Companies — no middle layer."],
+      ["Start at 30% comp", "Your compensation level is set to 30% from day one."],
+      ["Take unlimited calls", "Google inbound calls with no daily cap, Monday through Friday."],
+      ["Thrive covers chargebacks", "If a policy charges back, Thrive takes the hit — not you."]
+    ];
+    var rows = [
+      ["Contract", "Through your upline", "Directly with Thrive"],
+      ["Compensation level", "Standard", "30%"],
+      ["Google inbound calls", "Pay per call", "Unlimited, Mon–Fri"],
+      ["Chargebacks", "You pay them back", "Covered by Thrive"]
+    ];
+    return '<section class="lx-hero"><div class="lx-glow" aria-hidden="true"></div>' +
+      '<span class="chip lx-chip">Exclusive · Thrive agents only</span>' +
+      '<h1>The <span class="lx-g">Limitless</span><br>Program.</h1>' +
+      "<p>Get moved to Thrive directly at a 30% compensation level, take unlimited Google inbound calls Monday through Friday, and let Thrive cover every chargeback.</p>" +
+      '<div class="ctas">' + supportBtn("Apply with the desk", "gold") + "</div></section>" +
+      '<div class="lx-stats">' + stats.map(function (x) {
+        return '<div class="lx-stat"><b>' + esc(x[0]) + "</b><span>" + esc(x[1]) + "</span><p>" + esc(x[2]) + "</p></div>";
+      }).join("") + "</div>" +
+      sechead("How it works", "Four Steps to No Limits") +
+      '<ol class="lx-steps">' + steps.map(function (x, i) {
+        return '<li><span class="n">' + (i + 1) + "</span><b>" + esc(x[0]) + "</b><p>" + esc(x[1]) + "</p></li>";
+      }).join("") + "</ol>" +
+      sechead("The difference", "Standard vs. Limitless") +
+      '<div class="lx-table" role="table"><div class="r h" role="row"><span role="columnheader"></span><span role="columnheader">Standard</span><span role="columnheader">Limitless</span></div>' +
+      rows.map(function (r) {
+        return '<div class="r" role="row"><span role="rowheader">' + esc(r[0]) + '</span><span role="cell">' + esc(r[1]) + '</span><span role="cell" class="win">' + ic("check") + esc(r[2]) + "</span></div>";
+      }).join("") + "</div>" +
+      '<div class="only"><b>Thrive agents only.</b> You must be contracted with Thrive Companies to join. External (LeadTech) agents are not eligible.</div>' +
+      cta("Ready to Go Limitless?", "Talk to the desk to get moved to Thrive directly and start taking unlimited calls.",
+        supportBtn("Apply with the desk", "gold") + go("home", "All products"), "gold lx-cta");
   };
 
   /* ------------------------------------------------------------- router */
@@ -714,7 +785,7 @@ footer img{height:16px; width:auto; opacity:.85}
        home page, "Choose Your Solution"), or under the hero if there is none. */
     var html = VIEWS[id](), at = html.indexOf('<div class="sechead">');
     at = at < 0 ? html.indexOf("</section>") + 10 : html.indexOf("</div>", html.indexOf("</h2>", at)) + 6;
-    html = at > 9 ? html.slice(0, at) + sw + html.slice(at) : sw + html;
+    if (id !== "limitless") html = at > 9 ? html.slice(0, at) + sw + html.slice(at) : sw + html;
     $("#view").innerHTML = '<div class="view">' + html + "</div>";
     $("#navback").hidden = id === "home";
     var p = PRODUCTS.filter(function (x) { return x.id === id; })[0];
