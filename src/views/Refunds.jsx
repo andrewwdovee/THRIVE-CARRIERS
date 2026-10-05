@@ -321,15 +321,17 @@ export default function Refunds({ refunds, products, orders, refundTypes, custom
 
   const scoped = useMemo(() => refunds.filter((r) => r.at >= from && r.at <= to), [refunds, from, to]);
 
+  /* Grouped by the kind of refund, which is what the form asks for. */
   const groups = useMemo(() => {
-    const rows = products.map((p) => ({
-      id: p.id, name: p.name, color: p.color,
-      rows: scoped.filter((r) => r.productId === p.id),
+    const kinds = refundTypes || [];
+    const rows = kinds.map((t) => ({
+      id: t.id, name: t.name, color: t.color,
+      rows: scoped.filter((r) => r.typeId === t.id),
     }));
-    const loose = scoped.filter((r) => !r.productId || !products.some((p) => p.id === r.productId));
-    if (loose.length) rows.push({ id: "_none", name: "Not linked to a product", color: "slate", rows: loose });
+    const loose = scoped.filter((r) => !r.typeId || !kinds.some((t) => t.id === r.typeId));
+    if (loose.length) rows.push({ id: "_none", name: "Not categorised", color: "slate", rows: loose });
     return rows.filter((g) => g.rows.length).sort((a2, b2) => money(b2.rows) - money(a2.rows));
-  }, [scoped, products]);
+  }, [scoped, refundTypes]);
 
   /* The Saturday-to-Saturday week the business already runs on. */
   const thisWeek = useMemo(() => {
@@ -579,12 +581,9 @@ function RefundForm({ draft, products, orders, types, customers, onCancel, onSav
   const [newCust, setNewCust] = useState(null);
   const [dollars, setDollars] = useState(draft.amount != null ? (draft.amount / 100).toFixed(2) : "");
   const cents = Math.round(Number(dollars) * 100);
-  const ok = r.productId && r.typeId && Number.isFinite(cents) && cents > 0;
+  const ok = r.typeId && Number.isFinite(cents) && cents > 0;
   const type = types.find((t) => t.id === r.typeId);
   const stepList = (type?.steps || []).filter(Boolean);
-
-  /* Picking a past order fills the rest in, which is most refunds. */
-  const recent = useMemo(() => orders.slice(0, 60), [orders]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 dark:bg-black/75 p-4" onClick={onCancel}>
@@ -597,29 +596,6 @@ function RefundForm({ draft, products, orders, types, customers, onCancel, onSav
         </p>
 
         <div className="mt-4 space-y-3">
-          {!draft.editing && (
-            <Field label="Which order?" hint="Optional — picking one fills in the rest.">
-              <select className={IN} value={r.orderId || ""}
-                onChange={(e) => {
-                  const o = recent.find((x) => x.id === e.target.value);
-                  setR(o ? { ...r, orderId: o.id, productId: o.productId || "", customer: o.customer, email: o.email, chargeId: o.chargeId }
-                         : { ...r, orderId: "" });
-                  if (o?.amount != null) setDollars((o.amount / 100).toFixed(2));
-                }}>
-                <option value="">Not tied to one</option>
-                {recent.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.customer} — {o.productName} — {cash(o.amount)} — {new Date(o.receivedAt).toLocaleDateString()}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          )}
-
-          <Picker label="Which product was refunded?" hint="Not listed?" addLabel="Add a product"
-            value={r.productId} rows={products} onSetUp={onSetUp}
-            onChange={(v) => setR({ ...r, productId: v })} />
-
           <Picker label="What kind of refund is it?" hint="Not listed?" addLabel="Add a refund type"
             value={r.typeId} rows={types} onSetUp={onSetUp}
             onChange={(v) => setR({ ...r, typeId: v, steps: {} })} />
@@ -677,7 +653,7 @@ function RefundForm({ draft, products, orders, types, customers, onCancel, onSav
         <div className="mt-5 flex justify-end gap-2">
           <button onClick={onCancel} className={`rounded-md px-3 py-2 text-sm ${M}`}>Cancel</button>
           <button disabled={!draft.editing && !ok}
-            title={draft.editing || ok ? "" : "Pick a product and an amount above"}
+            title={draft.editing || ok ? "" : "Pick a refund type and an amount above"}
             onClick={() => onSave({ ...r, amount: draft.editing ? r.amount : cents })}
             className={`${PRI} disabled:opacity-40`}>Save</button>
         </div>

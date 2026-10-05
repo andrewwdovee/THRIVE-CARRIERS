@@ -9,6 +9,17 @@ import { storage } from "./storage";
    fresh edit. `updatedAt` on the record is what tells a poll whether the copy
    it just read is newer than what we already have. */
 
+/* Boards saved before "Google call" was a refund type get it added once. The
+   flag is saved with the board, so deleting the type later under Products
+   keeps it deleted. */
+function upgrade(p) {
+  if (p.refundTypesV2) return p;
+  const list = p.refundTypes || SEED_REFUND_TYPES;
+  const has = list.some((t) => t.id === "rt_google" || /google/i.test(t.name || ""));
+  const google = SEED_REFUND_TYPES.find((t) => t.id === "rt_google");
+  return { ...p, refundTypes: has ? list : [google, ...list], refundTypesV2: true };
+}
+
 export function useBoard() {
   const [st, setSt] = useState({ orders: [], products: SEED, refundTypes: SEED_REFUND_TYPES, refunds: [], customers: [], blocks: [], wipes: [], calls: [], handledRequests: {}, settings: DEF, updatedAt: 0 });
   const [loading, setLoading] = useState(true);
@@ -22,7 +33,7 @@ export function useBoard() {
       if (r?.value) {
         const p = JSON.parse(r.value);
         if (!silent || (p.updatedAt || 0) > lu.current) {
-          setSt({ products: SEED, refundTypes: SEED_REFUND_TYPES, refunds: [], customers: [], blocks: [], wipes: [], calls: [], handledRequests: {}, settings: DEF, orders: [], ...p });
+          setSt(upgrade({ products: SEED, refundTypes: SEED_REFUND_TYPES, refunds: [], customers: [], blocks: [], wipes: [], calls: [], handledRequests: {}, settings: DEF, orders: [], ...p }));
           lu.current = p.updatedAt || 0;
         }
       }
@@ -57,7 +68,7 @@ export function useBoard() {
         const cur = await storage.get(KEY, true);
         const remote = cur?.value ? JSON.parse(cur.value) : null;
         if (remote && (remote.updatedAt || 0) > base) {
-          toSave = fn({ products: SEED, refundTypes: SEED_REFUND_TYPES, refunds: [], customers: [], blocks: [], wipes: [], calls: [], handledRequests: {}, settings: DEF, orders: [], ...remote });
+          toSave = fn(upgrade({ products: SEED, refundTypes: SEED_REFUND_TYPES, refunds: [], customers: [], blocks: [], wipes: [], calls: [], handledRequests: {}, settings: DEF, orders: [], ...remote }));
           toSave.updatedAt = Date.now();
           lu.current = toSave.updatedAt; R.current = toSave; setSt(toSave);
         }

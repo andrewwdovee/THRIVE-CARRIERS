@@ -55,6 +55,8 @@ export const SETTLED = new Set(["stopped", "recovered"]);
    issuing a refund is a job with a procedure, not just a number to type in.
    Editable under Products, so the list matches what you actually refund. */
 export const SEED_REFUND_TYPES = [
+  { id: "rt_google", name: "Google call", color: "blue",
+    steps: ["Listen back to the call recording", "Confirm the credit with the agent", "Refund the charge in Stripe", "Note it on the agent's account"] },
   { id: "rt_call", name: "Individual call", color: "cyan",
     steps: ["Listen back to the call recording", "Confirm the credit with the agent", "Refund the charge in Stripe", "Note it on the agent's account"] },
   { id: "rt_membership", name: "Cancelled membership", color: "violet",
