@@ -104,14 +104,21 @@ input:focus,textarea:focus{outline:2px solid rgba(240,180,41,.55); outline-offse
   font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#fff;
   background:var(--bad); border-radius:999px; padding:1px 9px; flex:none; white-space:nowrap;
 }
-.slot .who{display:flex; align-items:baseline; justify-content:space-between; gap:10px}
-.slot .who b{font-size:14.5px; font-weight:600; color:var(--fg); min-width:0; overflow-wrap:anywhere}
+.slot .who{display:flex; align-items:center; justify-content:space-between; gap:6px 10px; flex-wrap:wrap}
+.slot .who b{font-size:14.5px; font-weight:600; color:var(--fg); min-width:0; overflow-wrap:break-word}
 .slot .vol{
   font-size:12px; font-weight:700; color:var(--gold-hi); white-space:nowrap;
   border:1px solid rgba(240,180,41,.4); border-radius:999px; padding:1px 9px; flex:none;
 }
 .slot .vol.none{color:var(--muted); border-color:var(--line-2); font-weight:500}
-.slot .busy{font-size:12px; color:var(--muted)}
+.slot .busy{font-size:12px; color:var(--muted); display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:3px}
+.slot .tags{display:inline-flex; gap:6px; flex:none; align-items:center}
+.slot .days5{display:inline-flex; gap:4px}
+.slot .days5 .d{font-size:10.5px; font-weight:700; letter-spacing:.03em; padding:2px 6px; border-radius:6px;
+  border:1px solid var(--line-2); color:var(--muted); background:var(--panel-2)}
+.slot .days5 .d.x{color:#FFD7D2; background:rgba(240,115,106,.22); border-color:rgba(240,115,106,.6); text-decoration:line-through}
+.slot .avail{font-size:12px; color:var(--muted)}
+.slot .avail.some{color:#F6B4AC}
 .slot .empty{padding:16px 17px; font-size:13px; color:var(--muted)}
 .sectionhead{
   font-family:var(--display); font-weight:400; font-size:24px; margin:28px 0 0;
@@ -345,12 +352,26 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
   }
 
   /* ------------------------------------------------------- the board
-     Public, and deliberately thin: names, start times, volumes and busy
-     days. No email, no phone, nothing else off the record — the email is
+     Public, and deliberately thin: full names, start times, calls a week
+     and the weekdays they are not available. No email, no phone, nothing else off the record — the email is
      what lets somebody change a row, so it never comes down here. */
+  /* Monday to Friday as five small tags, the days they are not available
+     picked out, so a glance shows who is around when. */
+  var WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri"];
   function busyLine(p) {
-    if (!p.busyDays || !p.busyDays.length) return "";
-    return "Busy " + p.busyDays.join(", ") + (p.busyPart ? " · " + p.busyPart : "");
+    var off = p.busyDays || [];
+    var tags = WEEK.map(function (d) {
+      var x = off.indexOf(d) >= 0;
+      return '<span class="d' + (x ? " x" : "") + '"' + (x ? ' title="Not available ' + d + (p.busyPart ? " (" + esc(p.busyPart) + ")" : "") + '"' : "") + ">" + d + "</span>";
+    }).join("");
+    var note = off.length ? "Not available " + off.join(", ") + (p.busyPart ? " · " + p.busyPart : "")
+      : "Available Monday to Friday";
+    return '<div class="days5">' + tags + '</div><div class="avail' + (off.length ? " some" : "") + '">' + esc(note) + "</div>";
+  }
+  function volume(p) {
+    if (p.callsPerWeek === 0) return '<span class="vol none">Week off</span>';
+    if (p.callsPerWeek == null) return "";
+    return '<span class="vol">' + p.callsPerWeek + " calls/wk</span>";
   }
 
   function drawRoster(data) {
@@ -369,8 +390,8 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
           var busy = busyLine(p);
           var cls = (p.me ? " me" : "") + (p.off ? " off" : "");
           html += "<li" + (cls ? ' class="' + cls.trim() + '"' : "") + '><div class="who"><b>' + esc(p.name) + "</b>" +
-            (p.off ? '<span class="offtag">Off today</span>' : "") + "</div>" +
-            (busy ? '<div class="busy">' + esc(busy) + "</div>" : "") + "</li>";
+            '<span class="tags">' + (p.off ? '<span class="offtag">Off today</span>' : "") + volume(p) + "</span></div>" +
+            '<div class="busy">' + busy + "</div></li>";
         });
         html += "</ul>";
       }

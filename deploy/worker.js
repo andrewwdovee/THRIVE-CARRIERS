@@ -578,14 +578,17 @@ async function handle(request, env) {
         if (prev && new Date(prev.signedAt) >= new Date(r.signedAt)) return;
         latest.set(k, r);
       });
-      /* Volumes are deliberately left off: the public board shows names,
-         start times and busy days. The totals live on the Lead Tech board. */
+      /* The public board shows each person's full name, start time, how many
+         calls they want this week and the weekdays they are not available.
+         Email and phone stay on this side. */
       const people = [...latest.values()].map((r) => ({
         id: String(r.id || ""),
         name: String(r.legalName || ""),
         startTime: ONBOARD_SLOTS.indexOf(r.startTime) >= 0 ? r.startTime : "",
         busyDays: Array.isArray(r.busyDays) ? r.busyDays.filter((d) => BUSY_DAYS.indexOf(d) >= 0) : [],
         busyPart: BUSY_PARTS.indexOf(r.busyPart) >= 0 ? r.busyPart : "",
+        callsPerWeek: r.callsPerWeek === "" || r.callsPerWeek == null || isNaN(Number(r.callsPerWeek))
+          ? null : Math.max(0, Math.round(Number(r.callsPerWeek))),
         off: !!offMap[String(r.email || "").toLowerCase()],
       }));
       return json({
