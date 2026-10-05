@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Plus, Trash2, Check, Loader2, AlertTriangle } from "lucide-react";
-import { BD, CARD, PANEL, IN, BTN, PRI, M, F, W, L, Field, dk } from "../lib/shared";
+import { M, F, W, L, Field, dk } from "../lib/shared";
 import Logo from "../components/Logo";
 import { RELAY } from "../lib/auth";
 
@@ -20,6 +20,18 @@ const REASONS = [
 
 const BLANK = () => ({ phone: "", reason: "" });
 
+/* Dressed like the other Thrive and Lead Tech pages agents see (the
+   marketplace, the onboarding forms): always dark, Inter, a cyan-to-blue
+   accent, cards with a faint white outline. The board keeps its own look;
+   these apply to this page only. */
+const BD = "border-white/15";
+const CARD = "rounded-2xl border border-white/15 bg-[#11141B]/90 shadow-[0_20px_60px_-30px_rgba(34,195,238,0.35)] backdrop-blur";
+const PANEL = "rounded-2xl border border-cyan-400/25 bg-gradient-to-b from-cyan-400/[0.07] to-blue-500/[0.02]";
+const IN = "w-full rounded-lg border border-white/15 bg-[#0B0E14] px-3 py-2.5 text-sm text-white placeholder-slate-600 [color-scheme:dark] focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20";
+const BTN = "rounded-lg border border-white/15 bg-[#1C212B] px-3 py-2 text-sm font-semibold text-slate-200 hover:border-white/40";
+const PRI = "rounded-lg bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3 text-sm font-bold text-white shadow-[0_10px_30px_-10px_rgba(34,195,238,0.7)] hover:brightness-110";
+const DOT = "mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-400";
+
 /* The two slips an agent can send. A duplicate is one call and carries its
    own reason; the two-bad-calls slip is the original form. */
 const KINDS = [
@@ -28,6 +40,20 @@ const KINDS = [
 ];
 
 export default function RefundRequest() {
+  /* This page is dark whatever the board's theme setting says, and uses the
+     same typeface as the other agent-facing pages. */
+  useEffect(() => {
+    const el = document.documentElement;
+    el.classList.add("dark"); el.style.colorScheme = "dark";
+    document.body.style.background = "#07090D";
+    if (!document.getElementById("rr-font")) {
+      const l = document.createElement("link");
+      l.id = "rr-font"; l.rel = "stylesheet";
+      l.href = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap";
+      document.head.appendChild(l);
+    }
+    document.title = "Call refund request · Lead Tech";
+  }, []);
   const [kind, setKind] = useState("pair");
   const [f, setF] = useState(() => ({ day: dk(Date.now()), first: "", last: "", email: "" }));
   const [dupPhone, setDupPhone] = useState("");
@@ -70,7 +96,7 @@ export default function RefundRequest() {
   if (done) return (
     <Shell>
       <div className={`${CARD} p-6 text-center`}>
-        <Check className="mx-auto h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+        <Check className="mx-auto h-8 w-8 text-cyan-400" />
         <h2 className={`mt-3 text-lg font-bold ${W}`}>Sent</h2>
         <p className={`mt-2 text-sm ${M}`}>
           {dup ? "Your duplicate call was" : `${calls.length} call${calls.length === 1 ? " was" : "s were"}`} submitted
@@ -92,10 +118,10 @@ export default function RefundRequest() {
           {KINDS.map(([id, label]) => (
             <button key={id} type="button" role="radio" aria-checked={kind === id}
               onClick={() => { setKind(id); setErr(""); }}
-              className={`rounded-lg border px-3 py-2.5 text-sm font-semibold ${
+              className={`rounded-xl border px-3 py-3 text-sm font-bold transition ${
                 kind === id
-                  ? "border-blue-500 bg-blue-500/10 text-blue-700 dark:text-blue-300"
-                  : `${BD} ${M} hover:bg-slate-50 dark:hover:bg-slate-900`}`}>
+                  ? "border-transparent bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-[0_8px_24px_-10px_rgba(34,195,238,0.8)]"
+                  : `${BD} bg-[#0B0E14] text-slate-300 hover:border-white/40`}`}>
               {label}
             </button>
           ))}
@@ -144,7 +170,7 @@ export default function RefundRequest() {
 
           <div className="mt-2 space-y-3">
             {calls.map((c, i) => (
-              <div key={i} className={`rounded-lg border ${BD} p-3`}>
+              <div key={i} className={`rounded-xl border ${BD} bg-white/[0.02] p-3`}>
                 <div className="flex items-baseline justify-between gap-2">
                   <L>Call {i + 1}</L>
                   {calls.length > 2 && (
@@ -197,11 +223,23 @@ export default function RefundRequest() {
 
 function Shell({ children }) {
   return (
-    <div className="min-h-screen bg-slate-100 px-4 py-8 dark:bg-slate-950">
-      <div className="mx-auto w-full max-w-2xl">
-        <div className="mb-6 text-center">
-          <Logo size="lg" className={`justify-center ${W}`} />
-          <L className="mt-3 block">Call refund request</L>
+    <div className="relative min-h-screen overflow-hidden bg-[#07090D] px-4 py-10 text-slate-200"
+      style={{ fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" }}>
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[520px]"
+        style={{ background: "radial-gradient(900px 480px at 50% -10%, rgba(34,195,238,.14), transparent 65%), radial-gradient(600px 380px at 12% 0%, rgba(59,130,246,.10), transparent 60%)" }} />
+      <div className="relative mx-auto w-full max-w-2xl">
+        <div className="mb-8 text-center">
+          <div className="flex justify-center"><Logo size="lg" className="justify-center text-white" /></div>
+          <span className="mt-5 inline-flex items-center gap-2 rounded-full border border-cyan-400/45 bg-cyan-400/[0.06] px-3 py-1 text-[10.5px] font-extrabold uppercase tracking-[0.14em] text-cyan-400">
+            <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />Call refund request
+          </span>
+          <h1 className="mt-4 text-4xl font-black leading-[1.05] tracking-tight text-white sm:text-5xl">
+            Request a<br />
+            <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-teal-300 bg-clip-text text-transparent">Call Refund.</span>
+          </h1>
+          <p className="mx-auto mt-3 max-w-md text-sm text-slate-400">
+            Pick the kind of refund, read the policy, then send the calls in for review.
+          </p>
         </div>
         {children}
         <p className={`mt-6 text-center text-xs ${F}`}>
@@ -217,7 +255,7 @@ function Shell({ children }) {
 function Policy() {
   return (
     <div className={`${PANEL} rounded-xl p-5`}>
-      <h2 className={`text-base font-bold ${W}`}>Inbound refund policy</h2>
+      <h2 className="text-lg font-extrabold text-white">Inbound refund policy</h2>
 
       <h3 className={`mt-4 text-sm font-semibold ${W}`}>Meta / TV calls</h3>
       <p className={`mt-1 text-sm ${M}`}>
@@ -232,11 +270,11 @@ function Policy() {
       <p className={`mt-3 text-sm ${M}`}>A bad call is either of the following:</p>
       <ul className={`mt-2 space-y-2 text-sm ${M}`}>
         <li className="flex gap-2">
-          <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-blue-500" />
+          <span className={DOT} />
           <span>An agent called in for customer support — not a consumer on the line.</span>
         </li>
         <li className="flex gap-2">
-          <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-blue-500" />
+          <span className={DOT} />
           <span>The call was dead air, with nobody on the other end. The agent must be in the USA for this to apply.</span>
         </li>
       </ul>
@@ -254,18 +292,18 @@ function Policy() {
 function DuplicatePolicy() {
   return (
     <div className={`${PANEL} rounded-xl p-5`}>
-      <h2 className={`text-base font-bold ${W}`}>Duplicate call policy</h2>
+      <h2 className="text-lg font-extrabold text-white">Duplicate call policy</h2>
       <ul className={`mt-3 space-y-2 text-sm ${M}`}>
         <li className="flex gap-2">
-          <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-blue-500" />
+          <span className={DOT} />
           <span>Duplicate calls that came through the <strong className={W}>same internal DID number</strong> will be refunded.</span>
         </li>
         <li className="flex gap-2">
-          <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-blue-500" />
+          <span className={DOT} />
           <span>If the caller rang an <strong className={W}>external</strong> support desk and then called us, those calls are not refunded. That is not an internal duplicate.</span>
         </li>
         <li className="flex gap-2">
-          <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-blue-500" />
+          <span className={DOT} />
           <span>If the same number called <strong className={W}>our</strong> support desk more than once, it counts as a refund.</span>
         </li>
       </ul>
