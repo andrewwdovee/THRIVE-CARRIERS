@@ -193,6 +193,9 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
   /* Step 7 opens a page with both servers on it; step 10 the marketplace. */
   var DISCORDS_URL = "../discord/";
   var MARKETPLACE_URL = "https://leadtech-marketplace.pages.dev";
+  /* Step 8. Each agent signs in with their own account, so no login is
+     carried in the link. */
+  var LEADERBOARD_URL = "https://kairos-financial.com/saleshub#leaderboard";
   /* Sits beside this page in the deploy. Empty in a preview, where
      there is nothing to point at — the button is dropped rather than
      left dead. */
@@ -273,6 +276,14 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
             "of the training runs. Lead Tech Support is where you open a ticket for a " +
             "bad transfer, a charge that looks wrong, or routing that is not working.",
       link: { href: DISCORDS_URL, label: "Join our Discord servers" }
+    },
+    {
+      id: "leaderboard",
+      who: "you",
+      title: "Join the company leaderboard",
+      body: "Where you keep track of your book of business and every sale you make. " +
+            "It is the company leaderboard, so the whole floor can see who is writing.",
+      link: { href: LEADERBOARD_URL, label: "Open the company leaderboard" }
     },
     {
       id: "contracts",
