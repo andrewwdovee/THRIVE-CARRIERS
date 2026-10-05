@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Training calendar</title>
-<meta name="description" content="Every training session we run, what time, where, and who takes it. All times Eastern.">
+<meta name="description" content="Every company training and team huddle, what time and who leads it. All times Eastern.">
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,7 +15,7 @@
   --ink:#07090E; --panel:#1A2130; --panel-2:#222B3C; --cell:#161D2B;
   --line:#2E394B; --line-2:#667998; --fg:#F0F4F9; --muted:#A3B4C8;
   --gold:#F0B429; --gold-hi:#FFE08A;
-  /* The five session types, in the hues the printed calendar uses.
+  /* The session colours.
      Every chip carries dark ink: white on the amber reads at 1.9:1,
      which is not a contrast you can put small bold type on. */
   --s-blue:#3B82F6; --s-amber:#F0B429; --s-green:#13B981;
@@ -85,7 +85,7 @@ body::before{
 .daycard.today > h3{background:rgba(240,180,41,.12)}
 .daycard ul{list-style:none; margin:0; padding:10px 12px; display:grid; gap:8px}
 
-/* A session, the same shape on the week cards and in the month grid. */
+/* A session on a day card. */
 .sess{
   display:grid; grid-template-columns:auto 1fr; gap:10px; align-items:center;
   border:1px solid var(--line-2); border-radius:10px; padding:7px 9px;
@@ -98,62 +98,13 @@ body::before{
 .sess .n{min-width:0}
 .sess .n b{display:block; font-size:12.5px; font-weight:700; line-height:1.3; overflow-wrap:anywhere}
 .sess .n small{display:block; font-size:11px; color:var(--muted); line-height:1.35}
+.sess .n i{display:block; font-style:normal; font-size:10.5px; color:var(--muted); opacity:.8; line-height:1.35}
 .sess.blue{border-color:rgba(59,130,246,.45)}   .sess.blue .t{background:var(--s-blue)}
 .sess.amber{border-color:rgba(240,180,41,.45)}  .sess.amber .t{background:var(--s-amber)}
 .sess.green{border-color:rgba(19,185,129,.45)}  .sess.green .t{background:var(--s-green)}
 .sess.violet{border-color:rgba(139,92,246,.45)} .sess.violet .t{background:var(--s-violet)}
 .sess.rose{border-color:rgba(244,63,94,.45)}    .sess.rose .t{background:var(--s-rose)}
 
-/* ------------------------------------------------------- the month */
-.monthbar{display:flex; align-items:center; gap:10px}
-.monthbar b{font-family:var(--display); font-weight:400; font-size:25px; min-width:9ch}
-.navbtn{
-  font:inherit; font-size:13px; font-weight:700; cursor:pointer; color:var(--fg);
-  background:var(--panel-2); border:1px solid var(--line-2); border-radius:9px;
-  padding:6px 12px; line-height:1.2;
-}
-.navbtn:hover{background:var(--panel)}
-.grid{
-  display:grid; grid-template-columns:repeat(7,1fr);
-  border:1px solid var(--line); border-radius:15px; overflow:hidden; background:var(--line);
-  gap:1px;
-}
-.grid .hd{
-  background:var(--panel); padding:7px 6px; text-align:center;
-  font-size:11px; font-weight:800; letter-spacing:.15em; text-transform:uppercase; color:var(--muted);
-}
-.grid .hd.wd{color:var(--gold)}
-.grid .cell{background:var(--panel); min-height:76px; padding:5px 6px; display:grid; align-content:start; gap:3px}
-.grid .cell.out{background:#141A26}
-.grid .cell.today{background:rgba(240,180,41,.09)}
-.grid .cell .dnum{font-size:12px; font-weight:700; color:var(--fg); line-height:1.2}
-.grid .cell.out .dnum{color:var(--muted); opacity:.5}
-.grid .cell .none{font-size:10px; color:var(--muted); letter-spacing:.09em; text-transform:uppercase; opacity:.65}
-.grid .sess{padding:2px 5px; gap:5px; border-radius:7px}
-.grid .sess .t{font-size:10px; padding:1px 4px}
-/* One line per session in the month: the trainer is on the week cards
-   above, so the grid only needs what and when. */
-.grid .sess .n b{font-size:10.5px; line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.grid .sess .n small{display:none}
-.grid .cell .none{font-size:9.5px}
-/* A holiday: no business that day, so the day is crossed off. */
-.grid .cell.holiday{
-  background:
-    linear-gradient(to top right, transparent calc(50% - 1.5px), rgba(240,115,106,.45) 50%, transparent calc(50% + 1.5px)),
-    linear-gradient(to top left, transparent calc(50% - 1.5px), rgba(240,115,106,.45) 50%, transparent calc(50% + 1.5px)),
-    #1F1A22;
-}
-.grid .cell.holiday .dnum{color:#F0736A; text-decoration:line-through}
-.grid .cell .hol{
-  font-size:10.5px; font-weight:700; color:#F0736A; line-height:1.25;
-}
-.grid .cell .hol small{display:block; font-size:9.5px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; opacity:.85}
-
-.monthwrap{display:none}
-@media (min-width:980px){ .monthwrap{display:block} .mobilenote{display:none} }
-.mobilenote{
-  margin-top:14px; font-size:12.5px; color:var(--muted); text-align:center;
-}
 footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16px 10px}
 @media (max-width:560px){ .marks{gap:14px} .marks img.thrive{height:56px} .marks .by{padding-left:14px} }
 </style>
@@ -181,21 +132,6 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
     <p>Monday to Friday. Nothing scheduled at the weekend.</p>
   </div>
   <div class="week" id="week"></div>
-  <p class="mobilenote">The month view needs a wider screen — the week above is the whole schedule.</p>
-
-  <div class="monthwrap">
-    <div class="sectionhead">
-      <div class="monthbar">
-        <button type="button" class="navbtn" data-act="prev" aria-label="Previous month">&larr;</button>
-        <b id="monthname"></b>
-        <button type="button" class="navbtn" data-act="next" aria-label="Next month">&rarr;</button>
-        <button type="button" class="navbtn" data-act="today">This month</button>
-      </div>
-      <p>Generated from the weekly schedule, so it is never out of date.</p>
-    </div>
-    <div class="grid" id="grid"></div>
-  </div>
-
   <footer><span data-entity>Thrive Companies</span> &middot; Lead Tech inbound</footer>
 </div>
 
@@ -207,34 +143,30 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
   var LOGOS = {};
 
   /* ------------------------------------------------------ the schedule
-     The calendar is a weekly pattern, so that is what is stored — the
-     month below is generated from it and cannot go stale. Edit here and
-     every view follows.
-
-     tone: which of the five colours.  where: the room, when it has one. */
+     The same every week. Edit here and the page follows.
+     tone: which colour.  lead: who runs it.  topics: what it covers. */
   var TYPES = [
-    { tone: "blue",   time: "9:15 AM", title: "Call Review + Role Play", where: "A Team Discord" },
-    { tone: "amber",  time: "5:00 PM", title: "Company Training", where: "Company-wide" },
-    { tone: "green",  time: "6:00 PM", title: "New Agent Onboarding", where: "Mondays" },
-    { tone: "violet", time: "7:30 PM", title: "Late Night Training", where: "Premium Palace" },
-    { tone: "rose",   time: "8:30 PM", title: "Leadership Training", where: "Mondays" }
+    { tone: "amber",  time: "9:30 AM", title: "Company Training", where: "Monday \u00b7 company-wide" },
+    { tone: "blue",   time: "9:30 AM", title: "Team Huddle", where: "Tuesday to Friday \u00b7 with your team" },
+    { tone: "violet", time: "6:30 PM", title: "Company Training", where: "Tuesday to Friday \u00b7 company-wide" }
   ];
-
-  var CALL = TYPES[0], COMPANY = TYPES[1], ONBOARD = TYPES[2], LATE = TYPES[3], LEAD = TYPES[4];
-  function s(type, lead) { return { tone: type.tone, time: type.time, title: type.title, lead: lead || "", where: type.where }; }
+  var MORNING = TYPES[0], HUDDLE = TYPES[1], EVENING = TYPES[2];
+  function s(type, title, lead, topics) {
+    return { tone: type.tone, time: type.time, title: title || type.title, lead: lead || "", topics: topics || "" };
+  }
+  var CLOSE = "Real Calls \u2022 Objections \u2022 Closing";
 
   /* index 0 = Sunday, to match Date#getDay */
   var WEEK = [
-    [],                                                          /* Sun */
-    [s(CALL, "Ryan"), s(COMPANY, "Ryan"), s(ONBOARD), s(LATE, "Rotating manager"), s(LEAD)],
-    [s(CALL, "Mike"), s(LATE, "Rotating manager")],              /* Tue */
-    [s(CALL, "Tristan"), s(COMPANY, "Rotating manager"), s(LATE, "Rotating manager")],
-    [s(CALL, "Ryan"), s(LATE, "Rotating manager")],              /* Thu */
-    [s(CALL, "Mike"), s(COMPANY, "Top producer"), s(LATE, "Rotating manager")],
-    []                                                           /* Sat */
+    [],                                                                          /* Sun */
+    [s(MORNING, "Win the Week", "Thrive Companies", "Positivity \u2022 Recognition \u2022 Standards")],
+    [s(HUDDLE), s(EVENING, "Sales Lab", "Michael", CLOSE)],                     /* Tue */
+    [s(HUDDLE), s(EVENING, "Recruit Like a Pro", "Tristan", "Content \u2022 DMs \u2022 Recruiting")],
+    [s(HUDDLE), s(EVENING, "Sales Lab", "Oscar", CLOSE)],                       /* Thu */
+    [s(HUDDLE), s(EVENING, "Cash Flow Friday", "Joey Rodas", "Pending Money \u2022 Final Push")],
+    []                                                                           /* Sat */
   ];
   var DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  var SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   var $ = function (q) { return document.querySelector(q); };
   Array.prototype.slice.call(document.querySelectorAll("[data-entity]"))
@@ -250,15 +182,13 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
-  function shortTime(t) { return String(t).replace(/\s*(AM|PM)$/, ""); }
 
-  function sessHtml(x, compact) {
+  function sessHtml(x) {
     return '<div class="sess ' + x.tone + '">' +
-      '<span class="t">' + esc(shortTime(x.time)) + "</span>" +
+      '<span class="t">' + esc(x.time) + "</span>" +
       '<span class="n"><b>' + esc(x.title) + "</b>" +
-      (x.lead || (!compact && x.where)
-        ? "<small>" + esc([x.lead, compact ? "" : x.where].filter(Boolean).join(" · ")) + "</small>"
-        : "") +
+      (x.lead ? "<small>Led by " + esc(x.lead) + "</small>" : "") +
+      (x.topics ? "<i>" + esc(x.topics) + "</i>" : "") +
       "</span></div>";
   }
 
@@ -274,97 +204,10 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
   $("#week").innerHTML = [1, 2, 3, 4, 5].map(function (d) {
     return '<section class="daycard' + (d === todayDow ? " today" : "") + '">' +
       "<h3>" + esc(DAYS[d]) + (d === todayDow ? " &middot; today" : "") + "</h3>" +
-      "<ul>" + WEEK[d].map(function (x) { return "<li>" + sessHtml(x, false) + "</li>"; }).join("") + "</ul>" +
+      "<ul>" + WEEK[d].map(function (x) { return "<li>" + sessHtml(x) + "</li>"; }).join("") + "</ul>" +
       "</section>";
   }).join("");
 
-  /* ------------------------------------------------------- the month */
-  var now = new Date();
-  var view = new Date(now.getFullYear(), now.getMonth(), 1);
-
-  /* The major American holidays: no business, so they are crossed off the month.
-     Worked out for whatever year is on screen, so it never goes stale. */
-  function nthWeekday(y, m, dow, n) {           /* n = 1..4, or -1 for the last */
-    if (n > 0) {
-      var d = new Date(y, m, 1);
-      d.setDate(1 + ((dow - d.getDay() + 7) % 7) + (n - 1) * 7);
-      return d;
-    }
-    var e = new Date(y, m + 1, 0);
-    e.setDate(e.getDate() - ((e.getDay() - dow + 7) % 7));
-    return e;
-  }
-  function easter(y) {                          /* anonymous Gregorian algorithm */
-    var a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4;
-    var f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
-    var h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4;
-    var l = (32 + 2 * e + 2 * i - h - k) % 7, mm = Math.floor((a + 11 * h + 22 * l) / 451);
-    var month = Math.floor((h + l - 7 * mm + 114) / 31), day = ((h + l - 7 * mm + 114) % 31) + 1;
-    return new Date(y, month - 1, day);
-  }
-  var holidayCache = {};
-  function holidays(y) {
-    if (holidayCache[y]) return holidayCache[y];
-    var list = [
-      [new Date(y, 0, 1), "New Year's Day"],
-      [easter(y), "Easter"],
-      [nthWeekday(y, 4, 1, -1), "Memorial Day"],
-      [new Date(y, 6, 4), "Independence Day"],
-      [nthWeekday(y, 8, 1, 1), "Labor Day"],
-      [new Date(y, 9, 31), "Halloween"],
-      [nthWeekday(y, 10, 4, 4), "Thanksgiving"],
-      [new Date(y, 11, 24), "Christmas Eve"],
-      [new Date(y, 11, 25), "Christmas Day"],
-      [new Date(y, 11, 31), "New Year's Eve"]
-    ];
-    var map = {};
-    list.forEach(function (h) { map[h[0].getMonth() + "-" + h[0].getDate()] = h[1]; });
-    return (holidayCache[y] = map);
-  }
-
-  function drawMonth() {
-    var y = view.getFullYear(), m = view.getMonth();
-    $("#monthname").textContent =
-      view.toLocaleDateString(undefined, { month: "long", year: "numeric" });
-    var first = new Date(y, m, 1);
-    var start = new Date(y, m, 1 - first.getDay());        /* back to the Sunday */
-    var html = SHORT.map(function (d, i) {
-      return '<div class="hd' + (i >= 1 && i <= 5 ? " wd" : "") + '">' + d + "</div>";
-    }).join("");
-    for (var i = 0; i < 42; i++) {
-      var d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
-      var out = d.getMonth() !== m;
-      var isToday = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() &&
-        d.getDate() === now.getDate();
-      var list = WEEK[d.getDay()];
-      /* The days either side of the month keep the grid square but
-         carry nothing: the schedule for them belongs to another month. */
-      var hol = out ? "" : holidays(d.getFullYear())[d.getMonth() + "-" + d.getDate()];
-      html += '<div class="cell' + (out ? " out" : "") + (isToday ? " today" : "") + (hol ? " holiday" : "") + '"' +
-        (hol ? ' title="' + esc(hol) + ' - closed"' : "") + '>' +
-        '<span class="dnum">' + d.getDate() + "</span>" +
-        (out ? ""
-          : hol ? '<span class="hol">' + esc(hol) + "<small>Closed</small></span>"
-          : list.length
-            ? list.map(function (x) { return sessHtml(x, true); }).join("")
-            : '<span class="none">No training</span>') +
-        "</div>";
-      /* stop once the month is done and the week is complete */
-      if (i >= 27 && d.getDay() === 6 && d >= new Date(y, m + 1, 0)) break;
-    }
-    $("#grid").innerHTML = html;
-  }
-  drawMonth();
-
-  document.addEventListener("click", function (ev) {
-    var b = ev.target.closest("[data-act]");
-    if (!b) return;
-    var a = b.getAttribute("data-act");
-    if (a === "prev") view = new Date(view.getFullYear(), view.getMonth() - 1, 1);
-    if (a === "next") view = new Date(view.getFullYear(), view.getMonth() + 1, 1);
-    if (a === "today") view = new Date(now.getFullYear(), now.getMonth(), 1);
-    drawMonth();
-  });
 })();
 </script>
 </body>
