@@ -371,6 +371,8 @@ footer img{height:16px; width:auto; opacity:.85}
      Where each button goes. An empty checkout link shows the button as
      "Checkout link coming soon" rather than going nowhere. */
   var PORTAL_URL = "https://leadtech-crm.vercel.app/agent/login";
+  /* Inbound Transfers have their own portal, separate from the CRM. */
+  var TRANSFER_PORTAL_URL = "https://leadtechfexinboundss.trackdrive.com/users/sign_in";
   var SUPPORT_URL = "https://discord.gg/keSnyfQ738";
   var CHECKOUT = {
     "transfers-starter": "https://buy.stripe.com/eVqfZhgz35ne051d4h2VG2c", "transfers-growth": "https://buy.stripe.com/14AcN596B16Y8Bx4xL2VG2d", "transfers-pro": "https://buy.stripe.com/fZudR9beJ7vm3hd8O12VG2e",
@@ -429,8 +431,8 @@ footer img{height:16px; width:auto; opacity:.85}
     if (!url) return '<span class="btn wide off ' + (cls || "") + '">Checkout link coming soon</span>';
     return '<a class="btn wide ' + (cls || "") + '" href="' + esc(url) + '" target="_blank" rel="noreferrer">' + esc(label || "Get Started") + ic("arrow") + "</a>";
   }
-  function portalBtn(label, cls) {
-    return '<a class="btn ' + (cls || "") + '" href="' + esc(PORTAL_URL) + '" target="_blank" rel="noreferrer">' + esc(label) + ic("ext") + "</a>";
+  function portalBtn(label, cls, url) {
+    return '<a class="btn ' + (cls || "") + '" href="' + esc(url || PORTAL_URL) + '" target="_blank" rel="noreferrer">' + esc(label) + ic("ext") + "</a>";
   }
   function supportBtn(label, cls) {
     return '<a class="btn ' + (cls || "") + '" href="' + esc(SUPPORT_URL) + '" target="_blank" rel="noreferrer">' + esc(label) + ic("ext") + "</a>";
@@ -512,7 +514,7 @@ footer img{height:16px; width:auto; opacity:.85}
   VIEWS.transfers = function () {
     return hero("Live inbound transfers — final expense", "Real Prospects.", "Live on the Line.",
         "Stop chasing cold leads. Our inbound final expense transfers connect you directly with seniors who are actively looking for coverage — transferred to you live in under 90 seconds.",
-        portalBtn("Open Transfer Portal")) +
+        portalBtn("Open Transfer Portal", "", TRANSFER_PORTAL_URL)) +
       sechead("One-time packages", "Choose Your Volume",
         "All packages are a one-time charge. Scale up or down at any time through the transfer portal. Every tier includes the same premium inbound transfer quality.") +
       '<div class="tiers">' +
@@ -526,7 +528,7 @@ footer img{height:16px; width:auto; opacity:.85}
         per: ["20 inbound calls · $23/call", "20 inbound calls"], key: "transfers-pro",
         items: ["20 inbound calls (one-time)", "90-second warm transfers", "Real-time call routing", "Live transfer portal access", "Delivery guaranteed", "Priority call queue", "Dedicated account support"] }) +
       "</div>" +
-      '<p class="fine">Already purchased? <a href="' + esc(PORTAL_URL) + '" target="_blank" rel="noreferrer">Open Live Transfer Portal &#8599;</a></p>' +
+      '<p class="fine">Already purchased? <a href="' + esc(TRANSFER_PORTAL_URL) + '" target="_blank" rel="noreferrer">Open Live Transfer Portal &#8599;</a></p>' +
       sechead("Why it works", "Built for Final Expense Agents",
         "We specialize exclusively in final expense inbound transfers. No health, no term — just seniors looking for burial and final expense coverage.") +
       feats([
@@ -539,7 +541,7 @@ footer img{height:16px; width:auto; opacity:.85}
       ]) +
       cta("Ready to Fill Your Pipeline?",
         "Purchase a package today and start receiving live inbound final expense transfers. Choose your volume, access the portal, and close more business.",
-        '<a class="btn pri" href="#transfers" data-scrolltop="1">Choose a Plan' + ic("arrow") + "</a>" + portalBtn("Open Transfer Portal"));
+        '<a class="btn pri" href="#transfers" data-scrolltop="1">Choose a Plan' + ic("arrow") + "</a>" + portalBtn("Open Transfer Portal", "", TRANSFER_PORTAL_URL));
   };
 
   /* Inbound Calls: pick a source (Meta, Google, TV), then the call types
