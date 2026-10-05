@@ -137,6 +137,11 @@ let lk = readFileSync(join(here, "links.html"), "utf8");
 lk = one(lk, 'var ENTITY = "Thrive Companies LLC";', `var ENTITY = ${JSON.stringify(entity)};`, "links.html");
 lk = one(lk, 'var LOGOS = {};', `var LOGOS = ${JSON.stringify(logos)};`, "links.html");
 
+/* The two Discord servers at /discord, which step 7 of /welcome opens. */
+let dc = readFileSync(join(here, "discord.html"), "utf8");
+dc = one(dc, 'var ENTITY = "Thrive Companies LLC";', `var ENTITY = ${JSON.stringify(entity)};`, "discord.html");
+dc = one(dc, 'var LOGOS = {};', `var LOGOS = ${JSON.stringify(logos)};`, "discord.html");
+
 /* The Lead Tech Marketplace at /marketplace: every product, priced. */
 let mk = readFileSync(join(here, "marketplace.html"), "utf8");
 mk = one(mk, 'var ENTITY = "Thrive Companies LLC";', `var ENTITY = ${JSON.stringify(entity)};`, "marketplace.html");
@@ -186,9 +191,10 @@ wc = favicon(wc, "Thrive", "welcome.html");
 tr = favicon(tr, "Thrive", "training.html");
 stp = favicon(stp, "Thrive", "states.html");
 lk = favicon(lk, "Thrive", "links.html");
+dc = favicon(dc, "Thrive", "discord.html");
 mk = favicon(mk, "Lead", "marketplace.html");
 Object.assign(KIND, { "": "Thrive", "start-time": "Thrive", welcome: "Thrive", training: "Thrive",
-  states: "Thrive", links: "Thrive", marketplace: "Lead" });
+  states: "Thrive", links: "Thrive", discord: "Thrive", marketplace: "Lead" });
 
 const dist = join(here, "dist");
 mkdirSync(dist, { recursive: true });
@@ -204,6 +210,8 @@ mkdirSync(join(dist, "states"), { recursive: true });
 writeFileSync(join(dist, "states", name), stp);
 mkdirSync(join(dist, "links"), { recursive: true });
 writeFileSync(join(dist, "links", name), lk);
+mkdirSync(join(dist, "discord"), { recursive: true });
+writeFileSync(join(dist, "discord", name), dc);
 mkdirSync(join(dist, "marketplace"), { recursive: true });
 writeFileSync(join(dist, "marketplace", name), mk);
 for (const [dir, kind] of Object.entries(KIND)) {
@@ -217,6 +225,7 @@ console.log(`Wrote onboarding/dist/${name}  (${(out.length / 1024).toFixed(0)} K
   and  onboarding/dist/training/${name}    (${(tr.length / 1024).toFixed(0)} KB)  ->  <url>/training
   and  onboarding/dist/states/${name}      (${(stp.length / 1024).toFixed(0)} KB)  ->  <url>/states
   and  onboarding/dist/links/${name}       (${(lk.length / 1024).toFixed(0)} KB)  ->  <url>/links
+  and  onboarding/dist/discord/${name}     (${(dc.length / 1024).toFixed(0)} KB)  ->  <url>/discord
   and  onboarding/dist/marketplace/${name} (${(mk.length / 1024).toFixed(0)} KB)  ->  <url>/marketplace
   relay   ${relay || "(none — preview, submissions go nowhere)"}
   entity  ${entity}
