@@ -26,3 +26,7 @@ OWNER_PASSWORD_ITER = "100000"
 #   wrangler secret put TOKEN_SECRET
 #   wrangler secret put OWNER_PASSWORD_SALT
 #   wrangler secret put OWNER_PASSWORD_HASH
+#
+# Stripe orders (see DEPLOY.md, "Stripe orders"):
+#   wrangler secret put STRIPE_WEBHOOK_SECRET   # whsec_... from the webhook
+#   wrangler secret put STRIPE_SECRET_KEY       # rk_... read-only restricted key

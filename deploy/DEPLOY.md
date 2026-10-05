@@ -420,3 +420,24 @@ signing page and the patched board were both driven in a real browser.
 against real KV, and its routing and CORS handling are unverified. Deploy it under a
 throwaway name first and run the step 4 smoke tests before pointing the live board at
 it.
+
+
+## Stripe orders
+
+Every Stripe payment (the marketplace's Payment Links included) lands on the
+Lead Tech board on its own, about fifteen seconds after it is paid.
+
+1. Stripe Dashboard -> Developers -> Webhooks -> Add destination.
+   - Endpoint URL: `https://thrive-relay.aandrewdavidson.workers.dev/stripe/webhook`
+   - API version: `2024-06-20` if Stripe offers the choice.
+   - Events: `checkout.session.completed`, `charge.succeeded`, `charge.failed`,
+     `charge.refunded`, `charge.dispute.created`, `invoice.payment_succeeded`,
+     `invoice.payment_failed`, `customer.subscription.deleted`.
+2. Copy its signing secret (`whsec_...`) and run
+   `npx wrangler secret put STRIPE_WEBHOOK_SECRET`.
+3. Developers -> API keys -> Create restricted key, with **Read** on
+   Checkout Sessions, Charges, Customers, Products and Prices, and nothing
+   else. Run `npx wrangler secret put STRIPE_SECRET_KEY` and paste it.
+   This is what names a Payment Link order ("Transfers Starter") instead
+   of leaving it in Needs triage.
+4. `npx wrangler deploy`, then open `/health`: `"webhook": true`.
