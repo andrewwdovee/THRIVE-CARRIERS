@@ -19,6 +19,30 @@ const ST_URL = String(__URL__).replace(/\/+$/, "") + "/start-time";
 const ST_SLOTS = ["10:00 AM EST", "11:00 AM EST"];
 const ST_GRACE = 15;            /* minutes after the start time */
 
+/* How a switched-off row looks: a red box around it, a faint red fill,
+   the name in red and a "Disabled" tag beside it. */
+const ST_OFF_ROW = { outline: "2px solid #e11d48", outlineOffset: "-2px", background: "rgba(225,29,72,0.10)" };
+const ST_OFF_NAME = { color: "#e11d48" };
+const ST_OFF_PILL = {
+  display: "inline-flex", marginLeft: "8px", padding: "1px 8px", borderRadius: "999px",
+  background: "#e11d48", color: "#fff", fontSize: "11px", fontWeight: 700,
+  letterSpacing: "0.04em", verticalAlign: "middle", whiteSpace: "nowrap",
+};
+
+/* How an exempt account looks: light blue instead of red, an "Exempt" tag,
+   and a line saying it cannot be turned off. No switch is offered. */
+const ST_EX_ROW = { outline: "2px solid #7dd3fc", outlineOffset: "-2px", background: "rgba(56,189,248,0.12)" };
+const ST_EX_PILL = {
+  display: "inline-flex", marginLeft: "8px", padding: "1px 8px", borderRadius: "999px",
+  background: "#7dd3fc", color: "#0c4a6e", fontSize: "11px", fontWeight: 700,
+  letterSpacing: "0.04em", verticalAlign: "middle", whiteSpace: "nowrap",
+};
+const ST_EX_NOTE = { color: "#0ea5e9", fontSize: "12px", fontWeight: 600 };
+const ST_EX_CHIP = {
+  display: "inline-flex", alignItems: "center", gap: "8px", padding: "4px 6px 4px 12px", borderRadius: "999px",
+  background: "rgba(56,189,248,0.14)", border: "1px solid #7dd3fc", fontSize: "13px", fontWeight: 600,
+};
+
 /* One series, so the colour job is magnitude, not identity: the default
    sequential blue, stepped for each surface. Both steps clear the 3:1
    contrast gate against the surface they sit on. */
@@ -90,9 +114,31 @@ function stUseDark() {
   return dark;
 }
 
+function StStat(props) {
+  return __JSX__.jsxs("div", {
+    className: "rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3",
+    children: [
+      __JSX__.jsx("div", {
+        className: "text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400",
+        children: props.label,
+      }),
+      __JSX__.jsx("div", {
+        className: "text-2xl font-bold tabular-nums text-slate-900 dark:text-white",
+        children: props.value,
+      }),
+    ],
+  });
+}
+
+/* 0 a week means they are taking the week off. */
+function stWeekOff(p) {
+  return p.callsPerWeek === 0 || p.callsPerWeek === "0";
+}
+
 function StPanel() {
   const [rows, setRows] = __REACT__.useState(null);
-  const [state, setState] = __REACT__.useState({ off: {}, log: [] });
+  const [state, setState] = __REACT__.useState({ off: {}, log: [], exempt: {} });
+  const [pick, setPick] = __REACT__.useState("");
   const [err, setErr] = __REACT__.useState("");
   const [busy, setBusy] = __REACT__.useState(false);
   const [window30, setWindow30] = __REACT__.useState(true);
@@ -109,10 +155,10 @@ function StPanel() {
       ]);
       let list = [];
       if (a && a.value) { try { list = JSON.parse(a.value); } catch { list = []; } }
-      let st = { off: {}, log: [] };
-      if (b && b.value) { try { st = JSON.parse(b.value); } catch { st = { off: {}, log: [] }; } }
+      let st = { off: {}, log: [], exempt: {} };
+      if (b && b.value) { try { st = JSON.parse(b.value); } catch { st = { off: {}, log: [], exempt: {} }; } }
       setRows(Array.isArray(list) ? list : []);
-      setState({ off: st.off || {}, log: Array.isArray(st.log) ? st.log : [] });
+      setState({ off: st.off || {}, log: Array.isArray(st.log) ? st.log : [], exempt: st.exempt || {} });
       setErr("");
     } catch (e) {
       setRows([]);
@@ -146,14 +192,19 @@ function StPanel() {
       (a.last || a.first).localeCompare(b.last || b.first));
   }, [rows]);
 
-  async function write(next) {
+  /* Every change keeps whatever it does not mention, so switching someone
+     off never drops the exempt list and the other way round. */
+  async function write(change) {
+    const next = Object.assign({ off: {}, log: [], exempt: {} }, state, change);
     setState(next);
     try { await __STORE__.set(ST_KEY, JSON.stringify(next)); setErr(""); }
     catch (e) { setErr("That did not save: " + String((e && e.message) || e)); }
   }
 
+  const exempt = state.exempt || {};
+
   function switchOff(p) {
-    if (state.off[p.email]) return;
+    if (state.off[p.email] || exempt[p.email]) return;
     const at = new Date().toISOString();
     write({
       off: Object.assign({}, state.off, { [p.email]: { date: today, at } }),
@@ -189,6 +240,33 @@ function StPanel() {
     write({ off: {}, log });
   }
 
+  /* Exempt agents are never switched off. Adding someone who is off right
+     now turns them back on in the same save. */
+  function addExempt(email) {
+    if (!email || exempt[email]) return;
+    const at = new Date().toISOString();
+    const off = Object.assign({}, state.off);
+    let log = state.log;
+    if (off[email]) {
+      delete off[email];
+      let closed = false;
+      log = state.log.map((e) => {
+        if (closed || e.email !== email || e.onAt) return e;
+        closed = true;
+        return Object.assign({}, e, { onAt: at });
+      });
+    }
+    write({ off, log, exempt: Object.assign({}, exempt, { [email]: { at } }) });
+    setPick("");
+  }
+
+  function removeExempt(email) {
+    if (!exempt[email]) return;
+    const next = Object.assign({}, exempt);
+    delete next[email];
+    write({ exempt: next });
+  }
+
   function copyLink() {
     const done = () => { setCopied(true); setTimeout(() => setCopied(false), 1800); };
     const fallback = () => {
@@ -222,6 +300,21 @@ function StPanel() {
   const cell = "px-3 py-2 text-sm text-slate-900 dark:text-white";
   const btn = "rounded-md border border-slate-200 dark:border-slate-800 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800";
   const card = "rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900";
+
+  /* -------------------------------------------------------- the totals
+     Active is everyone who has signed, minus anyone taking the week off.
+     The calls figure adds up what those active agents asked for. */
+  const active = people.filter((p) => !stWeekOff(p));
+  const totalCalls = active.reduce((t, p) => t + (Number(p.callsPerWeek) || 0), 0);
+  const stats = __JSX__.jsxs("div", {
+    className: "grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3",
+    children: [
+      __JSX__.jsx(StStat, { label: "Agents taking calls this week", value: active.length }, "a"),
+      __JSX__.jsx(StStat, { label: "Calls to route this week", value: totalCalls }, "d"),
+      __JSX__.jsx(StStat, { label: "Starting at 10:00 AM", value: active.filter((p) => p.startTime === ST_SLOTS[0]).length }, "b"),
+      __JSX__.jsx(StStat, { label: "Starting at 11:00 AM", value: active.filter((p) => p.startTime === ST_SLOTS[1]).length }, "c"),
+    ],
+  });
 
   /* --------------------------------------------------------- the link */
   const linkCard = __JSX__.jsxs("div", {
@@ -282,6 +375,62 @@ function StPanel() {
     ],
   });
 
+  /* ------------------------------------------------------ exempt agents */
+  const exemptPeople = people.filter((p) => exempt[p.email]);
+  const canAdd = people.filter((p) => !exempt[p.email]);
+  const exemptCard = __JSX__.jsxs("div", {
+    className: card + " p-4 mb-3",
+    children: [
+      __JSX__.jsx("h3", {
+        className: "text-sm font-semibold text-slate-900 dark:text-white",
+        children: "Exempt from start times",
+      }, "a"),
+      __JSX__.jsx("p", {
+        className: "text-sm text-slate-600 dark:text-slate-300 mt-1 mb-3",
+        children: "Agents here are never switched off for missing their start time. Their row shows in light blue with no switch.",
+      }, "b"),
+      exemptPeople.length
+        ? __JSX__.jsx("div", {
+            className: "flex items-center gap-2 flex-wrap mb-3",
+            children: exemptPeople.map((p) => __JSX__.jsxs("span", {
+              style: ST_EX_CHIP,
+              children: [
+                __JSX__.jsx("span", { className: "text-slate-900 dark:text-white", children: p.name }, "n"),
+                __JSX__.jsx("button", {
+                  onClick: () => removeExempt(p.email),
+                  className: btn + " text-xs",
+                  title: "Remove " + p.name + " from the exempt list",
+                  children: "Remove",
+                }, "x"),
+              ],
+            }, p.email)),
+          }, "l")
+        : __JSX__.jsx("p", {
+            className: "text-sm text-slate-500 dark:text-slate-400 mb-3",
+            children: "Nobody is exempt yet.",
+          }, "l"),
+      __JSX__.jsxs("div", {
+        className: "flex items-center gap-2 flex-wrap",
+        children: [
+          __JSX__.jsxs("select", {
+            value: pick,
+            onChange: (e) => setPick(e.target.value),
+            className: "flex-1 min-w-0 rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-sm text-slate-900 dark:text-white",
+            children: [
+              __JSX__.jsx("option", { value: "", children: canAdd.length ? "Choose an agent to exempt…" : "Everyone is already exempt" }, "_"),
+              ...canAdd.map((p) => __JSX__.jsx("option", { value: p.email, children: p.name + " — " + p.email }, p.email)),
+            ],
+          }, "s"),
+          __JSX__.jsx("button", {
+            onClick: () => addExempt(pick), disabled: !pick,
+            className: "rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60",
+            children: "Add exempt agent",
+          }, "b"),
+        ],
+      }, "f"),
+    ],
+  });
+
   /* --------------------------------------------------------- the groups */
   function group(slot) {
     const mine = people.filter((p) => p.startTime === slot);
@@ -326,15 +475,30 @@ function StPanel() {
                 __JSX__.jsx("tbody", {
                   children: mine.map((p) => {
                     const off = state.off[p.email];
+                    const ex = !!exempt[p.email];
+                    /* A switched-off account is boxed in red, name and all, so it
+                       reads as disabled at a glance. Inline styles, not Tailwind,
+                       because the compiled stylesheet only has the classes the
+                       original board used. */
                     return __JSX__.jsxs("tr", {
                       className: "border-b border-slate-200 dark:border-slate-800",
+                      style: ex ? ST_EX_ROW : off ? ST_OFF_ROW : undefined,
                       children: [
-                        __JSX__.jsx("td", { className: cell + " font-semibold", children: p.first || "—" }, "f"),
-                        __JSX__.jsx("td", { className: cell, children: p.last || "—" }, "l"),
+                        __JSX__.jsxs("td", {
+                          className: cell + " font-semibold",
+                          style: off ? ST_OFF_NAME : undefined,
+                          children: [
+                            p.first || "—",
+                            off ? __JSX__.jsx("span", { style: ST_OFF_PILL, children: "Disabled" }, "d") : null,
+                            ex ? __JSX__.jsx("span", { style: ST_EX_PILL, children: "Exempt" }, "x") : null,
+                          ],
+                        }, "f"),
+                        __JSX__.jsx("td", { className: cell, style: off ? ST_OFF_NAME : undefined, children: p.last || "—" }, "l"),
                         __JSX__.jsxs("td", {
                           className: cell + " text-slate-600 dark:text-slate-300",
                           children: [
                             __JSX__.jsx("div", { className: "truncate", children: p.email }, "a"),
+                            ex ? __JSX__.jsx("div", { style: ST_EX_NOTE, children: "User is exempt from being turned off" }, "x") : null,
                             p.busyDays.length ? __JSX__.jsxs("div", {
                               className: "text-xs text-amber-600 dark:text-amber-400 truncate",
                               children: ["Busy ", p.busyDays.join(", "), p.busyPart ? " · " + p.busyPart : ""],
@@ -348,7 +512,7 @@ function StPanel() {
                         }, "e"),
                         __JSX__.jsx("td", {
                           className: cell + " text-right tabular-nums text-slate-600 dark:text-slate-300",
-                          children: p.callsPerWeek == null || p.callsPerWeek === "" ? "—" : p.callsPerWeek,
+                          children: stWeekOff(p) ? "Week off" : (p.callsPerWeek == null || p.callsPerWeek === "" ? "—" : p.callsPerWeek),
                         }, "w"),
                         __JSX__.jsx("td", {
                           className: cell + " text-right",
@@ -360,8 +524,13 @@ function StPanel() {
                                 style: { whiteSpace: "nowrap" },
                                 children: ["off ", off.date === today ? stTime(off.at) : stDayLabel(off.date)],
                               }, "w"),
-                              __JSX__.jsx("button", {
+                              ex ? __JSX__.jsx("span", {
+                                style: Object.assign({}, ST_EX_PILL, { marginLeft: 0, padding: "4px 10px" }),
+                                title: "Exempt agents cannot be switched off",
+                                children: "Exempt",
+                              }, "x") : __JSX__.jsx("button", {
                                 onClick: () => (off ? switchOn(p) : switchOff(p)),
+                                style: { whiteSpace: "nowrap" },
                                 className: off
                                   ? "rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white"
                                   : btn + " text-xs",
@@ -486,8 +655,10 @@ function StPanel() {
 
   return __JSX__.jsxs("div", {
     children: [
+      stats,
       linkCard,
       banner,
+      exemptCard,
       err && __JSX__.jsx("div", {
         className: card + " px-4 py-3 mb-3 text-sm text-rose-600 dark:text-rose-400",
         children: err,

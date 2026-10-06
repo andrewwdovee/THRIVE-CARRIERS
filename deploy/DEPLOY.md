@@ -240,7 +240,7 @@ New since the rest of this file. Three pieces:
 | `onboarding/start-time.html` | the start-times board at `/start-time` — who is on at 10 and who at 11, and where an agent changes their own |
 | `POST /onboarding/submit` on the worker | no token, because the signer has no account yet |
 | `POST /onboarding/preferences` | no token either; it can only change a handful of fields on a row that already exists |
-| `GET /onboarding/roster` | no token; names, start times, volumes and busy days, and nothing else |
+| `GET /onboarding/roster` | no token; names, start times, busy days and whether the board has them switched off, and nothing else |
 | the **Onboarding** tab on the board | the link to send, and the grid of who has signed what |
 | the **Start times** tab | the settings link, the morning switch-off list, and who ends up off most often |
 
@@ -341,14 +341,14 @@ layer onto a bundle that already carries one of the two tabs but not the other.
 | `onboarding/doc/<id>` | one signed agreement, with the signature and the photo |
 | `starttimes/state` | who is switched off right now, and every switch-off ever |
 
-A start time, a weekly volume (15, 25, 35 or 50), busy days with an AM/PM/all-day
+A start time, a weekly volume (15, 25, 35, 50, or 0 for a week off), busy days with an AM/PM/all-day
 marker, and a note all live on the submission row, so the Start times tab reads them
 without a second fetch. `POST /onboarding/preferences` is the only thing that writes
 them, it can only touch those fields on a row that already exists, and it stamps
 every change and keeps the last ten.
 
 `GET /onboarding/roster` is what the public board reads. It is deliberately narrow:
-name, start time, volume, busy days. **The email never comes down it** — the email
+name, start time, busy days, and an off flag from the Start times tab. Volumes stay on the Lead Tech board. **The email never comes down it** — the email
 is what lets somebody change a row through the route above, so publishing it beside
 everyone's name would be handing out the edit key for the whole floor. Nor do the
 phone number, the NPN, the note or the agreements. There is a test that fails if any
@@ -420,3 +420,24 @@ signing page and the patched board were both driven in a real browser.
 against real KV, and its routing and CORS handling are unverified. Deploy it under a
 throwaway name first and run the step 4 smoke tests before pointing the live board at
 it.
+
+
+## Stripe orders
+
+Every Stripe payment (the marketplace's Payment Links included) lands on the
+Lead Tech board on its own, about fifteen seconds after it is paid.
+
+1. Stripe Dashboard -> Developers -> Webhooks -> Add destination.
+   - Endpoint URL: `https://thrive-relay.aandrewdavidson.workers.dev/stripe/webhook`
+   - API version: `2024-06-20` if Stripe offers the choice.
+   - Events: `checkout.session.completed`, `charge.succeeded`, `charge.failed`,
+     `charge.refunded`, `charge.dispute.created`, `invoice.payment_succeeded`,
+     `invoice.payment_failed`, `customer.subscription.deleted`.
+2. Copy its signing secret (`whsec_...`) and run
+   `npx wrangler secret put STRIPE_WEBHOOK_SECRET`.
+3. Developers -> API keys -> Create restricted key, with **Read** on
+   Checkout Sessions, Charges, Customers, Products and Prices, and nothing
+   else. Run `npx wrangler secret put STRIPE_SECRET_KEY` and paste it.
+   This is what names a Payment Link order ("Transfers Starter") instead
+   of leaving it in Needs triage.
+4. `npx wrangler deploy`, then open `/health`: `"webhook": true`.

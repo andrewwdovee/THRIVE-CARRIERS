@@ -132,6 +132,21 @@ let tr = readFileSync(join(here, "training.html"), "utf8");
 tr = one(tr, 'var ENTITY = "Thrive Companies LLC";', `var ENTITY = ${JSON.stringify(entity)};`, "training.html");
 tr = one(tr, 'var LOGOS = {};', `var LOGOS = ${JSON.stringify(logos)};`, "training.html");
 
+/* The links hub at /links: every page and server, to open or copy. */
+let lk = readFileSync(join(here, "links.html"), "utf8");
+lk = one(lk, 'var ENTITY = "Thrive Companies LLC";', `var ENTITY = ${JSON.stringify(entity)};`, "links.html");
+lk = one(lk, 'var LOGOS = {};', `var LOGOS = ${JSON.stringify(logos)};`, "links.html");
+
+/* The two Discord servers at /discord, which step 7 of /welcome opens. */
+let dc = readFileSync(join(here, "discord.html"), "utf8");
+dc = one(dc, 'var ENTITY = "Thrive Companies LLC";', `var ENTITY = ${JSON.stringify(entity)};`, "discord.html");
+dc = one(dc, 'var LOGOS = {};', `var LOGOS = ${JSON.stringify(logos)};`, "discord.html");
+
+/* The Lead Tech Marketplace at /marketplace: every product, priced. */
+let mk = readFileSync(join(here, "marketplace.html"), "utf8");
+mk = one(mk, 'var ENTITY = "Thrive Companies LLC";', `var ENTITY = ${JSON.stringify(entity)};`, "marketplace.html");
+mk = one(mk, 'var LOGOS = {};', `var LOGOS = ${JSON.stringify(logos)};`, "marketplace.html");
+
 let wc = readFileSync(join(here, "welcome.html"), "utf8");
 wc = one(wc, 'var ENTITY = "Thrive Companies LLC";', `var ENTITY = ${JSON.stringify(entity)};`, "welcome.html");
 wc = one(wc, 'var RULES_URL = "https://thrive-inbound.pages.dev/";', `var RULES_URL = ${JSON.stringify(rules)};`, "welcome.html");
@@ -148,6 +163,39 @@ for (const [f, varName] of EXTRA_LINKS) {
   if (v) wc = one(wc, `var ${varName} = "${here}";`, `var ${varName} = ${JSON.stringify(v)};`, "welcome.html");
 }
 
+/* Tab icons and link previews: the Thrive V on every Thrive page, the Lead
+   Tech mark on the marketplace. The icons are written out as real files next
+   to each page (favicon.png, apple-touch-icon.png) because Messages on an
+   iPhone fetches the icon by address for its link preview and cannot read
+   one inlined into the page. The og: tags give the preview its title and
+   description. The images live in favicons.json, beside the logos. */
+const favs = JSON.parse(readFileSync(join(here, "favicons.json"), "utf8"));
+const png = (k) => Buffer.from(favs[k].split(",")[1], "base64");
+const attr = (v) => v.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+const KIND = {};
+const favicon = (html, kind, name) => {
+  const title = (html.match(/<title>([^<]*)<\/title>/) || [, ""])[1];
+  const desc = (html.match(/<meta name="description" content="([^"]*)"/) || [, ""])[1];
+  return one(html, "</head>",
+    `<link rel="icon" type="image/png" sizes="64x64" href="favicon.png">\n` +
+    `<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">\n` +
+    `<meta property="og:type" content="website">\n` +
+    `<meta property="og:site_name" content="${kind === "Lead" ? "Lead Tech" : "Thrive Companies"}">\n` +
+    `<meta property="og:title" content="${attr(title)}">\n` +
+    (desc ? `<meta property="og:description" content="${desc}">\n` : "") +
+    `</head>`, name);
+};
+out = favicon(out, "Thrive", "index.html");
+st = favicon(st, "Thrive", "start-time.html");
+wc = favicon(wc, "Thrive", "welcome.html");
+tr = favicon(tr, "Thrive", "training.html");
+stp = favicon(stp, "Thrive", "states.html");
+lk = favicon(lk, "Thrive", "links.html");
+dc = favicon(dc, "Thrive", "discord.html");
+mk = favicon(mk, "Lead", "marketplace.html");
+Object.assign(KIND, { "": "Thrive", "start-time": "Thrive", welcome: "Thrive", training: "Thrive",
+  states: "Thrive", links: "Thrive", discord: "Thrive", marketplace: "Lead" });
+
 const dist = join(here, "dist");
 mkdirSync(dist, { recursive: true });
 const name = preview && !relay ? "preview.html" : "index.html";
@@ -160,12 +208,25 @@ mkdirSync(join(dist, "training"), { recursive: true });
 writeFileSync(join(dist, "training", name), tr);
 mkdirSync(join(dist, "states"), { recursive: true });
 writeFileSync(join(dist, "states", name), stp);
+mkdirSync(join(dist, "links"), { recursive: true });
+writeFileSync(join(dist, "links", name), lk);
+mkdirSync(join(dist, "discord"), { recursive: true });
+writeFileSync(join(dist, "discord", name), dc);
+mkdirSync(join(dist, "marketplace"), { recursive: true });
+writeFileSync(join(dist, "marketplace", name), mk);
+for (const [dir, kind] of Object.entries(KIND)) {
+  writeFileSync(join(dist, dir, "favicon.png"), png("fav" + kind));
+  writeFileSync(join(dist, dir, "apple-touch-icon.png"), png("fav" + kind + "180"));
+}
 
 console.log(`Wrote onboarding/dist/${name}  (${(out.length / 1024).toFixed(0)} KB)
   and  onboarding/dist/start-time/${name}  (${(st.length / 1024).toFixed(0)} KB)  ->  <url>/start-time
   and  onboarding/dist/welcome/${name}     (${(wc.length / 1024).toFixed(0)} KB)  ->  <url>/welcome
   and  onboarding/dist/training/${name}    (${(tr.length / 1024).toFixed(0)} KB)  ->  <url>/training
   and  onboarding/dist/states/${name}      (${(stp.length / 1024).toFixed(0)} KB)  ->  <url>/states
+  and  onboarding/dist/links/${name}       (${(lk.length / 1024).toFixed(0)} KB)  ->  <url>/links
+  and  onboarding/dist/discord/${name}     (${(dc.length / 1024).toFixed(0)} KB)  ->  <url>/discord
+  and  onboarding/dist/marketplace/${name} (${(mk.length / 1024).toFixed(0)} KB)  ->  <url>/marketplace
   relay   ${relay || "(none — preview, submissions go nowhere)"}
   entity  ${entity}
   state   ${state}

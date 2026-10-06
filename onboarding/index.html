@@ -47,7 +47,7 @@ body::before{
 }
 /* The mark alone, not the full lockup: the words "Thrive Companies"
    are the heading right underneath it. */
-.marks img.thrive{height:86px; width:auto}
+.marks img.thrive{height:64px; width:auto}
 .marks img.lead{height:14px; width:auto}
 .marks .by{
   display:flex; align-items:center; gap:9px;
@@ -132,6 +132,11 @@ input:focus,textarea:focus,select:focus{outline:2px solid rgba(240,180,41,.55); 
   padding:13px 16px; margin:0 0 13px;
 }
 .paper .flag p:last-child{margin:0}
+.paper dl.ci{display:grid; grid-template-columns:max-content 1fr; gap:6px 16px; margin:0 0 12px; font-size:14px}
+.paper dl.ci div{display:contents}
+.paper dl.ci dt{color:var(--paper-muted); font-weight:600}
+.paper dl.ci dd{margin:0; color:var(--paper-ink); font-weight:600; border-bottom:1px solid var(--paper-line); min-width:0; overflow-wrap:anywhere}
+@media (max-width:620px){ .paper dl.ci{grid-template-columns:1fr; gap:2px} .paper dl.ci dd{margin-bottom:8px} }
 .paper hr{border:0; border-top:1px solid var(--paper-line); margin:22px 0}
 .execd{
   background:#E7EFFA; border:1px solid #BBD0EC; border-left:3px solid #2F6FE0;
@@ -252,7 +257,7 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
   .drop{flex-direction:column; align-items:flex-start}
   .signrow{grid-template-columns:1fr}
   .marks{gap:14px}
-  .marks img.thrive{height:72px}
+  .marks img.thrive{height:56px}
   .marks .by{padding-left:14px}
 }
 
@@ -280,6 +285,16 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
     border-bottom:1px solid #999!important; border-radius:0!important; padding:4px 0!important;
   }
   .drop{border:0; padding:0}
+}
+/* ------------------------------------------------------------ phones
+   The headshot sits beside its button instead of above it, the agreements
+   scroll in a shorter box, and the submit button spans the screen. */
+@media (max-width:620px){
+  .masthead{padding-top:30px}
+  .drop{flex-direction:row; align-items:center}
+  .paper{max-height:320px}
+  .submitbar{display:grid; gap:10px}
+  .submitbar .btn{width:100%; justify-content:center; padding:13px 18px}
 }
 </style>
 </head>
@@ -364,141 +379,136 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
       <h2>3 &middot; The Lead Tech agreement</h2>
       <p class="sub">Read it to the end. The checkbox opens when you get there.</p>
 
-      <article class="paper" id="paper" tabindex="0" aria-label="Lead Tech Marketing Agreement">
+      <article class="paper" id="paper" tabindex="0" aria-label="Lead Tech Marketing Services Agreement">
         <div class="doctop">
           <img id="doc-lead" alt="Lead Tech">
           <span class="v" id="paper-date"></span>
         </div>
-        <h3>Lead Tech Marketing Agreement</h3>
-        <p>
-          This agreement is between <b data-entity>Thrive Companies</b> ("Thrive", "we",
-          "us"), which operates the Lead Tech inbound call platform, and the person or
-          business named on this form ("you"). It takes effect on the date you sign it.
-        </p>
+        <h3>Marketing Services Agreement</h3>
+        <p class="meta" style="margin-bottom:12px">Business-to-Business Marketing, Lead Generation &amp; Technology Services</p>
+        <p>This Marketing Services Agreement (the “Agreement”) is entered into as of the Effective Date below by and between Lead Tech (“Lead Tech,” “Company,” “we,” “us,” or “our”) and the client identified below (“Client,” “you,” or “your”).</p>
 
-        <h4>1 &middot; What you are buying</h4>
-        <p>
-          Thrive buys advertising, answers the calls that advertising generates, and
-          transfers qualified callers to you. Depending on what you have ordered that may
-          include:
-        </p>
+        <h4>1 &middot; Client information</h4>
+        <!-- Filled in live from the full name and date typed in step 4. -->
+        <dl class="ci">
+          <div><dt>Client / Legal Business Name</dt><dd id="ci-business">&mdash;</dd></div>
+          <div><dt>Effective Date</dt><dd id="ci-date">&mdash;</dd></div>
+        </dl>
+
+        <h4>2 &middot; Purpose and scope of services</h4>
+        <p>Lead Tech provides marketing, advertising, lead-generation, inbound-call, recruiting-advertising, software, automation, technology, and related marketing services. Services may include, without limitation:</p>
         <ul>
-          <li><b>Google Calls Subscription</b> — inbound calls from paid search, routed to your line.</li>
-          <li><b>Inbound Final Expense Transfers</b> — live transfers from the inbound desk, to a daily cap.</li>
-          <li><b>Individual Call</b> — a single transferred call, billed on its own.</li>
-          <li><b>Recruiting Ad Campaign</b> — a campaign run on your behalf to recruit producers.</li>
-          <li><b>Instagram Software</b> — access to the messaging software and its templates.</li>
+          <li>Lead generation and lead acquisition;</li>
+          <li>Inbound calls and call-generation campaigns;</li>
+          <li>Advertising campaigns on third-party platforms;</li>
+          <li>Recruiting advertisements and recruiting funnels;</li>
+          <li>Social-media and Instagram-related marketing tools or software;</li>
+          <li>Landing pages, portals, forms, websites, funnels, and inbound systems;</li>
+          <li>Marketing automation, CRM integrations, tracking systems, and workflows;</li>
+          <li>Ad creatives, copy, keywords, targeting strategies, campaign structures, and related marketing assets; and</li>
+          <li>Other services specifically described in an order, proposal, invoice, statement of work, or written communication accepted by the parties.</li>
         </ul>
-        <p>
-          What you have ordered, its price and its billing cycle are recorded on your
-          account and on your Stripe receipts. Those records control.
-        </p>
+        <p>The specific services, quantities, campaign budgets, setup fees, recurring fees, and other commercial terms may be set forth in an invoice, proposal, order form, statement of work, or other written agreement incorporated into this Agreement.</p>
 
-        <h4>2 &middot; Ad spend is spent</h4>
-        <div class="flag">
-          <p>
-            <b>Most of what you pay is advertising spend, and it is paid out to Google and
-            the other ad platforms within hours of your payment clearing. Once it is spent
-            it is gone. It cannot be recalled by Thrive, by you, by your bank, or by
-            Google.</b>
-          </p>
-        </div>
-        <p>
-          <b>(a) Ad spend is non-refundable.</b> Once a campaign has run, the money behind
-          it is not recoverable and will not be returned, in whole or in part — including
-          on a decision to stop, a change of mind, a change in your licensing, poor call
-          outcomes, or your own close rate.
-        </p>
-        <p>
-          <b>(b) You agree not to charge back ad spend.</b> You will not start, and will
-          not ask anyone else to start, a chargeback, payment dispute, ACH return or
-          reversal against Thrive for any charge that is or includes advertising spend. If
-          you think you have been charged in error you will raise it with us first, in
-          writing, and give us ten (10) business days to put it right.
-        </p>
-        <p>
-          <b>(c) If a chargeback is filed anyway.</b> It is a breach of this agreement, and
-          we may suspend call delivery and every other service on your account at once, set
-          the disputed amount off against any wallet balance or credit you hold, and recover
-          that amount together with the card network's dispute fee and our reasonable costs
-          of collection. The account stays suspended until the balance is settled.
-        </p>
-        <p>
-          <b>(d) This is not a waiver of fraud protection.</b> Nothing here asks you to
-          give up a dispute over a charge you did not authorise, a duplicate charge, or a
-          charge for something never delivered. Those are section 4, and we refund them.
-        </p>
+        <h4>3 &middot; Marketing budgets and third-party platform spend</h4>
+        <p>Client understands and acknowledges that amounts designated for advertising, lead acquisition, inbound calls, software, media placement, platform fees, or other third-party services may be committed or spent by Lead Tech on Client’s behalf.</p>
+        <p>Such funds may be paid to, deposited with, or otherwise committed to third-party advertising platforms, publishers, lead vendors, software providers, call providers, technology providers, or other service providers.</p>
+        <p>Once Lead Tech has incurred, committed, allocated, or spent funds in connection with Client’s campaign or requested services, those funds may be non-refundable to the extent they have been spent or are non-recoverable by Lead Tech.</p>
+        <p>Lead Tech will not be responsible for refunds resulting from a third party’s policies, platform decisions, rejected advertisements, lead quality disputes, account restrictions, outages, or other matters outside Lead Tech’s reasonable control, except to the extent otherwise expressly agreed in writing.</p>
+        <p>Client authorizes Lead Tech to use the applicable marketing budget for the services purchased and acknowledges that marketing results are not guaranteed.</p>
+        <p>Unless expressly stated in writing, Lead Tech does not guarantee any particular number of leads, calls, appointments, recruits, sales, revenue, return on advertising spend, or other business result.</p>
 
-        <h4>3 &middot; The inbound portal rules</h4>
-        <ol>
-          <li><b>The wallet runs the delivery.</b> Calls are delivered against a funded
-            wallet. At zero, delivery stops. Topping up restarts it. We do not deliver on
-            credit.</li>
-          <li><b>Payment is due the day it is raised.</b> An invoice unpaid after 12 hours
-            is past due, and a past-due account is paused: routing off for a subscription,
-            spend paused for a campaign.</li>
-          <li><b>You take the calls.</b> Transfers start at the time you chose on this form
-            and run through the day. A call you do not answer is still delivered and still
-            billable. Tell us before your hours change.</li>
-          <li><b>Licensing is yours to keep current.</b> Accept transfers only in states
-            where you hold an active, appointed licence. Tell us the same day one lapses and
-            we will stop routing those states.</li>
-          <li><b>Caps and coverage are set in writing.</b> Your daily transfer cap and
-            coverage area are recorded on your account. Ask for a change; never assume one
-            we have not confirmed.</li>
-          <li><b>Calls are recorded</b>, for quality and for settling disputes. Taking
-            transfers is your consent to that, and you confirm your own use of the
-            recordings follows the law in the states you work.</li>
-          <li><b>The callers are yours to work, not to sell.</b> You may not resell, share,
-            syndicate or re-transfer them to another agency, agent or lead buyer.</li>
-          <li><b>One account, one agency.</b> Your login and your routing are yours. Do not
-            share them.</li>
-          <li><b>Do not contact the ad platforms about our campaigns.</b> The ad accounts
-            are ours. Contacting Google about them, or complaining against them, is a breach
-            of this agreement.</li>
-          <li><b>Changes and cancellation.</b> Cancel a subscription in writing before the
-            next billing date. Cancelling mid-cycle stops delivery; ad spend already
-            committed for that cycle is not returned (section 2). Pro-rata credits are
-            section 4.</li>
-          <li><b>Raising a problem.</b> Email the fulfilment desk. We log it, listen back
-            and come back to you, and every credit decision is recorded on your account.</li>
-        </ol>
+        <h4>4 &middot; Payment; no improper chargebacks or payment disputes</h4>
+        <p>Client agrees to pay all invoices, deposits, setup fees, recurring fees, campaign budgets, and other amounts when due.</p>
+        <p>Client acknowledges that Lead Tech may immediately begin work, reserve advertising inventory, purchase leads, commit third-party resources, create technology, or incur other expenses after payment or authorization.</p>
+        <p>Client agrees not to initiate or encourage a fraudulent, deceptive, or improper chargeback, payment reversal, or payment dispute for services that Lead Tech has provided, commenced, purchased, reserved, committed, or performed.</p>
+        <p>Before initiating any payment dispute concerning an amount that Client genuinely believes is erroneous, Client agrees to notify Lead Tech in writing and provide Lead Tech a reasonable opportunity to investigate and resolve the issue.</p>
+        <p>Nothing in this Agreement is intended to waive or restrict any non-waivable rights or remedies that Client may have under applicable law or the rules governing the applicable payment method.</p>
+        <p>If a chargeback or payment reversal is initiated in violation of this Agreement and Lead Tech incurs fees, penalties, administrative costs, or other losses as a result, Lead Tech may seek recovery of those amounts to the extent permitted by applicable law.</p>
 
-        <h4>4 &middot; What we do refund</h4>
-        <p>Refunded or credited in Stripe, against the recorded account:</p>
+        <h4>5 &middot; Client responsibilities</h4>
         <ul>
-          <li><b>An individual call</b> that was mis-transferred, silent, duplicated, or
-            outside your agreed states or hours — once we have listened back and confirmed it.</li>
-          <li><b>A cancelled membership</b>, pro-rata from the cancellation date, for the
-            part of the fee that is not ad spend.</li>
-          <li><b>Service quality</b>, where we agree with you that we did not deliver what
-            was ordered.</li>
-          <li><b>A duplicate charge</b>, in full, as soon as both charges are visible.</li>
-          <li><b>Goodwill</b>, at our discretion.</li>
+          <li>Client will provide accurate information, approvals, credentials, brand materials, and other items reasonably necessary for Lead Tech to perform the services.</li>
+          <li>Client is responsible for ensuring that information supplied to Lead Tech is accurate and that Client has the right to use any materials, trademarks, images, testimonials, data, or other content supplied to Lead Tech.</li>
+          <li>Client will timely review and approve advertisements, landing pages, scripts, creative materials, and other deliverables when approval is requested.</li>
+          <li>Client will comply with applicable laws, regulations, advertising rules, platform policies, licensing requirements, and industry requirements applicable to Client’s business and offers.</li>
         </ul>
-        <p>
-          Raise a call credit within seven (7) days of the call. After that the recording
-          may have aged out of retention and we cannot verify it.
-        </p>
 
-        <h4>5 &middot; Your details, and your photo</h4>
-        <p>Keep your contact details, licensing and hours current on the account.</p>
-        <p>
-          A headshot is optional and only applies to agents writing under Thrive
-          Companies. If you give us one, we may use it in Thrive Companies marketing —
-          the company leaderboard, agent shout-outs and social posts — for as long as you
-          are with the agency. Ask us and we will stop using it. If you are not an
-          internal agent, no photo is needed and none is kept.
-        </p>
+        <h4>6 &middot; Ownership of Lead Tech intellectual property</h4>
+        <p>Except for Client-owned materials expressly identified in writing, all intellectual property, systems, processes, technology, know-how, campaign structures, templates, methodologies, proprietary information, and other materials created, developed, licensed, or supplied by Lead Tech remain the property of Lead Tech or its licensors.</p>
+        <p>This includes:</p>
+        <ul>
+          <li>Ad creatives, graphic designs, videos, images, copy, scripts, headlines, and marketing concepts;</li>
+          <li>Keywords, targeting methods, campaign structures, audience strategies, and optimization methods;</li>
+          <li>Landing pages, funnels, portals, forms, websites, dashboards, automations, workflows, integrations, and software configurations;</li>
+          <li>Software, code, prompts, systems, databases, templates, documentation, processes, and technical architecture;</li>
+          <li>Lead-routing systems, inbound-call systems, tracking systems, and proprietary marketing infrastructure; and</li>
+          <li>Lead Tech’s methods, strategies, know-how, trade secrets, and other proprietary business information.</li>
+        </ul>
+        <p>Payment for services does not transfer ownership of Lead Tech’s proprietary systems, software, templates, methods, campaign architecture, or intellectual property unless Lead Tech expressly agrees to such transfer in a separate written instrument.</p>
 
-        <h4>6 &middot; General</h4>
-        <p>
-          Governed by the laws of the State of <b data-state>Florida</b>. This is the whole
-          agreement between us about the inbound call platform and it replaces anything
-          said beforehand. If a court finds part of it unenforceable the rest stands. We
-          may change these rules on thirty (30) days' notice; taking calls after that is
-          acceptance.
-        </p>
+        <h4>7 &middot; Limited license to client</h4>
+        <p>Subject to Client’s full and timely payment and continued compliance with this Agreement, Lead Tech may provide Client with a limited, non-exclusive, non-transferable, non-sublicensable license to use certain deliverables solely for Client’s internal business and marketing purposes during the applicable service period.</p>
+        <p>This license does not authorize Client to sell, license, distribute, copy, reverse engineer, reproduce, recreate, or provide Lead Tech materials to another marketing provider for duplication.</p>
+
+        <h4>8 &middot; Non-replication; protection of proprietary marketing systems</h4>
+        <p>During the term of Client’s relationship with Lead Tech and for twelve (12) months after the end of the applicable services, Client will not knowingly, directly or indirectly, use Lead Tech’s confidential or proprietary materials to recreate, duplicate, replicate, reverse engineer, or develop a substantially similar system for Client or for another person or business.</p>
+        <p>This restriction applies to proprietary ad creatives, campaign structures, keyword strategies, targeting systems, inbound portals, call-routing systems, software configurations, automations, workflows, funnels, templates, technical systems, and other proprietary materials provided by Lead Tech.</p>
+        <p>Client also agrees not to provide such materials to a competing agency, contractor, developer, marketing company, or other third party for the purpose of reproducing substantially similar proprietary systems.</p>
+        <p>This section does not prohibit Client from using general knowledge, independently developed materials, or information that is lawfully available to the public without breach of this Agreement.</p>
+        <p>Nothing in this Agreement restricts conduct that applicable law does not permit the parties to restrict.</p>
+
+        <h4>9 &middot; Confidentiality</h4>
+        <p>Each party may receive confidential or proprietary information belonging to the other party.</p>
+        <p>The receiving party will use reasonable care to protect such information and will not disclose it to third parties except to employees, contractors, professional advisers, or service providers who have a legitimate need to know and are subject to appropriate confidentiality obligations.</p>
+        <p>Lead Tech’s confidential information includes, without limitation, pricing structures, vendor information, lead sources, campaign data, software architecture, credentials, customer lists, marketing methods, campaign performance information, technical processes, and other non-public business information.</p>
+
+        <h4>10 &middot; Leads, data, and personal information</h4>
+        <p>Lead Tech and Client will handle lead information and personal information in accordance with applicable law and the parties’ respective obligations.</p>
+        <p>Client is responsible for determining whether its intended use of leads, calls, messages, advertisements, and consumer information complies with applicable federal and state laws, regulations, consent requirements, telemarketing requirements, privacy requirements, and platform rules.</p>
+        <p>Lead Tech may use third-party providers to provide advertising, calling, software, hosting, analytics, CRM, lead distribution, and other services.</p>
+        <p>Client acknowledges that third-party platforms may have their own terms, privacy policies, restrictions, and data practices.</p>
+
+        <h4>11 &middot; Third-party platforms and service providers</h4>
+        <p>Lead Tech may use third-party platforms and vendors in performing the services.</p>
+        <p>Lead Tech is not responsible for a third party’s downtime, policy changes, account suspension, advertising rejection, algorithm changes, pricing changes, technical failures, data loss, or other actions outside Lead Tech’s reasonable control.</p>
+        <p>Lead Tech may substitute comparable vendors or technology when reasonably necessary to perform the services.</p>
+
+        <h4>12 &middot; No guarantee of results</h4>
+        <p>Client acknowledges that marketing and advertising performance depends on numerous factors outside Lead Tech’s control.</p>
+        <p>Unless expressly guaranteed in a written statement signed by Lead Tech, all forecasts, estimates, projections, expected lead volumes, expected call volumes, and performance expectations are estimates only and are not guarantees.</p>
+
+        <h4>13 &middot; Term and termination</h4>
+        <p>This Agreement begins on the Effective Date and continues until terminated in accordance with the applicable service terms or by either party upon written notice, subject to any minimum term, campaign commitment, or cancellation terms stated in an applicable order, proposal, or statement of work.</p>
+        <p>Termination does not eliminate Client’s obligation to pay amounts already due or amounts already committed or incurred for Client’s services.</p>
+        <p>Sections concerning payment obligations, intellectual property, confidentiality, non-replication, limitations of liability, indemnification, dispute resolution, and other provisions that by their nature should survive termination will survive.</p>
+
+        <h4>14 &middot; Indemnification</h4>
+        <p>To the extent permitted by law, Client agrees to defend, indemnify, and hold harmless Lead Tech and its owners, officers, employees, contractors, and agents from claims, losses, damages, liabilities, penalties, costs, and reasonable attorneys’ fees arising out of Client’s products or services, Client-provided materials, Client’s violation of applicable law or platform rules, or Client’s misuse of leads, consumer information, software, or marketing materials.</p>
+
+        <h4>15 &middot; Limitation of liability</h4>
+        <p>To the maximum extent permitted by applicable law, Lead Tech will not be liable for indirect, incidental, special, consequential, exemplary, or punitive damages, including lost profits, lost revenue, lost business opportunities, or loss of data arising from or related to the services.</p>
+        <p>To the maximum extent permitted by law, Lead Tech’s aggregate liability arising from the Agreement will not exceed the amount actually paid by Client to Lead Tech for the specific services giving rise to the claim during the three (3) months preceding the event giving rise to the claim.</p>
+
+        <h4>16 &middot; Dispute resolution and governing law</h4>
+        <p>The parties will first attempt in good faith to resolve any dispute through direct written communication.</p>
+        <p>This Agreement will be governed by the laws of the State of Florida, without regard to conflict-of-law principles, unless applicable law requires otherwise.</p>
+        <p>Any court proceeding permitted under this Agreement will be brought in a court of competent jurisdiction in Florida, unless the parties later agree otherwise in writing.</p>
+        <p>Nothing in this section prevents either party from seeking temporary or emergency equitable relief where necessary to protect confidential information, intellectual property, trade secrets, or other proprietary rights.</p>
+
+        <h4>17 &middot; No waiver; severability</h4>
+        <p>A party’s failure to enforce any provision of this Agreement does not waive that party’s right to enforce the provision later.</p>
+        <p>If any provision is determined to be unenforceable, the remaining provisions will remain in effect, and the unenforceable provision will be modified only to the minimum extent necessary to make it enforceable, to the extent permitted by law.</p>
+
+        <h4>18 &middot; Entire agreement; amendments</h4>
+        <p>This Agreement, together with any applicable proposal, invoice, order form, statement of work, or written service terms incorporated into it, constitutes the entire agreement between the parties regarding the subject matter and supersedes prior discussions or understandings concerning that subject matter.</p>
+        <p>Any amendment must be in writing and accepted by both parties.</p>
+
+        <h4>19 &middot; Electronic signatures</h4>
+        <p>The parties agree that electronic signatures, digital signatures, scanned signatures, and electronically accepted versions of this Agreement may be used and will have the same legal effect as original signatures to the extent permitted by applicable law.</p>
+
+        <h4>20 &middot; Acknowledgment</h4>
+        <p>By signing below, Client acknowledges that Client has read and understands this Agreement; has had an opportunity to ask questions or seek independent legal advice; understands that marketing funds may be spent or committed to third-party platforms and vendors; understands that marketing results are not guaranteed; and agrees to comply with the payment, confidentiality, intellectual-property, and non-replication provisions of this Agreement.</p>
         <hr>
         <p class="meta" id="paper-end">You have reached the end of the agreement.</p>
 
@@ -530,8 +540,9 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
       <div class="agree off" id="agreewrap">
         <input type="checkbox" id="agree" name="agree" disabled>
         <label for="agree">
-          I have read the whole agreement. I understand that advertising spend is
-          non-refundable and I agree not to charge it back.
+          I have read the whole agreement. I understand that marketing funds may be
+          spent with third-party platforms and vendors, that results are not
+          guaranteed, and I agree not to file an improper chargeback.
         </label>
       </div>
       <p class="err" data-err="agree"></p>
@@ -581,102 +592,318 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
       <h2>5 &middot; The Thrive Companies agreement</h2>
       <p class="sub">The agency side. Read it to the end — the checkbox opens when you get there.</p>
 
-      <article class="paper" id="paper2" tabindex="0" aria-label="Thrive Companies Agency Agreement">
+      <article class="paper" id="paper2" tabindex="0" aria-label="Thrive Companies Agent and Manager Agreement">
         <div class="doctop">
           <img id="doc-thrive" alt="Thrive Companies">
           <span class="v" id="paper2-date"></span>
         </div>
-        <h3>Thrive Companies Agency Agreement</h3>
-        <p>
-          This agreement is between <b data-entity>Thrive Companies</b> ("Thrive", "we",
-          "us") and the person named on this form ("you"), and it covers writing under
-          the agency. It sits alongside the Lead Tech Marketing Agreement above; where
-          that one is about buying calls, this one is about the agency relationship.
-        </p>
+        <h3>Thrive Companies Agreement</h3>
+        <p class="meta" style="margin-bottom:6px; font-weight:700; color:var(--paper-ink)">Agent &amp; Manager Onboarding, Confidentiality, Restrictive Covenant, Production-Debt &amp; Hierarchy-Debt Guaranty / Customer-Book Protection Agreement</p>
+        <p class="meta" style="margin-bottom:12px">Florida Governing Law</p>
+        <p>This Agreement is between Thrive Companies LLC (“Thrive”) and the individual signing below, together with any business entity through which that individual contracts, writes insurance business, manages a hierarchy, or participates in the Thrive organization (collectively, “Agent”).</p>
+        <p>The individual signatory is personally bound by the provisions expressly applying to an individual, including the production-debt obligations, personal guaranty, Manager Hierarchy Debt guaranty, confidentiality, restrictive covenant, customer/book protection, and related obligations below.</p>
+        <p>This Agreement addresses only the Thrive insurance brokerage relationship and does not govern separate marketing-service purchases, advertising-service credits, or third-party marketing billing.</p>
 
-        <h4>1 &middot; Your debt is yours</h4>
-        <div class="flag">
-          <p>
-            <b>An advance is a loan against commission you have not earned yet. If the
-            policy charges back, lapses, or never pays, the advance comes back — and it
-            comes back from you.</b>
-          </p>
-        </div>
-        <p>
-          <b>(a) A negative balance is a debt.</b> If chargebacks take your account below
-          zero, that balance is yours. We set it off against future commission first. If
-          you stop writing, move agencies or leave, whatever is left is payable on demand.
-        </p>
-        <p>
-          <b>(b) Rolling it up does not clear it.</b> When a carrier rolls an unpaid
-          balance up the hierarchy — to your upline, or to Thrive — the money moves but
-          the responsibility does not. You still owe it. Thrive, or whoever absorbed it,
-          may recover it from you directly and may set it off against any commission,
-          bonus, override or other payment owed to you, now or later.
-        </p>
-        <p>
-          <b>(c) You will not roll debt up on purpose.</b> That means not writing business
-          you expect to charge back, not writing on people who cannot or will not pay,
-          and not walking away from a negative balance for the upline to absorb. Doing
-          any of those is a breach of this agreement, and the balance becomes immediately
-          due in full.
-        </p>
-        <p>
-          <b>(d) What it costs to collect.</b> If we have to chase a balance, you also
-          cover the reasonable costs of collecting it, including legal fees.
-        </p>
+        <h4>1 &middot; PURPOSE; BROKERAGE ONBOARDING AGREEMENT</h4>
+        <p>This Agreement is intended to be the primary onboarding agreement for agents, managers, representatives, recruiters, and independent contractors who participate in the Thrive organization.</p>
+        <p>It covers brokerage obligations, confidentiality protections, restrictive covenants, data-security rules, production-debt protections, customer/book protections, insurance requirements, intellectual-property ownership, and transaction-continuity provisions.</p>
+        <p>For purposes of the debt and guaranty provisions below, any Agent who now or later has one or more direct or indirect downline agents, managers, representatives, recruits, or contracting entities in the Thrive organization is a “Manager.”</p>
+        <p>Manager obligations become effective automatically when a downline is first placed under Agent, without requiring a separate amendment, unless Thrive requires a separate manager agreement or guaranty.</p>
+        <p>If Agent separately signs a carrier, IMO, FMO, agency, compensation, product-specific, or other controlling agreement, those documents remain effective.</p>
+        <p>If a mandatory carrier or governmental rule conflicts with this Agreement, the mandatory rule controls to the extent required by law.</p>
 
-        <h4>2 &middot; What belongs to Thrive</h4>
-        <p>
-          Everything the agency puts in your hands stays the agency's: scripts, rebuttals,
-          training, recorded calls, the dialer build and its routing, lead sources and what
-          they cost, carrier terms and commission levels, the software and its templates,
-          the artwork, and anything else Thrive made or paid to have made.
-        </p>
-        <p>
-          You may use it while you are with Thrive, and not after. You will not copy it,
-          keep it, publish it, sell it, or take it to another agency, IMO or FMO. Anything
-          you produce for Thrive in the course of the work belongs to Thrive.
-        </p>
+        <h4>2 &middot; CONDITION PRECEDENT TO ACCESS; NO DISCORD ACCESS BEFORE SIGNATURE</h4>
+        <p>Agent may not be given access to Thrive confidential systems, private Discord servers or channels, courses, call recordings, lead systems, training materials, internal documents, CRM data, recruiting systems, manager groups, proprietary links, credentials, dashboards, or other non-public resources until this Agreement has been fully executed and accepted by Thrive.</p>
+        <p>Any manager or agent who invites, admits, shares credentials with, or otherwise provides restricted Thrive access to an unsigned person violates Company policy and may have access suspended.</p>
+        <p>Agent acknowledges: no private Thrive system or Discord access before signature.</p>
 
-        <h4>3 &middot; No recruiting from inside</h4>
-        <div class="flag">
-          <p>
-            <b>While you are with Thrive, and for twelve (12) months after you leave, you
-            will not recruit or solicit any agent, producer or staff member of Thrive
-            Companies to another agency, IMO or FMO — and you will not help anyone else
-            do it.</b>
-          </p>
-        </div>
-        <p>
-          <b>What it costs.</b> For each person you recruit or solicit in breach of this,
-          you will pay Thrive <b>$5,000</b>, plus the reasonable costs of enforcing it.
-          That figure is a genuine pre-estimate of what it costs the agency to replace and
-          retrain somebody — the recruiting, the licensing, the onboarding, the production
-          lost in between — and not a penalty. The actual loss is hard to measure, which is
-          exactly why a figure is agreed up front.
-        </p>
-        <p>
-          <b>What this does not stop.</b> A general advertisement that is not aimed at
-          Thrive's people, and somebody who comes to you entirely on their own without
-          any approach from you or anyone acting for you.
-        </p>
+        <h4>3 &middot; INDEPENDENT CONTRACTOR; NO EMPLOYMENT OR INCOME GUARANTEE</h4>
+        <p>Unless a separate written employment agreement expressly states otherwise, Agent participates as an independent contractor and is responsible for Agent's own taxes, business expenses, licenses, appointments, continuing education, equipment, and lawful conduct.</p>
+        <p>Nothing in this Agreement guarantees income, commissions, production, recruiting results, leads, appointments, calls, sales, revenue, promotions, hierarchy position, or continued participation.</p>
 
-        <h4>4 &middot; Confidentiality</h4>
-        <p>
-          Agent lists and contact details, commission levels, carrier terms, lead costs,
-          client and applicant data — all confidential, while you are here and after you
-          leave. Client data also has its own rules under law, and nothing here reduces
-          them.
-        </p>
+        <h4>4 &middot; LICENSING, INSURANCE COMPLIANCE, AND LAWFUL SALES CONDUCT</h4>
+        <p>Agent must maintain all licenses, appointments, certifications, and authority required for each product and jurisdiction in which Agent conducts business.</p>
+        <p>Agent must follow applicable insurance laws, carrier rules, replacement rules, privacy requirements, telemarketing requirements, do-not-call rules, TCPA requirements, advertising standards, suitability/best-interest duties where applicable, and Thrive compliance policies.</p>
+        <p>Nothing in this Agreement authorizes any unlawful, deceptive, misleading, fraudulent, or noncompliant sales practice.</p>
+        <p>Agent is individually responsible for Agent's own representations, applications, signatures, sales conduct, and handling of consumer information.</p>
 
-        <h4>5 &middot; General</h4>
-        <p>
-          Governed by the laws of the State of <b data-state>Florida</b>. Sections 1 to 4
-          carry on after you leave. If a court finds any part of this unenforceable — the
-          twelve months, or the $5,000 — it may reduce it to what is enforceable rather
-          than striking it out, and the rest stands.
-        </p>
+        <h4>5 &middot; THRIVE PROPRIETARY INFORMATION</h4>
+        <p>“Confidential Information” and “Proprietary Information” include all non-public information that Thrive owns, lawfully controls, or is authorized to protect, whether written, oral, visual, electronic, observed, demonstrated, or accessed through systems, meetings, training, or participation in the Thrive organization, including without limitation:</p>
+        <ul>
+          <li>Sales practices, sales scripts, objection handling, call flows, training methods, coaching methods, underwriting workflows, carrier-placement logic, product-selection logic, presentations, recordings, course videos, documents, and training resources;</li>
+          <li>Recruiting systems, recruiting scripts, setter workflows, recruiting campaigns, manager-development systems, onboarding systems, compensation structures, hierarchy structures, agent lists, recruit lists, team structures, and production data;</li>
+          <li>Thrive lead-distribution, inbound-call handling, call-routing usage, lead-routing usage, customer follow-up, fulfillment, and operational procedures;</li>
+          <li>CRM systems, workflows, automations, databases, portals, dashboards, tracking systems, reports, call recordings, screenshots, screen recordings, credentials, links, system configurations, and technical processes used by Thrive;</li>
+          <li>Customer, prospect, policyholder, lead, applicant, recruit, agent, manager, vendor, carrier, and business-contact information;</li>
+          <li>Company finances, margins, expenses, contracts, legal strategies, business plans, internal communications, operating procedures, meeting content, compensation information, carrier relationships, upline/downline data, and any other non-public Thrive business information.</li>
+        </ul>
+        <p>Information is protected whether or not it is marked “confidential.”</p>
+        <p>Information that is lawfully public through no breach of this Agreement, independently developed without use of Confidential Information, or lawfully received from a third party without a duty of confidentiality is not Confidential Information to the extent Agent can substantiate that status.</p>
+
+        <h4>6 &middot; OWNERSHIP; LIMITED LICENSE; NO COPYING OR REDISTRIBUTION</h4>
+        <p>All Thrive proprietary materials, systems, courses, scripts, training, software configurations, documents, recordings, processes, databases, automations, and other intellectual property remain the property of Thrive and/or its licensors.</p>
+        <p>Agent receives only a limited, revocable, nontransferable right to use authorized materials while participating in the organization and only for authorized business purposes.</p>
+        <p>Agent may not copy, export, scrape, download for unauthorized use, distribute, sell, publish, sublicense, teach outside the organization, upload elsewhere, share links, share credentials, reproduce, modify, reverse engineer, or provide Company materials or systems to another agency, IMO, FMO, lead company, developer, consultant, vendor, competitor, former agent, or other third party without written authorization.</p>
+
+        <h4>7 &middot; STRICT NONDISCLOSURE AND NEED-TO-KNOW USE</h4>
+        <p>Agent must hold Confidential Information in strict confidence, use it only for authorized Thrive business, and disclose it only to persons specifically authorized to receive it.</p>
+        <p>Agent may not use Confidential Information for personal leverage, to compete, to bypass Thrive, to recreate systems, to assist another organization, or to damage Thrive, its managers, agents, carrier relationships, or business relationships.</p>
+        <p>The confidentiality duty applies to conversations, phone calls, texts, email, Instagram, social media, Discord, private groups, screenshots, screen recordings, photographs, documents, demonstrations, software access, video calls, cloud drives, developer access, and any other transmission method.</p>
+        <p>The confidentiality obligations survive termination for as long as the information remains a protectable trade secret, confidential information, or otherwise protected by law, and for at least five (5) years for other non-public Confidential Information to the extent permitted by law.</p>
+        <p>Agent acknowledges the strict Thrive NDA and protected-reporting carve-out.</p>
+
+        <h4>8 &middot; PROTECTED REPORTING; LEGAL RIGHTS; NO RETALIATORY SUPPRESSION</h4>
+        <p>Nothing in this Agreement prohibits or restricts Agent from:</p>
+        <p>(a) making a good-faith report of suspected unlawful conduct to a federal, state, or local governmental agency or regulator with authority over the matter;</p>
+        <p>(b) communicating in confidence with Agent's attorney;</p>
+        <p>(c) responding truthfully to a subpoena, court order, regulatory request, carrier compliance inquiry, or lawful investigation;</p>
+        <p>(d) making disclosures protected by applicable whistleblower, labor, insurance, trade-secret, or other law; or</p>
+        <p>(e) cooperating with government, law-enforcement, regulatory, or authorized carrier-compliance investigations.</p>
+        <p>To the extent legally permitted, Agent should limit any protected disclosure to information reasonably necessary for the lawful purpose and take reasonable steps to preserve unrelated Confidential Information.</p>
+        <p>This section does not authorize theft, unauthorized access, fabrication of evidence, knowingly false statements, defamation, extortion, threats, or disclosure beyond what the law protects.</p>
+        <p>For purposes of the federal Defend Trade Secrets Act, 18 U.S.C. § 1833(b), an individual will not be held liable under federal or state trade-secret law for a confidential disclosure of a trade secret to a government official or attorney solely to report or investigate a suspected violation of law, or for a sealed filing as provided by that statute.</p>
+
+        <h4>9 &middot; INTERNAL COMPLIANCE REPORTING</h4>
+        <p>Agent is encouraged to promptly raise compliance concerns through Thrive's designated compliance or leadership channel so that issues can be investigated and corrected.</p>
+        <p>Internal reporting is not intended to waive or condition any external reporting right that cannot lawfully be conditioned.</p>
+
+        <h4>10 &middot; NO REVERSE ENGINEERING; NO SYSTEM RECREATION</h4>
+        <p>Agent may not decompile, disassemble, reverse engineer, scrape, export, reproduce, deconstruct, map, document for replication, or otherwise attempt to discover or reproduce the underlying structure, workflow, configuration, methodology, or operation of Thrive proprietary systems for the purpose of creating, improving, or assisting a competing or substitute system.</p>
+        <p>Agent may not provide screenshots, recordings, workflows, credentials, documentation, prompts, automations, or system access to a third-party developer or business for that purpose.</p>
+
+        <h4>11 &middot; NON-SOLICITATION OF THRIVE AGENTS, MANAGERS, RECRUITS, AND TEAMS</h4>
+        <p>During Agent's affiliation with Thrive and for twelve (12) months after that affiliation ends, Agent will not, directly or indirectly, for Agent or for any other person or organization, solicit, recruit, induce, encourage, persuade, target for recruitment, or knowingly assist another person in soliciting or recruiting a Thrive agent, manager, representative, contractor, leader, or active recruit to leave Thrive, change hierarchy away from Thrive, join another insurance agency, brokerage, IMO, FMO, marketing organization, or competing organization, or provide services to another such organization.</p>
+        <p>Prohibited solicitation includes attempts made by phone, text, iMessage, email, Instagram, Facebook, TikTok, LinkedIn, X, Discord, WhatsApp, Telegram, Slack, direct message, social-media message, private group, advertisement targeted using Thrive data, in-person communication, intermediary, recruiter, upline, downline, alternate account, or other method.</p>
+        <p>This covenant is intended to protect Thrive's legitimate business interests, including confidential agent/team information, substantial business relationships, goodwill, recruiting investments, specialized training, and organizational stability.</p>
+        <p>It applies at minimum to all persons whose identity, status, contact information, team affiliation, production, recruiting status, or relationship with Thrive became known to Agent through Thrive Confidential Information or Agent's participation in Thrive.</p>
+        <p>General advertising not specifically targeted using Thrive Confidential Information is not prohibited merely because a Thrive-affiliated person independently responds, provided Agent did not directly or indirectly target, invite, induce, or use another person to target that individual.</p>
+        <p>Nothing prohibits conduct that applicable law expressly protects.</p>
+        <p>Agent agrees to the 12-month post-affiliation non-solicitation covenant.</p>
+
+        <h4>12 &middot; NON-INTERFERENCE; PROTECTION OF MANAGERS AND UPLINES</h4>
+        <p>Agent may not use Confidential Information or Company relationships to circumvent, undermine, bypass, or intentionally interfere with established Thrive manager/upline relationships, team structures, recruiting relationships, compensation relationships, carrier relationships, vendor relationships, or other legitimate business relationships.</p>
+        <p>Agent may not redirect Company resources, misappropriate agent relationships, or use another person or entity to do indirectly what Agent is prohibited from doing directly.</p>
+
+        <h4>13 &middot; LIMITED NON-REPLICATION COVENANT</h4>
+        <p>During Agent's affiliation and for twelve (12) months after it ends, Agent will not use Thrive Confidential Information to create, operate, manage, assist, finance, advise, or materially support a competing insurance-agency, recruiting, training, sales, management, or brokerage system that substantially replicates Thrive proprietary methods.</p>
+        <p>This provision does not prohibit Agent from working in the insurance industry using Agent's own independently developed skills, experience, and publicly available information.</p>
+        <p>The parties intend this covenant to be enforced only to the extent reasonably necessary to protect legitimate business interests and to be reformed or narrowed by a court if required by Florida law rather than voided in its entirety.</p>
+
+        <h4>14 &middot; COMPANY DATA; CUSTOMER AND AGENT INFORMATION</h4>
+        <p>Agent may use customer, prospect, policyholder, lead, applicant, agent, recruit, manager, production, compensation, carrier, and internal business data only for authorized Thrive purposes.</p>
+        <p>Agent may not sell, export, download, transfer, retain for competitive use, or distribute Thrive data to unauthorized parties.</p>
+        <p>Upon termination or written request, Agent must cease access and return/delete Thrive data and credentials, subject to legally required recordkeeping and controlling carrier rules.</p>
+
+        <h4>15 &middot; ACCESS CREDENTIALS AND SECURITY</h4>
+        <p>All Thrive logins, course links, dashboards, portal credentials, Discord access, software access, CRM access, and other credentials are personal to the authorized user and may not be shared unless Thrive gives written permission.</p>
+        <p>Agent is responsible for reasonable credential security and must promptly report suspected unauthorized access.</p>
+
+        <h4>16 &middot; WRITING AGENT IS PRIMARY OBLIGOR FOR PRODUCTION DEBT</h4>
+        <p>The individual who writes, submits, places, or causes insurance business to be submitted (the “Writing Agent”) is the primary obligor for all debts and financial obligations attributable to that Writing Agent's production or activity (“Agent Debt”), including carrier chargebacks, commission advances, debit balances, reversals, policy cancellations, lapses, rescissions, unearned commissions, replacement-related reversals, lead balances, lead charges, administrative fees, overpayments, and other properly attributable production-related obligations.</p>
+        <p>Agent Debt remains the Writing Agent's obligation regardless of whether a carrier, IMO, FMO, agency, brokerage, manager, upline, Thrive, or another party initially posts, transfers, rolls up, advances, pays, offsets, or temporarily satisfies the amount.</p>
+        <p>A roll-up changes where the debit is posted; it does not shift the underlying economic responsibility away from the Writing Agent.</p>
+        <p>Agent Debt survives resignation, termination, inactivity, loss or lapse of license, change of agency, change of upline, hierarchy change, carrier change, IMO/FMO change, transfer, termination of appointment, or discovery of the debt after Agent leaves, so long as the debt arises from or is properly attributable to Agent's prior production or activity.</p>
+        <p>Agent is not released from Agent Debt unless the party legally entitled to the obligation provides an express written release identifying the specific obligation released.</p>
+        <p>A verbal statement, informal conversation, hierarchy change, transfer, payment by an upline, or temporary roll-up is not a release.</p>
+        <p>Agent acknowledges: Writing Agent is primary obligor for personal production debt.</p>
+
+        <h4>17 &middot; CONTINUING PERSONAL GUARANTY; MANAGER HIERARCHY DEBT GUARANTY</h4>
+        <p>If Agent writes, contracts, receives commissions, or incurs obligations through a corporation, LLC, partnership, agency, DBA, or other entity owned, managed, controlled, or used by Agent (an “Agent Entity”), the individual signatory personally, absolutely, unconditionally, and continuously guarantees the prompt payment and performance of all Agent Debt and other monetary obligations of that Agent Entity arising under this Agreement or from insurance business written or submitted by or for Agent.</p>
+        <p>This is a guaranty of payment and performance, not merely a guaranty of collection.</p>
+        <p>To the fullest extent permitted by law, Guarantor waives presentment, protest, notice of dishonor, and any requirement that Thrive, a manager, upline, carrier, IMO, FMO, or other entitled party first pursue the Agent Entity, collateral, another obligor, commission stream, or another remedy before pursuing Guarantor.</p>
+        <p>Extensions, payment plans, carrier adjustments, hierarchy changes, or reasonable modifications of the underlying obligation do not release Guarantor except to the extent an express written release specifically says so.</p>
+        <p>For purposes of Sections 16 through 24, “Manager Hierarchy” means every direct and indirect downline agent, manager, representative, recruit, or contracting entity placed beneath a Manager in Thrive, carrier, IMO, FMO, agency, commission, contracting, or internal hierarchy records.</p>
+        <p>“Hierarchy Debt” means all Agent Debt of any person or entity in the Manager Hierarchy arising from business written, submitted, placed, advanced, or otherwise generated while that person or entity was in the Manager Hierarchy, including debt discovered, posted, transferred, rolled up, or charged after the downline leaves, becomes inactive, changes hierarchy, or transfers to another organization.</p>
+        <p>By signing this Agreement, Agent agrees that if Agent is now or later becomes a Manager, the individual signatory personally, absolutely, unconditionally, and continuously guarantees the prompt payment and performance of all Hierarchy Debt.</p>
+        <p>The Manager's liability for Hierarchy Debt is additional to, and does not replace or reduce, the Writing Agent's primary liability for the same debt.</p>
+        <p>To the fullest extent permitted by applicable law and controlling carrier/IMO/FMO agreements, the Writing Agent and each Manager whose Manager Hierarchy included that Writing Agent at the time the applicable business was written, submitted, placed, advanced, or generated are jointly and severally liable for the applicable Hierarchy Debt.</p>
+        <p>Thrive and/or any party legally entitled to the obligation may pursue the Writing Agent, any responsible Manager, any other responsible guarantor, or any combination of them, without first exhausting remedies against another obligor, entity, collateral, hierarchy level, or commission stream.</p>
+        <p>A hierarchy change, removal of a downline, resignation, termination, release from Thrive, transfer to another agency, change of IMO/FMO, change of carrier, termination of appointment, or later restructuring does not release a Manager from Hierarchy Debt arising from business generated while the downline was within that Manager's Manager Hierarchy.</p>
+        <p>A Manager remains liable until the underlying debt is paid in full or the party legally entitled to release the obligation provides an express written release identifying the specific debt and the Manager being released.</p>
+        <p>Manager acknowledges that downline production can create chargeback and debit exposure beyond Manager's direct day-to-day control.</p>
+        <p>Manager knowingly accepts that risk as a condition of receiving, where applicable, hierarchy rights, override compensation, management economics, lead allocations, recruiting benefits, team-building rights, or other economic or organizational benefits associated with maintaining a downline organization.</p>
+        <p>Individual signatory guarantees Agent Entity obligations and covered direct/indirect Hierarchy Debt.</p>
+
+        <h4>18 &middot; INDEMNIFICATION AND REIMBURSEMENT OF THRIVE, MANAGERS, AND UPLINES</h4>
+        <p>If any Agent Debt or Hierarchy Debt is charged, rolled up, transferred, withheld, debited, collected from, or paid by Thrive, a manager, upline, agency, IMO, FMO, or other upstream party, the Writing Agent and every Manager responsible for that Hierarchy Debt under Section 17 must promptly reimburse and indemnify the affected party for the amount properly attributable to the applicable production, together with reasonable documented collection costs and attorneys' fees recoverable by law or contract.</p>
+        <p>The obligations of the Writing Agent and responsible Manager(s) are cumulative and are not reduced merely because another person or entity also owes or pays some or all of the same debt.</p>
+        <p>Agent and Manager authorize Thrive to provide reasonable documentation of Agent Debt and Hierarchy Debt to affected managers/uplines and other parties with a legitimate need to administer, collect, reconcile, or resolve the obligation, subject to privacy law and carrier/IMO/FMO rules.</p>
+
+        <h4>19 &middot; SETOFF; APPLICATION OF COMMISSIONS AND AMOUNTS OWED</h4>
+        <p>To the extent permitted by applicable carrier/IMO/FMO agreements and law, Thrive may apply commissions, overrides, bonuses, refunds, credits, reimbursements, amounts otherwise payable by Thrive, or other amounts held for Agent or Manager against matured Agent Debt or Hierarchy Debt that Agent or Manager owes or guarantees under this Agreement.</p>
+        <p>Nothing in this section authorizes Thrive to take carrier funds it has no legal or contractual right to offset.</p>
+
+        <h4>20 &middot; DEBT STATEMENTS; NOTICE; DISPUTE PROCEDURE</h4>
+        <p>Thrive may rely on carrier, IMO, FMO, agency, accounting, commission, policy, hierarchy, contracting, and payment records to calculate Agent Debt and Hierarchy Debt.</p>
+        <p>When reasonably practicable, Thrive will provide the responsible Writing Agent or Manager a statement or supporting record identifying the amount claimed and source.</p>
+        <p>Agent or Manager must raise any good-faith written dispute promptly and identify the specific amount and basis disputed.</p>
+        <p>An unresolved dispute does not permit Agent or Manager to misrepresent, conceal, transfer, restructure, or evade a debt, and the parties may pursue available contractual or legal remedies.</p>
+
+        <h4>21 &middot; HIERARCHY TRANSFER / RELEASE WHILE AGENT DEBT IS OUTSTANDING</h4>
+        <p>To the fullest extent permitted by carrier/IMO/FMO agreements and applicable law, Thrive has no obligation to voluntarily consent to, facilitate, expedite, sign, or provide a discretionary release, hierarchy-transfer approval, vector change, or similar assistance while any undisputed Agent Debt or Hierarchy Debt for which Agent or Manager is responsible under this Agreement remains unpaid, or while Agent or Manager has failed to make commercially reasonable repayment arrangements acceptable to the party legally entitled to the debt.</p>
+        <p>Agent understands that carrier, IMO, FMO, regulatory, or statutory rules may independently govern appointments, releases, vectors, and transfers and may override any inconsistent private contractual provision.</p>
+        <p>This Agreement does not create a right to block a transfer that applicable law or a controlling carrier agreement requires to occur.</p>
+        <p>For a Manager, this section includes both the Manager's personal production-related Agent Debt and all Hierarchy Debt guaranteed under Section 17.</p>
+        <p>A Manager is not released from guaranteed downline debt merely because the downline leaves, is moved, or is transferred.</p>
+        <p>Subject to controlling law and carrier/IMO/FMO rules, all such debt must be paid in full or expressly resolved in writing before Thrive is required to provide voluntary transfer or release assistance.</p>
+
+        <h4>22 &middot; COLLECTION AND ENFORCEMENT OF AGENT DEBT</h4>
+        <p>If Agent or Manager fails to pay undisputed Agent Debt or Hierarchy Debt after written demand and any applicable cure period, Thrive and/or the party legally entitled to the obligation may pursue lawful collection remedies, which may include setoff where authorized, carrier/IMO collection procedures, a collection agency, arbitration if required by a controlling agreement, or a civil action in a court of competent jurisdiction.</p>
+        <p>Thrive is not required to first sue or collect from the Writing Agent before pursuing a responsible Manager/Guarantor where the guaranty is enforceable.</p>
+        <p>The parties do not intend to create a confession of judgment or waive nonwaivable procedural rights.</p>
+        <p>To the extent permitted by law, Agent and Manager are responsible for reasonable collection costs and attorneys' fees awarded or recoverable under this Agreement or applicable law with respect to Agent Debt or Hierarchy Debt they owe or guarantee.</p>
+
+        <h4>23 &middot; NO FRAUDULENT TRANSFERS OR DEBT EVASION</h4>
+        <p>Agent or Manager may not intentionally transfer commissions, move business, move downlines, shift an Agent Entity, change hierarchy, redirect payments, use another writing number, re-paper production, or otherwise structure transactions for the purpose of evading legitimate Agent Debt or Hierarchy Debt.</p>
+        <p>Nothing in this section prohibits lawful business restructuring undertaken for legitimate reasons and not designed to hinder a lawful creditor or evade a contractual guaranty.</p>
+
+        <h4>24 &middot; CARRIER AND COMPENSATION AGREEMENTS</h4>
+        <p>Carrier, IMO, FMO, and compensation agreements may impose independent chargeback, advance, vesting, release, offset, commission, and debt rules.</p>
+        <p>Agent is responsible for understanding those rules.</p>
+        <p>This Agreement supplements those obligations and does not amend a carrier's mandatory terms unless the carrier expressly agrees in writing.</p>
+
+        <h4>25 &middot; SUSPENSION AND TERMINATION</h4>
+        <p>Thrive may suspend or terminate participation, production access, lead access, training access, system access, or other privileges for nonpayment, material breach, misuse of systems, credential sharing, confidentiality breach, improper solicitation, data misuse, insurance/compliance risk, E&amp;O lapse, or other material violation.</p>
+        <p>Termination does not eliminate obligations intended to survive, including Agent Debt, guaranty, indemnification, confidentiality, intellectual-property protection, non-solicitation, non-replication, customer/book protection, data return/deletion, and enforcement provisions.</p>
+
+        <h4>26 &middot; REMEDIES; INJUNCTIVE RELIEF</h4>
+        <p>Agent acknowledges that unauthorized disclosure, system copying, misuse of trade secrets, credential sharing, data theft, or prohibited solicitation may cause harm that is difficult to quantify.</p>
+        <p>To the extent permitted by law, Thrive may seek temporary, preliminary, or permanent injunctive/equitable relief in addition to damages and other remedies.</p>
+        <p>Nothing in this Agreement waives any bond requirement or other requirement that applicable law does not permit the parties to waive.</p>
+
+        <h4>27 &middot; FALSE STATEMENTS, THREATS, AND IMPROPER LEVERAGE</h4>
+        <p>Nothing in the Protected Reporting section authorizes an Agent to knowingly make false factual statements, fabricate evidence, impersonate another person, unlawfully access systems, threaten disclosure solely to obtain money or an unrelated business concession, or otherwise engage in defamation, extortion, coercion, or unlawful conduct.</p>
+        <p>Thrive reserves all rights and remedies concerning such conduct.</p>
+        <p>Good-faith protected reporting of suspected misconduct is not a breach merely because Thrive disputes the allegation.</p>
+
+        <h4>28 &middot; ATTORNEYS' FEES AND COSTS</h4>
+        <p>To the extent permitted by applicable law, the prevailing party in an action to enforce or challenge an enforceable restrictive covenant, confidentiality obligation, guaranty, or other provision may recover reasonable attorneys' fees and costs where authorized by statute or this Agreement.</p>
+        <p>Nothing in this section limits a court's authority under Florida law.</p>
+
+        <h4>29 &middot; FLORIDA RESTRICTIVE-COVENANT INTENT; REFORMATION</h4>
+        <p>The parties acknowledge that Agent may receive valuable Confidential Information, substantial business relationships, customer/agent goodwill, recruiting investments, and specialized training, which the parties intend to constitute legitimate business interests to the extent recognized by Florida law.</p>
+        <p>The restrictive covenants are intended to be reasonable and no broader than necessary to protect those interests.</p>
+        <p>If a court finds a restriction overbroad in time, geography, persons, or scope, the parties request that the court modify and enforce it to the maximum lawful extent rather than invalidate the entire restriction.</p>
+        <p>If any Florida statutory notice or counsel-review requirement applies to a particular category of worker or covenant, Thrive will provide the required notice before execution.</p>
+        <p>This Agreement should not be used as a substitute for any separate notice required by then-current law.</p>
+
+        <h4>30 &middot; GOVERNING LAW; FORUM</h4>
+        <p>This Agreement is governed by Florida law, without regard to conflict-of-law rules, except where federal law or another jurisdiction's mandatory law controls.</p>
+        <p>Subject to any mandatory arbitration or forum provision in a controlling carrier/IMO/FMO agreement, a civil action concerning this Agreement may be brought in a court of competent jurisdiction in the Florida county where Thrive's principal place of business is located, unless applicable law requires another venue.</p>
+
+        <h4>31 &middot; JURY TRIAL WAIVER - COUNSEL REVIEW REQUIRED</h4>
+        <p>TO THE FULLEST EXTENT PERMITTED BY LAW, EACH PARTY KNOWINGLY AND VOLUNTARILY WAIVES TRIAL BY JURY IN A CIVIL ACTION ARISING DIRECTLY FROM THIS AGREEMENT, EXCEPT WHERE A JURY-TRIAL WAIVER IS NOT ENFORCEABLE OR WHERE A CONTROLLING AGREEMENT OR LAW REQUIRES OTHERWISE.</p>
+        <p>THIS CLAUSE SHOULD BE SPECIFICALLY REVIEWED BY FLORIDA COUNSEL BEFORE USE.</p>
+        <p>Agent acknowledges the jury-trial waiver, subject to law and counsel review.</p>
+
+        <h4>32 &middot; NO WAIVER OF NONWAIVABLE RIGHTS</h4>
+        <p>Nothing in this Agreement waives a right or remedy that applicable law does not allow a private contract to waive.</p>
+        <p>Nothing requires Agent to violate a law, regulation, court order, governmental request, or controlling carrier rule.</p>
+
+        <h4>33 &middot; SEVERABILITY; BLUE-PENCIL / REFORMATION</h4>
+        <p>If any provision is invalid or unenforceable, the remaining provisions remain effective.</p>
+        <p>Where permitted, an unenforceable restriction will be narrowed, modified, or reformed to the maximum enforceable scope consistent with the parties' stated legitimate interests.</p>
+
+        <h4>34 &middot; THRIVE-OWNED ASSETS, GOODWILL, AND ENTERPRISE CONTINUITY</h4>
+        <p>To the extent owned or controlled by Thrive under applicable law and controlling carrier, IMO, FMO, vendor, platform, and intellectual-property agreements, Thrive assets include the Thrive name and brand; trade names; domains; websites; company-controlled phone numbers; training libraries; scripts; SOPs; courses; call-recording libraries; recruiting systems; manager-development systems; sales systems; CRM configurations; automations; company-created databases; company-created customer, lead, prospect, recruit, agent, and manager records; company social-media assets; internal documentation; software configurations and technology; Company Work Product; Company Data; goodwill; and contractual rights belonging to Thrive.</p>
+        <p>Agent acknowledges that access to, contribution to, or use of a Thrive asset does not by itself create an ownership interest in that asset.</p>
+        <p>Nothing in this section transfers to Thrive any carrier contract, commission, renewal, servicing right, or other property that a controlling written agreement or applicable law expressly and nonwaivably assigns to Agent.</p>
+        <p>The parties intend, however, that Thrive-owned systems, data, intellectual property, goodwill, and contractual rights remain usable and transferable with the Thrive business to the fullest extent permitted by law.</p>
+
+        <h4>35 &middot; COMPANY WORK PRODUCT; INTELLECTUAL-PROPERTY ASSIGNMENT</h4>
+        <p>“Company Work Product” means any training material, script, SOP, workflow, presentation, template, recording, course, document, recruiting material, sales material, automation, software configuration, process, graphic, video, copy, system documentation, or other work product created specifically for Thrive, at the request or direction of Thrive, within the scope of Agent's authorized duties for Thrive, or using material Thrive Confidential Information or Thrive resources for a Thrive business purpose.</p>
+        <p>To the fullest extent permitted by law, copyrightable Company Work Product created within the scope of a qualifying work-made-for-hire relationship is specially commissioned as a work made for hire for Thrive.</p>
+        <p>To the extent any Company Work Product does not qualify as a work made for hire, Agent hereby irrevocably assigns to Thrive all right, title, and interest Agent may have in that Company Work Product, including intellectual-property rights, subject to any nonwaivable rights under applicable law.</p>
+        <p>Agent will execute reasonable further documents needed to confirm such ownership.</p>
+        <p>Agent retains ownership of pre-existing materials created independently before the Thrive engagement and of general skills, experience, and know-how not derived from Thrive Confidential Information.</p>
+        <p>If Agent knowingly incorporates Agent-owned pre-existing material into Company Work Product, Agent grants Thrive a perpetual, worldwide, transferable, sublicensable, royalty-free license to use, reproduce, modify, distribute, display, perform, and create derivative works from that embedded material as part of the Company Work Product, unless a separate written agreement states otherwise.</p>
+
+        <h4>36 &middot; COMPANY SYSTEMS, RECORDS, AND OPERATIONAL CONTINUITY</h4>
+        <p>Agent and Manager must keep material Thrive recruiting, lead, customer, policy-administration, production, training, hierarchy, and operational records created or maintained for Thrive in systems designated or approved by Thrive when reasonably required.</p>
+        <p>Agent may not intentionally maintain the sole authoritative copy of material Thrive information in a personal email account, personal cloud drive, personal CRM, personal messaging account, or other system inaccessible to Thrive.</p>
+        <p>Upon request or termination, Agent must reasonably cooperate in transferring Thrive records, administrative credentials, Company Work Product, and other Thrive-owned information into Thrive-controlled systems, subject to applicable privacy law, carrier requirements, and legally required recordkeeping.</p>
+        <p>Agent may retain only information Agent is legally entitled or required to retain and may not use retained information for a prohibited competitive, solicitation, replacement, or debt-evasion purpose.</p>
+
+        <h4>37 &middot; PROTECTED CUSTOMERS, LEADS, PROSPECTS, RECRUITING PROSPECTS, AND CRM RECORDS</h4>
+        <p>For purposes of this Agreement, “Protected Business Relationships” include, to the extent protectable by law:</p>
+        <p>(a) leads, prospects, customers, policyholders, applicants, recruiting prospects, recruits, and business contacts introduced to Agent through Thrive, a Thrive manager/upline, Thrive advertising or lead programs, Thrive inbound calls, Thrive recruiting campaigns, Thrive CRM systems, or Thrive Confidential Information; and</p>
+        <p>(b) customers and policy relationships associated with insurance business written, submitted, serviced, or placed through the Thrive hierarchy where Thrive, a Thrive manager/upline, or another Thrive-affiliated party has a legitimate business, compensation, servicing, or goodwill interest under the applicable arrangements.</p>
+        <p>Agent may use Protected Business Relationship information only for authorized Thrive business while affiliated with Thrive.</p>
+        <p>Agent may not export, scrape, copy, sell, assign, transfer, license, disclose, upload to another CRM, retain for competitive use, or provide to another agency, IMO, FMO, lead buyer, recruiter, aggregator, producer, investor, or other third party any Thrive-owned or Thrive-controlled lead list, customer list, policyholder list, recruiting-prospect list, CRM export, contact database, call record, lead history, policy data, or other Thrive Data except as authorized in writing or required by law.</p>
+        <p>Nothing in this section is intended to override a policyholder's lawful right to choose a producer, insurer, or service provider, or to override a carrier's controlling ownership or servicing rules.</p>
+        <p>The restrictions are directed at misuse of Thrive Data, Thrive relationships, Thrive goodwill, and systematic transfer or exploitation of business developed through the Thrive organization.</p>
+
+        <h4>38 &middot; NO BOOK STRIPPING, PORTFOLIO RESALE, REPLACEMENT ABUSE, OR DEBT-CREATING MIGRATION</h4>
+        <p>During Agent's affiliation with Thrive and for twelve (12) months after it ends, Agent will not directly or indirectly initiate, organize, assist, finance, or participate in a systematic campaign to move, rewrite, replace, surrender, cancel, rebroker, re-paper, transfer, or otherwise migrate policies or customers within the Protected Business Relationships from Thrive to another agency, brokerage, IMO, FMO, producer, or distribution organization for the purpose of moving compensation, generating new commissions, transferring a book of business, exploiting Company Data, harming Thrive or its managers/uplines, or creating or accelerating chargebacks, reversals, debit balances, or other Agent Debt or Hierarchy Debt.</p>
+        <p>Agent may not sell, assign, pledge, license, broker, monetize, or offer to sell or transfer any Company-owned customer list, lead list, CRM data, policyholder list, recruiting-prospect list, goodwill, or other Company asset as part of a purported “book of business.”</p>
+        <p>Agent also may not represent to a prospective buyer or new agency that Agent owns Company Data, Company goodwill, or other assets that Agent does not legally own.</p>
+        <p>If Agent has independent renewal, servicing, or other rights under a carrier agreement, any lawful transfer of those rights remains subject to this Agreement's confidentiality, data-use, debt, guaranty, non-solicitation, and debt-evasion provisions to the fullest extent permitted by law.</p>
+        <p>If Agent's prohibited replacement, rewrite, transfer, portfolio sale, or migration causes or accelerates a chargeback, commission reversal, debit, clawback, refund, lost advance, or other production-related obligation, that amount remains Agent Debt and, where applicable, Hierarchy Debt under this Agreement.</p>
+        <p>Agent and any responsible Manager remain liable for such debt, and Agent must reimburse and indemnify the affected Thrive party, manager, or upline for actual documented losses and amounts properly attributable to the prohibited conduct to the extent permitted by law.</p>
+        <p>Nothing in this section requires Agent to recommend that a client keep unsuitable coverage or prohibits a bona fide, client-initiated or objectively client-beneficial replacement, exchange, surrender, transfer, or servicing action that is fully compliant with applicable replacement, suitability, best-interest, disclosure, consent, carrier, and regulatory requirements.</p>
+        <p>Agent may not use this carve-out as a pretext for a systematic book-stripping or debt-evasion campaign.</p>
+        <p>Agent acknowledges Protected Book / no-book-stripping rules and resulting debt liability.</p>
+
+        <h4>39 &middot; ERRORS AND OMISSIONS INSURANCE REQUIREMENT</h4>
+        <p>Each producing Agent must maintain errors-and-omissions (“E&amp;O”) insurance in force throughout Agent's active production relationship with Thrive at limits no lower than those required by applicable law, the applicable carrier, IMO, FMO, or such reasonable minimum limits as Thrive may designate in writing from time to time.</p>
+        <p>Agent must provide a certificate of insurance or other reasonable evidence of coverage upon request.</p>
+        <p>Agent must promptly notify Thrive of cancellation, nonrenewal, material reduction, lapse, or known denial of required E&amp;O coverage.</p>
+        <p>Thrive may suspend new production, lead access, appointments, or system access until required coverage is restored.</p>
+        <p>If the applicable policy is claims-made, Agent must maintain any prior-acts protection, extended reporting coverage, or other post-termination protection required by applicable law, carrier rules, or a reasonable written Thrive policy applicable to similarly situated agents.</p>
+        <p>Producing Agent acknowledges the E&amp;O requirement and proof-of-coverage duty.</p>
+
+        <h4>40 &middot; NO EQUITY OR OWNERSHIP RIGHTS FROM PARTICIPATION, PRODUCTION, OR HIERARCHY</h4>
+        <p>Unless a separate written equity, purchase, partnership, or ownership agreement signed by an authorized Thrive representative expressly states otherwise, Agent's production, recruiting, team-building, manager status, hierarchy position, receipt of overrides, contribution to training, participation in meetings, or development of goodwill does not give Agent any equity, membership, shareholder, partnership, voting, ownership, or control interest in Thrive, Thrive intellectual property, Thrive Data, Thrive systems, Thrive goodwill, Thrive recruiting pipelines, or Thrive-owned customer/lead relationships.</p>
+        <p>Compensation, commissions, overrides, renewals, bonuses, and servicing rights are governed by the applicable written compensation, carrier, IMO, FMO, or agency arrangements.</p>
+        <p>Economic compensation does not itself convert Thrive-owned assets or goodwill into Agent-owned property.</p>
+
+        <h4>41 &middot; TRANSACTION COOPERATION; DUE DILIGENCE; CONFIDENTIAL TRANSACTION DISCLOSURES</h4>
+        <p>Agent agrees to reasonably cooperate with lawful administrative actions necessary to facilitate a merger, acquisition, asset sale, recapitalization, financing, reorganization, affiliation, carrier transition, contracting transition, or change of control involving Thrive or relevant Thrive assets.</p>
+        <p>Reasonable cooperation may include confirming Agent information, completing administrative forms, acknowledging updated system instructions, and taking non-economic transition steps reasonably required by carriers, vendors, platforms, or regulators.</p>
+        <p>No such transaction may materially expand Agent's personal economic obligations under this Agreement without separate consent where consent is legally required.</p>
+        <p>Thrive may, subject to applicable privacy, insurance, carrier, and data-security requirements, disclose this Agreement and reasonably necessary non-public business information to bona fide prospective or actual purchasers, investors, lenders, financing sources, insurers, attorneys, accountants, investment bankers, consultants, due-diligence providers, and their representatives who have a legitimate transaction-related need to know and are subject to confidentiality duties or other appropriate safeguards.</p>
+        <p>Agent acknowledges that a lawful transaction or change in Thrive ownership, management, capitalization, or structure does not by itself terminate this Agreement, extinguish Agent Debt or Hierarchy Debt, release a guaranty, eliminate confidentiality obligations, or terminate any surviving restrictive covenant.</p>
+
+        <h4>42 &middot; ASSIGNMENT; CHANGE OF CONTROL; SUCCESSORS; THIRD-PARTY BENEFICIARIES</h4>
+        <p>Thrive may assign, delegate, transfer, or convey its rights and obligations under this Agreement, in whole or in part, to an affiliate, successor, surviving entity, purchaser of substantially all or a relevant portion of the Thrive business or assets, or other entity resulting from or participating in a merger, acquisition, reorganization, recapitalization, or change-of-control transaction, without further consent from Agent to the extent permitted by applicable law and controlling carrier, IMO, FMO, vendor, and platform arrangements.</p>
+        <p>Agent may not assign, delegate, or transfer this Agreement or Agent's obligations without Thrive's prior written consent, except where applicable law provides otherwise.</p>
+        <p>A permitted successor or assignee of Thrive may enforce the rights assigned to it under this Agreement to the same extent as Thrive, subject to applicable law.</p>
+        <p>A change in ownership, control, management, capitalization, or legal form of Thrive does not by itself release Agent from obligations that otherwise survive or continue.</p>
+        <p>The confidentiality, non-solicitation, customer/book protection, debt reimbursement, guaranty, intellectual-property, data-protection, and related provisions are intended to benefit Thrive, its permitted successors and assigns, and, where the facts support it, affected Thrive managers/uplines who incur Agent Debt or Hierarchy Debt.</p>
+        <p>Such affected managers/uplines may be intended third-party beneficiaries of the applicable reimbursement and protective provisions to the extent permitted by law.</p>
+        <p>Agent acknowledges Thrive IP/data ownership and permitted successor enforcement rights.</p>
+
+        <h4>43 &middot; NOTICES; ELECTRONIC TRANSACTIONS; RECORDS</h4>
+        <p>Electronic signatures, click acceptance, and electronic records may be used to the extent permitted by applicable law.</p>
+        <p>Notices may be sent to the email, address, or account information maintained for Agent unless a specific method is required by a controlling agreement or law.</p>
+        <p>Agent must keep contact information current.</p>
+
+        <h4>44 &middot; ENTIRE AGREEMENT; ORDER OF PRECEDENCE</h4>
+        <p>This Agreement, together with applicable carrier agreements, compensation agreements, agency/IMO/FMO agreements, manager agreements, written policies, and other documents expressly incorporated into the Thrive relationship, states the agreement concerning the covered brokerage subjects.</p>
+        <p>Mandatory law and mandatory carrier terms control where legally required.</p>
+        <p>This Agreement does not govern separate marketing-service pricing, advertising-service credits, advertising spend, or third-party marketing payment authorization.</p>
+
+        <h4>45 &middot; ACKNOWLEDGMENTS</h4>
+        <p>By signing, Agent acknowledges and agrees that:</p>
+        <ul>
+          <li>Agent had the opportunity to read this Agreement and seek independent legal advice before signing;</li>
+          <li>Agent understands that private Thrive systems and Discord access are conditioned on execution of this Agreement;</li>
+          <li>Agent understands the confidentiality, intellectual-property, no-copying, no-reverse-engineering, and data-security obligations;</li>
+          <li>Agent understands the 12-month non-solicitation covenant;</li>
+          <li>Agent understands that the Writing Agent remains the primary obligor for production-related debt attributable to that Writing Agent;</li>
+          <li>Agent understands that roll-up of a debit to an upline, manager, agency, IMO, or FMO does not release the Writing Agent and does not prevent Thrive or another entitled party from pursuing a responsible Manager/Guarantor;</li>
+          <li>Agent understands that an individual who uses an Agent Entity personally guarantees that entity's covered obligations and that any Agent who now or later becomes a Manager personally guarantees Hierarchy Debt of all direct and indirect downlines as stated above;</li>
+          <li>Agent understands that, to the fullest extent permitted by law and controlling upstream agreements, the Writing Agent and responsible Manager(s) may be jointly and severally liable for the same Hierarchy Debt and Thrive need not first exhaust collection against one before pursuing another;</li>
+          <li>Agent understands that hierarchy changes, downline transfers, resignation, termination, or agency changes do not automatically release a Manager from Hierarchy Debt arising while the downline was within that Manager's hierarchy;</li>
+          <li>Agent understands Thrive may pursue lawful collection remedies for unpaid Agent Debt and guaranteed Hierarchy Debt, including pursuing a responsible Manager/Guarantor where permitted;</li>
+          <li>Agent understands confidentiality does not prohibit legally protected good-faith reporting, regulator/law-enforcement cooperation, authorized carrier-compliance cooperation, or communications with legal counsel;</li>
+          <li>Agent understands that knowingly false statements, theft, unauthorized access, extortion, and improper use of Thrive Confidential Information are not protected by this Agreement;</li>
+          <li>Agent understands the customer/lead/book protections and agrees not to export, sell, transfer, or systematically migrate Thrive-owned or Thrive-controlled customer, lead, CRM, recruiting-prospect, or policy data to another organization;</li>
+          <li>Agent understands that prohibited book stripping, replacement abuse, or debt-creating migration does not release Agent or responsible Managers from resulting Agent Debt or Hierarchy Debt;</li>
+          <li>Agent understands that producing agents must maintain required E&amp;O insurance and provide evidence of coverage upon request;</li>
+          <li>Agent understands that Company Work Product and Thrive-owned data, systems, goodwill, and other assets remain owned by Thrive as stated in this Agreement and that hierarchy position or production does not itself create equity or ownership rights; and</li>
+          <li>Agent understands that a permitted merger, acquisition, asset sale, reorganization, or change of control does not by itself terminate this Agreement or release surviving obligations, and that permitted successors or assigns may enforce assigned rights.</li>
+        </ul>
         <hr>
         <p class="meta">You have reached the end of the agreement.</p>
 
@@ -705,9 +932,9 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
       <div class="agree off" id="agreewrap2">
         <input type="checkbox" id="agree2" name="agree2" disabled>
         <label for="agree2">
-          I have read the whole agreement. I understand that a rolled-up balance is still
-          mine, and I agree to the twelve-month no-recruiting term and the $5,000 per
-          agent that goes with it.
+          I have read the whole agreement. I understand I am the primary obligor for my production debt, that as a Manager I
+          guarantee my hierarchy's debt, and I agree to the confidentiality, 12-month
+          non-solicitation and book-protection terms.
         </label>
       </div>
       <p class="err" data-err="agree2"></p>
@@ -797,7 +1024,7 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
   /* Where a signed form sends them. Empty means there is nowhere to go
      -- a preview build -- and the thank-you panel below stands in. */
   var WELCOME_URL = "";
-  var AGREEMENT_VERSION = "2026-10-04";
+  var AGREEMENT_VERSION = "2026-10-05";
   var LOGOS = {};   /* filled in by the build; see build-onboarding.mjs */
 
   /* The steps, numbered once. Everything that has to name one -- the
@@ -990,6 +1217,10 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
 
   function syncExecution() {
     var f = fields();
+    /* Section 1 of the Lead Tech agreement, filled in from step 1. */
+    var dash = "\u2014";
+    $("#ci-business").textContent = f.signedName || f.legalName || dash;
+    $("#ci-date").textContent = f.signedDate ? longDate(f.signedDate) : dash;
     mirror(sigLT, "sigmirror", "execd-ghost", "sm-name", "sm-business", "sm-date",
       f.signedName || f.legalName, f.business, f.signedDate);
     mirror(sigTC, "sigmirror2", "execd-ghost2", "sm2-name", "sm2-business", "sm2-date",

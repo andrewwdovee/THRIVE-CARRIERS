@@ -35,6 +35,12 @@ const argv = process.argv.slice(2);
 const relay = (argv.find((a) => /^https:\/\//.test(a)) || "").replace(/\/+$/, "");
 const onboardingArg = argv.indexOf("--onboarding");
 const onboardingUrl = onboardingArg < 0 ? "" : (argv[onboardingArg + 1] || "").replace(/\/+$/, "");
+/* --from-live <url>: start from the board that is already published there
+   instead of _leadtech-content.html. That page is public, so nothing new
+   leaves anyone's hands, and it carries the tabs and the relay URL from
+   the last build -- both are re-done below. */
+const liveArg = argv.indexOf("--from-live");
+const liveUrl = liveArg < 0 ? "" : (argv[liveArg + 1] || "").replace(/\/+$/, "");
 
 if (!relay) {
   console.error("Usage: node build-leadtech.mjs https://thrive-relay.<subdomain>.workers.dev [--onboarding https://thrive-onboarding.pages.dev]");
@@ -46,16 +52,35 @@ if (!/^https:\/\//.test(relay)) {
 }
 
 const sourcePath = join(here, "_leadtech-content.html");
-if (!existsSync(sourcePath)) {
+let source;
+if (liveUrl) {
+  let page;
+  try {
+    const res = await fetch(liveUrl + "/", { headers: { "Cache-Control": "no-cache" } });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    page = await res.text();
+  } catch (e) {
+    console.error(`Could not download ${liveUrl}: ${e.message}`);
+    process.exit(1);
+  }
+  const start = page.indexOf("<body>\n");
+  const end = page.lastIndexOf("\n</body>");
+  if (start < 0 || end <= start) {
+    console.error(`${liveUrl} does not look like a page this script built. Use _leadtech-content.html instead.`);
+    process.exit(1);
+  }
+  source = page.slice(start + "<body>\n".length, end);
+  console.error(`Starting from the live board at ${liveUrl} (${(source.length / 1024).toFixed(0)} KB)`);
+} else if (!existsSync(sourcePath)) {
   console.error(`Missing ${sourcePath}.
 
 That file is the published board's own content and is deliberately not in
 git. Get it by reading the Lead Tech artifact, then taking everything
 between "<body>\\n" and "\\n</body></html>" from the saved HTML.`);
   process.exit(1);
+} else {
+  source = readFileSync(sourcePath, "utf8");
 }
-
-const source = readFileSync(sourcePath, "utf8");
 
 /* The relay URL the Vite build emitted. Minified names move between
    builds, so the binding is derived rather than hardcoded: find the one
@@ -67,7 +92,13 @@ const RELAY_EXPR =
   /([A-Za-z_$][\w$]*)=String\(\(([A-Za-z_$][\w$]*)==null\?void 0:\2\.VITE_RELAY_URL\)\|\|\(\2==null\?void 0:\2\.VITE_STORAGE_URL\)\|\|""\)/g;
 
 const found = [...source.matchAll(RELAY_EXPR)];
-if (found.length !== 1) {
+/* A board this script already built holds the relay as a literal. Swap
+   that one literal rather than refusing, so a live board can be rebuilt. */
+const LITERAL = /([A-Za-z_$][\w$]*)=String\("https:\/\/[^"]+"\)/g;
+const literals = found.length ? [] : [...source.matchAll(LITERAL)];
+if (!found.length && literals.length === 1) {
+  found.push(literals[0]);
+} else if (found.length !== 1) {
   const already = /=String\("https:\/\//.test(source);
   console.error(`Expected exactly one relay-URL expression in the bundle, found ${found.length}.${
     already ? "\nThe bundle already holds a literal https URL there, so it looks patched already." : ""
@@ -97,11 +128,28 @@ if (onboardingUrl) {
   }
 }
 
+/* Tab icon and link preview: the Lead Tech mark, the same images the
+   marketplace uses (onboarding/favicons.json). Written out as real files
+   because Messages on an iPhone fetches the icon by address for its link
+   preview and cannot read one inlined into the page. */
+const favs = JSON.parse(readFileSync(join(here, "..", "onboarding", "favicons.json"), "utf8"));
+const png = (k) => Buffer.from(favs[k].split(",")[1], "base64");
+const TITLE = "Lead Tech Fulfillment";
+const DESC = "Orders, refunds, wallets and start times for the Lead Tech inbound desk.";
+
 const html = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${TITLE}</title>
+<meta name="description" content="${DESC}">
+<link rel="icon" type="image/png" sizes="64x64" href="favicon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Lead Tech">
+<meta property="og:title" content="${TITLE}">
+<meta property="og:description" content="${DESC}">
 <style>
   html, body { margin: 0; padding: 0; }
   img { max-width: 100%; }
@@ -116,6 +164,8 @@ ${patched}
 
 mkdirSync(join(here, "dist-leadtech"), { recursive: true });
 writeFileSync(join(here, "dist-leadtech", "index.html"), html);
+writeFileSync(join(here, "dist-leadtech", "favicon.png"), png("favLead"));
+writeFileSync(join(here, "dist-leadtech", "apple-touch-icon.png"), png("favLead180"));
 
 console.log(`Wrote deploy/dist-leadtech/index.html  (${(html.length / 1024).toFixed(0)} KB)
 Relay: ${relay}${onboardingUrl ? "\nOnboarding: " + onboardingUrl : "\nOnboarding tab: not included (pass --onboarding <url>)"}

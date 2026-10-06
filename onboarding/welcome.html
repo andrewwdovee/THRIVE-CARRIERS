@@ -31,7 +31,7 @@ body::before{
 
 .masthead{padding:44px 0 10px; text-align:center}
 .marks{display:flex; align-items:center; justify-content:center; gap:19px; margin:0 0 24px}
-.marks img.thrive{height:78px; width:auto}
+.marks img.thrive{height:64px; width:auto}
 .marks img.lead{height:14px; width:auto}
 .marks .by{
   display:flex; align-items:center; gap:9px;
@@ -64,7 +64,8 @@ body::before{
 .progress .count{font-family:var(--display); font-size:30px; line-height:1; color:var(--fg)}
 .progress .count small{font-family:var(--body); font-size:13px; font-weight:600; color:var(--muted); margin-left:4px}
 .progress .track{flex:1 1 180px; min-width:140px; height:10px; border-radius:999px; background:var(--panel-2); overflow:hidden}
-.progress .fill{height:100%; width:0; border-radius:999px; background:var(--good); transition:width .25s ease}
+.progress .fill{display:block; height:100%; width:0; border-radius:999px; background:linear-gradient(90deg,#1FA374,var(--good)); transition:width .9s cubic-bezier(.22,.8,.3,1)}
+@media (prefers-reduced-motion:reduce){ .progress .fill{transition:none} }
 .progress .msg{font-size:13px; color:var(--muted); flex-basis:100%}
 .progress.done .fill{background:var(--good)}
 .progress.done .msg{color:var(--good); font-weight:600}
@@ -124,6 +125,7 @@ body::before{
 }
 .endnote h3{margin:0 0 7px; font-size:15px; font-weight:700}
 .endnote p{margin:0; font-size:14px; color:var(--muted)}
+.ref[hidden]{display:none}
 .ref{
   display:inline-block; margin-top:14px; font-family:ui-monospace,Menlo,monospace;
   font-size:12px; letter-spacing:.07em; color:var(--gold);
@@ -133,8 +135,26 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
 @media (max-width:560px){
   .step{padding:15px 16px; gap:13px}
   .marks{gap:14px}
-  .marks img.thrive{height:66px}
+  .marks img.thrive{height:56px}
   .marks .by{padding-left:14px}
+}
+/* ------------------------------------------------------------ phones
+   Tighter cards, full-width buttons a thumb can hit, and a ticked step
+   folds down to its title so the list shortens as you go. */
+@media (max-width:560px){
+  .masthead{padding-top:30px}
+  .lede{font-size:13.5px}
+  .progress{padding:14px 16px; margin-top:20px}
+  .steps{gap:10px}
+  .step{padding:14px 14px 15px; gap:12px}
+  .step .tick{width:30px; height:30px}
+  .step h2{font-size:15.5px; row-gap:2px}
+  .step h2 .n{flex-basis:100%}
+  .step p{font-size:13.5px; line-height:1.55}
+  .step .note{font-size:12.5px}
+  .step .tags{margin-top:9px}
+  .step .go{display:block; text-align:center; padding:12px 16px; margin-top:11px}
+  .step.on p, .step.on .note, .step.on .tags, .step.on .go{display:none}
 }
 </style>
 </head>
@@ -165,7 +185,7 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
 
   <div class="endnote">
     <h3>Stuck on any of it?</h3>
-    <p>Reply to your onboarding email, or message the person who brought you in. The desk would rather answer early than fix it later.</p>
+    <p>Reach out to your hiring manager for any direct support.</p>
     <p class="ref" id="ref" hidden></p>
   </div>
 
@@ -186,6 +206,14 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
   var TRAINING_URL = "../training/";
   var DISCORD_URL = "https://discord.gg/DHN5EDN2y7";
   var SUPPORT_URL = "https://discord.gg/keSnyfQ738";
+  /* The Thrive Contracting ticket server, for step 10. */
+  var CONTRACTING_URL = "https://discord.gg/JeMcKjcxDG";
+  /* Step 7 opens a page with both servers on it; step 10 the marketplace. */
+  var DISCORDS_URL = "../discord/";
+  var MARKETPLACE_URL = "https://leadtech-marketplace.pages.dev";
+  /* Step 8. Each agent signs in with their own account, so no login is
+     carried in the link. */
+  var LEADERBOARD_URL = "https://kairos-financial.com/saleshub#leaderboard";
   /* Sits beside this page in the deploy. Empty in a preview, where
      there is nothing to point at — the button is dropped rather than
      left dead. */
@@ -206,9 +234,8 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
       id: "portal",
       who: "you",
       title: "Set up your inbound portal",
-      body: "Your login, your wallet and your card on file. It is where you top up, " +
-            "see every charge, and watch the calls come in. Nothing is delivered " +
-            "against an empty wallet, so finish it before anything else.",
+      body: "Create your login. The portal is where you watch your calls come in " +
+            "and run your account day to day, so set it up before anything else.",
       note: "Pick the right one when you sign up. <b>Thrive Companies</b> if every " +
             "contract you write is internal. <b>Lead Tech</b> if you are still moving " +
             "over and do not have all your internal contracts yet — that one covers " +
@@ -218,19 +245,10 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
     {
       id: "rules",
       who: "you",
-      title: "Read how the inbound works",
+      title: "Read how inbounds work",
       body: "The wallet, the daily cut-off, what gets credited and what does not. " +
             "Fifteen minutes now saves an argument later.",
       link: { href: RULES_URL, label: "Read the inbound rules" }
-    },
-    {
-      id: "starttime",
-      who: "you",
-      title: "Confirm when your calls start",
-      body: "You picked 10:00 or 11:00 when you signed. Change it here any time, " +
-            "along with how many calls you want a week. If you are not on fifteen " +
-            "minutes past, calls stop for the day — so pick the one you will keep.",
-      link: { href: SETTINGS_URL, label: "View start times" }
     },
     {
       id: "licences",
@@ -262,20 +280,54 @@ footer{text-align:center; color:var(--muted); font-size:11.5px; padding:28px 16p
     {
       id: "discord",
       who: "you",
-      title: "Join our Discord server",
-      body: "Where the floor actually talks — call reviews, carrier news, a question " +
-            "answered in two minutes instead of two days. Most of the training above " +
-            "runs in here, so you need to be in before your first session.",
-      link: { href: DISCORD_URL, label: "Join the Thrive Discord" }
+      title: "Join our Discord servers",
+      body: "Two servers to join. The Thrive Discord is where the floor talks and most " +
+            "of the training runs. Lead Tech Support is where you open a ticket for a " +
+            "bad transfer, a charge that looks wrong, or routing that is not working.",
+      link: { href: DISCORDS_URL, label: "Join our Discord servers" }
     },
     {
-      id: "support",
+      id: "leaderboard",
       who: "you",
-      title: "Join the Lead Tech support server",
-      body: "A separate server, and the fastest way to raise a problem — a bad " +
-            "transfer, a charge that looks wrong, routing that is not doing what it " +
-            "should. Open a ticket there and it is in front of the desk straight away.",
-      link: { href: SUPPORT_URL, label: "Join the support server", quiet: true }
+      title: "Join the company leaderboard",
+      body: "Where you keep track of your book of business and every sale you make. " +
+            "It is the company leaderboard, so the whole floor can see who is writing.",
+      link: { href: LEADERBOARD_URL, label: "Open the company leaderboard" }
+    },
+    {
+      id: "contracts",
+      who: "you",
+      title: "Submit for all Thrive contracts",
+      body: "Have your manager send you an invite to begin contracting, then submit " +
+            "for every Thrive contract. Do them all in one sitting so none of them " +
+            "holds up the rest."
+    },
+    {
+      id: "contracts-back",
+      who: "us",
+      title: "Wait for your contracts to come back",
+      body: "The carriers review what you submitted. Once your contracts come back " +
+            "approved, you are good to go and ready to start selling.",
+      note: "Questions while you wait? The <b>Thrive Contracting</b> ticket server on " +
+            "Discord is where we offer contracting support. Open a ticket there.",
+      link: { href: CONTRACTING_URL, label: "Join the Thrive Contracting server" }
+    },
+    {
+      id: "starttime",
+      who: "you",
+      title: "Confirm your start time",
+      body: "You picked 10:00 or 11:00 when you signed. Change it here any time, " +
+            "along with how many calls you want a week. If you are not on fifteen " +
+            "minutes past, calls stop for the day — so pick the one you will keep.",
+      link: { href: SETTINGS_URL, label: "View start times" }
+    },
+    {
+      id: "wallet",
+      who: "you",
+      title: "Fund your wallet and go live",
+      body: "Now pick a tier package to start on for your calls, and purchase it on " +
+            "Sunday for the following week.",
+      link: { href: MARKETPLACE_URL, label: "Open the Lead Tech Marketplace" }
     }
   ];
 

@@ -267,6 +267,8 @@ function obPaginate(items) {
 
 /* ------------------------------------------------- the execution block */
 
+var OB_INITIAL_ROWS = [["access", "No access before signature (s.2)"], ["nda", "Strict NDA / protected reporting (s.7)"], ["nonsolicit", "12-Month Non-Solicitation (s.11)"], ["debt", "Writing agent primary obligor (s.16)"], ["guaranty", "Personal & Hierarchy Debt guaranty (s.17)"], ["jury", "Jury-trial waiver (s.31)"], ["book", "Protected book / no book stripping (s.38)"], ["eo", "E&O insurance (s.39)"], ["ip", "IP & successor rights (s.42)"], ["sp_nonsolicit", "Special \u2014 12-Month Non-Solicitation"], ["sp_debt", "Special \u2014 debt + hierarchy guaranty"], ["sp_nda", "Special \u2014 NDA / protected reporting"], ["sp_book", "Special \u2014 protected book"], ["sp_eo", "Special \u2014 E&O insurance"], ["sp_ip", "Special \u2014 IP / change of control"]];
+
 function obExecution(rec, which) {
   var lt = which === "lt";
   var name = lt ? rec.signedName : rec.thriveSignedName;
@@ -297,6 +299,12 @@ function obExecution(rec, which) {
   if (lt && rec.startTime) row("Calls start", rec.startTime);
   if (rec.referrer) row("Brought in by", rec.referrer);
   row("Agreement version", rec.version);
+  /* The Thrive Companies agreement is initialled line by line. */
+  if (!lt && rec.thriveInitials) {
+    OB_INITIAL_ROWS.forEach(function (r) {
+      if (rec.thriveInitials[r[0]]) row("Initialled: " + r[1], rec.thriveInitials[r[0]]);
+    });
+  }
   row("Signed as typed", name);
   row("Dated", date);
 
@@ -489,7 +497,7 @@ function obSafeName(s) {
 function obContractPdf(rec, which) {
   var lt = which === "lt";
   var md = lt ? OB_CONTRACT.lt : OB_CONTRACT.tc;
-  var title = lt ? "Lead Tech Marketing Agreement" : "Thrive Companies Agency Agreement";
+  var title = lt ? "Lead Tech Marketing Services Agreement" : "Thrive Companies Agreement";
   var sig = lt ? rec.signature : rec.thriveSignature;
   var name = lt ? rec.signedName : rec.thriveSignedName;
   var date = lt ? rec.signedDate : rec.thriveSignedDate;

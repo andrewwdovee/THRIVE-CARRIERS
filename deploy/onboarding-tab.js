@@ -97,6 +97,7 @@ function ObPanel() {
   const [copied, setCopied] = __REACT__.useState(false);
   const [pdfBusy, setPdfBusy] = __REACT__.useState("");
   const [pdfErr, setPdfErr] = __REACT__.useState("");
+  const [q, setQ] = __REACT__.useState("");
 
   const load = __REACT__.useCallback(async () => {
     setBusy(true);
@@ -121,6 +122,12 @@ function ObPanel() {
   const signedThisWeek = list.filter((r) => new Date(r.signedAt).getTime() >= week).length;
   const waiting = list.filter((r) => !r.reviewed).length;
   const withPhoto = list.filter((r) => (r.steps || {}).photo === true).length;
+  /* The search box: any word of the name, business, email or start time. */
+  const needle = q.trim().toLowerCase();
+  const shown = needle
+    ? list.filter((r) => [r.legalName, r.business, r.email, r.startTime]
+        .some((v) => String(v || "").toLowerCase().includes(needle)))
+    : list;
 
   async function openRow(id) {
     if (open === id) { setOpen(null); setDoc(null); return; }
@@ -224,6 +231,28 @@ function ObPanel() {
     });
   }
 
+  /* The headshot comes down the same way the agreements do. It is stored
+     as a data URL, so it is turned back into a file here. */
+  function savePhoto(rec) {
+    setPdfErr("");
+    try {
+      const m = String(rec.photo || "").match(/^data:([^;,]+)(;base64)?,(.*)$/);
+      if (!m) throw new Error("the photo on file is not readable");
+      const bin = m[2] ? atob(m[3]) : decodeURIComponent(m[3]);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const ext = m[1] === "image/png" ? "png" : m[1] === "image/webp" ? "webp" : "jpg";
+      const name = String(rec.legalName || "agent").trim().replace(/[^\w .-]+/g, "").replace(/\s+/g, " ");
+      Promise.resolve(__SAVE__(name + " headshot." + ext, new Blob([bytes], { type: m[1] })))
+        .then(function (r) {
+          if (r && r.ok === false) setPdfErr("Could not save the photo: " + obSaveWhy(r.code));
+        })
+        .catch(function (e) { setPdfErr("Could not save the photo: " + (e && e.message ? e.message : String(e))); });
+    } catch (e) {
+      setPdfErr("Could not save the photo: " + (e && e.message ? e.message : String(e)));
+    }
+  }
+
   /* ------------------------------------------------------ one open row */
   function detail(r) {
     if (!doc) {
@@ -276,7 +305,7 @@ function ObPanel() {
                 }, what)),
               doc.photo && __JSX__.jsxs("div", {
                 children: [
-                  __JSX__.jsx("div", { className: "text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1", children: "Highlight photo" }, "l"),
+                  __JSX__.jsx("div", { className: "text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1", children: "Headshot photo" }, "l"),
                   __JSX__.jsx("img", {
                     src: doc.photo, alt: "",
                     style: { height: "96px", width: "96px", objectFit: "cover", borderRadius: "999px" },
@@ -297,6 +326,14 @@ function ObPanel() {
                   onClick: () => savePdf(doc, which),
                   children: pdfBusy === which ? "Building the PDF…" : "Download " + label + " (PDF)",
                 }, which)),
+              __JSX__.jsx("button", {
+                type: "button",
+                className: btn,
+                disabled: !doc.photo,
+                title: doc.photo ? "" : "No headshot was uploaded",
+                onClick: () => savePhoto(doc),
+                children: doc.photo ? "Download headshot photo" : "No headshot uploaded",
+              }, "ph"),
               pdfErr && __JSX__.jsx("span", {
                 className: "text-sm text-rose-600 dark:text-rose-400",
                 children: pdfErr,
@@ -343,7 +380,7 @@ function ObPanel() {
             }),
           }, "h"),
           __JSX__.jsx("tbody", {
-            children: list.map((r) => __JSX__.jsxs(__JSX__.Fragment, {
+            children: shown.map((r) => __JSX__.jsxs(__JSX__.Fragment, {
               children: [
                 __JSX__.jsxs("tr", {
                   className: "border-b border-slate-200 dark:border-slate-800 hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer",
@@ -413,13 +450,30 @@ function ObPanel() {
             className: "text-sm font-semibold text-slate-900 dark:text-white",
             children: "Who has signed",
           }, "t"),
-          __JSX__.jsx("button", {
-            onClick: load, disabled: busy, className: btn + " disabled:opacity-60",
-            children: busy ? "Refreshing" : "Refresh",
-          }, "r"),
+          __JSX__.jsxs("div", {
+            className: "flex items-center gap-2",
+            children: [
+              __JSX__.jsx("input", {
+                type: "search", value: q, placeholder: "Search by name, business or email",
+                "aria-label": "Search who has signed",
+                onChange: (e) => setQ(e.target.value),
+                className: "w-full min-w-0 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-900 dark:text-white",
+                style: { width: "260px", maxWidth: "60vw" },
+              }, "q"),
+              __JSX__.jsx("button", {
+                onClick: load, disabled: busy, className: btn + " disabled:opacity-60",
+                children: busy ? "Refreshing" : "Refresh",
+              }, "r"),
+            ],
+          }, "tools"),
         ],
       }, "hd"),
-      body,
+      needle && list.length && !shown.length
+        ? __JSX__.jsx("div", {
+            className: "rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 text-sm text-slate-600 dark:text-slate-300",
+            children: "Nobody who has signed matches \u201c" + q.trim() + "\u201d.",
+          }, "none")
+        : body,
     ],
   });
 }

@@ -3,3 +3,7 @@
 preview.html
 *-snapshot-for-import.json
 *-state.json
+
+# Board exports and backups hold customer data
+deploy/board*.json
+deploy/old-board*.json

@@ -16,6 +16,10 @@
  *   POST /onboarding/submit        no token, {record} -> {ok: true, id}
  *   POST /onboarding/preferences   no token, {email, ...} -> {ok: true, ...}
  *   GET  /onboarding/roster        no token            -> {slots: [...]}
+ *   POST /refund-request           no token, an agent's refund slip -> {ok: true}
+ *   GET  /refund-requests          Bearer token        -> [request, ...]
+ *   POST /stripe/webhook           Stripe-Signature    -> {ok: true}
+ *   GET  /orders?since=<unix s>    Bearer token        -> [order, ...]
  *
  * It is the only unauthenticated write, because the person signing the
  * agreement has no account yet. It is not open: the CORS allow-list
@@ -31,6 +35,8 @@
  * anything real at it.
  */
 
+import { verify, HANDLED, fromEvent, mergeOrders } from "./stripe-webhook.js";
+
 const TOKEN_TTL_DAYS = 30;
 const enc = new TextEncoder();
 
@@ -44,13 +50,124 @@ const ONBOARD_MAX_PHOTO = 2.6 * 1024 * 1024;
 const ONBOARD_MAX_ROWS = 2000;
 const ONBOARD_PER_HOUR = 6;
 const PREFS_PER_HOUR = 20;
-/* The only weekly volumes on offer. */
-const CALL_TIERS = [15, 25, 35, 50];
+/* The only weekly volumes on offer. 0 is "taking the week off". */
+const CALL_TIERS = [15, 25, 35, 50, 0];
+/* Where the Lead Tech board keeps who is switched off (its {off, log}
+   record, written through the /kv route). */
+const STARTTIMES_KEY = "kv:starttimes/state";
 const BUSY_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const BUSY_PARTS = ["AM", "PM", "All day"];
 /* The only start times the desk runs. The signing page and the settings
    page both offer these two, and the relay accepts nothing else. */
 const ONBOARD_SLOTS = ["10:00 AM EST", "11:00 AM EST"];
+
+/* Refund slips from the public form on the Lead Tech board (#request).
+   Two kinds: two bad calls earn one refund, and a duplicate call is one
+   call that is a refund on its own. */
+const RR_PREFIX = "rr:";
+const RR_TTL = 120 * 24 * 3600;          /* long enough to settle a dispute */
+const RR_MAX_BODY = 8 * 1024;
+const RR_MAX_CALLS = 12;
+const RR_PER_HOUR = 20;
+const RR_REASONS = ["non_consumer", "agent", "dead_air", "other", "duplicate"];
+
+function readRefundRequest(body) {
+  const str = (v, max) => String(v ?? "").trim().slice(0, max);
+  const first = str(body?.first, 80);
+  const last = str(body?.last, 80);
+  const email = str(body?.email, 160).toLowerCase();
+  const day = str(body?.day, 10);
+  if (!first || !last) return { error: "A first and last name are needed." };
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "That email address doesn't look right." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return { error: "A date is needed." };
+
+  const kind = body?.kind === "duplicate" ? "duplicate" : "pair";
+  const raw = Array.isArray(body?.calls) ? body.calls.slice(0, kind === "duplicate" ? 1 : RR_MAX_CALLS) : [];
+  const calls = [];
+  for (const c of raw) {
+    const phone = str(c?.phone, 24);
+    const reason = kind === "duplicate" ? "duplicate" : str(c?.reason, 32);
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length < 10) return { error: "Each call needs a phone number of at least 10 digits." };
+    if (RR_REASONS.indexOf(reason) < 0 || (kind === "pair" && reason === "duplicate")) {
+      return { error: "Pick a reason for each call." };
+    }
+    calls.push({ phone, digits, reason, note: str(c?.note, 200) });
+  }
+  if (kind === "duplicate") {
+    if (calls.length !== 1) return { error: "A duplicate call needs its phone number." };
+  } else if (calls.length < 2) {
+    return { error: "Two calls are needed for one refund." };
+  }
+  return { value: { kind, first, last, email, day, calls, note: str(body?.note, 500) } };
+}
+
+/* Stripe. Every payment Stripe pushes lands in the inbox for a week; the
+   portal polls GET /orders and keeps its own copy for good, so nothing is
+   lost when an entry expires. Two secrets:
+     STRIPE_WEBHOOK_SECRET  whsec_...  required; it is what proves a delivery
+                            came from Stripe and not from a stranger
+     STRIPE_SECRET_KEY      rk_... or sk_...  optional; a read-only restricted
+                            key lets the relay look up what was bought on a
+                            Payment Link, and lets the portal backfill */
+const STRIPE_API = "https://api.stripe.com/v1";
+const INBOX_TTL = 7 * 24 * 3600;
+const INBOX_OVERLAP = 600;
+
+async function stripeGet(env, path, params = {}) {
+  const qs = new URLSearchParams(params).toString();
+  const r = await fetch(`${STRIPE_API}/${path}${qs ? `?${qs}` : ""}`, {
+    headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`, "Stripe-Version": "2024-06-20" },
+  });
+  if (!r.ok) throw new Error(`Stripe ${r.status}: ${(await r.text()).slice(0, 300)}`);
+  return r.json();
+}
+
+/* A Payment Link checkout says who paid and how much, but not what for:
+   the line items are left out of the event. Ask for them, so the order
+   arrives already named and sorted into its product's lane. */
+async function withLineItems(env, event) {
+  const o = event.data && event.data.object;
+  if (event.type !== "checkout.session.completed" || !o || !o.id || !env.STRIPE_SECRET_KEY) return event;
+  if (o.line_items && o.line_items.data && o.line_items.data.length) return event;
+  try {
+    const li = await stripeGet(env, `checkout/sessions/${o.id}/line_items`, { limit: "20", "expand[]": "data.price.product" });
+    const data = (li.data || []).map((l) => {
+      const prod = l.price && typeof l.price.product === "object" ? l.price.product : null;
+      return {
+        ...l,
+        description: l.description || (prod && prod.name) || "",
+        price: l.price ? { ...l.price, product: prod ? prod.id : l.price.product } : l.price,
+      };
+    });
+    return { ...event, data: { ...event.data, object: { ...o, line_items: { data } } } };
+  } catch {
+    return event;   /* an unnamed order beats a lost one */
+  }
+}
+
+async function inboxSince(env, since) {
+  const out = [];
+  let cursor;
+  do {
+    const page = await env.THRIVE_KV.list({ prefix: "inbox:", cursor });
+    for (const k of page.keys) {
+      const at = Number(k.name.split(":")[1]);
+      if (Number.isFinite(at) && at < since - INBOX_OVERLAP) continue;
+      const raw = await env.THRIVE_KV.get(k.name);
+      if (raw) { try { out.push(JSON.parse(raw)); } catch { /* skip a bad row */ } }
+    }
+    cursor = page.list_complete ? null : page.cursor;
+  } while (cursor);
+  return out;
+}
+
+/* The backfill: ask Stripe directly for recent charges, to catch anything
+   a delivery outage lost. Only with a secret key, and only on request. */
+async function recentCharges(env, since) {
+  const page = await stripeGet(env, "charges", { limit: "100", "created[gte]": String(since), "expand[]": "data.customer" });
+  return (page.data || []).map((ch) => fromEvent({ type: "charge." + ch.status, data: { object: ch } }));
+}
 
 /* ---------------------------------------------------------------- utils */
 
@@ -181,6 +298,8 @@ function configReport(env) {
     hashLooksValid: typeof env.OWNER_PASSWORD_HASH === "string" && /^[0-9a-fA-F]{64}$/.test(env.OWNER_PASSWORD_HASH.trim()),
     tokenSecret: typeof env.TOKEN_SECRET === "string" && env.TOKEN_SECRET.length > 0,
     kv: !!env.THRIVE_KV,
+    stripeWebhook: typeof env.STRIPE_WEBHOOK_SECRET === "string" && env.STRIPE_WEBHOOK_SECRET.startsWith("whsec_"),
+    stripeKey: typeof env.STRIPE_SECRET_KEY === "string" && env.STRIPE_SECRET_KEY.length > 0,
     iterations: Number(env.OWNER_PASSWORD_ITER || 0),
     allowedOrigins: (env.ALLOWED_ORIGINS || "").split(",").map((s) => s.trim()).filter(Boolean),
   };
@@ -243,9 +362,70 @@ async function handle(request, env) {
       return json({
         ok: true,
         service: "thrive-relay",
+        /* The portal reads this to know Stripe pushes to us, so it can
+           check every few seconds instead of on a long timer. */
+        webhook: !!(env.STRIPE_WEBHOOK_SECRET && env.THRIVE_KV),
         config: configReport(env),
         missing: missingConfig(env),
       }, 200, head);
+    }
+
+    /* ---- Stripe pushing a payment ----
+       No token: Stripe cannot send one. The signature is the check, and
+       nothing is stored until it passes. */
+    if (path === "/stripe/webhook" && request.method === "POST") {
+      const raw = await request.text();
+      const check = await verify(raw, request.headers.get("Stripe-Signature"), env.STRIPE_WEBHOOK_SECRET);
+      if (!check.ok) return json({ error: check.reason }, 400);
+      let event;
+      try { event = JSON.parse(raw); } catch { return json({ error: "Body is not JSON." }, 400); }
+      /* Acknowledge what we do not act on, or Stripe retries it for days. */
+      if (!HANDLED.has(event.type)) return json({ ok: true, ignored: event.type });
+      /* A subscription checkout is told again, with its line items, by the
+         invoice and the charge that follow it. Taking the session too would
+         put the first month on the board twice. */
+      if (event.type === "checkout.session.completed" && event.data?.object?.mode === "subscription") {
+        return json({ ok: true, ignored: "subscription checkout: the invoice carries it" });
+      }
+      /* A session that is still waiting on a bank transfer has not paid. */
+      if (event.type === "checkout.session.completed" && event.data?.object?.payment_status === "unpaid") {
+        return json({ ok: true, ignored: "not paid yet" });
+      }
+
+      const order = fromEvent(await withLineItems(env, event));
+      if (!order || !order.id) return json({ ok: true, ignored: "no payment object" });
+
+      /* One payment fires several events (the checkout, the charge, the
+         invoice) at slightly different times. The first to arrive claims a
+         key; the rest find it through the pointer and merge into it. */
+      const at = Number(order.created) || Math.floor(Date.now() / 1000);
+      const ptr = `idx:${order.id}`;
+      const key = (await env.THRIVE_KV.get(ptr)) || `inbox:${String(at).padStart(12, "0")}:${order.id}`;
+      const prior = await env.THRIVE_KV.get(key);
+      const merged = prior ? mergeOrders(JSON.parse(prior), order) : order;
+      await env.THRIVE_KV.put(key, JSON.stringify(merged), { expirationTtl: INBOX_TTL });
+      if (!prior) await env.THRIVE_KV.put(ptr, key, { expirationTtl: INBOX_TTL * 4 });
+      return json({ ok: true, received: order.id });
+    }
+
+    /* ---- orders, for the signed-in portal ---- */
+    if (path === "/orders" && request.method === "GET") {
+      const who = await readToken(env, request);
+      if (!who) return json({ error: "Signed out" }, 401, head);
+      const asked = Number(url.searchParams.get("since"));
+      const floor = Math.floor(Date.now() / 1000) - 30 * 24 * 3600;
+      const since = Number.isFinite(asked) && asked > 0 ? Math.max(Math.floor(asked), floor) : floor;
+      const nocache = { ...head, "Cache-Control": "no-store" };
+
+      const pushed = await inboxSince(env, since);
+      if (url.searchParams.get("backfill") !== "1" || !env.STRIPE_SECRET_KEY) return json(pushed, 200, nocache);
+      try {
+        const polled = await recentCharges(env, since);
+        const seen = new Set(pushed.map((o) => o.id));
+        return json([...pushed, ...polled.filter((o) => o && !seen.has(o.id))], 200, nocache);
+      } catch {
+        return json(pushed, 200, nocache);   /* partial beats nothing */
+      }
     }
 
     /* ---- auth ---- */
@@ -333,6 +513,16 @@ async function handle(request, env) {
         tz:        text(body.tz, 60),
         agent:     text(body.agent, 200),
       };
+      /* Initials from the Thrive Companies agreement: short keys to a few
+         letters each, and no more of them than the agreement asks for. */
+      rec.thriveInitials = {};
+      if (body.thriveInitials && typeof body.thriveInitials === "object") {
+        Object.keys(body.thriveInitials).slice(0, 24).forEach((k) => {
+          const key = String(k).replace(/[^a-z0-9_]/gi, "").slice(0, 24);
+          const val = text(body.thriveInitials[k], 6).toUpperCase().replace(/[^A-Z]/g, "");
+          if (key && val) rec.thriveInitials[key] = val;
+        });
+      }
       const signature = typeof body.signature === "string" ? body.signature : "";
       const thriveSignature = typeof body.thriveSignature === "string" ? body.thriveSignature : "";
       const photo = typeof body.photo === "string" ? body.photo : "";
@@ -510,23 +700,81 @@ async function handle(request, env) {
       let index = [];
       try { index = JSON.parse((await env.THRIVE_KV.get(ONBOARD_INDEX)) || "[]"); } catch { index = []; }
       if (!Array.isArray(index)) index = [];
-      const people = index
-        .filter((r) => r && r.legalName)
-        .map((r) => ({
-          id: String(r.id || ""),
-          name: String(r.legalName || ""),
-          startTime: ONBOARD_SLOTS.indexOf(r.startTime) >= 0 ? r.startTime : "",
-          callsPerWeek: CALL_TIERS.indexOf(r.callsPerWeek) >= 0 ? r.callsPerWeek : null,
-          busyDays: Array.isArray(r.busyDays) ? r.busyDays.filter((d) => BUSY_DAYS.indexOf(d) >= 0) : [],
-          busyPart: BUSY_PARTS.indexOf(r.busyPart) >= 0 ? r.busyPart : "",
-        }));
+      /* Who the board has switched off. Only a yes/no per person comes down
+         here; the email it is keyed on stays on this side. */
+      let offMap = {};
+      try { offMap = (JSON.parse((await env.THRIVE_KV.get(STARTTIMES_KEY)) || "{}") || {}).off || {}; } catch { offMap = {}; }
+      /* One row per person: signing twice keeps the latest answer. */
+      const latest = new Map();
+      index.filter((r) => r && r.legalName).forEach((r) => {
+        const k = String(r.email || r.id || "").toLowerCase();
+        const prev = latest.get(k);
+        if (prev && new Date(prev.signedAt) >= new Date(r.signedAt)) return;
+        latest.set(k, r);
+      });
+      /* The public board shows each person's full name, start time, how many
+         calls they want this week and the weekdays they are not available.
+         Email and phone stay on this side. */
+      const people = [...latest.values()].map((r) => ({
+        id: String(r.id || ""),
+        name: String(r.legalName || ""),
+        startTime: ONBOARD_SLOTS.indexOf(r.startTime) >= 0 ? r.startTime : "",
+        busyDays: Array.isArray(r.busyDays) ? r.busyDays.filter((d) => BUSY_DAYS.indexOf(d) >= 0) : [],
+        busyPart: BUSY_PARTS.indexOf(r.busyPart) >= 0 ? r.busyPart : "",
+        callsPerWeek: r.callsPerWeek === "" || r.callsPerWeek == null || isNaN(Number(r.callsPerWeek))
+          ? null : Math.max(0, Math.round(Number(r.callsPerWeek))),
+        off: !!offMap[String(r.email || "").toLowerCase()],
+      }));
       return json({
         slots: ONBOARD_SLOTS,
-        tiers: CALL_TIERS,
         days: BUSY_DAYS,
         parts: BUSY_PARTS,
         people,
       }, 200, { ...head, "Cache-Control": "no-store" });
+    }
+
+    /* ---- refund slips ----
+       The form goes to agents with no account, so the POST takes no token:
+       a fixed shape, a size cap, a rate limit, and nothing comes back. */
+    if (path === "/refund-request" && request.method === "POST") {
+      const raw = await request.text();
+      if (raw.length > RR_MAX_BODY) return json({ error: "That's too long." }, 413, head);
+      let body;
+      try { body = JSON.parse(raw); } catch { return json({ error: "Couldn't read that." }, 400, head); }
+      const { value, error } = readRefundRequest(body);
+      if (error) return json({ error }, 400, head);
+
+      const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+      const who = await hmac(env.TOKEN_SECRET || "refunds", ip);
+      const bucket = `rate:refund:${who.slice(0, 24)}:${Math.floor(Date.now() / 36e5)}`;
+      const seen = Number(await env.THRIVE_KV.get(bucket)) || 0;
+      if (seen >= RR_PER_HOUR) return json({ error: "Too many requests from here. Try again later." }, 429, head);
+
+      const at = Date.now();
+      const id = crypto.randomUUID();
+      await env.THRIVE_KV.put(
+        `${RR_PREFIX}${String(Math.floor(at / 1000)).padStart(12, "0")}:${id}`,
+        JSON.stringify({ ...value, id, at }),
+        { expirationTtl: RR_TTL },
+      );
+      await env.THRIVE_KV.put(bucket, String(seen + 1), { expirationTtl: 7200 });
+      return json({ ok: true }, 200, head);
+    }
+
+    if (path === "/refund-requests" && request.method === "GET") {
+      const who = await readToken(env, request);
+      if (!who) return json({ error: "Signed out" }, 401, head);
+      const out = [];
+      let cursor;
+      do {
+        const page = await env.THRIVE_KV.list({ prefix: RR_PREFIX, cursor });
+        for (const k of page.keys) {
+          const v = await env.THRIVE_KV.get(k.name);
+          if (v) { try { out.push(JSON.parse(v)); } catch { /* skip a bad row */ } }
+        }
+        cursor = page.list_complete ? null : page.cursor;
+      } while (cursor);
+      return json(out.sort((a, b) => b.at - a.at), 200, { ...head, "Cache-Control": "no-store" });
     }
 
     /* ---- key/value ---- */
