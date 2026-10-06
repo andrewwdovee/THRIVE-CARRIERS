@@ -43,7 +43,10 @@ const FIXES = [
     name: "since has a ceiling",
     find: /"since="\+Math\.floor\((\w{1,3})\/1e3\)\+\((\w{1,3})\?"&backfill=1":""\)/g,
     make: (m) => `"since="+Math.floor(Math.min(${m[1]},Date.now()-${LAG_MS})/1e3)+(${m[2]}?"&backfill=1":"")`,
-    done: /"since="\+Math\.floor\(Math\.min\(/g,
+    /* Two ways this can already be true: patched here, or fixed upstream
+       in src/lib/sync.js, which compiles to the clamp sitting in its own
+       binding just before the URL is built. Neither needs doing twice. */
+    done: /(?:"since="\+Math\.floor\(Math\.min\()|(?:Math\.min\([\w$]{1,3},Date\.now\(\)-[\w$.e\d]{1,8}\)[\s\S]{0,160}?"since="\+Math\.floor\()/g,
   },
   {
     name: "pulls once on open",
@@ -52,7 +55,10 @@ const FIXES = [
     find: /(\w{1,3})=setInterval\(\(\)=>\{document\.hidden\|\|(\w{1,3})\(\{quiet:!0\}\)\},(\w{1,3})\);return\(\)=>clearInterval\(\1\)/g,
     make: (m) => `${m[1]}=setInterval(()=>{document.hidden||${m[2]}({quiet:!0})},${m[3]});` +
       `${m[2]}({quiet:!0});return()=>clearInterval(${m[1]})`,
-    done: /\w{1,3}\(\{quiet:!0\}\);return\(\)=>clearInterval\(/g,
+    /* Patched here it reads `X({quiet:!0});return()=>clearInterval(`;
+       fixed upstream the minifier folds it into the return as
+       `return X({quiet:!0}),()=>clearInterval(`. Same thing. */
+    done: /\w{1,3}\(\{quiet:!0\}\)[,;]\s*(?:return)?\s*\(\)=>clearInterval\(/g,
   },
   {
     name: "timer errors show",
@@ -70,7 +76,11 @@ export function patchSync(source, opts = {}) {
     const already = [...out.matchAll(fix.done)].length;
     const hits = [...out.matchAll(fix.find)];
 
-    if (!hits.length && already === 1) { log(`  ${fix.name.padEnd(22)} already in`); continue; }
+    /* Already-fixed wins over still-matches. The upstream fix puts the
+       clamp in its own binding, so the shape this patch looks for is
+       still sitting right there afterwards -- patching on top of it
+       would clamp a clamped value and report work it did not do. */
+    if (already >= 1) { log(`  ${fix.name.padEnd(22)} already in`); continue; }
     if (hits.length !== 1) {
       throw new Error(
         `Sync fix "${fix.name}": expected one place to change, found ${hits.length}` +
