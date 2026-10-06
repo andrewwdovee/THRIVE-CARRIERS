@@ -19,6 +19,11 @@ ONBOARDING_URL="https://thrive-onboarding.pages.dev"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 LICENSING_DIR="${LICENSING_DIR:-$HOME/thrive-onboarding}"
 PORTAL_SRC="${PORTAL_SRC:-$HOME/thrive-leadtech-src}"
+# The portal is published to both of its addresses, so whichever one
+# people have bookmarked is always the newest version. Both read the same
+# data from the relay, so a deploy never touches what is on the board.
+# Set LTF_BRANCH if lead-tech-fulfillment's production branch is not main.
+LTF_BRANCH="${LTF_BRANCH:-main}"
 
 pages() {  # pages <folder> <project> <production branch>
   echo
@@ -55,7 +60,11 @@ if [ "${1:-}" = "--portal" ]; then
   (cd "$PORTAL_SRC" && npm ci && npm run artifact)
   cp "$PORTAL_SRC/artifact/fulfillment-desk.html" deploy/_leadtech-content.html
   (cd deploy && node build-leadtech.mjs "$RELAY" --onboarding "$ONBOARDING_URL")
+  # The board's data lives on the relay, not in the page. A build that
+  # lost the relay address would open empty, so refuse to ship one.
+  grep -q "$RELAY" deploy/dist-leadtech/index.html || { echo "Portal build has no relay address -- not deploying."; exit 1; }
   pages deploy/dist-leadtech thrive-leadtech main
+  pages deploy/dist-leadtech lead-tech-fulfillment "$LTF_BRANCH"
 fi
 
 echo
@@ -63,7 +72,8 @@ echo "==> Checking each site serves the newest build"
 for url in \
   "$ONBOARDING_URL/" "$ONBOARDING_URL/welcome/" "$ONBOARDING_URL/start-time/" \
   "https://thrive-links.pages.dev/" "https://leadtech-marketplace.pages.dev/" \
-  "https://thrive-training.pages.dev/" "https://thrive-licensing.pages.dev/"; do
+  "https://thrive-training.pages.dev/" "https://thrive-licensing.pages.dev/" \
+  "https://thrive-leadtech.pages.dev/" "https://lead-tech-fulfillment.pages.dev/"; do
   code=$(curl -s -o /dev/null -w '%{http_code}' "$url" || echo "---")
   printf '  %s  %s\n' "$code" "$url"
 done
