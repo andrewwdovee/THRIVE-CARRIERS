@@ -11,12 +11,15 @@ ArtifactData tool with that URL.
 
 ## 2. Pull calls
 ```
-python3 call-sync/call_sync.py --since "$SINCE" --out /tmp/calls --dump-raw
+python3 call-sync/call_sync.py --since "$SINCE" --out .sync-out --dump-raw
 ```
-Read `/tmp/calls/_summary.json`. If a source reports an error, keep going with the other one
+Read `.sync-out/_summary.json`. If a source reports an error, keep going with the other one
 and record the error in step 5. On the first successful run, check `_raw_retreaver.json` and
 `_raw_callgrid.json` against the normalized files. If agent, caller, length or outcome came out
 wrong, fix the patterns in `FIELDS` in `call_sync.py`, re-run, and commit the fix.
+
+Write into `.sync-out` inside the repo checkout (it is gitignored): recordings must be inside the
+working directory to be uploaded.
 
 ## 3. Skip calls already in the dashboard
 For each call in `_summary.json`, `get` collection `calls` with that id. If it exists and already
@@ -42,10 +45,15 @@ has a `review`, skip it. If it exists without a review but now has a transcript,
    "summary": "2-3 plain sentences",
    "keyDetails": [{"label": "<each keyDetails label, in order>", "value": "" if not mentioned}],
    "checklist": [{"rule": "R1 short restatement", "status": "met|missed|unclear|na", "evidence": "..."}],
-   "flags": [{"severity": "critical|warning|info", "title": "...", "quote": "verbatim from ONE transcript line, under 25 words", "explanation": "..."}],
+   "flags": [{"severity": "critical|warning|info", "title": "...", "quote": "verbatim from ONE transcript line, under 25 words, without the [mm:ss] timestamp", "explanation": "...",
+              "startSec": <seconds into the call where the problem starts, or null>, "endSec": <seconds where it ends, or null>}],
    "reviewedAt": "<now, ISO>"}
   ```
   Order flags critical first.
+- Flag times: transcripts from the sync start each line with `[mm:ss]`. Set `startSec`/`endSec` to
+  cover the whole stretch where the problem happens, which can span several lines (for example
+  1080 to 1260 for 18:00 to 21:00). Admins use these to jump the recording to that moment. Use null
+  when the transcript has no timestamps.
 - Carrier identity: "correct" when the caller asked whether we are a carrier (or clearly assumed it)
   and the agent did not confirm it ("That's one of the carriers we can help assist with").
   "incorrect" when the agent said yes, said or implied we are the carrier or work for it, or let the
@@ -57,7 +65,15 @@ has a `review`, skip it. If it exists without a review but now has a transcript,
 - Set `status` to `"ai"`. Leave calls without a transcript at `"new"` (they still appear on the
   dashboard, and 20+ minute ones are still marked for review).
 
-## 5. Write and record the run
+## 5. Attach recordings
+For each call in `_summary.json` with a `recordingFile` whose dashboard doc has no `recordingAsset`
+yet, upload the file to the dashboard's asset store with the Artifact tool: `action: "publish"`,
+`url` = the dashboard URL, `asset: true`, and `file_paths` with up to 25 `.mp4` files per call.
+Each result gives the file's asset `id`. Add `"recordingAsset": <id>, "recordingType": "video/mp4"`
+to that call's document in step 6. If an upload fails, skip it; the dashboard falls back to a link
+to the platform's recording.
+
+## 6. Write and record the run
 - Write calls with `batch` (up to 50 per batch). New docs: `set` with the file contents plus
   `review`, `status`, and `createdAt`. Existing docs: `update` with `if_version`.
 - `set` collection `config`, doc `sync`:

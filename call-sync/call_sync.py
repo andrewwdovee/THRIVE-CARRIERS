@@ -13,9 +13,11 @@ Environment:
 Usage:
   python3 call_sync.py --since 2026-10-04T13:00:00Z --out /tmp/calls [--dump-raw]
 
-Writes <out>/<doc_id>.json per call (dashboard shape) and <out>/_summary.json.
+Writes <out>/<doc_id>.json per call (dashboard shape), <out>/<doc_id>.mp4 per recording
+(mono AAC, the audio format the dashboard can store) and <out>/_summary.json.
+Transcripts from Deepgram carry [mm:ss] line timestamps so flags can point to a time in the call.
 """
-import argparse, datetime as dt, json, os, re, sys, urllib.error, urllib.parse, urllib.request
+import argparse, datetime as dt, json, os, re, shutil, subprocess, sys, urllib.error, urllib.parse, urllib.request
 
 RETREAVER_URL = "https://api.retreaver.com/api/v4/calls.json"
 CALLGRID_URL = os.environ.get("CALLGRID_CALLS_URL", "https://api.callgrid.com/v1/calls")
@@ -208,7 +210,33 @@ def transcribe(url):
         return ""
     res = http_json(DEEPGRAM_URL, headers={"Authorization": f"Token {key}"}, data={"url": url}, timeout=300)
     utts = (res.get("results") or {}).get("utterances") or []
-    return "\n".join(f"Speaker {u.get('speaker', '?')}: {u.get('transcript', '').strip()}" for u in utts if u.get("transcript"))
+    return "\n".join(f"[{clock(u.get('start', 0))}] Speaker {u.get('speaker', '?')}: {u.get('transcript', '').strip()}"
+                     for u in utts if u.get("transcript"))
+
+
+def clock(sec):
+    sec = int(sec or 0)
+    h, m, s = sec // 3600, sec % 3600 // 60, sec % 60
+    return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
+
+
+def fetch_recording(url, dest):
+    """Download a recording and convert it to a small mono AAC .mp4, the audio format the dashboard can store."""
+    if not url.startswith("http") or not shutil.which("ffmpeg"):
+        return None
+    raw = dest + ".src"
+    with urllib.request.urlopen(urllib.request.Request(url), timeout=300) as r, open(raw, "wb") as f:
+        shutil.copyfileobj(r, f)
+    try:
+        subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-y", "-i", raw, "-vn", "-ac", "1", "-ar", "16000",
+                        "-c:a", "aac", "-b:a", "32k", "-movflags", "+faststart", dest], check=True, timeout=600)
+    finally:
+        os.remove(raw)
+    if os.path.getsize(dest) > 20 * 1024 * 1024:  # dashboard limit; re-encode smaller
+        subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-y", "-i", dest, "-c:a", "aac", "-b:a", "16k",
+                        "-movflags", "+faststart", dest + ".small.mp4"], check=True, timeout=600)
+        os.replace(dest + ".small.mp4", dest)
+    return dest
 
 
 def main():
@@ -216,6 +244,7 @@ def main():
     ap.add_argument("--since", required=True, help="ISO time; calls started at or after this are pulled")
     ap.add_argument("--out", required=True)
     ap.add_argument("--min-seconds", type=int, default=30)
+    ap.add_argument("--skip-recordings", action="store_true", help="don't download recordings")
     ap.add_argument("--dump-raw", action="store_true", help="save each platform's first raw page for field checks")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
@@ -246,8 +275,15 @@ def main():
                         src["transcribed"] += bool(doc["transcript"])
                     except Exception as e:  # keep the call; it can be reviewed once a transcript exists
                         src.setdefault("transcribeErrors", []).append(f"{doc_id}: {e}")
+                rec = None
+                if doc["recordingUrl"] and not a.skip_recordings:
+                    try:
+                        rec = fetch_recording(doc["recordingUrl"], os.path.join(a.out, doc_id + ".mp4"))
+                    except Exception as e:  # the call still syncs; the dashboard links to the platform instead
+                        src.setdefault("recordingErrors", []).append(f"{doc_id}: {e}")
                 json.dump(doc, open(os.path.join(a.out, doc_id + ".json"), "w"))
-                summary["calls"].append({"id": doc_id, "durationSec": doc["durationSec"], "hasTranscript": bool(doc["transcript"])})
+                summary["calls"].append({"id": doc_id, "durationSec": doc["durationSec"], "hasTranscript": bool(doc["transcript"]),
+                                         "recordingFile": rec})
                 src["kept"] += 1
         except urllib.error.HTTPError as e:
             src["error"] = f"HTTP {e.code} from {name}: {e.read()[:300].decode(errors='replace')}"

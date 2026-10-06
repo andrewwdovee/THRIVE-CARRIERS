@@ -1,39 +1,41 @@
-<title>Thrive Call Review</title>
+<title>Lead Tech Compliance</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,650&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
 <style>
 /* Layout: sticky top bar with tabs; KPI strip; call table (main) beside an agent-score rail; call detail opens as a right-hand drawer. */
+/* Layout: sticky top bar with tabs; KPI strip; call table (main) beside a carrier/agent rail; review queue view; call detail opens as a right-hand drawer.
+   Look: neutral ink-on-white with a single cobalt brand blue. Blue also marks priority (long, likely-closed) calls; red/amber/green stay semantic. */
 :root{
-  --bg:#f2f5f5; --surface:#ffffff; --surface-2:#e9eff0; --line:#d4dde0; --fg:#13222a; --muted:#566a72;
-  --accent:#0b6e69; --accent-ink:#ffffff; --accent-soft:#dbefed;
-  --close:#5a3ccf; --close-soft:#ece7fc; --watch:#8a74e0; --watch-soft:#f4f1fe;
-  --crit:#c12a3a; --crit-soft:#fbe6e8; --warn:#9c5e07; --warn-soft:#fbefd9; --ok:#277a40; --ok-soft:#e0f1e5; --info:#4a6170; --info-soft:#e7edf0;
-  --scrim:rgba(10,22,28,.38); --shadow:0 18px 50px rgba(10,30,40,.18);
-  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
-  --f-body:"Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
-  --r:10px;
+  --bg:#f6f7f9; --surface:#ffffff; --surface-2:#f1f3f6; --line:#e4e7ec; --line-strong:#d0d5dd; --fg:#0e1420; --muted:#5d6676;
+  --accent:#1d4ed8; --accent-ink:#ffffff; --accent-soft:#eaf0ff;
+  --close:#1d4ed8; --close-soft:#eaf0ff; --watch:#7a9ef0; --watch-soft:#f4f7ff;
+  --crit:#d92d20; --crit-soft:#fef1f0; --warn:#b54708; --warn-soft:#fff6e8; --ok:#067647; --ok-soft:#ecfdf3; --info:#475467; --info-soft:#f2f4f7;
+  --scrim:rgba(14,20,32,.32); --shadow:0 24px 60px rgba(16,24,40,.16); --shadow-sm:0 1px 2px rgba(16,24,40,.06);
+  --f-display:"Geist", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-body:"Geist", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-mono:"Geist Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r:12px;
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
-  --bg:#0d1518; --surface:#142024; --surface-2:#1a282d; --line:#283a40; --fg:#e2ebed; --muted:#8ea1a8;
-  --accent:#40b8ad; --accent-ink:#03201d; --accent-soft:#11312e;
-  --close:#a690ff; --close-soft:#251e47; --watch:#8d7fd6; --watch-soft:#1c1a33;
-  --crit:#ff7884; --crit-soft:#3b1a20; --warn:#efb455; --warn-soft:#33270f; --ok:#62cf8c; --ok-soft:#12301f; --info:#9fb3bd; --info-soft:#1d2a30;
-  --scrim:rgba(0,0,0,.55); --shadow:0 18px 50px rgba(0,0,0,.5); color-scheme:dark;
+  --bg:#0a0c10; --surface:#111419; --surface-2:#181c23; --line:#232833; --line-strong:#2f3542; --fg:#eceef3; --muted:#8b93a3;
+  --accent:#5b86ff; --accent-ink:#06122e; --accent-soft:#16223f;
+  --close:#5b86ff; --close-soft:#16223f; --watch:#9db5ff; --watch-soft:#121a2c;
+  --crit:#ff6b6b; --crit-soft:#2c1517; --warn:#f2b347; --warn-soft:#2a2112; --ok:#4cc38a; --ok-soft:#10261c; --info:#a3acbb; --info-soft:#1b1f27;
+  --scrim:rgba(0,0,0,.6); --shadow:0 24px 60px rgba(0,0,0,.55); --shadow-sm:0 1px 2px rgba(0,0,0,.4); color-scheme:dark;
 }}
 :root[data-theme="dark"]{
-  --bg:#0d1518; --surface:#142024; --surface-2:#1a282d; --line:#283a40; --fg:#e2ebed; --muted:#8ea1a8;
-  --accent:#40b8ad; --accent-ink:#03201d; --accent-soft:#11312e;
-  --close:#a690ff; --close-soft:#251e47; --watch:#8d7fd6; --watch-soft:#1c1a33;
-  --crit:#ff7884; --crit-soft:#3b1a20; --warn:#efb455; --warn-soft:#33270f; --ok:#62cf8c; --ok-soft:#12301f; --info:#9fb3bd; --info-soft:#1d2a30;
-  --scrim:rgba(0,0,0,.55); --shadow:0 18px 50px rgba(0,0,0,.5); color-scheme:dark;
+  --bg:#0a0c10; --surface:#111419; --surface-2:#181c23; --line:#232833; --line-strong:#2f3542; --fg:#eceef3; --muted:#8b93a3;
+  --accent:#5b86ff; --accent-ink:#06122e; --accent-soft:#16223f;
+  --close:#5b86ff; --close-soft:#16223f; --watch:#9db5ff; --watch-soft:#121a2c;
+  --crit:#ff6b6b; --crit-soft:#2c1517; --warn:#f2b347; --warn-soft:#2a2112; --ok:#4cc38a; --ok-soft:#10261c; --info:#a3acbb; --info-soft:#1b1f27;
+  --scrim:rgba(0,0,0,.6); --shadow:0 24px 60px rgba(0,0,0,.55); --shadow-sm:0 1px 2px rgba(0,0,0,.4); color-scheme:dark;
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-body{background:var(--bg);color:var(--fg);font:14px/1.5 var(--f-body)}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 var(--f-body);-webkit-font-smoothing:antialiased}
 button,input,select,textarea{font:inherit;color:inherit}
-h1,h2,h3{font-family:var(--f-display);font-weight:650;margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1,h2,h3{font-family:var(--f-display);font-weight:600;margin:0;text-wrap:balance;letter-spacing:-.02em}
 .mono,.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 .muted{color:var(--muted)}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -42,21 +44,22 @@ h1,h2,h3{font-family:var(--f-display);font-weight:650;margin:0;text-wrap:balance
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
 .top-in{max-width:1440px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:10px;margin-right:auto}
-.mark{width:30px;height:30px;border-radius:8px;background:var(--accent);display:grid;place-items:center}
+.mark{width:32px;height:32px;border-radius:9px;background:var(--fg);color:var(--bg);display:grid;place-items:center;font-weight:700;font-size:13px;letter-spacing:-.02em}
 .mark svg{display:block}
-.brand h1{font-size:19px}
+.brand h1{font-size:17px;line-height:1.2}
+.brand h1 span{color:var(--muted);font-weight:500}
 .brand small{display:block;color:var(--muted);font-size:12px;font-family:var(--f-body);font-weight:500;letter-spacing:0}
 .tabs{display:flex;gap:4px;background:var(--surface-2);padding:3px;border-radius:9px}
 .tab{border:0;background:none;padding:6px 12px;border-radius:7px;cursor:pointer;color:var(--muted);font-weight:600}
 .tab[aria-selected="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
 
-.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);padding:7px 12px;border-radius:8px;cursor:pointer;font-weight:600;white-space:nowrap}
+.btn{display:inline-flex;align-items:center;gap:6px;box-shadow:var(--shadow-sm);border:1px solid var(--line-strong);background:var(--surface);padding:7px 12px;border-radius:8px;cursor:pointer;font-weight:600;white-space:nowrap}
 .btn:hover{border-color:var(--muted)}
 .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .btn.primary:hover{filter:brightness(1.07)}
 .btn.danger{color:var(--crit)}
 .btn.danger.armed{background:var(--crit);color:#fff;border-color:var(--crit)}
-.btn.ghost{border-color:transparent;background:transparent}
+.btn.ghost{border-color:transparent;background:transparent;box-shadow:none}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .btn.sm{padding:4px 9px;font-size:13px}
 
@@ -67,17 +70,18 @@ h1,h2,h3{font-family:var(--f-display);font-weight:650;margin:0;text-wrap:balance
 /* KPI strip */
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px}
 .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;min-width:0}
-.kpi .lab{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
-.kpi .val{font-family:var(--f-mono);font-size:26px;font-weight:600;line-height:1.2;margin-top:2px}
+.kpi .lab{font-size:12.5px;color:var(--muted);font-weight:500}
+.kpi .val{font-family:var(--f-display);font-variant-numeric:tabular-nums;font-size:28px;font-weight:600;letter-spacing:-.03em;line-height:1.15;margin-top:4px}
 .kpi .sub{font-size:12px;color:var(--muted)}
-.kpi.k-close{border-color:var(--close);background:var(--close-soft)}
+.kpi{box-shadow:var(--shadow-sm)}
+.kpi.k-close{border-color:var(--accent)}
 .kpi.k-close .val{color:var(--close)}
 .kpi.k-crit .val{color:var(--crit)}
 @media (max-width:460px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 .layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
 @media (max-width:1100px){.layout{grid-template-columns:minmax(0,1fr)}}
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);min-width:0;box-shadow:var(--shadow-sm)}
 
 /* filters */
 .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px;border-bottom:1px solid var(--line)}
@@ -87,48 +91,47 @@ h1,h2,h3{font-family:var(--f-display);font-weight:650;margin:0;text-wrap:balance
 .chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 10px;font-size:13px;cursor:pointer;font-weight:600;color:var(--muted)}
 .chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .chip.c-close[aria-pressed="true"]{background:var(--close);border-color:var(--close);color:#fff}
-.chip.c-watch[aria-pressed="true"]{background:var(--watch);border-color:var(--watch);color:#fff}
+.chip.c-watch[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
 .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line)}
 .toolbar .count{margin-right:auto;color:var(--muted);font-size:13px}
 .progress{font-size:13px;color:var(--accent);font-weight:600}
 
 /* table */
 .tablewrap{overflow-x:auto}
-table.calls{width:100%;border-collapse:separate;border-spacing:0;min-width:1060px}
-.car{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;margin-bottom:2px}
-.calls th{position:sticky;top:0;background:var(--surface-2);text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.calls{width:100%;border-collapse:separate;border-spacing:0;min-width:940px}
+.calls th{padding:8px 8px!important}
+.calls td{white-space:nowrap}
+.calls .l1{line-height:1.3}
+.calls .l2{font-size:12px;color:var(--muted);line-height:1.3;margin-top:1px}
+.calls .trunc{max-width:128px;overflow:hidden;text-overflow:ellipsis}
+.calls .split{border-left:1px solid var(--line)}
+.calls th.split{padding-left:14px}
+.calls td.split{padding-left:14px}
+.calls th{position:sticky;top:0;background:var(--surface);text-align:left;font-size:12px;color:var(--muted);font-weight:500;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
 .calls th button{all:unset;cursor:pointer;display:inline-flex;gap:4px;align-items:center}
 .calls th button:focus-visible{outline:2px solid var(--accent)}
 .calls th .arr{opacity:.35}
 .calls th[aria-sort] .arr{opacity:1;color:var(--fg)}
-.calls td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle}
+.calls td{padding:8px 8px;border-bottom:1px solid var(--line);vertical-align:middle;height:56px}
 .calls tr.row{cursor:pointer}
 .calls tr.row:hover td{background:var(--surface-2)}
 .calls tr.row.sel td{background:var(--accent-soft)}
-.calls td:first-child{border-left:4px solid transparent}
-.calls tr.t-close td{background:var(--close-soft)}
+.calls td:first-child{border-left:3px solid transparent}
 .calls tr.t-close td:first-child{border-left-color:var(--close)}
 .calls tr.t-watch td:first-child{border-left-color:var(--watch)}
-.calls tr.t-watch td{background:var(--watch-soft)}
 .who{font-weight:600}
 .sub2{font-size:12px;color:var(--muted)}
-.dur{display:flex;align-items:center;gap:8px;min-width:150px}
-.dbar{flex:0 0 64px;height:6px;border-radius:3px;background:var(--surface-2);position:relative;overflow:hidden}
-.dbar i{position:absolute;inset:0 auto 0 0;background:var(--muted);border-radius:3px}
-.t-close .dbar i{background:var(--close)}
-.t-watch .dbar i{background:var(--watch)}
-.t-close .dbar{background:var(--surface)}
-.t-watch .dbar{background:var(--surface)}
+.dur{display:flex;align-items:center;gap:8px}
 
-.pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:700;white-space:nowrap;border:1px solid transparent}
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:600;white-space:nowrap;border:1px solid transparent}
 .pill.close{background:var(--close);color:#fff}
-.pill.watch{background:var(--watch-soft);color:var(--close);border-color:var(--watch)}
+.pill.watch{background:var(--accent-soft);color:var(--accent)}
 .pill.ok{background:var(--ok-soft);color:var(--ok)}
 .pill.warn{background:var(--warn-soft);color:var(--warn)}
 .pill.crit{background:var(--crit-soft);color:var(--crit)}
 .pill.info{background:var(--info-soft);color:var(--info)}
 .pill.ex{background:transparent;border-color:var(--line);color:var(--muted);font-weight:600}
-.pill.need{background:var(--close-soft);color:var(--close);border-color:var(--close)}
+.pill.need{background:var(--fg);color:var(--bg)}
 .score{font-family:var(--f-mono);font-weight:600;font-size:15px;display:inline-flex;align-items:center;gap:6px}
 .score .dot{width:9px;height:9px;border-radius:50%}
 .flagct{display:flex;gap:4px}
@@ -163,6 +166,12 @@ table.calls{width:100%;border-collapse:separate;border-spacing:0;min-width:1060p
 .dhead{padding:calc(14px + env(safe-area-inset-top,0px)) 18px 12px;background:var(--surface);border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
 .dhead .row1{display:flex;gap:12px;align-items:flex-start}
 .dhead h2{font-size:22px}
+.facts{display:flex;flex-wrap:wrap;gap:6px 22px;margin:0}
+.facts dt{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700}
+.facts dd{margin:0;font-weight:600}
+.rec{display:flex;flex-direction:column;gap:10px}
+.rec audio{width:100%;min-width:0}
+.rec .rbtns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .dhead .x{margin-left:auto}
 .dtags{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .dactions{display:flex;flex-wrap:wrap;gap:6px}
@@ -193,14 +202,14 @@ table.calls{width:100%;border-collapse:separate;border-spacing:0;min-width:1060p
 .meta-grid dt{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
 .meta-grid dd{margin:0}
 .transcript{display:flex;flex-direction:column;gap:6px;max-height:520px;overflow-y:auto;font-size:13.5px}
-.tl{display:grid;grid-template-columns:86px minmax(0,1fr);gap:8px}
+.tl{display:grid;grid-template-columns:44px 86px minmax(0,1fr);gap:8px;padding:2px 4px}
 .tl .sp{font-weight:700;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding-top:2px;overflow:hidden;text-overflow:ellipsis}
 .tl.agent .sp{color:var(--accent)}
 .tl p{margin:0;overflow-wrap:anywhere}
 .idq{margin:8px 0 0;padding:4px 10px;border-left:2px solid var(--line);font-style:italic}
 mark{background:var(--warn-soft);color:var(--fg);border-bottom:2px solid var(--warn);padding:0 1px}
 mark.critical{background:var(--crit-soft);border-bottom-color:var(--crit)}
-mark.flash{outline:2px solid var(--accent)}
+mark.flash,.tl.flash{outline:2px solid var(--accent)}
 textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--surface);resize:vertical;min-height:70px}
 .thinking{display:flex;gap:10px;align-items:center;color:var(--accent);font-weight:600}
 .spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--accent-soft);border-top-color:var(--accent);animation:sp 0.8s linear infinite}
@@ -247,17 +256,55 @@ label.f input,label.f select{border:1px solid var(--line);border-radius:8px;padd
 .sync.err .led{background:var(--crit)}
 .sync.err{border-color:var(--crit)}
 .sync b{font-weight:700}
+.badge{display:inline-grid;place-items:center;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--crit);color:#fff;font-size:11px;font-weight:700;margin-left:4px;font-family:var(--f-mono)}
+.qhead{display:flex;gap:16px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;margin-bottom:14px}
+.qhead h2{font-size:20px}
+.qhead .lead{margin:4px 0 0;color:var(--muted);max-width:70ch}
+.qlist{display:flex;flex-direction:column;gap:10px}
+.qcard{box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr) auto;gap:16px;align-items:center;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--crit);border-radius:var(--r);padding:12px 14px}
+.qcard:hover{border-color:var(--muted)}
+.qcard:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.qcard.long{border-left-color:var(--accent)}
+.qcard .who{font-weight:700}
+.qcard .moments{display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+.mom{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:7px;padding:3px 8px;font-size:12px;max-width:100%}
+.mom .tm{font-family:var(--f-mono);font-weight:600;white-space:nowrap}
+.mom .tt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mom.critical .tm{color:var(--crit)}
+.mom.warning .tm{color:var(--warn)}
+.qcard .right{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+@media (max-width:760px){.qcard{grid-template-columns:minmax(0,1fr)}.qcard .right{align-items:flex-start;flex-direction:row}}
+.tline{position:relative;height:30px;border-radius:6px;background:var(--surface-2);margin:4px 0 2px}
+.tline .seg{position:absolute;top:0;bottom:0;min-width:6px;border-radius:4px;opacity:.85;cursor:pointer;border:0;padding:0}
+.tline .seg.critical{background:var(--crit)}
+.tline .seg.warning{background:var(--warn)}
+.tline .seg.info{background:var(--info)}
+.tline .seg:focus-visible{outline:2px solid var(--fg);outline-offset:1px}
+.tline .play{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--fg);pointer-events:none}
+.tticks{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.jump{all:unset;cursor:pointer;font-family:var(--f-mono);font-weight:600;font-size:12px;border:1px solid var(--line);border-radius:6px;padding:1px 7px;white-space:nowrap}
+.jump:hover{border-color:var(--accent);color:var(--accent)}
+.jump:focus-visible{outline:2px solid var(--accent)}
+.flag .fr{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:4px}
+.flag .fr .btn{padding:3px 9px;font-size:12px}
+.flag .fr .btn[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.flag.resolved{opacity:.7}
+.tl .ts{all:unset;cursor:pointer;font-family:var(--f-mono);font-size:11px;color:var(--muted);padding-top:3px}
+.tl .ts:hover{color:var(--accent)}
+.tl.inflag{background:var(--warn-soft);border-radius:6px}
+.tl.inflag.critical{background:var(--crit-soft)}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:9px;font-weight:600;z-index:60;max-width:calc(100% - 32px);box-shadow:var(--shadow)}
 </style>
 
 <header class="top">
   <div class="top-in">
     <div class="brand">
-      <div class="mark" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6l7-3z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg></div>
-      <div><h1>Thrive Call Review</h1><small>Policy support desk · compliance QA</small></div>
+      <div class="mark" aria-hidden="true">LT</div>
+      <div><h1>Lead Tech <span>Compliance</span></h1><small>Policy support desk call review</small></div>
     </div>
     <div class="tabs" role="tablist">
       <button class="tab" role="tab" id="tab-calls" aria-selected="true" data-view="calls">Calls</button>
+      <button class="tab" role="tab" id="tab-queue" aria-selected="false" data-view="queue">Review queue <span class="badge" id="qBadge" hidden></span></button>
       <button class="tab" role="tab" id="tab-rules" aria-selected="false" data-view="rules">Review rules</button>
     </div>
     <button class="btn" id="importBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Import CSV</button>
@@ -305,11 +352,11 @@ label.f input,label.f select{border:1px solid var(--line);border-radius:8px;padd
             <thead><tr>
               <th data-sort="startedAt"><button>Date <span class="arr">↕</span></button></th>
               <th data-sort="agent"><button>Agent <span class="arr">↕</span></button></th>
-              <th>Caller</th>
               <th data-sort="durationSec"><button>Length <span class="arr">↕</span></button></th>
-              <th>Carrier asked → placed</th>
+              <th class="split">Current carrier</th>
+              <th>Placed with</th>
               <th>Outcome</th>
-              <th data-sort="trust"><button>Trust score <span class="arr">↕</span></button></th>
+              <th data-sort="trust"><button>Trust <span class="arr">↕</span></button></th>
               <th>Flags</th>
               <th>Status</th>
             </tr></thead>
@@ -327,6 +374,17 @@ label.f input,label.f select{border:1px solid var(--line);border-radius:8px;padd
         </div>
       </aside>
     </div>
+  </section>
+
+  <section id="view-queue" hidden>
+    <div class="qhead">
+      <div><h2>Review queue</h2><p class="lead">Calls with critical flags, carrier-identity problems, or 20+ minutes. Each one stays here until someone listens to the flagged moments and approves or escalates it.</p></div>
+      <div class="chips" role="group" aria-label="Queue filter">
+        <button class="chip" data-q="open" aria-pressed="true">Waiting</button>
+        <button class="chip" data-q="done" aria-pressed="false">Reviewed</button>
+      </div>
+    </div>
+    <div id="queue"></div>
   </section>
 
   <section id="view-rules" hidden>
@@ -374,7 +432,7 @@ label.f input,label.f select{border:1px solid var(--line);border-radius:8px;padd
       <label class="f">Length (mm:ss)<input id="a-dur" placeholder="21:45" required><span class="hint" id="a-durhint">Or pick the recording below and it fills in.</span></label>
       <label class="f">Outcome<select id="a-outcome"><option>Sold</option><option>Not sold</option><option>Callback set</option><option>Transferred</option><option>Unknown</option></select></label>
       <label class="f">Product<input id="a-product" placeholder="Final expense, term, IUL…"></label>
-      <label class="f full">Call recording (optional, reads the length only)<input id="a-audio" type="file" accept="audio/*,video/*"></label>
+      <label class="f full">Call recording<input id="a-audio" type="file" accept="audio/*,video/*"><span class="hint" id="a-rechint">Any format fills in the length. MP4, M4A or WebM is also saved with the call.</span></label>
       <label class="f full">Transcript file (.txt, .vtt, .srt)<input id="a-tfile" type="file" accept=".txt,.vtt,.srt,text/plain"></label>
       <label class="f full">Transcript<textarea id="a-transcript" rows="9" placeholder="Agent: Thank you for calling, this call is on a recorded line…&#10;Customer: Hi, I saw an ad about…"></textarea><span class="hint">Label each line with the speaker (Agent: / Customer:) for the best review.</span></label>
     </div>
@@ -472,7 +530,12 @@ function band(score){ return score==null ? "info" : score>=80 ? "ok" : score>=60
 function scoreColor(score){ return `var(--${band(score)})`; }
 const carrierOf = c => c.review?.carrier || {};
 function identityBad(c){ return carrierOf(c).identityHandling==="incorrect"; }
-function needsReview(c){ return tier(c)==="close" && c.status!=="approved" && c.status!=="escalated"; }
+function inQueue(c){ return tier(c)==="close" || critCount(c)>0 || identityBad(c); }
+function needsReview(c){ return inQueue(c) && c.status!=="approved" && c.status!=="escalated"; }
+function queueReason(c){
+  const r=[]; if(identityBad(c)) r.push("Said they were the carrier"); const cc=critCount(c); if(cc) r.push(`${cc} critical flag${cc>1?"s":""}`);
+  if(tier(c)==="close") r.push(`${cfg().mustMin}+ min call`); return r;
+}
 function critCount(c){ return (c.review?.flags||[]).filter(f=>f.severity==="critical").length; }
 function warnCount(c){ return (c.review?.flags||[]).filter(f=>f.severity==="warning").length; }
 const STATUS = {
@@ -505,7 +568,7 @@ function visible(){
 
 /* ---------- render ---------- */
 function render(){
-  renderSync(); renderKpis(); renderTable(); renderAgents(); renderCarriers(); renderLegend();
+  renderSync(); renderKpis(); renderTable(); renderAgents(); renderCarriers(); renderQueue(); renderLegend();
   if(S.openId) renderDrawer();
 }
 function renderSync(){
@@ -524,7 +587,7 @@ function renderKpis(){
   const avg = reviewed.length ? Math.round(reviewed.reduce((s,c)=>s+c.review.trustScore,0)/reviewed.length) : null;
   const crit = all.filter(c=>critCount(c)).length, idBad = all.filter(identityBad).length;
   const placed = all.filter(c=>carrierOf(c).placedWith).length;
-  const need = all.filter(needsReview).length, longAll = all.filter(c=>tier(c)==="close").length;
+  const need = all.filter(needsReview).length, inQ = all.filter(inQueue).length;
   const k=cfg();
   $("#kpis").innerHTML = `
     <div class="kpi"><div class="lab">Calls logged</div><div class="val">${all.length}</div><div class="sub">${reviewed.length} AI-reviewed</div></div>
@@ -532,16 +595,13 @@ function renderKpis(){
     <div class="kpi k-crit"><div class="lab">Said they were the carrier</div><div class="val">${idBad}</div><div class="sub">agent confirmed or implied it</div></div>
     <div class="kpi"><div class="lab">Placed with a new carrier</div><div class="val">${placed}</div><div class="sub">of ${reviewed.length} reviewed calls</div></div>
     <div class="kpi k-crit"><div class="lab">Calls with critical flags</div><div class="val">${crit}</div><div class="sub">compliance risk, check these first</div></div>
-    <div class="kpi k-close"><div class="lab">${k.mustMin}+ min calls to sign off</div><div class="val">${need}</div><div class="sub">of ${longAll} long calls · likely closes</div></div>`;
+    <div class="kpi k-close" id="kpiQueue" role="button" tabindex="0" style="cursor:pointer"><div class="lab">Waiting for review</div><div class="val">${need}</div><div class="sub">of ${inQ} flagged or ${k.mustMin}+ min calls · open queue</div></div>`;
 }
-function carrierCell(c){
-  if(!c.review) return `<span class="muted">—</span>`;
-  const k=carrierOf(c), a=k.askedFor, p=k.placedWith;
-  const id = identityBad(c) ? `<span class="pill crit" title="Agent went along with being the carrier">Said they were carrier</span>` : "";
-  return `<div class="car">${a?`<span>${esc(a)}</span>`:`<span class="muted">Not named</span>`}<span class="muted">→</span>${p?`<b>${esc(p)}</b>`:`<span class="muted">No placement</span>`}</div>${id}`;
-}
+const currentCarrier = c => carrierOf(c).current || carrierOf(c).askedFor || "";
+function fmtDay(iso){ const d=new Date(iso); return isNaN(d) ? "—" : d.toLocaleDateString(undefined,{month:"short",day:"numeric"}); }
+function fmtTime(iso){ const d=new Date(iso); return isNaN(d) ? "" : d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}); }
 function renderTable(){
-  const list=visible(), k=cfg(), maxDur=Math.max(k.mustMin*60*1.5, ...list.map(c=>c.durationSec||0));
+  const list=visible(), k=cfg();
   $("#count").textContent = `${list.length} of ${S.calls.size} calls`;
   document.querySelectorAll(".calls th[data-sort]").forEach(th=>{
     const on=th.dataset.sort===S.sort.key;
@@ -550,18 +610,19 @@ function renderTable(){
   });
   $("#rows").innerHTML = list.map(c=>{
     const t=tier(c), r=c.review, busy=S.busy.has(c.id), st=STATUS[c.status||"new"];
-    const tchip = t==="close" ? `<span class="pill close">${k.mustMin}+ min</span>` : t==="watch" ? `<span class="pill watch">${k.watchMin}+ min</span>` : "";
+    const tchip = t==="close" ? `<span class="pill close">${k.mustMin}+</span>` : t==="watch" ? `<span class="pill watch">${k.watchMin}+</span>` : "";
+    const cur=currentCarrier(c), placed=carrierOf(c).placedWith;
     const score = busy ? `<span class="thinking"><span class="spin"></span></span>` : r ? `<span class="score"><span class="dot" style="background:${scoreColor(r.trustScore)}"></span>${r.trustScore}</span>` : `<span class="muted">—</span>`;
     const cc=critCount(c), wc=warnCount(c);
-    const flags = r ? (cc||wc ? `<span class="flagct">${cc?`<span class="pill crit">${cc} critical</span>`:""}${wc?`<span class="pill warn">${wc}</span>`:""}</span>` : `<span class="pill ok">Clean</span>`) : `<span class="muted">—</span>`;
-    const status = needsReview(c) ? `<span class="pill need">Review required</span>` : `<span class="pill ${st.cls}">${st.label}</span>`;
+    const flags = r ? (cc||wc ? `<span class="flagct">${cc?`<span class="pill crit">${cc} critical</span>`:""}${wc?`<span class="pill warn">${wc} warning${wc>1?"s":""}</span>`:""}</span>` : `<span class="pill ok">Clean</span>`) : `<span class="muted">—</span>`;
+    const status = needsReview(c) ? `<span class="pill need">Needs review</span>` : `<span class="pill ${st.cls}">${st.label}</span>`;
     return `<tr class="row t-${t}${S.openId===c.id?" sel":""}" data-id="${esc(c.id)}" tabindex="0">
-      <td><div class="num">${esc(fmtDate(c.startedAt))}</div>${c.example?`<span class="pill ex">Example</span>`:""}</td>
-      <td class="who">${esc(c.agent||"—")}</td>
-      <td><div>${esc(c.caller||"—")}</div><div class="sub2">${esc(c.product||"")}</div></td>
-      <td><div class="dur"><span class="dbar"><i style="width:${Math.min(100,(c.durationSec||0)/maxDur*100)}%"></i></span><span class="num">${fmtDur(c.durationSec)}</span>${tchip}</div></td>
-      <td>${carrierCell(c)}</td>
-      <td>${esc(c.outcome||"—")}</td>
+      <td><div class="l1 num">${esc(fmtDay(c.startedAt))}</div><div class="l2 num">${esc(fmtTime(c.startedAt))}</div></td>
+      <td><div class="l1 who trunc">${esc(c.agent||"—")}</div><div class="l2 trunc">${esc(c.caller||"Unknown caller")}</div></td>
+      <td><div class="dur"><span class="num">${fmtDur(c.durationSec)}</span>${tchip}</div></td>
+      <td class="split"><div class="trunc">${cur?esc(cur):`<span class="muted">—</span>`}</div></td>
+      <td><div class="trunc">${placed?`<b>${esc(placed)}</b>`:`<span class="muted">—</span>`}</div></td>
+      <td><div class="trunc">${esc(c.outcome||"—")}</div></td>
       <td>${score}</td><td>${flags}</td><td>${status}</td></tr>`;
   }).join("");
   const empty=$("#empty");
@@ -598,15 +659,15 @@ function renderAgents(){
 }
 function renderCarriers(){
   const asked={}, placed={};
-  for(const c of S.calls.values()){ const k=carrierOf(c); const a=k.askedFor; if(a) asked[a]=(asked[a]||0)+1; if(k.placedWith) placed[k.placedWith]=(placed[k.placedWith]||0)+1; }
+  for(const c of S.calls.values()){ const k=carrierOf(c); const a=currentCarrier(c); if(a) asked[a]=(asked[a]||0)+1; if(k.placedWith) placed[k.placedWith]=(placed[k.placedWith]||0)+1; }
   const list=(o,color)=>{ const e=Object.entries(o).sort((x,y)=>y[1]-x[1]).slice(0,6), max=Math.max(1,...e.map(x=>x[1]));
     return e.length ? e.map(([n,v])=>`<button class="carrow" data-carrier="${esc(n)}"><span class="nm">${esc(n)}</span><span class="sc">${v}</span><span class="bar"><i style="width:${v/max*100}%;background:${color}"></i></span></button>`).join("") : `<p class="muted" style="margin:0 0 8px">None yet.</p>`; };
-  $("#carriers").innerHTML = `<div class="clab">Callers asked for</div>${list(asked,"var(--muted)")}<div class="clab" style="margin-top:10px">Placed with</div>${list(placed,"var(--accent)")}`;
+  $("#carriers").innerHTML = `<div class="clab">Client's current carrier</div>${list(asked,"var(--muted)")}<div class="clab" style="margin-top:10px">Placed with carrier</div>${list(placed,"var(--accent)")}`;
 }
 function renderLegend(){
   const k=cfg();
   $("#legend").innerHTML = `
-    <div><span class="sw" style="background:var(--close)"></span><span><b>${k.mustMin}+ minutes.</b> Most likely a close. Always reviewed: stays in the queue until an admin approves or escalates it.</span></div>
+    <div><span class="sw" style="background:var(--close)"></span><span><b>${k.mustMin}+ minutes.</b> Most likely a close. Always goes to the review queue until an admin approves or escalates it.</span></div>
     <div><span class="sw" style="background:var(--watch)"></span><span><b>${k.watchMin}–${k.mustMin} minutes.</b> Highlighted as a possible close.</span></div>
     <div><span class="sw" style="background:var(--ok)"></span><span><b>80–100 trust.</b> Compliant, nothing serious found.</span></div>
     <div><span class="sw" style="background:var(--warn)"></span><span><b>60–79 trust.</b> Gaps worth coaching.</span></div>
@@ -625,16 +686,87 @@ function highlight(text, flags){
   for(const [s,e,sev,i] of ranges){ if(s<pos) continue; out+=esc(text.slice(pos,s))+`<mark class="${sev==="critical"?"critical":""}" data-flag="${i}">${esc(text.slice(s,e))}</mark>`; pos=e; }
   return out+esc(text.slice(pos));
 }
+/* transcript lines may start with a [mm:ss] or [h:mm:ss] timestamp (Deepgram, VTT/SRT imports) */
+function parseLines(c){
+  const lines=(c.transcript||"").trim().split(/\n+/).filter(l=>l.trim());
+  const total=(c.transcript||"").length||1; let pos=0;
+  return lines.map(raw=>{
+    let t=null, line=raw;
+    const m=raw.match(/^\s*\[?(\d{1,2}:\d{2}(?::\d{2})?)(?:\.\d+)?\]?\s+(.*)$/);
+    if(m){ t=parseDur(m[1]); line=m[2]; }
+    const est=Math.round(pos/total*(c.durationSec||0)); pos+=raw.length+1;
+    const sm=line.match(/^\s*([A-Za-z][\w .'\-]{0,24}?)\s*:\s*(.*)$/);
+    return {t, est, sp:sm?sm[1]:"", body:sm?sm[2]:line};
+  });
+}
+/* where in the call each flag happened: AI-given range, else the quoted line's timestamp, else an estimate */
+function flagTimes(c){
+  const L=parseLines(c), timed=L.some(l=>l.t!=null), dur=c.durationSec||0;
+  return (c.review?.flags||[]).map(f=>{
+    let start=Number.isFinite(f.startSec)?f.startSec:null, end=Number.isFinite(f.endSec)?f.endSec:null, approx=false, line=-1;
+    const q=(f.quote||"").trim().toLowerCase().replace(/^["“]|["”]$/g,"");
+    if(q.length>=4) line=L.findIndex(l=>l.body.toLowerCase().includes(q));
+    if(start==null && line>=0){
+      if(timed && L[line].t!=null){ start=L[line].t; const nx=L.slice(line+1).find(l=>l.t!=null); end=nx?nx.t:Math.min(dur,start+20); }
+      else { start=L[line].est; end=Math.min(dur, start+30); approx=true; }
+    }
+    if(start==null) return null;
+    if(end==null||end<start) end=Math.min(dur||start+30, start+30);
+    return {start:Math.max(0,start), end:Math.max(start,end), approx, line};
+  });
+}
+const fmtRange=(t)=> t ? `${t.approx?"≈ ":""}${fmtDur(t.start)}–${fmtDur(t.end)}` : "";
 function renderTranscript(c){
   const flags=c.review?.flags||[], txt=(c.transcript||"").trim();
   if(!txt) return `<p class="muted" style="margin:0 0 8px">No transcript yet. Paste one here (label lines Agent: / Customer:), then run the AI review.</p>
     <textarea id="d-txin" rows="6" placeholder="Agent: Thank you for calling…"></textarea>
     <div style="margin-top:8px"><button class="btn sm" id="d-savetx">Save transcript</button></div>`;
-  return txt.split(/\n+/).map(line=>{
-    const m=line.match(/^\s*([A-Za-z][\w .'\-]{0,24}?)\s*:\s*(.*)$/);
-    const sp=m?m[1]:"", body=m?m[2]:line, isAgent=/agent|rep|^a$/i.test(sp) || (c.agent && sp && c.agent.toLowerCase().startsWith(sp.toLowerCase()));
-    return `<div class="tl${isAgent?" agent":""}"><span class="sp">${esc(sp)}</span><p>${highlight(body, flags)}</p></div>`;
+  const times=flagTimes(c), L=parseLines(c);
+  return L.map((l,i)=>{
+    const sp=l.sp, isAgent=/agent|rep|^a$/i.test(sp) || (c.agent && sp && c.agent.toLowerCase().startsWith(sp.toLowerCase()));
+    const at=l.t!=null?l.t:l.est, hit=times.map((t,j)=>t&&(t.line===i||(l.t!=null&&!t.approx&&at>=t.start&&at<t.end))?flags[j].severity:null).filter(Boolean);
+    const cls=hit.length?` inflag${hit.includes("critical")?" critical":""}`:"";
+    return `<div class="tl${isAgent?" agent":""}${cls}" data-at="${at}"><button class="ts" data-seek="${at}" title="Play from here">${l.t!=null?fmtDur(l.t):""}</button><span class="sp">${esc(sp)}</span><p>${highlight(l.body, flags)}</p></div>`;
   }).join("");
+}
+const REC_TYPES = {mp4:"video/mp4", m4a:"video/mp4", webm:"video/webm"};
+function recType(file){ const ext=(file.name.split(".").pop()||"").toLowerCase(); return REC_TYPES[ext] || (/^(audio|video)\/(mp4|x-m4a|m4a)$/.test(file.type)?"video/mp4":/webm/.test(file.type)?"video/webm":null); }
+function recFilename(c){
+  const day=(c.startedAt||"").slice(0,10), clean=v=>String(v||"").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-|-$/g,"");
+  return [clean(c.agent)||"agent", clean(c.caller)||"caller", day].join("_") + (c.recordingType==="video/webm"?".webm":".m4a");
+}
+function recordingSec(c){
+  const busy=S.recBusy===c.id, ext=c.recordingUrl && /^https?:\/\//i.test(c.recordingUrl);
+  let body;
+  if(c.recordingAsset){
+    body=`<audio controls preload="metadata" data-asset="${esc(c.recordingAsset)}" src="/_blob/${esc(c.recordingAsset)}"></audio>
+      <div class="rbtns">${S.downloads?`<button class="btn sm" id="d-dl">Download recording</button>`:""}
+        ${S.assets?`<button class="btn sm ghost" id="d-recpick">Replace</button>`:""}<span class="sub2" id="d-recmsg">${esc(recFilename(c))}</span></div>`;
+  } else {
+    body=`<p class="muted" style="margin:0">${ext?`This recording is still on ${esc(c.source||"the call platform")}. The hourly sync attaches it here.`:"No recording attached to this call."}</p>
+      <div class="rbtns">${S.assets?`<button class="btn sm" id="d-recpick">${busy?"Uploading…":"Attach recording"}</button>`:""}
+        ${ext?`<a class="btn sm ghost" href="${esc(c.recordingUrl)}" target="_blank" rel="noopener">Open on ${esc(c.source||"platform")}</a>`:""}
+        <span class="sub2" id="d-recmsg">${S.assets?"MP4, M4A or WebM, up to 20 MB":""}</span></div>`;
+  }
+  return `<div class="sec rec"><h3>Call recording</h3>${body}<input type="file" id="d-recfile" accept=".mp4,.m4a,.webm,audio/mp4,video/mp4,video/webm,audio/webm" hidden></div>`;
+}
+async function uploadRecording(file){
+  const type=recType(file);
+  if(!type) throw {code:"unsupported_type"};
+  if(file.size>20*1024*1024) throw {code:"too_large"};
+  const res=await S.assets.upload(file,{type});
+  return {recordingAsset:res.id, recordingType:type, recordingBytes:res.sizeBytes};
+}
+const REC_ERR={unsupported_type:"Only MP4, M4A or WebM files can be stored here. MP3 and WAV recordings are converted automatically by the hourly sync.",
+  too_large:"That file is over 20 MB. Export it at a lower bitrate and try again.", not_granted:"You need edit access to attach recordings.", quota_or_state:"This dashboard is out of storage for recordings."};
+async function downloadRecording(c){
+  const msg=$("#d-recmsg");
+  try{
+    msg.textContent="Preparing download…";
+    const r=await fetch("/_blob/"+c.recordingAsset); if(!r.ok) throw new Error(r.status);
+    await S.downloads.save({filename:recFilename(c), data:await r.blob()});
+    msg.textContent=recFilename(c);
+  }catch(e){ msg.textContent = e?.code==="cancelled" ? recFilename(c) : "The download didn't start. Try again."; }
 }
 function renderDrawer(){
   const c=S.calls.get(S.openId), d=$("#drawer");
@@ -665,18 +797,31 @@ function renderDrawer(){
       <div><dt>Placed with</dt><dd>${esc(k2.placedWith||"No placement")}</dd></div></dl>
       <p style="margin:10px 0 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>“Is this ${esc(k2.askedFor||"the carrier")}?”</b> <span class="pill ${idLabel[0]}">${idLabel[1]}</span></p>
       ${k2.identityQuote?`<blockquote class="idq">“${esc(k2.identityQuote)}”</blockquote>`:""}</div>` : "";
-  const flags = r ? (r.flags.length ? `<div class="sec"><h3>Flags <span class="muted">${r.flags.length} found · click a quote to find it</span></h3><div class="flags">${
-      r.flags.map((f,i)=>`<div class="flag ${esc(f.severity)}"><div class="ft"><span class="pill ${f.severity==="critical"?"crit":f.severity==="warning"?"warn":"info"}">${esc(f.severity)}</span>${esc(f.title)}</div>
-      ${f.quote?`<blockquote data-jump="${i}" tabindex="0">“${esc(f.quote)}”</blockquote>`:""}<div class="muted">${esc(f.explanation)}</div></div>`).join("")}</div></div>`
+  const times=r?flagTimes(c):[], fr=c.flagReview||{}, dur=c.durationSec||1;
+  const doneN=r?r.flags.filter((f,i)=>fr[i]).length:0;
+  const timeline = r && times.some(Boolean) ? `<div class="sec"><h3>Flagged moments <span class="muted">${times.some(t=>t&&t.approx)?"≈ estimated from transcript position · ":""}click to play</span></h3>
+      <div class="tline" id="d-tline">${times.map((t,i)=>t?`<button class="seg ${esc(r.flags[i].severity)}" data-seek="${t.start}" data-flagi="${i}" title="${esc(fmtRange(t)+" · "+r.flags[i].title)}" aria-label="${esc(fmtRange(t)+" "+r.flags[i].title)}" style="left:${Math.min(99,t.start/dur*100)}%;width:${Math.max(0.6,(t.end-t.start)/dur*100)}%"></button>`:"").join("")}<span class="play" id="d-play" hidden></span></div>
+      <div class="tticks"><span>0:00</span><span>${fmtDur(dur/4)}</span><span>${fmtDur(dur/2)}</span><span>${fmtDur(dur*3/4)}</span><span>${fmtDur(dur)}</span></div></div>` : "";
+  const flags = r ? (r.flags.length ? `<div class="sec"><h3>Flags <span class="muted">${doneN} of ${r.flags.length} checked by a reviewer</span></h3><div class="flags">${
+      r.flags.map((f,i)=>`<div class="flag ${esc(f.severity)}${fr[i]?" resolved":""}"><div class="ft"><span class="pill ${f.severity==="critical"?"crit":f.severity==="warning"?"warn":"info"}">${esc(f.severity)}</span>${times[i]?`<button class="jump" data-seek="${times[i].start}" data-flagi="${i}">▶ ${esc(fmtRange(times[i]))}</button>`:""}${esc(f.title)}</div>
+      ${f.quote?`<blockquote data-jump="${i}" tabindex="0">“${esc(f.quote)}”</blockquote>`:""}<div class="muted">${esc(f.explanation)}</div>
+      <div class="fr"><button class="btn" data-fr="${i}" data-v="confirmed" aria-pressed="${fr[i]==="confirmed"}">Confirmed issue</button><button class="btn" data-fr="${i}" data-v="dismissed" aria-pressed="${fr[i]==="dismissed"}">Not an issue</button></div></div>`).join("")}</div></div>`
     : `<div class="sec"><h3>Flags</h3><p style="margin:0"><span class="pill ok">Clean</span> Nothing off was found on this call.</p></div>`) : "";
   const check = r && r.checklist.length ? `<div class="sec"><h3>Rule checklist <span class="muted">${r.checklist.filter(x=>x.status==="met").length} of ${r.checklist.length} met</span></h3><table class="check">${
       r.checklist.map(x=>`<tr><td><span class="pill ${x.status==="met"?"ok":x.status==="missed"?"crit":"info"}">${esc(x.status==="na"?"n/a":x.status)}</span></td><td><div>${esc(x.rule)}</div>${x.evidence?`<div class="sub2">${esc(x.evidence)}</div>`:""}</td></tr>`).join("")}</table></div>` : "";
   const kd = r && r.keyDetails.length ? `<div class="sec"><h3>Key details</h3><dl class="kd">${r.keyDetails.map(x=>`<div><dt>${esc(x.label)}</dt><dd>${esc(x.value||"Not mentioned")}</dd></div>`).join("")}</dl></div>` : "";
+  const keepAudio = c.recordingAsset ? d.querySelector(`audio[data-asset="${c.recordingAsset}"]`) : null;
   d.innerHTML = `
     <div class="dhead">
-      <div class="row1"><div><h2>${esc(c.caller||"Unnamed caller")}</h2><div class="muted">${esc(c.agent||"Unknown agent")} · ${esc(fmtDate(c.startedAt))}</div></div>
+      <div class="row1"><div><h2>${esc(c.caller||"Unknown caller")}</h2></div>
         <button class="btn ghost x" id="d-close" aria-label="Close">✕</button></div>
-      <div class="dtags">${tchip}<span class="pill ${needsReview(c)?"need":st.cls}">${needsReview(c)?"Review required":st.label}</span>${c.example?`<span class="pill ex">Example</span>`:""}
+      <dl class="facts">
+        <div><dt>Agent</dt><dd>${esc(c.agent||"Unknown")}</dd></div>
+        <div><dt>Date</dt><dd>${esc(fmtDate(c.startedAt))}</dd></div>
+        <div><dt>Length</dt><dd class="num">${fmtDur(c.durationSec)}</dd></div>
+        <div><dt>Outcome</dt><dd>${esc(c.outcome||"—")}</dd></div>
+      </dl>
+      <div class="dtags">${t!=="std"?tchip:""}<span class="pill ${needsReview(c)?"need":st.cls}">${needsReview(c)?"Needs review":st.label}</span>${c.example?`<span class="pill ex">Example</span>`:""}
         ${reviewer?`<span class="sub2">${c.status==="approved"?"Approved":"Escalated"} by ${esc(reviewer)}</span>`:""}</div>
       <div class="dactions">
         ${busy ? `<button class="btn" id="d-stop">Stop review</button>` : `<button class="btn primary" id="d-run" ${canAI?"":"disabled"}>${r?"Re-run AI review":"Run AI review"}</button>`}
@@ -687,19 +832,62 @@ function renderDrawer(){
       </div>
     </div>
     <div class="dbody">
-      ${verdict}${carrierSec}${flags}${kd}${check}
-      <div class="sec"><h3>Call info</h3><dl class="meta-grid">
-        <div><dt>Outcome</dt><dd>${esc(c.outcome||"—")}</dd></div><div><dt>Product</dt><dd>${esc(c.product||"—")}</dd></div>
-        <div><dt>Length</dt><dd class="num">${fmtDur(c.durationSec)}</dd></div><div><dt>Agent</dt><dd>${esc(c.agent||"—")}</dd></div>
-        ${c.source?`<div><dt>Imported from</dt><dd>${esc(c.source)}</dd></div>`:""}
-        ${c.recordingUrl && /^https?:\/\//i.test(c.recordingUrl)?`<div><dt>Recording</dt><dd><a href="${esc(c.recordingUrl)}" target="_blank" rel="noopener">Open recording</a></dd></div>`:""}</dl></div>
+      ${recordingSec(c)}
+      ${verdict}${timeline}${carrierSec}${flags}${kd}${check}
+      ${c.product||c.source?`<div class="sec"><h3>Call info</h3><dl class="meta-grid">
+        ${c.product?`<div><dt>Product</dt><dd>${esc(c.product)}</dd></div>`:""}
+        ${c.source?`<div><dt>Imported from</dt><dd>${esc(c.source)}</dd></div>`:""}</dl></div>`:""}
       <div class="sec"><h3>Admin notes</h3><textarea id="d-notes" rows="3" placeholder="What did you hear on the recording? Coaching for the agent?">${esc(noteVal)}</textarea>
         <div style="margin-top:8px;display:flex;gap:8px;align-items:center"><button class="btn sm" id="d-savenotes">Save notes</button><span class="sub2" id="d-notesmsg"></span></div></div>
       <div class="sec"><h3>Transcript</h3><div class="transcript" id="d-tx">${renderTranscript(c)}</div></div>
     </div>`;
+  if(keepAudio){ const slot=d.querySelector(`audio[data-asset="${c.recordingAsset}"]`); if(slot) slot.replaceWith(keepAudio); }
   if(notesFocused){ const n=$("#d-notes"); n.focus(); n.setSelectionRange(n.value.length,n.value.length); }
   if(c.reviewedBy && !S.names[c.reviewedBy] && S.user?.profiles){ S.user.profiles([c.reviewedBy]).then(p=>{ const n=p?.[c.reviewedBy]?.name; if(n){S.names[c.reviewedBy]=n; if(S.openId===c.id) renderDrawer();} }).catch(()=>{}); }
 }
+
+function seekTo(sec, flagi){
+  const a=$("#drawer audio");
+  if(a){ try{ a.currentTime=sec; a.play().catch(()=>{}); }catch(e){} }
+  // scroll the transcript to the line nearest that time
+  const lines=[...document.querySelectorAll("#d-tx .tl")]; let best=null;
+  for(const el of lines){ if(+el.dataset.at<=sec+0.5) best=el; }
+  const target = (flagi!=null && document.querySelector(`#d-tx mark[data-flag="${flagi}"]`)) || best || lines[0];
+  if(target){ target.scrollIntoView({block:"center",behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"}); target.classList.add("flash"); setTimeout(()=>target.classList.remove("flash"),1600); }
+  if(!a) toast(`Flagged at ${fmtDur(sec)}. Attach the recording to listen from here.`);
+}
+document.addEventListener("timeupdate", e=>{
+  if(e.target.closest?.("#drawer")!==$("#drawer") || !S.openId) return;
+  const p=$("#d-play"), c=S.calls.get(S.openId); if(!p||!c) return;
+  p.hidden=false; p.style.left=Math.min(100,e.target.currentTime/(c.durationSec||1)*100)+"%";
+}, true);
+
+/* ---------- review queue ---------- */
+let qMode="open";
+function renderQueue(){
+  const all=[...S.calls.values()].filter(inQueue), open=all.filter(needsReview);
+  const b=$("#qBadge"); b.hidden=!open.length; b.textContent=open.length;
+  if(S.view!=="queue") return;
+  const list=(qMode==="open"?open:all.filter(c=>!needsReview(c)))
+    .sort((a,b)=> (identityBad(b)-identityBad(a)) || (critCount(b)-critCount(a)) || ((b.durationSec||0)-(a.durationSec||0)));
+  if(!list.length){ $("#queue").innerHTML=`<div class="panel empty"><h3>${qMode==="open"?"Nothing waiting for review":"No reviewed calls yet"}</h3><p>${qMode==="open"?"New flagged calls land here automatically.":"Approved and escalated calls from the queue show up here."}</p></div>`; return; }
+  $("#queue").innerHTML=`<div class="qlist">${list.map(c=>{
+    const r=c.review, times=r?flagTimes(c):[], st=STATUS[c.status||"new"];
+    const moms=r?r.flags.map((f,i)=>({f,t:times[i]})).filter(x=>x.f.severity!=="info").slice(0,4):[];
+    const done=r?r.flags.filter((f,i)=>(c.flagReview||{})[i]).length:0;
+    return `<div class="qcard${!critCount(c)&&!identityBad(c)?" long":""}" data-id="${esc(c.id)}" role="button" tabindex="0">
+      <div><div class="who">${esc(c.agent||"Unknown agent")}</div><div class="sub2">${esc(c.caller||"Unknown caller")} · ${esc(fmtDate(c.startedAt))} · <span class="num">${fmtDur(c.durationSec)}</span></div>
+        <div class="sub2" style="margin-top:4px">${esc(queueReason(c).join(" · "))}</div></div>
+      <div class="moments">${moms.length?moms.map(x=>`<span class="mom ${esc(x.f.severity)}">${x.t?`<span class="tm">${esc(fmtRange(x.t))}</span>`:""}<span class="tt">${esc(x.f.title)}</span></span>`).join(""):`<span class="muted">${r?"No flags. In the queue because of its length.":"Not AI-reviewed yet."}</span>`}</div>
+      <div class="right">${r?`<span class="score"><span class="dot" style="background:${scoreColor(r.trustScore)}"></span>${r.trustScore}</span>`:""}
+        ${needsReview(c)?`<span class="pill need">${r&&r.flags.length?`${done}/${r.flags.length} flags checked`:"Review required"}</span>`:`<span class="pill ${st.cls}">${st.label}</span>`}</div>
+    </div>`; }).join("")}</div>`;
+}
+$("#queue").addEventListener("click", e=>{ const b=e.target.closest(".qcard"); if(b) openDrawer(b.dataset.id); });
+$("#queue").addEventListener("keydown", e=>{ if(e.key==="Enter"||e.key===" "){ const b=e.target.closest(".qcard"); if(b){ e.preventDefault(); openDrawer(b.dataset.id); } } });
+$("#kpis").addEventListener("click", e=>{ if(e.target.closest("#kpiQueue")) $("#tab-queue").click(); });
+$("#kpis").addEventListener("keydown", e=>{ if(e.key==="Enter" && e.target.closest("#kpiQueue")) $("#tab-queue").click(); });
+document.querySelectorAll(".chip[data-q]").forEach(b=>b.onclick=()=>{ qMode=b.dataset.q; document.querySelectorAll(".chip[data-q]").forEach(x=>x.setAttribute("aria-pressed",x===b)); renderQueue(); });
 
 /* ---------- AI review ---------- */
 function buildPrompt(c){
@@ -725,6 +913,7 @@ Any "incorrect" identity handling is always a critical flag.
 KEY DETAILS TO EXTRACT (use exactly these labels, in this order): ${k.keyDetails.join(" | ")}
 
 CALL INFO: agent "${c.agent||"unknown"}", logged outcome "${c.outcome||"unknown"}", product "${c.product||"unknown"}", length ${fmtDur(c.durationSec)}.
+Lines may start with a [mm:ss] timestamp. For every flag give startSec and endSec covering the whole stretch of the call where the problem happens (it can span several lines, e.g. 1080 to 1260 for 18:00-21:00). Use null for both if the transcript has no timestamps.
 Note: the transcript may be machine-generated with errors, or an excerpt. Do not penalize for things the transcript cannot show; mark them "unclear" instead.
 
 TRANSCRIPT:
@@ -738,7 +927,7 @@ Reply with ONLY one JSON object of this shape:
  "summary": "2-3 plain sentences: what happened on the call and the main compliance takeaway",
  "keyDetails": [{"label": "...", "value": "... or empty string if not mentioned"}],
  "checklist": [{"rule": "R1 short restatement", "status": "met" | "missed" | "unclear" | "na", "evidence": "short reason or quote"}],
- "flags": [{"severity": "critical" | "warning" | "info", "title": "short headline", "quote": "exact words copied verbatim from ONE line of the transcript, under 25 words", "explanation": "why this is a problem and what the agent should have done"}]}
+ "flags": [{"severity": "critical" | "warning" | "info", "title": "short headline", "quote": "exact words copied verbatim from ONE line of the transcript, under 25 words, without the timestamp", "explanation": "why this is a problem and what the agent should have done", "startSec": number | null, "endSec": number | null}]}
 
 Scoring: start at 100. Each missed critical rule or serious misrepresentation costs 20-35 points. Each missed warning rule or pressure moment costs 5-12. Info items cost 0-3. "unclear" costs nothing. Never go below 0. A clean, well-disclosed call should land 85-100.
 Flags: include every missed critical or warning rule, plus anything else that seems off per the admin's instructions. Quotes must match the transcript text exactly so they can be highlighted. Use an empty array if nothing is wrong.`;
@@ -755,7 +944,9 @@ function normalize(o){
     summary: str(o?.summary).slice(0,1200),
     keyDetails: (Array.isArray(o?.keyDetails)?o.keyDetails:[]).slice(0,30).map(x=>({label:str(x?.label).slice(0,80), value:str(x?.value).slice(0,300)})),
     checklist: (Array.isArray(o?.checklist)?o.checklist:[]).slice(0,40).map(x=>({rule:str(x?.rule).slice(0,300), status:stat(x?.status), evidence:str(x?.evidence).slice(0,400)})),
-    flags: (Array.isArray(o?.flags)?o.flags:[]).slice(0,30).map(x=>({severity:sev(x?.severity), title:str(x?.title).slice(0,160), quote:str(x?.quote).slice(0,300), explanation:str(x?.explanation).slice(0,600)}))
+    flags: (Array.isArray(o?.flags)?o.flags:[]).slice(0,30).map(x=>({severity:sev(x?.severity), title:str(x?.title).slice(0,160), quote:str(x?.quote).replace(/^\s*\[?\d{1,2}:\d{2}(?::\d{2})?\]?\s*/,"").slice(0,300), explanation:str(x?.explanation).slice(0,600),
+      startSec: Number.isFinite(+x?.startSec) && x?.startSec!==null && x?.startSec!=="" ? Math.max(0,Math.round(+x.startSec)) : null,
+      endSec: Number.isFinite(+x?.endSec) && x?.endSec!==null && x?.endSec!=="" ? Math.max(0,Math.round(+x.endSec)) : null}))
       .sort((a,b)=>["critical","warning","info"].indexOf(a.severity)-["critical","warning","info"].indexOf(b.severity)),
     reviewedAt: new Date().toISOString()
   };
@@ -834,8 +1025,15 @@ $("#a-tfile").addEventListener("change", async e=>{
   const file=e.target.files[0]; if(!file) return;
   let t=await file.text();
   if(/\.(vtt|srt)$/i.test(file.name) || /^WEBVTT/.test(t)){
-    t=t.replace(/^WEBVTT.*$/m,"").split(/\r?\n/).filter(l=>l.trim() && !/^\d+$/.test(l.trim()) && !/-->/.test(l) && !/^NOTE\b/.test(l)).join("\n");
-    t=t.replace(/<v\s+([^>]+)>/g,"$1: ").replace(/<\/?[^>]+>/g,"");
+    const out=[]; let stamp=null;
+    for(const l of t.replace(/^WEBVTT.*$/m,"").split(/\r?\n/)){
+      const ln=l.trim(); if(!ln || /^\d+$/.test(ln) || /^NOTE\b/.test(ln)) continue;
+      const cue=ln.match(/^(\d{1,2}:)?(\d{1,2}):(\d{2})[.,]\d+\s*-->/);
+      if(cue){ const sec=(+(cue[1]||"0:").slice(0,-1))*3600+(+cue[2])*60+(+cue[3]); stamp=fmtDur(sec); continue; }
+      const text=ln.replace(/<v\s+([^>]+)>/g,"$1: ").replace(/<\/?[^>]+>/g,"");
+      out.push(stamp!=null?`[${stamp}] ${text}`:text); stamp=null;
+    }
+    t=out.join("\n");
   }
   $("#a-transcript").value=t.trim();
 });
@@ -851,6 +1049,12 @@ $("#addForm").addEventListener("submit", async e=>{
   const doc={agent:$("#a-agent").value.trim(), caller:$("#a-caller").value.trim(), startedAt:new Date($("#a-date").value).toISOString(),
     durationSec:dur, outcome:$("#a-outcome").value, product:$("#a-product").value.trim(), transcript:$("#a-transcript").value.slice(0,200000),
     status:"new", createdAt:new Date().toISOString(), createdBy:S.myId||null};
+  const recFile=$("#a-audio").files[0];
+  if(recFile && S.assets && recType(recFile)){
+    err.textContent="Uploading recording…";
+    try{ Object.assign(doc, await uploadRecording(recFile)); }catch(x){ return err.textContent=REC_ERR[x?.code] || "Couldn't upload the recording."; }
+    err.textContent="";
+  }
   try{ await ref(id).set(doc); }catch(x){ return err.textContent="Couldn't save the call. You may need edit access to this dashboard."; }
   $("#addDlg").close(); toast("Call saved.");
   if(run && doc.transcript.trim()){ openDrawer(id); runReview(id).catch(()=>{}); }
@@ -997,7 +1201,8 @@ $("#saveRules").onclick=async()=>{
 /* ---------- events ---------- */
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
   S.view=b.dataset.view; document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected", t===b));
-  $("#view-calls").hidden=S.view!=="calls"; $("#view-rules").hidden=S.view!=="rules";
+  $("#view-calls").hidden=S.view!=="calls"; $("#view-rules").hidden=S.view!=="rules"; $("#view-queue").hidden=S.view!=="queue";
+  renderQueue();
   if(S.view==="rules") loadRulesForm();
   try{ localStorage.setItem("tcr-view", S.view); }catch(e){}
 });
@@ -1022,9 +1227,21 @@ $("#batchBtn").onclick=runBatch;
 $("#carriers").addEventListener("click", e=>{ const b=e.target.closest("[data-carrier]"); if(!b) return;
   S.f.carrier = S.f.carrier===b.dataset.carrier ? "" : b.dataset.carrier; renderTable(); $("#fCarrier").value=S.f.carrier; });
 let delArm=null;
+$("#drawer").addEventListener("change", async e=>{
+  if(e.target.id!=="d-recfile") return;
+  const id=S.openId, file=e.target.files[0]; if(!file||!id) return;
+  S.recBusy=id; renderDrawer();
+  try{ const patch=await uploadRecording(file); await ref(id).update(patch); toast("Recording attached."); }
+  catch(x){ toast(REC_ERR[x?.code] || "Couldn't attach the recording. Try again."); }
+  finally{ S.recBusy=null; renderDrawer(); }
+});
 $("#drawer").addEventListener("input", e=>{ if(e.target.id==="d-notes") S.notes[S.openId]=e.target.value; });
 $("#drawer").addEventListener("click", async e=>{
   const id=S.openId, b=e.target.closest("button,blockquote"); if(!b) return;
+  if(b.dataset.seek!=null){ seekTo(+b.dataset.seek, b.dataset.flagi); return; }
+  if(b.dataset.fr!=null){ const c=S.calls.get(id), cur=(c.flagReview||{})[b.dataset.fr], v=cur===b.dataset.v?null:b.dataset.v;
+    const next={...(c.flagReview||{})}; if(v) next[b.dataset.fr]=v; else delete next[b.dataset.fr];
+    try{ await ref(id).update({flagReview:next, flagReviewedBy:S.myId||null}); }catch(x){ toast("Couldn't save. You may need edit access."); } return; }
   if(b.id==="d-close") return closeDrawer();
   if(b.id==="d-run"){ S.busy.get(id)?.ctl?.abort(); const ctl=new AbortController(); runReview(id, ctl.signal).catch(()=>{}); S.busy.get(id) && (S.busy.get(id).ctl=ctl); return; }
   if(b.id==="d-stop"){ S.busy.get(id)?.ctl?.abort(); S.batch?.abort(); return; }
@@ -1032,6 +1249,8 @@ $("#drawer").addEventListener("click", async e=>{
   if(b.id==="d-escalate") return setStatus(id,"escalated");
   if(b.id==="d-reopen") return setStatus(id, S.calls.get(id)?.review ? "ai" : "new");
   if(b.id==="d-savenotes") return saveNotes(id);
+  if(b.id==="d-dl") return downloadRecording(S.calls.get(id));
+  if(b.id==="d-recpick") return $("#d-recfile").click();
   if(b.id==="d-savetx"){ const v=$("#d-txin").value.trim(); if(!v) return toast("Paste the transcript first.");
     try{ await ref(id).update({transcript:v.slice(0,200000)}); toast("Transcript saved."); }catch(x){ toast("Couldn't save. You may need edit access."); } return; }
   if(b.id==="d-del"){
@@ -1059,13 +1278,14 @@ $("#exportBtn").onclick=async()=>{
 };
 
 /* ---------- boot ---------- */
-try{ const v=localStorage.getItem("tcr-view"); if(v==="rules") $("#tab-rules").click(); }catch(e){}
+try{ const v=localStorage.getItem("tcr-view"); if(v==="rules") $("#tab-rules").click(); if(v==="queue") $("#tab-queue").click(); }catch(e){}
 render();
 (async()=>{
   const c=window.claude;
   if(!c?.use){ S.db=false; $("#offline").hidden=false; render(); return; }
   c.use("sample").then(s=>{ S.sample=s; render(); });
-  c.use("downloads").then(d=>{ S.downloads=d; renderTable(); });
+  c.use("downloads").then(d=>{ S.downloads=d; renderTable(); if(S.openId) renderDrawer(); });
+  c.use("assets").then(a=>{ S.assets=a; if(S.openId) renderDrawer(); });
   c.use("user").then(async u=>{ S.user=u; if(u){ try{ S.myId=await u.id(); }catch(e){} } });
   const db=await c.use("db");
   if(!db){ S.db=false; $("#offline").hidden=false; render(); return; }
