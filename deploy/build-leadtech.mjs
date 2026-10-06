@@ -28,6 +28,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { patchOnboarding } from "./patch-onboarding.mjs";
+import { patchSync } from "./patch-sync.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const argv = process.argv.slice(2);
@@ -78,6 +79,9 @@ re-derive the patch from the current bundle before deploying.`);
 
 const [relayExpr, relayBinding] = found[0];
 let patched = source.replace(relayExpr, `${relayBinding}=String(${JSON.stringify(relay)})`);
+
+console.error("Fixing the order sync:");
+patched = patchSync(patched, { log: (m) => console.error(m) });
 
 if (onboardingUrl) {
   if (!/^https:\/\//.test(onboardingUrl)) {

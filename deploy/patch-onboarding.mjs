@@ -25,6 +25,8 @@
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
+
+import { patchSync } from "./patch-sync.mjs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -315,8 +317,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   try { src = readFileSync(inPath, "utf8"); }
   catch { console.error(`Missing ${inPath}.`); process.exit(1); }
   let out;
-  try { out = patchOnboarding(src, url, { log: (m) => console.error(m) }); }
-  catch (e) { console.error("\n" + e.message + "\n"); process.exit(1); }
+  try {
+    out = patchOnboarding(src, url, { log: (m) => console.error(m) });
+    console.error("Fixing the order sync:");
+    out = patchSync(out, { log: (m) => console.error(m) });
+  } catch (e) { console.error("\n" + e.message + "\n"); process.exit(1); }
   if (outPath) { writeFileSync(outPath, out); console.error(`Wrote ${outPath} (${out.length} bytes)`); }
   else process.stdout.write(out);
 }
