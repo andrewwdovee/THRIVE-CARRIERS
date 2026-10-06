@@ -4,15 +4,31 @@
  "rules": [
   {
    "severity": "critical",
+   "text": "When the caller asks if they've reached a specific carrier (\"Is this Mutual of Omaha?\"), the agent never says yes or goes along with it. The approved answer is along the lines of \"That's one of the carriers we can help assist with.\""
+  },
+  {
+   "severity": "critical",
+   "text": "No one on our side says or implies that we are the carrier, work for the carrier, or are its customer service (\"this is Aetna\", \"we're with Colonial Penn\", \"I can pull that up in our system as your carrier\")."
+  },
+  {
+   "severity": "warning",
+   "text": "If the caller still seems to think they reached their insurance company, the agent clears that up before reviewing their policy. Letting the belief stand counts as a miss."
+  },
+  {
+   "severity": "critical",
    "text": "Agent states the call is being recorded near the start of the call."
   },
   {
    "severity": "critical",
-   "text": "Agent gives their name, says they are a licensed insurance agent, and names the agency."
+   "text": "Agent gives their name and identifies us as an independent policy support desk with licensed agents, not an insurance company."
   },
   {
    "severity": "critical",
-   "text": "No promise of \"guaranteed approval\" unless the product really is guaranteed issue, and no claim that coverage starts before the carrier approves it."
+   "text": "When moving a client to a new carrier, the agent asks about the existing policy, follows replacement steps, and tells the client not to cancel the old policy until the new one is approved."
+  },
+  {
+   "severity": "critical",
+   "text": "Agent does not run down or misstate the caller's current carrier or policy to get them to switch (twisting)."
   },
   {
    "severity": "critical",
@@ -32,15 +48,11 @@
   },
   {
    "severity": "warning",
-   "text": "Agent asks whether this policy replaces or changes any existing life insurance or annuity, and follows replacement steps if yes."
+   "text": "The new carrier's name, coverage amount, monthly premium, policy type, and any waiting or graded period are stated clearly before the client agrees."
   },
   {
    "severity": "warning",
-   "text": "Coverage amount, monthly premium, policy type, and any waiting or graded period are stated clearly before the client agrees."
-  },
-  {
-   "severity": "warning",
-   "text": "No pressure tactics: no false deadlines (\"rates go up tomorrow\"), no talking over a client who wants to think about it or end the call."
+   "text": "No pressure tactics: no false deadlines, no talking over a client who wants to think about it or end the call."
   },
   {
    "severity": "warning",
@@ -51,17 +63,18 @@
    "text": "Agent mentions the free-look period or the right to cancel."
   }
  ],
- "instructions": "Flag anything that seems off even if no rule covers it: a third party in the background prompting the client, a client who sounds confused about what they bought, an agent rushing through disclosures, or statements about price or coverage that contradict each other.",
+ "instructions": "We are an independent policy support desk. People call in to have their life insurance policies reviewed, and many of them think they are calling their insurance company. Agents may say a carrier is one we can help with, but must never confirm or suggest that we are that carrier. Pay close attention to the first two minutes, where the caller usually names the carrier they were trying to reach. Also flag anything else that seems off: a third party prompting the client, a client who sounds confused about who they are talking to or what they bought, an agent rushing through disclosures, or price and coverage statements that contradict each other.",
  "keyDetails": [
+  "Carrier caller asked for",
+  "Current carrier / policy",
+  "Carrier placed with",
   "Product type",
-  "Carrier",
   "Coverage amount",
   "Monthly premium",
   "Draft date",
   "Beneficiary",
   "Client age",
   "Client state",
-  "Existing coverage / replacement",
   "Sale made"
  ]
 }

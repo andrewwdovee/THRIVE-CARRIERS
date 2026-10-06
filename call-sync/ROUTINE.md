@@ -25,12 +25,20 @@ has a `review`, skip it. If it exists without a review but now has a transcript,
 ## 4. Review each call with a transcript, longest first
 - Rules: `get` collection `config`, doc `settings`. Use its `rules`, `instructions`, `keyDetails`
   and `mustMin`. If the doc doesn't exist, use `call-sync/default_rules.json`.
-- Review the transcript the way a careful, fair compliance auditor for an inbound life insurance
-  call center would. Check every rule. Transcripts may be machine-generated ("Speaker 0/1"):
+- Context: we are an independent life insurance policy support desk, not a carrier. Callers often
+  think they reached their insurance company. Agents review the caller's policy and may place them
+  with a new carrier.
+- Review the transcript the way a careful, fair compliance auditor would. Check every rule, and
+  follow the settings doc's `instructions`. Transcripts may be machine-generated ("Speaker 0/1"):
   work out which speaker is the agent from context.
 - Add a `review` field to the call document in exactly this shape:
   ```
   {"trustScore": 0-100,
+   "carrier": {"askedFor": "carrier the caller asked for or was trying to reach, else empty",
+               "current": "carrier of the caller's existing policy, else empty",
+               "placedWith": "carrier the agent placed or is moving them with on this call, else empty",
+               "identityHandling": "correct | incorrect | not_asked",
+               "identityQuote": "agent's exact words when it came up, under 25 words, else empty"},
    "summary": "2-3 plain sentences",
    "keyDetails": [{"label": "<each keyDetails label, in order>", "value": "" if not mentioned}],
    "checklist": [{"rule": "R1 short restatement", "status": "met|missed|unclear|na", "evidence": "..."}],
@@ -38,6 +46,11 @@ has a `review`, skip it. If it exists without a review but now has a transcript,
    "reviewedAt": "<now, ISO>"}
   ```
   Order flags critical first.
+- Carrier identity: "correct" when the caller asked whether we are a carrier (or clearly assumed it)
+  and the agent did not confirm it ("That's one of the carriers we can help assist with").
+  "incorrect" when the agent said yes, said or implied we are the carrier or work for it, or let the
+  caller keep believing it. "not_asked" when it never came up. "incorrect" is always also a
+  critical flag.
 - Scoring: start at 100. Each missed critical rule or misrepresentation costs 20-35 points; each
   missed warning rule or pressure moment costs 5-12; info costs 0-3; "unclear" costs nothing. A
   clean call lands 85-100.

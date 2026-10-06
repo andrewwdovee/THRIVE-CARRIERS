@@ -30,6 +30,7 @@
   --scrim:rgba(0,0,0,.55); --shadow:0 18px 50px rgba(0,0,0,.5); color-scheme:dark;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{background:var(--bg);color:var(--fg);font:14px/1.5 var(--f-body)}
 button,input,select,textarea{font:inherit;color:inherit}
 h1,h2,h3{font-family:var(--f-display);font-weight:650;margin:0;text-wrap:balance;letter-spacing:-.01em}
@@ -64,7 +65,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:650;margin:0;text-wrap:balance
 .notice b{color:var(--fg)}
 
 /* KPI strip */
-.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px}
 .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;min-width:0}
 .kpi .lab{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
 .kpi .val{font-family:var(--f-mono);font-size:26px;font-weight:600;line-height:1.2;margin-top:2px}
@@ -72,7 +73,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:650;margin:0;text-wrap:balance
 .kpi.k-close{border-color:var(--close);background:var(--close-soft)}
 .kpi.k-close .val{color:var(--close)}
 .kpi.k-crit .val{color:var(--crit)}
-@media (max-width:820px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:460px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 .layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
 @media (max-width:1100px){.layout{grid-template-columns:minmax(0,1fr)}}
@@ -93,7 +94,8 @@ h1,h2,h3{font-family:var(--f-display);font-weight:650;margin:0;text-wrap:balance
 
 /* table */
 .tablewrap{overflow-x:auto}
-table.calls{width:100%;border-collapse:separate;border-spacing:0;min-width:900px}
+table.calls{width:100%;border-collapse:separate;border-spacing:0;min-width:1060px}
+.car{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;margin-bottom:2px}
 .calls th{position:sticky;top:0;background:var(--surface-2);text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
 .calls th button{all:unset;cursor:pointer;display:inline-flex;gap:4px;align-items:center}
 .calls th button:focus-visible{outline:2px solid var(--accent)}
@@ -143,6 +145,14 @@ table.calls{width:100%;border-collapse:separate;border-spacing:0;min-width:900px
 .agent .bar{grid-column:1/-1;height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden}
 .agent .bar i{display:block;height:100%;border-radius:3px}
 .agent .meta{grid-column:1/-1;font-size:12px;color:var(--muted)}
+.clab{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700;margin-bottom:6px}
+.carrow{all:unset;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;width:100%;margin-bottom:8px;border-radius:6px}
+.carrow:hover .nm{text-decoration:underline}
+.carrow:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.carrow .nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.carrow .sc{font-family:var(--f-mono);font-weight:600}
+.carrow .bar{grid-column:1/-1;height:5px;border-radius:3px;background:var(--surface-2);overflow:hidden}
+.carrow .bar i{display:block;height:100%;border-radius:3px}
 .legend{display:flex;flex-direction:column;gap:8px;font-size:13px}
 .legend div{display:flex;gap:8px;align-items:flex-start}
 .sw{flex:0 0 14px;height:14px;border-radius:3px;margin-top:3px}
@@ -187,6 +197,7 @@ table.calls{width:100%;border-collapse:separate;border-spacing:0;min-width:900px
 .tl .sp{font-weight:700;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding-top:2px;overflow:hidden;text-overflow:ellipsis}
 .tl.agent .sp{color:var(--accent)}
 .tl p{margin:0;overflow-wrap:anywhere}
+.idq{margin:8px 0 0;padding:4px 10px;border-left:2px solid var(--line);font-style:italic}
 mark{background:var(--warn-soft);color:var(--fg);border-bottom:2px solid var(--warn);padding:0 1px}
 mark.critical{background:var(--crit-soft);border-bottom-color:var(--crit)}
 mark.flash{outline:2px solid var(--accent)}
@@ -243,7 +254,7 @@ label.f input,label.f select{border:1px solid var(--line);border-radius:8px;padd
   <div class="top-in">
     <div class="brand">
       <div class="mark" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6l7-3z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg></div>
-      <div><h1>Thrive Call Review</h1><small>Inbound life insurance · compliance QA</small></div>
+      <div><h1>Thrive Call Review</h1><small>Policy support desk · compliance QA</small></div>
     </div>
     <div class="tabs" role="tablist">
       <button class="tab" role="tab" id="tab-calls" aria-selected="true" data-view="calls">Calls</button>
@@ -265,6 +276,7 @@ label.f input,label.f select{border:1px solid var(--line);border-radius:8px;padd
         <div class="filters">
           <input type="search" id="q" class="field" placeholder="Search agent, caller, transcript…" aria-label="Search calls">
           <select id="fAgent" class="field" aria-label="Agent"><option value="">All agents</option></select>
+          <select id="fCarrier" class="field" aria-label="Carrier"><option value="">All carriers</option></select>
           <select id="fStatus" class="field" aria-label="Status">
             <option value="all">Any status</option>
             <option value="needs">Needs review</option>
@@ -295,6 +307,7 @@ label.f input,label.f select{border:1px solid var(--line);border-radius:8px;padd
               <th data-sort="agent"><button>Agent <span class="arr">↕</span></button></th>
               <th>Caller</th>
               <th data-sort="durationSec"><button>Length <span class="arr">↕</span></button></th>
+              <th>Carrier asked → placed</th>
               <th>Outcome</th>
               <th data-sort="trust"><button>Trust score <span class="arr">↕</span></button></th>
               <th>Flags</th>
@@ -306,6 +319,7 @@ label.f input,label.f select{border:1px solid var(--line);border-radius:8px;padd
         <div class="empty" id="empty" hidden></div>
       </div>
       <aside class="rail">
+        <div class="panel"><h2>Carriers</h2><div id="carriers"></div></div>
         <div class="panel"><h2>Agent trust scores</h2><div id="agents"></div></div>
         <div class="panel">
           <h2>How calls are marked</h2>
@@ -404,21 +418,24 @@ label.f input,label.f select{border:1px solid var(--line);border-radius:8px;padd
 const DEFAULTS = {
   watchMin: 15, mustMin: 20,
   rules: [
+    {severity:"critical", text:"When the caller asks if they've reached a specific carrier (\"Is this Mutual of Omaha?\"), the agent never says yes or goes along with it. The approved answer is along the lines of \"That's one of the carriers we can help assist with.\""},
+    {severity:"critical", text:"No one on our side says or implies that we are the carrier, work for the carrier, or are its customer service (\"this is Aetna\", \"we're with Colonial Penn\", \"I can pull that up in our system as your carrier\")."},
+    {severity:"warning", text:"If the caller still seems to think they reached their insurance company, the agent clears that up before reviewing their policy. Letting the belief stand counts as a miss."},
     {severity:"critical", text:"Agent states the call is being recorded near the start of the call."},
-    {severity:"critical", text:"Agent gives their name, says they are a licensed insurance agent, and names the agency."},
-    {severity:"critical", text:"No promise of \"guaranteed approval\" unless the product really is guaranteed issue, and no claim that coverage starts before the carrier approves it."},
+    {severity:"critical", text:"Agent gives their name and identifies us as an independent policy support desk with licensed agents, not an insurance company."},
+    {severity:"critical", text:"When moving a client to a new carrier, the agent asks about the existing policy, follows replacement steps, and tells the client not to cancel the old policy until the new one is approved."},
+    {severity:"critical", text:"Agent does not run down or misstate the caller's current carrier or policy to get them to switch (twisting)."},
     {severity:"critical", text:"Agent never says or implies the policy is a government, Medicare, Social Security or state benefit program."},
     {severity:"critical", text:"Health questions are read as written. Agent does not coach answers, skip questions or suggest leaving conditions out."},
     {severity:"critical", text:"Client gives clear verbal authorization for the bank draft, with premium amount and draft date read back."},
     {severity:"critical", text:"The person consenting is the proposed insured or owner. No one else answers or authorizes on their behalf."},
-    {severity:"warning", text:"Agent asks whether this policy replaces or changes any existing life insurance or annuity, and follows replacement steps if yes."},
-    {severity:"warning", text:"Coverage amount, monthly premium, policy type, and any waiting or graded period are stated clearly before the client agrees."},
-    {severity:"warning", text:"No pressure tactics: no false deadlines (\"rates go up tomorrow\"), no talking over a client who wants to think about it or end the call."},
+    {severity:"warning", text:"The new carrier's name, coverage amount, monthly premium, policy type, and any waiting or graded period are stated clearly before the client agrees."},
+    {severity:"warning", text:"No pressure tactics: no false deadlines, no talking over a client who wants to think about it or end the call."},
     {severity:"warning", text:"Full SSN and full bank or card numbers are not read back aloud."},
     {severity:"info", text:"Agent mentions the free-look period or the right to cancel."}
   ],
-  instructions: "Flag anything that seems off even if no rule covers it: a third party in the background prompting the client, a client who sounds confused about what they bought, an agent rushing through disclosures, or statements about price or coverage that contradict each other.",
-  keyDetails: ["Product type","Carrier","Coverage amount","Monthly premium","Draft date","Beneficiary","Client age","Client state","Existing coverage / replacement","Sale made"]
+  instructions: "We are an independent policy support desk. People call in to have their life insurance policies reviewed, and many of them think they are calling their insurance company. Agents may say a carrier is one we can help with, but must never confirm or suggest that we are that carrier. Pay close attention to the first two minutes, where the caller usually names the carrier they were trying to reach. Also flag anything else that seems off: a third party prompting the client, a client who sounds confused about who they are talking to or what they bought, an agent rushing through disclosures, or price and coverage statements that contradict each other.",
+  keyDetails: ["Carrier caller asked for","Current carrier / policy","Carrier placed with","Product type","Coverage amount","Monthly premium","Draft date","Beneficiary","Client age","Client state","Sale made"]
 };
 
 const $ = s => document.querySelector(s);
@@ -427,7 +444,7 @@ const S = {
   db:null, sample:null, user:null, downloads:null, myId:null,
   calls:new Map(), settingsDoc:null, loaded:false,
   sort:{key:"startedAt", dir:"desc"},
-  f:{q:"", agent:"", status:"all", tier:"all", crit:false},
+  f:{q:"", agent:"", carrier:"", status:"all", tier:"all", crit:false},
   openId:null, busy:new Map(), notes:{}, names:{}, batch:null, sampleOff:false, view:"calls"
 };
 const cfg = () => {
@@ -453,6 +470,8 @@ function fmtDate(iso){ const d=new Date(iso); if(isNaN(d)) return "—";
   return d.toLocaleDateString(undefined,{month:"short",day:"numeric"}) + " · " + d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}); }
 function band(score){ return score==null ? "info" : score>=80 ? "ok" : score>=60 ? "warn" : "crit"; }
 function scoreColor(score){ return `var(--${band(score)})`; }
+const carrierOf = c => c.review?.carrier || {};
+function identityBad(c){ return carrierOf(c).identityHandling==="incorrect"; }
 function needsReview(c){ return tier(c)==="close" && c.status!=="approved" && c.status!=="escalated"; }
 function critCount(c){ return (c.review?.flags||[]).filter(f=>f.severity==="critical").length; }
 function warnCount(c){ return (c.review?.flags||[]).filter(f=>f.severity==="warning").length; }
@@ -468,12 +487,14 @@ function visible(){
   const q=S.f.q.toLowerCase();
   let list=[...S.calls.values()].filter(c=>{
     if(S.f.agent && c.agent!==S.f.agent) return false;
+    if(S.f.carrier){ const k=carrierOf(c); if(k.askedFor!==S.f.carrier && k.placedWith!==S.f.carrier && k.current!==S.f.carrier) return false; }
     if(S.f.tier!=="all" && tier(c)!==S.f.tier) return false;
     if(S.f.crit && !critCount(c)) return false;
     const st=S.f.status;
     if(st==="needs" && !needsReview(c)) return false;
     if(["new","ai","approved","escalated"].includes(st) && (c.status||"new")!==st) return false;
-    if(q && !`${c.agent} ${c.caller} ${c.product} ${c.outcome} ${c.transcript}`.toLowerCase().includes(q)) return false;
+    const k=carrierOf(c);
+    if(q && !`${c.agent} ${c.caller} ${c.product} ${c.outcome} ${k.askedFor||""} ${k.current||""} ${k.placedWith||""} ${c.transcript}`.toLowerCase().includes(q)) return false;
     return true;
   });
   const {key,dir}=S.sort, m=dir==="asc"?1:-1;
@@ -484,7 +505,7 @@ function visible(){
 
 /* ---------- render ---------- */
 function render(){
-  renderSync(); renderKpis(); renderTable(); renderAgents(); renderLegend();
+  renderSync(); renderKpis(); renderTable(); renderAgents(); renderCarriers(); renderLegend();
   if(S.openId) renderDrawer();
 }
 function renderSync(){
@@ -501,14 +522,23 @@ function renderSync(){
 function renderKpis(){
   const all=[...S.calls.values()], reviewed=all.filter(c=>c.review);
   const avg = reviewed.length ? Math.round(reviewed.reduce((s,c)=>s+c.review.trustScore,0)/reviewed.length) : null;
-  const crit = all.filter(c=>critCount(c)).length;
+  const crit = all.filter(c=>critCount(c)).length, idBad = all.filter(identityBad).length;
+  const placed = all.filter(c=>carrierOf(c).placedWith).length;
   const need = all.filter(needsReview).length, longAll = all.filter(c=>tier(c)==="close").length;
   const k=cfg();
   $("#kpis").innerHTML = `
     <div class="kpi"><div class="lab">Calls logged</div><div class="val">${all.length}</div><div class="sub">${reviewed.length} AI-reviewed</div></div>
     <div class="kpi"><div class="lab">Average trust score</div><div class="val" style="color:${scoreColor(avg)}">${avg ?? "—"}</div><div class="sub">across reviewed calls, out of 100</div></div>
+    <div class="kpi k-crit"><div class="lab">Said they were the carrier</div><div class="val">${idBad}</div><div class="sub">agent confirmed or implied it</div></div>
+    <div class="kpi"><div class="lab">Placed with a new carrier</div><div class="val">${placed}</div><div class="sub">of ${reviewed.length} reviewed calls</div></div>
     <div class="kpi k-crit"><div class="lab">Calls with critical flags</div><div class="val">${crit}</div><div class="sub">compliance risk, check these first</div></div>
     <div class="kpi k-close"><div class="lab">${k.mustMin}+ min calls to sign off</div><div class="val">${need}</div><div class="sub">of ${longAll} long calls · likely closes</div></div>`;
+}
+function carrierCell(c){
+  if(!c.review) return `<span class="muted">—</span>`;
+  const k=carrierOf(c), a=k.askedFor, p=k.placedWith;
+  const id = identityBad(c) ? `<span class="pill crit" title="Agent went along with being the carrier">Said they were carrier</span>` : "";
+  return `<div class="car">${a?`<span>${esc(a)}</span>`:`<span class="muted">Not named</span>`}<span class="muted">→</span>${p?`<b>${esc(p)}</b>`:`<span class="muted">No placement</span>`}</div>${id}`;
 }
 function renderTable(){
   const list=visible(), k=cfg(), maxDur=Math.max(k.mustMin*60*1.5, ...list.map(c=>c.durationSec||0));
@@ -530,6 +560,7 @@ function renderTable(){
       <td class="who">${esc(c.agent||"—")}</td>
       <td><div>${esc(c.caller||"—")}</div><div class="sub2">${esc(c.product||"")}</div></td>
       <td><div class="dur"><span class="dbar"><i style="width:${Math.min(100,(c.durationSec||0)/maxDur*100)}%"></i></span><span class="num">${fmtDur(c.durationSec)}</span>${tchip}</div></td>
+      <td>${carrierCell(c)}</td>
       <td>${esc(c.outcome||"—")}</td>
       <td>${score}</td><td>${flags}</td><td>${status}</td></tr>`;
   }).join("");
@@ -548,6 +579,9 @@ function renderTable(){
   const agents=[...new Set([...S.calls.values()].map(c=>c.agent).filter(Boolean))].sort();
   const sel=$("#fAgent"), cur=sel.value;
   sel.innerHTML = `<option value="">All agents</option>` + agents.map(a=>`<option${a===cur?" selected":""}>${esc(a)}</option>`).join("");
+  const carriers=[...new Set([...S.calls.values()].flatMap(c=>{const k=carrierOf(c); return [k.askedFor,k.current,k.placedWith];}).filter(Boolean))].sort();
+  const cs=$("#fCarrier"), ccur=cs.value;
+  cs.innerHTML = `<option value="">All carriers</option>` + carriers.map(a=>`<option${a===ccur?" selected":""}>${esc(a)}</option>`).join("");
   $("#agentList").innerHTML = agents.map(a=>`<option value="${esc(a)}">`).join("");
   $("#chipClose").textContent=`${k.mustMin}+ min`; $("#chipWatch").textContent=`${k.watchMin}–${k.mustMin} min`; $("#chipStd").textContent=`Under ${k.watchMin}`;
 }
@@ -561,6 +595,13 @@ function renderAgents(){
       <span class="bar"><i style="width:${r.avg??0}%;background:${scoreColor(r.avg)}"></i></span>
       <span class="meta">${r.n} call${r.n>1?"s":""} · ${r.long} long · ${r.crit} with critical flags</span></div>`).join("")
     : `<p class="muted" style="margin:0">Scores appear once calls are reviewed. Lowest scores sort to the top.</p>`;
+}
+function renderCarriers(){
+  const asked={}, placed={};
+  for(const c of S.calls.values()){ const k=carrierOf(c); const a=k.askedFor; if(a) asked[a]=(asked[a]||0)+1; if(k.placedWith) placed[k.placedWith]=(placed[k.placedWith]||0)+1; }
+  const list=(o,color)=>{ const e=Object.entries(o).sort((x,y)=>y[1]-x[1]).slice(0,6), max=Math.max(1,...e.map(x=>x[1]));
+    return e.length ? e.map(([n,v])=>`<button class="carrow" data-carrier="${esc(n)}"><span class="nm">${esc(n)}</span><span class="sc">${v}</span><span class="bar"><i style="width:${v/max*100}%;background:${color}"></i></span></button>`).join("") : `<p class="muted" style="margin:0 0 8px">None yet.</p>`; };
+  $("#carriers").innerHTML = `<div class="clab">Callers asked for</div>${list(asked,"var(--muted)")}<div class="clab" style="margin-top:10px">Placed with</div>${list(placed,"var(--accent)")}`;
 }
 function renderLegend(){
   const k=cfg();
@@ -616,6 +657,14 @@ function renderDrawer(){
   } else {
     verdict = `<div class="sec"><h3>Not reviewed yet</h3><p class="muted" style="margin:0">${(c.transcript||"").trim() ? (S.sample ? "Run the AI review to get a trust score, flags and key details." : "AI review runs when this page is open in Claude.") : "Add a transcript to this call to review it."}</p></div>`;
   }
+  const k2=carrierOf(c);
+  const idLabel={correct:["ok","Handled correctly"],incorrect:["crit","Went along with being the carrier"],not_asked:["info","Caller didn't ask"]}[k2.identityHandling]||["info","Unclear"];
+  const carrierSec = r ? `<div class="sec"><h3>Carrier</h3><dl class="kd">
+      <div><dt>Caller asked for</dt><dd>${esc(k2.askedFor||"Not named")}</dd></div>
+      <div><dt>Current carrier</dt><dd>${esc(k2.current||"Not named")}</dd></div>
+      <div><dt>Placed with</dt><dd>${esc(k2.placedWith||"No placement")}</dd></div></dl>
+      <p style="margin:10px 0 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>“Is this ${esc(k2.askedFor||"the carrier")}?”</b> <span class="pill ${idLabel[0]}">${idLabel[1]}</span></p>
+      ${k2.identityQuote?`<blockquote class="idq">“${esc(k2.identityQuote)}”</blockquote>`:""}</div>` : "";
   const flags = r ? (r.flags.length ? `<div class="sec"><h3>Flags <span class="muted">${r.flags.length} found · click a quote to find it</span></h3><div class="flags">${
       r.flags.map((f,i)=>`<div class="flag ${esc(f.severity)}"><div class="ft"><span class="pill ${f.severity==="critical"?"crit":f.severity==="warning"?"warn":"info"}">${esc(f.severity)}</span>${esc(f.title)}</div>
       ${f.quote?`<blockquote data-jump="${i}" tabindex="0">“${esc(f.quote)}”</blockquote>`:""}<div class="muted">${esc(f.explanation)}</div></div>`).join("")}</div></div>`
@@ -638,7 +687,7 @@ function renderDrawer(){
       </div>
     </div>
     <div class="dbody">
-      ${verdict}${flags}${kd}${check}
+      ${verdict}${carrierSec}${flags}${kd}${check}
       <div class="sec"><h3>Call info</h3><dl class="meta-grid">
         <div><dt>Outcome</dt><dd>${esc(c.outcome||"—")}</dd></div><div><dt>Product</dt><dd>${esc(c.product||"—")}</dd></div>
         <div><dt>Length</dt><dd class="num">${fmtDur(c.durationSec)}</dd></div><div><dt>Agent</dt><dd>${esc(c.agent||"—")}</dd></div>
@@ -655,13 +704,23 @@ function renderDrawer(){
 /* ---------- AI review ---------- */
 function buildPrompt(c){
   const k=cfg(), tx=(c.transcript||"").slice(0,160000);
-  return `You are a senior compliance QA reviewer for an inbound call center that sells life insurance (final expense, term, whole life, IUL) over the phone. Review the call transcript below the way a careful, fair auditor would.
+  return `You are a senior compliance QA reviewer for an inbound life insurance policy support desk. Agents review callers' existing policies and, when it helps the client, place them with a new carrier (final expense, term, whole life, IUL). Review the call transcript below the way a careful, fair auditor would.
 
 AGENCY RULES (check every one; severity in brackets):
 ${k.rules.map((r,i)=>`R${i+1} [${r.severity}] ${r.text}`).join("\n")}
 
 EXTRA INSTRUCTIONS FROM THE ADMIN:
 ${k.instructions || "(none)"}
+
+ABOUT US: We are an independent policy support desk, not an insurance carrier. Callers often believe they have reached their insurance company.
+
+CARRIER TRACKING (always fill the "carrier" object):
+- askedFor: the carrier the caller says they were trying to reach or asks about at the start ("Is this Globe Life?"). Empty string if never named.
+- current: the carrier of the policy the caller has now, if mentioned.
+- placedWith: the carrier the agent is moving or placing the caller with on this call. Empty string if no new policy was written.
+- identityHandling: "correct" if the caller asked whether we are a carrier (or clearly assumed it) and the agent did NOT confirm it, e.g. "That's one of the carriers we can help assist with"; "incorrect" if the agent said yes, said or implied we are the carrier or work for it, or let the caller keep believing it; "not_asked" if it never came up.
+- identityQuote: the agent's exact words when it came up (verbatim, under 25 words), else empty.
+Any "incorrect" identity handling is always a critical flag.
 
 KEY DETAILS TO EXTRACT (use exactly these labels, in this order): ${k.keyDetails.join(" | ")}
 
@@ -675,6 +734,7 @@ ${tx}
 
 Reply with ONLY one JSON object of this shape:
 {"trustScore": 0-100 integer,
+ "carrier": {"askedFor": "", "current": "", "placedWith": "", "identityHandling": "correct" | "incorrect" | "not_asked", "identityQuote": ""},
  "summary": "2-3 plain sentences: what happened on the call and the main compliance takeaway",
  "keyDetails": [{"label": "...", "value": "... or empty string if not mentioned"}],
  "checklist": [{"rule": "R1 short restatement", "status": "met" | "missed" | "unclear" | "na", "evidence": "short reason or quote"}],
@@ -689,6 +749,9 @@ function normalize(o){
   const str=v=>v==null?"":String(v);
   return {
     trustScore: Math.max(0, Math.min(100, Math.round(Number(o?.trustScore)||0))),
+    carrier: { askedFor:str(o?.carrier?.askedFor).slice(0,80), current:str(o?.carrier?.current).slice(0,80), placedWith:str(o?.carrier?.placedWith).slice(0,80),
+      identityHandling: ["correct","incorrect","not_asked"].includes(o?.carrier?.identityHandling) ? o.carrier.identityHandling : "not_asked",
+      identityQuote: str(o?.carrier?.identityQuote).slice(0,300) },
     summary: str(o?.summary).slice(0,1200),
     keyDetails: (Array.isArray(o?.keyDetails)?o.keyDetails:[]).slice(0,30).map(x=>({label:str(x?.label).slice(0,80), value:str(x?.value).slice(0,300)})),
     checklist: (Array.isArray(o?.checklist)?o.checklist:[]).slice(0,40).map(x=>({rule:str(x?.rule).slice(0,300), status:stat(x?.status), evidence:str(x?.evidence).slice(0,400)})),
@@ -941,6 +1004,7 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
 $("#addBtn").onclick=openAdd;
 $("#q").addEventListener("input", e=>{ S.f.q=e.target.value; renderTable(); });
 $("#fAgent").onchange=e=>{ S.f.agent=e.target.value; renderTable(); };
+$("#fCarrier").onchange=e=>{ S.f.carrier=e.target.value; renderTable(); };
 $("#fStatus").onchange=e=>{ S.f.status=e.target.value; renderTable(); };
 document.querySelectorAll(".chip[data-tier]").forEach(b=>b.onclick=()=>{
   S.f.tier=b.dataset.tier; document.querySelectorAll(".chip[data-tier]").forEach(x=>x.setAttribute("aria-pressed", x===b)); renderTable(); });
@@ -955,6 +1019,8 @@ $("#rows").addEventListener("keydown", e=>{ if(e.key==="Enter"){ const tr=e.targ
 $("#scrim").onclick=closeDrawer;
 document.addEventListener("keydown", e=>{ if(e.key==="Escape" && S.openId && !$("#addDlg").open) closeDrawer(); });
 $("#batchBtn").onclick=runBatch;
+$("#carriers").addEventListener("click", e=>{ const b=e.target.closest("[data-carrier]"); if(!b) return;
+  S.f.carrier = S.f.carrier===b.dataset.carrier ? "" : b.dataset.carrier; renderTable(); $("#fCarrier").value=S.f.carrier; });
 let delArm=null;
 $("#drawer").addEventListener("input", e=>{ if(e.target.id==="d-notes") S.notes[S.openId]=e.target.value; });
 $("#drawer").addEventListener("click", async e=>{
@@ -986,9 +1052,9 @@ $("#clearEx").onclick=async e=>{
   try{ for(const c of ex) await ref(c.id).delete(); toast(`Removed ${ex.length} example calls.`); }catch(x){ toast("Couldn't remove them. You may need edit access."); }
 };
 $("#exportBtn").onclick=async()=>{
-  const cols=["Date","Agent","Caller","Product","Outcome","Length","Length (sec)","Length tier","Trust score","Critical flags","Warnings","Status","Summary","Flags"];
+  const cols=["Date","Agent","Caller","Carrier asked for","Current carrier","Placed with","Carrier identity","Product","Outcome","Length","Length (sec)","Length tier","Trust score","Critical flags","Warnings","Status","Summary","Flags"];
   const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
-  const lines=[cols.join(",")].concat(visible().map(c=>[c.startedAt,c.agent,c.caller,c.product,c.outcome,fmtDur(c.durationSec),c.durationSec,tier(c),c.review?.trustScore??"",critCount(c),warnCount(c),needsReview(c)?"Review required":STATUS[c.status||"new"].label,c.review?.summary||"",(c.review?.flags||[]).map(f=>`[${f.severity}] ${f.title}`).join("; ")].map(q).join(",")));
+  const lines=[cols.join(",")].concat(visible().map(c=>[c.startedAt,c.agent,c.caller,carrierOf(c).askedFor||"",carrierOf(c).current||"",carrierOf(c).placedWith||"",carrierOf(c).identityHandling||"",c.product,c.outcome,fmtDur(c.durationSec),c.durationSec,tier(c),c.review?.trustScore??"",critCount(c),warnCount(c),needsReview(c)?"Review required":STATUS[c.status||"new"].label,c.review?.summary||"",(c.review?.flags||[]).map(f=>`[${f.severity}] ${f.title}`).join("; ")].map(q).join(",")));
   try{ await S.downloads.save({filename:`call-review-${new Date().toISOString().slice(0,10)}.csv`, data:lines.join("\n")}); }catch(e){ if(e?.code!=="cancelled") toast("The export didn't save."); }
 };
 
