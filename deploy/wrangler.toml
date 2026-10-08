@@ -16,7 +16,7 @@ id = "cc65589c8dfe4579b355f3804db2fb65"
 # An entry may start with "https://*." to match subdomains of one domain —
 # Pages gives every deployment its own hostname, and they are all yours.
 # It still never matches another domain, and never plain http.
-ALLOWED_ORIGINS = "https://thrive-command.pages.dev,https://*.thrive-command.pages.dev,https://thrive-leadtech.pages.dev,https://*.thrive-leadtech.pages.dev,https://thrive-onboarding.pages.dev,https://*.thrive-onboarding.pages.dev"
+ALLOWED_ORIGINS = "https://thrive-command.pages.dev,https://*.thrive-command.pages.dev,https://thrive-leadtech.pages.dev,https://*.thrive-leadtech.pages.dev,https://thrive-onboarding.pages.dev,https://*.thrive-onboarding.pages.dev,https://thrive-loa.pages.dev,https://*.thrive-loa.pages.dev"
 
 OWNER_EMAIL = "andrew.davidson.zenith@gmail.com"
 # 100000 is the ceiling Cloudflare Workers allow for PBKDF2.
@@ -26,6 +26,9 @@ OWNER_PASSWORD_ITER = "100000"
 #   wrangler secret put TOKEN_SECRET
 #   wrangler secret put OWNER_PASSWORD_SALT
 #   wrangler secret put OWNER_PASSWORD_HASH
+#
+# LOA Producer Desk (loa-desk/build-desk.mjs bakes the same value into the page):
+#   wrangler secret put DESK_TOKEN              # any long random string
 #
 # Stripe orders (see DEPLOY.md, "Stripe orders"):
 #   wrangler secret put STRIPE_WEBHOOK_SECRET   # whsec_... from the webhook

@@ -285,6 +285,19 @@ async function readToken(env, request) {
   return { email: body.e };
 }
 
+/* The LOA Producer Desk signs its producers in itself, so it carries one
+   shared DESK_TOKEN instead of an owner session. That token reaches only
+   the desk's two keys, and only to read or write them. */
+const DESK_KEYS = new Set(["loa.state", "snapshots.loa"]);
+
+function readDeskToken(env, request) {
+  if (!env.DESK_TOKEN) return null;
+  const auth = request.headers.get("Authorization") || "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+  if (!token || !sameBytes(enc.encode(token), enc.encode(env.DESK_TOKEN))) return null;
+  return { role: "desk" };
+}
+
 /* --------------------------------------------------------------- routes */
 
 /* Which pieces of configuration are present. Booleans only — never a
@@ -779,11 +792,14 @@ async function handle(request, env) {
 
     /* ---- key/value ---- */
     if (path.startsWith("/kv/")) {
-      const who = await readToken(env, request);
+      const who = (await readToken(env, request)) || readDeskToken(env, request);
       if (!who) return json({ error: "Signed out" }, 401, head);
 
       const key = decodeURIComponent(path.slice(4));
       if (!key || key.length > 256) return json({ error: "Bad key" }, 400, head);
+      if (who.role === "desk" && !DESK_KEYS.has(key)) {
+        return json({ error: "This token may only reach the desk's own keys." }, 403, head);
+      }
 
       if (request.method === "GET") {
         const value = await env.THRIVE_KV.get(`kv:${key}`);
