@@ -18,11 +18,30 @@
 -- What the portals store today, carried over as-is. The board keeps its
 -- whole state in one row here, which is how it already works; this table
 -- is what lets the migration happen without touching a single page.
+-- `expires_at` is how Cloudflare KV's expirationTtl survives the move.
+-- The relay leans on it for the rate-limit counters and for ageing out
+-- the Stripe inbox, so the store honours it rather than making every
+-- call site remember. Null means keep forever, which is most rows.
 create table if not exists public.kv (
   key        text primary key,
   value      text        not null,
+  expires_at timestamptz,
   updated_at timestamptz not null default now()
 );
+
+create index if not exists kv_expires_idx on public.kv (expires_at)
+  where expires_at is not null;
+
+-- Nothing sweeps on a timer, so expired rows are stepped over on read and
+-- cleared out whenever something is written. Cheap, and it keeps the
+-- table from growing without bound on rate-limit keys.
+create or replace function public.kv_sweep()
+returns integer
+language sql
+as $$
+  with gone as (delete from public.kv where expires_at < now() returning 1)
+  select count(*)::integer from gone;
+$$;
 
 -- -------------------------------------------------------------- orders
 -- A payment, as Stripe pushed it. Several events describe one payment --
@@ -91,45 +110,9 @@ create table if not exists public.onboarding_documents (
   created_at       timestamptz not null default now()
 );
 
--- -------------------------------------------------------- rate limiting
--- Cloudflare KV expired these for us. Postgres does not, so the row
--- carries its own expiry and stale ones are swept on write.
-create table if not exists public.rate_limits (
-  bucket     text primary key,
-  count      integer     not null default 0,
-  expires_at timestamptz not null
-);
-
-create index if not exists rate_limits_expires_idx on public.rate_limits (expires_at);
-
--- Count one hit against a bucket and return the count BEFORE it, which is
--- what the Worker compares against its ceiling. Doing it in one statement
--- closes the read-then-write gap that let two requests past the limit
--- together on KV.
-create or replace function public.bump_rate(p_bucket text, p_ttl_seconds integer)
-returns integer
-language plpgsql
-as $$
-declare
-  seen integer;
-begin
-  delete from public.rate_limits where expires_at < now();
-
-  select count into seen from public.rate_limits where bucket = p_bucket;
-
-  insert into public.rate_limits (bucket, count, expires_at)
-  values (p_bucket, 1, now() + make_interval(secs => p_ttl_seconds))
-  on conflict (bucket) do update
-    set count = public.rate_limits.count + 1;
-
-  return coalesce(seen, 0);
-end;
-$$;
-
 -- --------------------------------------------------------------- locking
 -- Nothing but the Worker's service role key gets in.
 alter table public.kv                     enable row level security;
 alter table public.orders                 enable row level security;
 alter table public.onboarding_submissions enable row level security;
 alter table public.onboarding_documents   enable row level security;
-alter table public.rate_limits            enable row level security;

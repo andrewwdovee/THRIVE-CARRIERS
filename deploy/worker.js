@@ -36,6 +36,18 @@
  */
 
 import { verify, HANDLED, fromEvent, mergeOrders } from "./stripe-webhook.js";
+import { pickStore } from "./supabase-store.js";
+
+/* Where the records live. Supabase when its two secrets are set,
+   Cloudflare KV otherwise -- so a deploy that has not been given the
+   secrets yet keeps serving from KV rather than falling over, and
+   rolling back is deleting a secret. Resolved once per isolate: the
+   answer cannot change without a redeploy. */
+let STORE = null;
+function store(env) {
+  if (!STORE) STORE = pickStore(env);
+  return STORE;
+}
 
 const TOKEN_TTL_DAYS = 30;
 const enc = new TextEncoder();
@@ -150,11 +162,11 @@ async function inboxSince(env, since) {
   const out = [];
   let cursor;
   do {
-    const page = await env.THRIVE_KV.list({ prefix: "inbox:", cursor });
+    const page = await store(env).list({ prefix: "inbox:", cursor });
     for (const k of page.keys) {
       const at = Number(k.name.split(":")[1]);
       if (Number.isFinite(at) && at < since - INBOX_OVERLAP) continue;
-      const raw = await env.THRIVE_KV.get(k.name);
+      const raw = await store(env).get(k.name);
       if (raw) { try { out.push(JSON.parse(raw)); } catch { /* skip a bad row */ } }
     }
     cursor = page.list_complete ? null : page.cursor;
@@ -310,7 +322,10 @@ function configReport(env) {
     passwordHash: typeof env.OWNER_PASSWORD_HASH === "string" && env.OWNER_PASSWORD_HASH.length > 0,
     hashLooksValid: typeof env.OWNER_PASSWORD_HASH === "string" && /^[0-9a-fA-F]{64}$/.test(env.OWNER_PASSWORD_HASH.trim()),
     tokenSecret: typeof env.TOKEN_SECRET === "string" && env.TOKEN_SECRET.length > 0,
-    kv: !!env.THRIVE_KV,
+    kv: !!store(env),
+    /* Which store the records are actually in, so /health answers it
+       rather than leaving it to be inferred from a deploy log. */
+    backend: store(env) && typeof store(env).saveOrder === "function" ? "supabase" : "cloudflare-kv",
     stripeWebhook: typeof env.STRIPE_WEBHOOK_SECRET === "string" && env.STRIPE_WEBHOOK_SECRET.startsWith("whsec_"),
     stripeKey: typeof env.STRIPE_SECRET_KEY === "string" && env.STRIPE_SECRET_KEY.length > 0,
     iterations: Number(env.OWNER_PASSWORD_ITER || 0),
@@ -377,7 +392,7 @@ async function handle(request, env) {
         service: "thrive-relay",
         /* The portal reads this to know Stripe pushes to us, so it can
            check every few seconds instead of on a long timer. */
-        webhook: !!(env.STRIPE_WEBHOOK_SECRET && env.THRIVE_KV),
+        webhook: !!(env.STRIPE_WEBHOOK_SECRET && store(env)),
         config: configReport(env),
         missing: missingConfig(env),
       }, 200, head);
@@ -413,11 +428,18 @@ async function handle(request, env) {
          key; the rest find it through the pointer and merge into it. */
       const at = Number(order.created) || Math.floor(Date.now() / 1000);
       const ptr = `idx:${order.id}`;
-      const key = (await env.THRIVE_KV.get(ptr)) || `inbox:${String(at).padStart(12, "0")}:${order.id}`;
-      const prior = await env.THRIVE_KV.get(key);
+      const key = (await store(env).get(ptr)) || `inbox:${String(at).padStart(12, "0")}:${order.id}`;
+      const prior = await store(env).get(key);
       const merged = prior ? mergeOrders(JSON.parse(prior), order) : order;
-      await env.THRIVE_KV.put(key, JSON.stringify(merged), { expirationTtl: INBOX_TTL });
-      if (!prior) await env.THRIVE_KV.put(ptr, key, { expirationTtl: INBOX_TTL * 4 });
+      await store(env).put(key, JSON.stringify(merged), { expirationTtl: INBOX_TTL });
+      if (!prior) await store(env).put(ptr, key, { expirationTtl: INBOX_TTL * 4 });
+      /* And into the orders table, for reading in SQL. Best effort on
+         purpose: the board is served from the record above, and a
+         projection that failed must never cost us the payment. */
+      if (store(env).saveOrder) {
+        try { await store(env).saveOrder(merged); }
+        catch (e) { console.log("orders projection failed for " + order.id + ": " + e.message); }
+      }
       return json({ ok: true, received: order.id });
     }
 
@@ -504,7 +526,7 @@ async function handle(request, env) {
         request.headers.get("CF-Connecting-IP") || "unknown"
       );
       const bucket = `rate:onboard:${who.slice(0, 24)}:${Math.floor(Date.now() / 36e5)}`;
-      const seen = Number(await env.THRIVE_KV.get(bucket)) || 0;
+      const seen = Number(await store(env).get(bucket)) || 0;
       if (seen >= ONBOARD_PER_HOUR) {
         return json({ error: "Too many submissions from here in the last hour." }, 429, head);
       }
@@ -567,7 +589,7 @@ async function handle(request, env) {
       const signedAt = new Date().toISOString();
 
       let index = [];
-      try { index = JSON.parse((await env.THRIVE_KV.get(ONBOARD_INDEX)) || "[]"); } catch { index = []; }
+      try { index = JSON.parse((await store(env).get(ONBOARD_INDEX)) || "[]"); } catch { index = []; }
       if (!Array.isArray(index)) index = [];
       if (index.length >= ONBOARD_MAX_ROWS) {
         return json({ error: "The onboarding list is full. Clear it from the board." }, 507, head);
@@ -598,10 +620,22 @@ async function handle(request, env) {
         reviewed: false,
       });
 
-      await env.THRIVE_KV.put(`kv:${ONBOARD_DOC}${id}`,
+      await store(env).put(`kv:${ONBOARD_DOC}${id}`,
         JSON.stringify({ ...rec, id, signedAt, signature, thriveSignature, photo }));
-      await env.THRIVE_KV.put(ONBOARD_INDEX, JSON.stringify(index));
-      await env.THRIVE_KV.put(bucket, String(seen + 1), { expirationTtl: 7200 });
+      await store(env).put(ONBOARD_INDEX, JSON.stringify(index));
+      await store(env).put(bucket, String(seen + 1), { expirationTtl: 7200 });
+
+      /* The same record in columns, for reading in SQL. Best effort, as
+         with orders: somebody has signed, and losing the agreement over
+         a reporting row would be the wrong trade. */
+      if (store(env).saveSubmission) {
+        try {
+          await store(env).saveSubmission(
+            { ...rec, id, signedAt, steps: index[0].steps },
+            { signature, thriveSignature, photo },
+          );
+        } catch (e) { console.log("onboarding projection failed for " + id + ": " + e.message); }
+      }
 
       return json({ ok: true, id, signedAt }, 200, head);
     }
@@ -627,7 +661,7 @@ async function handle(request, env) {
         request.headers.get("CF-Connecting-IP") || "unknown"
       );
       const bucket = `rate:prefs:${who.slice(0, 24)}:${Math.floor(Date.now() / 36e5)}`;
-      const seen = Number(await env.THRIVE_KV.get(bucket)) || 0;
+      const seen = Number(await store(env).get(bucket)) || 0;
       if (seen >= PREFS_PER_HOUR) {
         return json({ error: "Too many changes from here in the last hour." }, 429, head);
       }
@@ -671,7 +705,7 @@ async function handle(request, env) {
       }
 
       let index = [];
-      try { index = JSON.parse((await env.THRIVE_KV.get(ONBOARD_INDEX)) || "[]"); } catch { index = []; }
+      try { index = JSON.parse((await store(env).get(ONBOARD_INDEX)) || "[]"); } catch { index = []; }
       if (!Array.isArray(index)) index = [];
       const row = index.find((r) => String(r.email || "").toLowerCase() === email);
       if (!row) {
@@ -689,8 +723,8 @@ async function handle(request, env) {
         .concat(Array.isArray(row.prefsLog) ? row.prefsLog : [])
         .slice(0, 10);
 
-      await env.THRIVE_KV.put(ONBOARD_INDEX, JSON.stringify(index));
-      await env.THRIVE_KV.put(bucket, String(seen + 1), { expirationTtl: 7200 });
+      await store(env).put(ONBOARD_INDEX, JSON.stringify(index));
+      await store(env).put(bucket, String(seen + 1), { expirationTtl: 7200 });
 
       return json({
         ok: true, at,
@@ -711,12 +745,12 @@ async function handle(request, env) {
        record. Names and a schedule, nothing more. */
     if (path === "/onboarding/roster" && request.method === "GET") {
       let index = [];
-      try { index = JSON.parse((await env.THRIVE_KV.get(ONBOARD_INDEX)) || "[]"); } catch { index = []; }
+      try { index = JSON.parse((await store(env).get(ONBOARD_INDEX)) || "[]"); } catch { index = []; }
       if (!Array.isArray(index)) index = [];
       /* Who the board has switched off. Only a yes/no per person comes down
          here; the email it is keyed on stays on this side. */
       let offMap = {};
-      try { offMap = (JSON.parse((await env.THRIVE_KV.get(STARTTIMES_KEY)) || "{}") || {}).off || {}; } catch { offMap = {}; }
+      try { offMap = (JSON.parse((await store(env).get(STARTTIMES_KEY)) || "{}") || {}).off || {}; } catch { offMap = {}; }
       /* One row per person: signing twice keeps the latest answer. */
       const latest = new Map();
       index.filter((r) => r && r.legalName).forEach((r) => {
@@ -760,17 +794,17 @@ async function handle(request, env) {
       const ip = request.headers.get("CF-Connecting-IP") || "unknown";
       const who = await hmac(env.TOKEN_SECRET || "refunds", ip);
       const bucket = `rate:refund:${who.slice(0, 24)}:${Math.floor(Date.now() / 36e5)}`;
-      const seen = Number(await env.THRIVE_KV.get(bucket)) || 0;
+      const seen = Number(await store(env).get(bucket)) || 0;
       if (seen >= RR_PER_HOUR) return json({ error: "Too many requests from here. Try again later." }, 429, head);
 
       const at = Date.now();
       const id = crypto.randomUUID();
-      await env.THRIVE_KV.put(
+      await store(env).put(
         `${RR_PREFIX}${String(Math.floor(at / 1000)).padStart(12, "0")}:${id}`,
         JSON.stringify({ ...value, id, at }),
         { expirationTtl: RR_TTL },
       );
-      await env.THRIVE_KV.put(bucket, String(seen + 1), { expirationTtl: 7200 });
+      await store(env).put(bucket, String(seen + 1), { expirationTtl: 7200 });
       return json({ ok: true }, 200, head);
     }
 
@@ -780,9 +814,9 @@ async function handle(request, env) {
       const out = [];
       let cursor;
       do {
-        const page = await env.THRIVE_KV.list({ prefix: RR_PREFIX, cursor });
+        const page = await store(env).list({ prefix: RR_PREFIX, cursor });
         for (const k of page.keys) {
-          const v = await env.THRIVE_KV.get(k.name);
+          const v = await store(env).get(k.name);
           if (v) { try { out.push(JSON.parse(v)); } catch { /* skip a bad row */ } }
         }
         cursor = page.list_complete ? null : page.cursor;
@@ -802,7 +836,7 @@ async function handle(request, env) {
       }
 
       if (request.method === "GET") {
-        const value = await env.THRIVE_KV.get(`kv:${key}`);
+        const value = await store(env).get(`kv:${key}`);
         if (value === null) return json({ error: "Not found" }, 404, head);
         return json({ value, key }, 200, head);
       }
@@ -814,7 +848,7 @@ async function handle(request, env) {
            Anything else is stringified so the store stays uniform. */
         const value = typeof body.value === "string" ? body.value : JSON.stringify(body.value);
         if (value.length > 20 * 1024 * 1024) return json({ error: "Too large" }, 413, head);
-        await env.THRIVE_KV.put(`kv:${key}`, value);
+        await store(env).put(`kv:${key}`, value);
         return json({ ok: true, key, bytes: value.length }, 200, head);
       }
     }
