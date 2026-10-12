@@ -6,11 +6,13 @@ import pg from "pg";
 const db = new pg.Pool({ host: "/var/run/postgresql", user: "postgres", database: "thrive" });
 const TABLES = new Set(["kv", "orders", "onboarding_submissions", "onboarding_documents"]);
 
+/* Faithful to PostgREST: the value is taken as it arrives. An earlier
+   version stripped surrounding double quotes, which real PostgREST does
+   not do. That one kindness made every test pass against a store whose
+   every lookup failed in production. A stand-in that is more forgiving
+   than the real thing is worse than no stand-in. */
 function unquote(v) {
-  /* searchParams has already percent-decoded; decoding twice turns a
-     literal % in the value into a bad escape. */
-  return v.startsWith('"') && v.endsWith('"')
-    ? v.slice(1, -1).replace(/\\(.)/g, "$1") : v;
+  return v;
 }
 
 /* key=eq."x" | key=like."pre*" | or=(expires_at.is.null,expires_at.gt.ISO) */

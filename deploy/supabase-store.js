@@ -28,18 +28,18 @@
 
 const PAGE = 1000;
 
-/* PostgREST reads a bare comma or parenthesis in a filter as syntax, so
-   a value that might hold one travels quoted. Keys here are tame --
-   "onboarding/doc/ob_x", "inbox:000001712:ch_y" -- but a customer id is
-   not something to assume about. */
-function q(value) {
-  return `"${String(value).replace(/["\\]/g, (c) => "\\" + c)}"`;
-}
+/* Values travel percent-encoded and NOT quoted. An earlier version wrapped
+   every key in double quotes, reasoning that a comma or parenthesis in a value
+   would otherwise read as syntax. PostgREST does not strip those quotes --
+   it matched on a key that literally began and ended with one, so every
+   lookup came back empty while every write succeeded. Percent-encoding is
+   enough on its own: the query string is split before values are decoded,
+   so a comma arrives as data, and `eq.` takes one value anyway. */
 
-/* LIKE wants % for "anything"; PostgREST spells it *. Either way the
-   wildcards already in a key have to stop meaning wildcard. */
+/* LIKE wants % for "anything"; PostgREST spells it *. Either way a
+   wildcard already inside a key has to stop meaning wildcard. */
 function likePrefix(prefix) {
-  return q(String(prefix).replace(/([%_\\])/g, "\\$1") + "*");
+  return String(prefix).replace(/([%_\\])/g, "\\$1") + "*";
 }
 
 /* An upsert sets every column it is given, so a second Stripe event that
@@ -99,7 +99,7 @@ export function makeStore(env) {
 
   const store = {
     async get(k) {
-      const got = await rows(`/kv?key=eq.${encodeURIComponent(q(k))}&${live()}&select=value&limit=1`);
+      const got = await rows(`/kv?key=eq.${encodeURIComponent(k)}&${live()}&select=value&limit=1`);
       return got.length ? got[0].value : null;
     },
 
@@ -127,7 +127,7 @@ export function makeStore(env) {
     },
 
     async delete(k) {
-      await call(`/kv?key=eq.${encodeURIComponent(q(k))}`, {
+      await call(`/kv?key=eq.${encodeURIComponent(k)}`, {
         method: "DELETE",
         headers: { Prefer: "return=minimal" },
       });

@@ -17,7 +17,7 @@ async function countThere() {
   return Number((res.headers.get("content-range") || "").split("/")[1]) || 0;
 }
 async function readBack(key) {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/kv?key=eq.${encodeURIComponent('"' + key + '"')}&select=value`, { headers });
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/kv?key=eq.${encodeURIComponent(key)}&select=value`, { headers });
   const j = await r.json();
   return j.length ? j[0].value : null;
 }
@@ -57,7 +57,7 @@ ok("the count check would catch a short copy", after < fakeKv.length + before + 
 const soon = new Date(Date.now() + 2000).toISOString();
 await upsert([{ key: RUN + "idx:pi_expiring", value: "ptr", expires_at: soon, updated_at: new Date().toISOString() }]);
 ok("a key with an expiry copies across", await readBack(RUN + "idx:pi_expiring") === "ptr");
-const row = await (await fetch(`${SUPABASE_URL}/rest/v1/kv?key=eq.${encodeURIComponent('"' + RUN + "idx:pi_expiring" + '"')}&select=expires_at`, { headers })).json();
+const row = await (await fetch(`${SUPABASE_URL}/rest/v1/kv?key=eq.${encodeURIComponent(RUN + "idx:pi_expiring")}&select=expires_at`, { headers })).json();
 ok("and keeps its expiry rather than becoming permanent", !!row[0]?.expires_at, row[0]);
 
 console.log(`\n${pass} passed, ${fail} failed`);
