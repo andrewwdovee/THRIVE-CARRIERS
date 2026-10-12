@@ -111,8 +111,28 @@ console.error(`${keys.length} keys, ${wanted.length} to copy${skipped ? `, ${ski
 if (expiring) console.error(`${expiring} of them expire on their own; their expiry travels with them.`);
 
 if (!WRITE) {
-  for (const k of wanted.slice(0, 40)) console.error("  " + k.key + (k.expires_at ? "   expires " + k.expires_at.slice(0, 16).replace("T", " ") : ""));
-  if (wanted.length > 40) console.error(`  … and ${wanted.length - 40} more`);
+  /* The records that matter are the handful that never expire -- the
+     board, the snapshots, the signed agreements. The rest are Stripe
+     pointers that age out on their own and outnumber them twenty to
+     one, so listing the first forty of those tells you nothing. Show
+     the permanent ones in full, and count the rest by prefix. */
+  const keep = wanted.filter((k) => !k.expires_at);
+  const ages = wanted.filter((k) => k.expires_at);
+
+  console.error(`\nThese ${keep.length} are permanent -- your actual records:`);
+  for (const k of keep) console.error("  " + k.key);
+
+  if (ages.length) {
+    const byPrefix = new Map();
+    for (const k of ages) {
+      const p = (k.key.split(":")[0] || "?") + ":";
+      byPrefix.set(p, (byPrefix.get(p) || 0) + 1);
+    }
+    console.error(`\nAnd ${ages.length} that expire by themselves:`);
+    for (const [p, n] of [...byPrefix].sort((a, b) => b[1] - a[1])) {
+      console.error(`  ${n} × ${p}…`);
+    }
+  }
   console.error(`\nNothing written. Re-run with --write to copy them.`);
   process.exit(0);
 }
