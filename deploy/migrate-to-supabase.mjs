@@ -26,6 +26,15 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const WRITE = process.argv.includes("--write");
 
+/* --only <text> copies just the keys containing that text. For putting a
+   single record back after something downstream overwrote it, without
+   dragging 200 unrelated keys along and undoing everything else that has
+   happened since. */
+const ONLY = (() => {
+  const i = process.argv.indexOf("--only");
+  return i < 0 ? null : (process.argv[i + 1] || null);
+})();
+
 const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || "";
 if (!SUPABASE_URL || !SERVICE_KEY) {
@@ -99,6 +108,7 @@ try {
    finished with. KV reports it as unix seconds. */
 const wanted = keys
   .filter((k) => !SKIP.some((re) => re.test(k.name)))
+  .filter((k) => !ONLY || k.name.includes(ONLY))
   .map((k) => ({
     key: k.name,
     expires_at: Number.isFinite(k.expiration) && k.expiration > 0
@@ -107,7 +117,12 @@ const wanted = keys
   }));
 const skipped = keys.length - wanted.length;
 const expiring = wanted.filter((k) => k.expires_at).length;
-console.error(`${keys.length} keys, ${wanted.length} to copy${skipped ? `, ${skipped} skipped (expiring counters)` : ""}.`);
+if (ONLY) console.error(`Only keys containing "${ONLY}".`);
+console.error(`${keys.length} keys, ${wanted.length} to copy${skipped && !ONLY ? `, ${skipped} skipped (expiring counters)` : ""}.`);
+if (ONLY && !wanted.length) {
+  console.error(`Nothing matched. Check the text against a key name.`);
+  process.exit(1);
+}
 if (expiring) console.error(`${expiring} of them expire on their own; their expiry travels with them.`);
 
 if (!WRITE) {
