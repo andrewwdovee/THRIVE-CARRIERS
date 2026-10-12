@@ -14,10 +14,14 @@ project, no network and no credentials.
     sudo service postgresql start
     sudo -u postgres createdb thrive
     sudo -u postgres psql -d thrive -f ../../supabase/schema.sql
-    npm install pg
+    npm install
 
     # every time
-    node postgrest-shim.mjs &
+    npm run shim &
+    npm test
+
+The three suites can also be run on their own:
+
     node store.test.mjs       # the store: get, put, list, ttl, projections
     node worker.test.mjs      # the whole relay: sign in, save, sign a contract
     node migrate.test.mjs     # the copy from Cloudflare KV lands and re-runs clean

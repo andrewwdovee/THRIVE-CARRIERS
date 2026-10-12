@@ -1,0 +1,13 @@
+{
+  "name": "thrive-relay-tests",
+  "private": true,
+  "description": "Runs the relay against a real Postgres. Not shipped; nothing imports it.",
+  "type": "module",
+  "scripts": {
+    "shim": "node postgrest-shim.mjs",
+    "test": "node store.test.mjs && node worker.test.mjs && node migrate.test.mjs"
+  },
+  "dependencies": {
+    "pg": "^8.23.1"
+  }
+}
