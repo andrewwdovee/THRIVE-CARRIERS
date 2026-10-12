@@ -52,5 +52,13 @@ ok("re-running picks up a changed value", await readBack(RUN + "kv:snapshots/loa
 
 ok("the count check would catch a short copy", after < fakeKv.length + before + 1);
 
+/* A key that ages out in KV must age out here too, or the Stripe inbox
+   grows for ever once it is copied across. */
+const soon = new Date(Date.now() + 2000).toISOString();
+await upsert([{ key: RUN + "idx:pi_expiring", value: "ptr", expires_at: soon, updated_at: new Date().toISOString() }]);
+ok("a key with an expiry copies across", await readBack(RUN + "idx:pi_expiring") === "ptr");
+const row = await (await fetch(`${SUPABASE_URL}/rest/v1/kv?key=eq.${encodeURIComponent('"' + RUN + "idx:pi_expiring" + '"')}&select=expires_at`, { headers })).json();
+ok("and keeps its expiry rather than becoming permanent", !!row[0]?.expires_at, row[0]);
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

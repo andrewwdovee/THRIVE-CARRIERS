@@ -93,12 +93,25 @@ try {
   process.exit(1);
 }
 
-const wanted = keys.map((k) => k.name).filter((n) => !SKIP.some((re) => re.test(n)));
+/* Keep each key's expiry, not just its name. The Stripe inbox and its
+   pointers age out on a TTL, and carrying them over as permanent rows
+   would leave Supabase growing for ever with orders the relay had
+   finished with. KV reports it as unix seconds. */
+const wanted = keys
+  .filter((k) => !SKIP.some((re) => re.test(k.name)))
+  .map((k) => ({
+    key: k.name,
+    expires_at: Number.isFinite(k.expiration) && k.expiration > 0
+      ? new Date(k.expiration * 1000).toISOString()
+      : null,
+  }));
 const skipped = keys.length - wanted.length;
+const expiring = wanted.filter((k) => k.expires_at).length;
 console.error(`${keys.length} keys, ${wanted.length} to copy${skipped ? `, ${skipped} skipped (expiring counters)` : ""}.`);
+if (expiring) console.error(`${expiring} of them expire on their own; their expiry travels with them.`);
 
 if (!WRITE) {
-  for (const k of wanted.slice(0, 40)) console.error("  " + k);
+  for (const k of wanted.slice(0, 40)) console.error("  " + k.key + (k.expires_at ? "   expires " + k.expires_at.slice(0, 16).replace("T", " ") : ""));
   if (wanted.length > 40) console.error(`  … and ${wanted.length - 40} more`);
   console.error(`\nNothing written. Re-run with --write to copy them.`);
   process.exit(0);
@@ -118,16 +131,16 @@ async function flush() {
   batch = [];
 }
 
-for (const key of wanted) {
+for (const row of wanted) {
   let value;
   try {
-    value = wrangler(["kv", "key", "get", key, `--namespace-id=${nsId}`, "--remote"]);
+    value = wrangler(["kv", "key", "get", row.key, `--namespace-id=${nsId}`, "--remote"]);
   } catch {
-    console.error(`\n  ! could not read ${key} — skipped`);
+    console.error(`\n  ! could not read ${row.key} — skipped`);
     continue;
   }
   bytes += value.length;
-  batch.push({ key, value, expires_at: null, updated_at: new Date().toISOString() });
+  batch.push({ key: row.key, value, expires_at: row.expires_at, updated_at: new Date().toISOString() });
   if (batch.length >= 50 || batch.reduce((n, r) => n + r.value.length, 0) > 4e6) await flush();
 }
 await flush();
