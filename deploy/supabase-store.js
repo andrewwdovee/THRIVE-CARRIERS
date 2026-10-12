@@ -64,9 +64,15 @@ export function makeStore(env) {
   const base = root + "/rest/v1";
   const headers = {
     apikey: key,
-    Authorization: `Bearer ${key}`,
     "Content-Type": "application/json",
   };
+  /* Supabase issues two kinds of secret. A legacy service_role key is a
+     JWT and PostgREST is happy to see it in both headers. A newer
+     sb_secret_ key is not a JWT at all: send it as a Bearer token and
+     the platform tries to parse it as one and refuses the request with
+     "Invalid JWT". So the Authorization header goes on only when the key
+     is actually a JWT, and the apikey header carries it either way. */
+  if (/^ey[A-Za-z0-9_-]/.test(key)) headers.Authorization = `Bearer ${key}`;
 
   async function call(path, init = {}) {
     const res = await fetch(base + path, {

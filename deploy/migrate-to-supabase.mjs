@@ -57,11 +57,14 @@ function wrangler(args) {
   });
 }
 
+/* A newer sb_secret_ key is not a JWT, and sending it as a Bearer token
+   gets the request refused with "Invalid JWT". Only a legacy
+   service_role key, which is a JWT, goes in that header. */
 const headers = {
   apikey: SERVICE_KEY,
-  Authorization: `Bearer ${SERVICE_KEY}`,
   "Content-Type": "application/json",
 };
+if (/^ey[A-Za-z0-9_-]/.test(SERVICE_KEY)) headers.Authorization = `Bearer ${SERVICE_KEY}`;
 
 async function upsert(rows) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/kv?on_conflict=key`, {
