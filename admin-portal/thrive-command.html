@@ -854,6 +854,10 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
   function addDays(iso, n) {
     var d = new Date(iso + "T12:00:00");
     d.setDate(d.getDate() + n);
+    /* toISOString throws RangeError on an invalid date, and this is called
+       from inside render -- so one unparseable day in one record took the
+       whole screen down. Callers already treat "" as no date. */
+    if (isNaN(d)) return "";
     return d.toISOString().slice(0, 10);
   }
   function prettyDate(iso) {
@@ -2074,7 +2078,40 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
   }
 
   /* ------------------------------------------------------------ shell */
+  /* A throw anywhere in here used to leave the previous screen on the
+     glass: `app.innerHTML` is assigned at the end, so a page function that
+     fails never replaces what is already drawn, and wireCharts never runs.
+     The console then looks frozen -- stale words, dead clicks -- because
+     every click re-enters the same throw. One malformed record did that.
+     Catch it, name it, and keep the rest of the console reachable. */
   function render() {
+    try {
+      renderOrThrow();
+    } catch (e) {
+      try { renderCrash(e); }
+      catch (e2) {
+        app.textContent = "Thrive Command could not draw this screen: " +
+          ((e && e.message) || String(e));
+      }
+    }
+  }
+
+  function renderCrash(e) {
+    var trace = String((e && e.stack) || e).split("\n").slice(0, 8).join("\n");
+    app.innerHTML = masthead() + rail() +
+      '<div class="wrap"><div class="panel"><div class="empty">' +
+      '<div class="msg err" style="text-align:left;margin:0 0 14px">' +
+      "<b>This screen could not be drawn.</b> " + esc((e && e.message) || String(e)) +
+      "</div>" +
+      '<p style="text-align:left;margin:0 0 14px">The data loaded. Something in it broke this' +
+      " page while drawing it, so the tab above is showing what it could. The other tabs" +
+      " may still work.</p>" +
+      '<pre style="text-align:left;white-space:pre-wrap;font:12px/1.5 ui-monospace,Menlo,monospace;' +
+      "opacity:.7;overflow:auto;margin:0\">" + esc(trace) + "</pre>" +
+      "</div></div></div>";
+  }
+
+  function renderOrThrow() {
     chartData = {}; chartSeq = 0;
     if (ui.booting) { app.innerHTML = authShell('<p class="lede">Connecting to the company database…</p>'); return; }
     if (ui.dbError) { app.innerHTML = authShell(dbErrorBody()); return; }
@@ -2495,11 +2532,17 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     var span = Math.round((new Date(to + "T12:00:00") - new Date(first + "T12:00:00")) / 86400000);
     if (span > 365) first = addDays(to, -365);
 
-    var days = [], index = {}, cur = first;
-    while (cur <= to) {
+    var days = [], index = {}, cur = first, guard = 0;
+    /* Every other date walk in this file carries a ceiling. This one did
+       not, and a date that fails to advance -- or one addDays cannot
+       parse -- turns it into a hang with no output. 367 covers the span
+       clamped just above. */
+    while (cur <= to && guard++ < 367) {
       index[cur] = days.length;
       days.push({ date: cur, label: prettyDate(cur), value: 0 });
-      cur = addDays(cur, 1);
+      var next = addDays(cur, 1);
+      if (!next || next <= cur) break;
+      cur = next;
     }
 
     var org = loaOrg(), set = ltSettings();
