@@ -726,7 +726,12 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       set: function (path, data) { return d.doc(path).set(data); },
       del: function (path) { return d.doc(path).delete(); },
       /* Live: the platform pushes every change to every open view. */
-      watch: function (path, cb) { return d.doc(path).onSnapshot(function (s) { cb(s.exists ? s.data() : null); }, function () {}); }
+      watch: function (path, cb, onErr) {
+        return d.doc(path).onSnapshot(
+          function (s) { cb(s.exists ? s.data() : null); },
+          function (e) { if (onErr) onErr(e); }
+        );
+      }
     };
   }
 
@@ -747,8 +752,8 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       get: function (path) { return Promise.resolve(mem[path] || null); },
       set: function (path, data) { mem[path] = data; return Promise.resolve(true); },
       del: function (path) { mem[path] = null; return Promise.resolve(true); },
-      watch: function (path, cb) {
-        this.get(path).then(cb).catch(function () {});
+      watch: function (path, cb, onErr) {
+        this.get(path).then(cb).catch(function (e) { if (onErr) onErr(e); });
         return function () {};
       }
     };
@@ -774,7 +779,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       raw: function (key) {
         return relayFetch("/kv/" + encodeURIComponent(key)).then(function (res) {
           if (res.status === 404) return null;
-          if (!res.ok) throw { code: "read_failed", message: "Could not read " + path + " (" + res.status + ")." };
+          if (!res.ok) throw { code: "read_failed", message: "Could not read " + key + " (" + res.status + ")." };
           return res.json();
         }).then(function (body) {
           if (!body) return null;
@@ -797,8 +802,8 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
       del: function (path) { return this.set(path, null); },
       /* No push channel here — read once now, and the fifteen-minute
          refresh keeps it current. */
-      watch: function (path, cb) {
-        this.get(path).then(cb).catch(function () {});
+      watch: function (path, cb, onErr) {
+        this.get(path).then(cb).catch(function (e) { if (onErr) onErr(e); });
         return function () {};
       }
     };
@@ -814,6 +819,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     booting: true,
     refreshing: false,
     dbError: null,
+    readErrors: {},       /* source name -> why its last read failed */
     owner: null,          /* {salt, hash, iter} or null before it is set */
     settings: null,       /* {brokerageSpreadPct} — owner-editable */
     loa: null,            /* snapshot document body */
@@ -2298,9 +2304,23 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     return out + "</div>";
   }
 
+  /* "Nothing has synced" is a claim about the portal. When the read itself
+     failed it is a claim about this console, and the two need different
+     things done about them. */
+  function readErrorNote(name) {
+    var why = ui.readErrors[name];
+    if (!why) return "";
+    return '<div class="msg err" style="margin:0 0 14px;text-align:left">' +
+      "<b>This console could not read " + esc(name) + ".</b> " + esc(why) +
+      " Nothing is necessarily wrong with the portal itself — the data may be" +
+      " there and unreachable from here." +
+      "</div>";
+  }
+
   function notSynced(which) {
     var src = SOURCES[which];
     return '<div class="panel"><div class="empty">' +
+      readErrorNote(src.name) +
       "<strong>" + esc(src.name) + " has not synced yet</strong>" +
       "<p>Nothing has been written into this console from that portal. Open <b>Sync &amp; sources</b> to see how it feeds in, or paste a snapshot there to fill it in now.</p>" +
       '<p style="margin-top:14px"><button class="btn ghost sm" data-act="tab" data-tab="sync">Go to Sync &amp; sources</button></p>' +
@@ -2324,6 +2344,7 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     if (!hasLOA() && !hasLT()) {
       return pageHead("Overview") +
         '<div class="panel"><div class="empty">' +
+        readErrorNote(SOURCES.loa.name) + readErrorNote(SOURCES.lt.name) +
         "<strong>Nothing has synced into this console yet</strong>" +
         "<p>Thrive Command mirrors the LOA Producer Desk and the Lead Tech Fulfillment board. Once either one syncs, the company-wide numbers appear here.</p>" +
         '<p style="margin-top:14px"><button class="btn accent sm" data-act="tab" data-tab="sync">Open Sync &amp; sources</button></p>' +
@@ -3976,10 +3997,21 @@ table.data.pl th:last-child, table.data.pl td:last-child { width: 1%; white-spac
     render();
   }
 
+  /* A read that fails and a record that is empty both leave `ui.lt` null,
+     and the empty state says "has not synced yet" either way — which sent
+     us looking at the board for a problem that was in the connection. Say
+     which one it was. */
+  function readFailed(label) {
+    return function (e) {
+      ui.readErrors[label] = (e && e.message) || "the request failed";
+      render();
+    };
+  }
+
   function subscribe() {
-    store.watch(SOURCES.loa.doc, function (d) { ui.loa = d; render(); });
-    store.watch(SOURCES.lt.doc, function (d) { ui.lt = d; render(); });
-    store.watch(SETTINGS_DOC, function (d) { ui.settings = d; render(); });
+    store.watch(SOURCES.loa.doc, function (d) { delete ui.readErrors[SOURCES.loa.name]; ui.loa = d; render(); }, readFailed(SOURCES.loa.name));
+    store.watch(SOURCES.lt.doc, function (d) { delete ui.readErrors[SOURCES.lt.name]; ui.lt = d; render(); }, readFailed(SOURCES.lt.name));
+    store.watch(SETTINGS_DOC, function (d) { ui.settings = d; render(); }, readFailed("Settings"));
     /* Only the artifact keeps a passcode; the relay's own sign-in is the
        gate there, so there is nothing to watch. */
     if (store.mode === "artifact") store.watch(OWNER_DOC, function (d) { if (d) ui.owner = d; });

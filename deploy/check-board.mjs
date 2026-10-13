@@ -75,9 +75,18 @@ function describe(name, r) {
   if (r.missing) return console.log("  not present");
   if (r.error) return console.log(`  could not read: ${r.error}`);
   const v = r.value || {};
+
+  /* The console decides a source has "not synced" by counting these five
+     lists, so print the same five. A record that exists but has them all
+     empty is the shape that reads as never synced -- which looks like a
+     missing key and is not one. */
+  const LISTS = ["orders", "products", "calls", "refunds", "wipes"];
+  const counts = LISTS.map((k) => `${k} ${Array.isArray(v[k]) ? v[k].length : 0}`);
+  const total = LISTS.reduce((t, k) => t + (Array.isArray(v[k]) ? v[k].length : 0), 0);
+  console.log(`  ${counts.join(" · ")}` + (v.updatedAt ? `\n  last written ${v.updatedAt}` : ""));
+  console.log(`  the console would call this ${total ? "synced" : "NOT SYNCED"}`);
+
   const rows = Array.isArray(v.calls) ? v.calls : [];
-  console.log(`  ${rows.length} call day${rows.length === 1 ? "" : "s"}` +
-    (v.updatedAt ? ` · last written ${v.updatedAt}` : ""));
   if (!rows.length) return;
   console.log("  the five most recent rows, exactly as stored:");
   rows.slice().sort((a, b) => String(b.day || b.date || "").localeCompare(String(a.day || a.date || "")))
@@ -95,9 +104,36 @@ describe("snapshots.leadtech", snap);
 describe("fulfillment_board_v3", board);
 
 console.log("\n=== which one the console is reading ===");
-if (!snap.missing && !snap.error) {
+const snapUsable = !snap.missing && !snap.error && snap.value;
+if (snapUsable) {
   console.log("  snapshots.leadtech — it exists, so the console reads it and never");
   console.log("  looks at the live board. If its numbers are stale, that is the cause.");
+  const n = ["orders", "products", "calls", "refunds", "wipes"]
+    .reduce((t, k) => t + (Array.isArray(snap.value[k]) ? snap.value[k].length : 0), 0);
+  if (!n) {
+    console.log("");
+    console.log("  It is EMPTY. That is why the console says nothing has synced: an");
+    console.log("  empty record still counts as present, so the fallback to the live");
+    console.log("  board never runs. Clear the key and the board shows through:");
+    console.log("");
+    console.log("    node check-board.mjs --clear-snapshot");
+  }
 } else {
   console.log("  fulfillment_board_v3 — the live board, because no snapshot shadows it.");
+}
+
+/* Deleting the shadow is the fix often enough that retyping a curl with a
+   bearer token by hand is the wrong last step. The relay has no delete
+   verb, so write the empty string: `raw` fails to parse it and returns
+   null, which is what "absent" means to the console. */
+if (process.argv.includes("--clear-snapshot")) {
+  const res = await fetch(`${relay}/kv/snapshots.leadtech`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${auth.token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ value: "" }),
+  });
+  console.log("");
+  console.log(res.ok
+    ? "Cleared snapshots.leadtech. Reload Thrive Command — it reads the live board now."
+    : `Could not clear it (${res.status}).`);
 }
