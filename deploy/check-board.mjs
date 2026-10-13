@@ -92,8 +92,16 @@ function describe(name, r) {
   rows.slice().sort((a, b) => String(b.day || b.date || "").localeCompare(String(a.day || a.date || "")))
     .slice(0, 5)
     .forEach((row) => console.log("    " + JSON.stringify(row)));
+  /* Sum whatever the rows actually carry. Asking for "sold" and "calls" by
+     name printed two confident zeros for a board that stores sold35,
+     sold40 and googleCalls -- a tool reporting its own wrong guess as
+     your data is worse than a tool that reports nothing. */
   const sum = (k) => rows.reduce((t, x) => t + (Number(x[k]) || 0), 0);
-  console.log(`  totals across every row: billable ${sum("billable")} · sold ${sum("sold")} · calls ${sum("calls")}`);
+  const numeric = [...new Set(rows.flatMap((x) => Object.keys(x)))]
+    .filter((k) => k !== "id" && k !== "day" && k !== "date" && k !== "at")
+    .filter((k) => rows.some((x) => typeof x[k] === "number"));
+  console.log("  totals across every row: " +
+    (numeric.length ? numeric.map((k) => `${k} ${sum(k)}`).join(" · ") : "no numeric fields"));
   const keys = [...new Set(rows.flatMap((x) => Object.keys(x)))];
   console.log(`  field names present: ${keys.join(", ")}`);
 }
