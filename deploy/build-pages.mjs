@@ -74,7 +74,17 @@ ${source}
 mkdirSync(join(here, "dist"), { recursive: true });
 writeFileSync(join(here, "dist", "index.html"), html);
 
+/* Ships beside the console at /check.html. When the console says a source
+   has not synced, the question is always whether the relay answered and
+   what it answered with -- and the browser is the only place that can be
+   asked, because a terminal does not carry the page's origin. It gets the
+   same relay URL from the same place, so the two cannot drift apart. */
+const check = readFileSync(join(here, "check-page.html"), "utf8")
+  .replace("<script>", `<script>window.THRIVE_RELAY = ${JSON.stringify(relay)};</script>\n<script>`);
+writeFileSync(join(here, "dist", "check.html"), check);
+
 console.log(`Wrote deploy/dist/index.html  (${(html.length / 1024).toFixed(0)} KB)
+Wrote deploy/dist/check.html  (connection check)
 Relay: ${relay}
 
 Next:

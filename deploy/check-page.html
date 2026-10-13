@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thrive Command — connection check</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin:0; padding:24px; background:#0b1017; color:#e6edf3;
+         font:14px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  h1 { font:600 18px/1.3 system-ui, sans-serif; margin:0 0 4px; }
+  p.sub { margin:0 0 20px; color:#8b98a5; font-family:system-ui, sans-serif; }
+  form { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; }
+  input, button { font:14px ui-monospace, Menlo, monospace; padding:9px 12px;
+                  border-radius:7px; border:1px solid #2a3340; background:#141b24; color:#e6edf3; }
+  button { background:#2f81f7; border-color:#2f81f7; color:#fff; cursor:pointer; font-weight:600; }
+  button:disabled { opacity:.5; cursor:default; }
+  #out { white-space:pre-wrap; word-break:break-word; background:#0e141c;
+         border:1px solid #1f2733; border-radius:10px; padding:16px; min-height:80px; }
+  .ok   { color:#3fb950; }
+  .bad  { color:#f85149; }
+  .warn { color:#d29922; }
+  .dim  { color:#6e7b8a; }
+</style>
+</head>
+<body>
+<h1>Thrive Command — connection check</h1>
+<p class="sub">Signs in to the relay from this browser and replays, step by step, exactly what the
+console does when it loads. Whatever the console is silently getting, this prints.</p>
+
+<form id="f">
+  <input id="email" type="email" size="34" autocomplete="username" placeholder="owner email">
+  <input id="pw" type="password" size="22" autocomplete="current-password" placeholder="password">
+  <button id="go" type="submit">Run the check</button>
+</form>
+
+<div id="out" class="dim">Fill in the two boxes and press Run.</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* Baked in by build-pages.mjs, the same way the console gets it, so this
+     page cannot be checking a different relay than the one next door. */
+  var RELAY = String(window.THRIVE_RELAY || "").replace(/\/+$/, "");
+  var LT_DOC = "snapshots/leadtech";
+  var LT_BOARD_KEY = "fulfillment_board_v3";
+
+  var out = document.getElementById("f") && document.getElementById("out");
+  var lines = [];
+  function say(text, cls) {
+    lines.push(cls ? '<span class="' + cls + '">' + text + "</span>" : text);
+    out.className = "";
+    out.innerHTML = lines.join("\n");
+  }
+  function esc(v) {
+    return String(v == null ? "" : v).replace(/[&<>]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c];
+    });
+  }
+
+  document.getElementById("email").value = "";
+  if (!RELAY) say("No relay URL is baked into this page. It was not built by build-pages.mjs.", "bad");
+
+  document.getElementById("f").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    lines = [];
+    var btn = document.getElementById("go");
+    btn.disabled = true;
+    run(document.getElementById("email").value.trim(),
+        document.getElementById("pw").value)
+      .catch(function (e) { say("\nThe check itself fell over: " + esc((e && e.message) || e), "bad"); })
+      .then(function () { btn.disabled = false; });
+  });
+
+  function run(email, password) {
+    say("origin      " + location.origin);
+    say("relay       " + RELAY);
+    say("");
+
+    return fetch(RELAY + "/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email, password: password })
+    }).then(function (res) {
+      return res.text().then(function (t) { return { res: res, text: t }; });
+    }).then(function (r) {
+      var body = {};
+      try { body = JSON.parse(r.text); } catch (e) {}
+      if (!r.res.ok || !body.token) {
+        say("sign-in     FAILED  " + r.res.status + "  " + esc(r.text.slice(0, 200)), "bad");
+        throw new Error("stopped: could not sign in");
+      }
+      say("sign-in     ok, token received", "ok");
+      say("");
+      return body.token;
+    }).then(function (token) {
+
+      /* raw(), transcribed from the console so the two cannot drift. */
+      function raw(key) {
+        var step = {};
+        return fetch(RELAY + "/kv/" + encodeURIComponent(key), {
+          headers: { Authorization: "Bearer " + token }
+        }).then(function (res) {
+          step.status = res.status;
+          return res.text().then(function (t) { step.bytes = t.length; step.text = t; return step; });
+        }).then(function (s) {
+          say("GET /kv/" + key);
+          say("  status            " + s.status, s.status === 200 ? "ok" : s.status === 404 ? "warn" : "bad");
+          say("  response bytes    " + s.bytes);
+          if (s.status === 404) { say("  -> the console reads this as absent", "dim"); return null; }
+          if (s.status !== 200) { say("  -> the console THROWS here", "bad"); return null; }
+
+          var body;
+          try { body = JSON.parse(s.text); }
+          catch (e) { say("  outer JSON.parse  FAILED: " + esc(e.message), "bad"); return null; }
+
+          say("  typeof body.value " + typeof body.value);
+          if (typeof body.value === "string") say("  value bytes       " + body.value.length);
+
+          var val;
+          try { val = typeof body.value === "string" ? JSON.parse(body.value) : body.value; }
+          catch (e) {
+            say("  inner JSON.parse  FAILED: " + esc(e.message), "bad");
+            say("  -> the console turns this into null and says nothing synced", "bad");
+            return null;
+          }
+          say("  parsed type       " + (Array.isArray(val) ? "array" : typeof val),
+              (val && typeof val === "object" && !Array.isArray(val)) ? "ok" : "bad");
+          if (val && typeof val === "object") {
+            say("  top-level keys    " + esc(Object.keys(val).join(", ").slice(0, 300)));
+            ["orders", "products", "calls", "refunds", "wipes"].forEach(function (k) {
+              say("    " + k + " ".repeat(10 - k.length) + (Array.isArray(val[k]) ? val[k].length : "— not an array"));
+            });
+          }
+          say("");
+          return val;
+        }, function (e) {
+          say("GET /kv/" + key, "bad");
+          say("  the request never completed: " + esc(e.message), "bad");
+          say("  (that is a CORS block, a dead network, or a blocking extension)", "dim");
+          say("");
+          return null;
+        });
+      }
+
+      /* get(), likewise: snapshot first, live board as the fallback. */
+      return raw(LT_DOC.replace(/\//g, ".")).then(function (v) {
+        if (v) {
+          say("VERDICT", "ok");
+          say("  The snapshot exists, so the console uses it and never reads the board.");
+          return;
+        }
+        say("No snapshot, so the console falls back to the live board.", "dim");
+        say("");
+        return raw(LT_BOARD_KEY).then(function (board) {
+          say("VERDICT");
+          if (!board || typeof board !== "object") {
+            say("  The console gets null for Lead Tech and shows 'nothing has synced'.", "bad");
+            return;
+          }
+          var n = ["orders", "products", "calls", "refunds", "wipes"]
+            .reduce(function (t, k) { return t + (Array.isArray(board[k]) ? board[k].length : 0); }, 0);
+          say("  The console gets a board with " + n + " records across its five lists.",
+              n ? "ok" : "bad");
+          say(n
+            ? "  It should be showing Lead Tech. If it is not, the page running next"
+            : "  Every list is empty, which the console counts as never synced.",
+            n ? "warn" : "bad");
+          if (n) say("  door is not the page this check just proved works.", "warn");
+        });
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>
