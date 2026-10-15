@@ -10,3 +10,4 @@ deploy/old-board*.json
 
 # Wrangler's local build and state cache, one per folder it runs in.
 .wrangler/
+deploy/dist-knockout/

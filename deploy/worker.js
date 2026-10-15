@@ -16,6 +16,7 @@
  *   POST /onboarding/submit        no token, {record} -> {ok: true, id}
  *   POST /onboarding/preferences   no token, {email, ...} -> {ok: true, ...}
  *   GET  /onboarding/roster        no token            -> {slots: [...]}
+ *   GET  /tournament               no token            -> the knockout board
  *   POST /refund-request           no token, an agent's refund slip -> {ok: true}
  *   GET  /refund-requests          Bearer token        -> [request, ...]
  *   POST /stripe/webhook           Stripe-Signature    -> {ok: true}
@@ -67,6 +68,12 @@ const CALL_TIERS = [15, 25, 35, 50, 0];
 /* Where the Lead Tech board keeps who is switched off (its {off, log}
    record, written through the /kv route). */
 const STARTTIMES_KEY = "kv:starttimes/state";
+
+/* The knockout board. Agents read it with no account -- it is a scoreboard,
+   and asking a hundred producers to hold a login to look at a bracket is
+   the wrong trade. Writing it still goes through PUT /kv with a token, so
+   only the owner can post a result. */
+const TOURNAMENT_KEY = "kv:tournament_board";
 const BUSY_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const BUSY_PARTS = ["AM", "PM", "All day"];
 /* The only start times the desk runs. The signing page and the settings
@@ -822,6 +829,13 @@ async function handle(request, env) {
         cursor = page.list_complete ? null : page.cursor;
       } while (cursor);
       return json(out.sort((a, b) => b.at - a.at), 200, { ...head, "Cache-Control": "no-store" });
+    }
+
+    if (path === "/tournament" && request.method === "GET") {
+      const raw = await store(env).get(TOURNAMENT_KEY);
+      let body = null;
+      try { body = raw ? JSON.parse(raw) : null; } catch { body = null; }
+      return json(body, 200, { ...head, "Cache-Control": "no-store" });
     }
 
     /* ---- key/value ---- */
