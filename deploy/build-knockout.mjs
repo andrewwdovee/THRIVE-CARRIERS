@@ -12,11 +12,13 @@
  * Writes deploy/dist-knockout/index.html.
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, copyFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
+
+const DESC = "Single-elimination bracket for the Thrive Companies agent tournament. Live results, week by week.";
 
 /* Rebuilding to pick up a change is the common case, and the relay is the
    same one as last time. Read it back rather than make someone find it. */
@@ -40,10 +42,14 @@ if (!/^https:\/\//.test(relay)) {
   process.exit(1);
 }
 
-const source = readFileSync(join(here, "..", "tournament", "thrive-knockout.html"), "utf8");
-const favicon = existsSync(join(here, "favicon.png"))
-  ? "data:image/png;base64," + readFileSync(join(here, "favicon.png")).toString("base64")
-  : "";
+const site = (process.argv[3] || "https://thrive-knockout.pages.dev").replace(/\/+$/, "");
+
+/* The page's own <title> and the artifact viewport hint belong to its other
+   home. Here they would land inside <body>, where a second <title> is a
+   quiet mess, so they come out and the real head carries them. */
+const source = readFileSync(join(here, "..", "tournament", "thrive-knockout.html"), "utf8")
+  .replace(/^<title>[^<]*<\/title>\n/, "")
+  .replace(/^<meta name="claude:[^>]*>\n/m, "");
 
 /* Mirrors the head the artifact runtime supplies, so the page renders the
    same in both places. */
@@ -52,7 +58,27 @@ const html = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-${favicon ? `<link rel="icon" type="image/png" href="${favicon}">` : ""}
+<title>Thrive Knockout</title>
+<meta name="description" content="${DESC}">
+<meta name="theme-color" content="#0c1118">
+<link rel="icon" type="image/png" href="/icon.png">
+<link rel="apple-touch-icon" href="/icon.png">
+<!-- What a messaging app shows when someone pastes the link. It needs
+     absolute URLs: a relative one resolves against the sender's app. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Thrive Companies">
+<meta property="og:title" content="Thrive Knockout">
+<meta property="og:description" content="${DESC}">
+<meta property="og:url" content="${site}/">
+<meta property="og:image" content="${site}/og.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Thrive Knockout — agent tournament bracket">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Thrive Knockout">
+<meta name="twitter:description" content="${DESC}">
+<meta name="twitter:image" content="${site}/og.png">
 <style>
   :root { color-scheme: light dark; }
   html, body { margin: 0; padding: 0; }
@@ -68,11 +94,18 @@ ${source}
 </html>
 `;
 
-mkdirSync(join(here, "dist-knockout"), { recursive: true });
-writeFileSync(join(here, "dist-knockout", "index.html"), html);
+const out = join(here, "dist-knockout");
+mkdirSync(out, { recursive: true });
+writeFileSync(join(out, "index.html"), html);
 
-console.log(`Wrote deploy/dist-knockout/index.html  (${(html.length / 1024).toFixed(0)} KB)
+/* Served as real files rather than data: URIs -- a link preview fetches
+   og:image over the network and cannot read one embedded in the page. */
+copyFileSync(join(here, "favicon.png"), join(out, "icon.png"));
+copyFileSync(join(here, "..", "tournament", "og-card.png"), join(out, "og.png"));
+
+console.log(`Wrote deploy/dist-knockout/  index.html (${(html.length / 1024).toFixed(0)} KB), icon.png, og.png
 Relay: ${relay}
+Link previews point at: ${site}
 
 Next:
   wrangler pages deploy ./dist-knockout --project-name thrive-knockout --branch main

@@ -16,6 +16,10 @@
   --font-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
   --r:10px;
   --shadow:0 1px 2px rgba(18,24,32,.07), 0 6px 18px rgba(18,24,32,.05);
+  /* Draw-sheet measurements. The grid template is written inline because the
+     column count follows the field size, so these have to be tokens for a
+     media query to be able to shrink them. */
+  --colw:164px; --gutw:20px; --cupw:132px; --rowh:30px;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -109,9 +113,11 @@ section{padding-block:24px}
 .sec-head .when{font-size:13px; color:var(--dim)}
 .scroll{overflow-x:auto; padding-bottom:8px}
 .bracket{display:grid; gap:0; min-width:min-content}
-.rhead{padding:0 0 12px; min-width:0}
+.rhead{padding:0 0 12px; min-width:0; overflow-wrap:anywhere}
 .rhead .t{font:600 12px/1.2 var(--font-body); letter-spacing:.1em; text-transform:uppercase; color:var(--ink)}
 .rhead .s{font:500 11px/1.4 var(--font-mono); color:var(--faint); margin-top:3px}
+/* Break between the week and the dates, never inside a date range. */
+.rhead .s span{white-space:nowrap}
 .rhead.now .t{color:var(--live)}
 
 .match{
@@ -130,6 +136,7 @@ section{padding-block:24px}
 .nm{font-size:13.5px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .nm.tbd{color:var(--faint); font-style:italic}
 .nm.bye{color:var(--faint); font:600 10.5px/1.3 var(--font-body); letter-spacing:.14em; text-transform:uppercase}
+.nm .sm{display:none}
 .sc{
   margin-left:auto; font:600 13.5px/1 var(--font-mono); font-variant-numeric:tabular-nums;
   color:var(--dim); flex:none;
@@ -238,13 +245,57 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
 .state.dirty{color:var(--brass); font-weight:600}
 .foot{padding-block:12px 32px; font-size:12px; color:var(--faint)}
 
-@media (max-width: 560px){
+@media (max-width: 620px){
+  /* A phone shows one column of a bracket at a time, so everything comes
+     down a step: more of the draw fits on screen and less of it is scrolled
+     past sideways. */
+  :root{--colw:132px; --gutw:13px; --cupw:104px; --rowh:23px}
+  .nm .lg{display:none}
+  .nm .sm{display:inline}
+  .rhead .s{font-size:9px; line-height:1.35}
+  body{font-size:14px}
+  section{padding-block:16px}
+  .top-in{padding-block:12px 0; gap:10px}
+  .logo{height:24px}
+  .rule{min-height:26px}
+  .brand{gap:10px}
+  .brand h1{font-size:22px}
+  .brand p{font-size:9.5px; letter-spacing:.1em}
+  .top-right{gap:6px; width:100%; margin-left:0; padding-bottom:0}
+  .chip{font-size:9.5px; padding:5px 8px; gap:5px}
+  .tabs{margin-top:10px}
+  .tab{margin-right:16px; font-size:12.5px; padding:8px 2px}
+
+  .sec-head{margin-bottom:10px; gap:4px}
+  .sec-head h2{font-size:11.5px}
+  .sec-head .when{font-size:11.5px}
+
+  .side{padding:5px 7px; gap:5px}
+  .sd{width:15px; font-size:9.5px}
+  .nm{font-size:11.5px}
+  .sc{font-size:11.5px}
+  .nm.bye{font-size:9px; letter-spacing:.1em}
+  .rhead{padding-bottom:8px}
+  .rhead .t{font-size:10px; letter-spacing:.06em}
+  .rhead .s{font-size:9.5px}
+  .cup{padding:10px 9px; margin-left:9px}
+  .cup .lab{font-size:9px}
+  .cup .who{font-size:16px}
+  i.conn{border-top-right-radius:5px; border-bottom-right-radius:5px}
+
+  .panel{padding:13px}
+  .note{padding:11px 12px; font-size:12.5px}
+  .draw-sum{font-size:12px; gap:6px 14px; padding:9px 10px}
+  .seeds{grid-template-columns:1fr; gap:7px}
+  .fields{grid-template-columns:1fr}
   /* The score boxes and the winner buttons cannot share a line this narrow. */
-  .mrow{grid-template-columns:1fr; gap:10px}
+  .mrow{grid-template-columns:1fr; gap:9px; padding:10px 0}
   .pick{width:100%}
-  .pick button{flex:1; text-align:center}
-  .brand h1{font-size:25px}
-  .logo{height:28px}
+  .pick button{flex:1; text-align:center; padding:8px 6px}
+  .mside input[type=number]{width:66px}
+  .bar{padding:10px 12px; gap:8px}
+  .btn{padding:9px 12px; font-size:12.5px}
+  .state{margin-left:0; width:100%}
 }
 </style>
 
@@ -442,9 +493,17 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
   }
   function slotLabel(t, idx) {
     if (idx === BYE) return { text: "Bye", cls: "bye" };
-    if (idx == null) return { text: "Winner to come", cls: "tbd" };
+    if (idx == null) return { text: "Winner to come", short: "TBD", cls: "tbd" };
     var nm = seedName(t, idx);
     return { text: nm || "Seed " + (idx + 1), cls: nm ? "" : "tbd" };
+  }
+  /* A phone column cannot hold "Winner to come" without clipping it to
+     something that reads like a different word, so both go in and CSS
+     picks one. */
+  function slotInner(L) {
+    return L.short
+      ? '<span class="lg">' + esc(L.text) + '</span><span class="sm">' + esc(L.short) + "</span>"
+      : esc(L.text);
   }
   function slotNum(idx) { return idx == null ? "—" : (idx === BYE ? "" : idx + 1); }
   function anyNames(t) { return t.seeds.some(function (s) { return s && s.trim(); }); }
@@ -724,7 +783,7 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
     var L = slotLabel(t, idx);
     return '<div class="side' + (state ? " " + state : "") + '">' +
       '<span class="sd">' + slotNum(idx) + "</span>" +
-      '<span class="nm' + (L.cls ? " " + L.cls : "") + '">' + esc(L.text) + "</span>" +
+      '<span class="nm' + (L.cls ? " " + L.cls : "") + '">' + slotInner(L) + "</span>" +
       '<span class="sc">' + (score == null ? "" : esc(score)) + "</span></div>";
   }
 
@@ -748,15 +807,20 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
     }
 
     var cols = [];
-    for (var r = 0; r < rounds; r++) cols.push("minmax(164px, 1fr) 20px");
-    cols.push("minmax(132px, 0.85fr)");
+    for (var r = 0; r < rounds; r++) cols.push("minmax(var(--colw), 1fr) var(--gutw)");
+    cols.push("minmax(var(--cupw), 0.85fr)");
 
     var cells = "";
     for (var r2 = 0; r2 < rounds; r2++) {
       var rd = t.rounds[r2], span = Math.pow(2, r2 + 1);
       cells += '<div class="rhead' + (r2 === live ? " now" : "") + '" style="grid-column:' +
         (2 * r2 + 1) + ';grid-row:1"><div class="t">' + esc(rd.name) + "</div>" +
-        '<div class="s">' + esc([rd.week, rd.dates].filter(Boolean).join(" · ") || "—") +
+        '<div class="s">' +
+          (rd.week || rd.dates
+            ? (rd.week ? "<span>" + esc(rd.week) + "</span>" : "") +
+              (rd.week && rd.dates ? " · " : "") +
+              (rd.dates ? "<span>" + esc(rd.dates) + "</span>" : "")
+            : "—") +
         "</div></div>";
 
       for (var i = 0; i < matchesIn(size, r2); i++) {
@@ -795,7 +859,7 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
               " at the top of the list" : "")) +
       "</span></div>" +
       '<div class="scroll"><div class="bracket" style="grid-template-columns:' + cols.join(" ") +
-      ";grid-template-rows:auto repeat(" + size + ", minmax(30px, 1fr))\">" + cells +
+      ";grid-template-rows:auto repeat(" + size + ", minmax(var(--rowh), 1fr))\">" + cells +
       "</div></div></section>";
 
     return out;
@@ -971,7 +1035,7 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
     var cls = auto ? "" : (w === side ? " won" : (w ? " lost" : ""));
     return '<div class="mside' + cls + '">' +
       '<span class="sd">' + slotNum(idx) + "</span>" +
-      '<span class="nm' + (L.cls ? " " + L.cls : "") + '">' + esc(L.text) + "</span>" +
+      '<span class="nm' + (L.cls ? " " + L.cls : "") + '">' + slotInner(L) + "</span>" +
       (auto ? "" :
         '<input type="number" data-score="' + r + "-" + m + '" data-side="' + side +
         '" value="' + (score == null ? "" : esc(score)) + '" placeholder="—" ' +
@@ -1123,7 +1187,7 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
           var el = sides[i++];
           if (!el) return;
           var L = slotLabel(t, c[s]), nmEl = el.querySelector(".nm");
-          nmEl.textContent = L.text;
+          nmEl.innerHTML = slotInner(L);
           nmEl.className = "nm" + (L.cls ? " " + L.cls : "");
         }
       }
