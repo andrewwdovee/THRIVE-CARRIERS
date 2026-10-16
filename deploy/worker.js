@@ -307,14 +307,31 @@ async function readToken(env, request) {
 /* The LOA Producer Desk signs its producers in itself, so it carries one
    shared DESK_TOKEN instead of an owner session. That token reaches only
    the desk's two keys, and only to read or write them. */
-const DESK_KEYS = new Set(["loa.state", "snapshots.loa"]);
+/* One entry per producer desk. The keys beside a token are the only keys
+   that token can ever reach.
+
+   This was a single flat allow-list, which was fine while there was one
+   desk and wrong the moment there were two: every desk token reached every
+   desk key, so a second agency on this relay could have read and written
+   the first one's book. Two agencies' commission records must not be one
+   pasted token apart. */
+const DESKS = [
+  { secret: "DESK_TOKEN",    keys: ["loa.state", "snapshots.loa"] },
+  { secret: "PP_DESK_TOKEN", keys: ["pp.loa.state", "snapshots.pp-loa"] },
+];
 
 function readDeskToken(env, request) {
-  if (!env.DESK_TOKEN) return null;
   const auth = request.headers.get("Authorization") || "";
   const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-  if (!token || !sameBytes(enc.encode(token), enc.encode(env.DESK_TOKEN))) return null;
-  return { role: "desk" };
+  if (!token) return null;
+  for (const desk of DESKS) {
+    const secret = env[desk.secret];
+    if (!secret) continue;
+    if (sameBytes(enc.encode(token), enc.encode(secret))) {
+      return { role: "desk", keys: new Set(desk.keys) };
+    }
+  }
+  return null;
 }
 
 /* --------------------------------------------------------------- routes */
@@ -845,8 +862,8 @@ async function handle(request, env) {
 
       const key = decodeURIComponent(path.slice(4));
       if (!key || key.length > 256) return json({ error: "Bad key" }, 400, head);
-      if (who.role === "desk" && !DESK_KEYS.has(key)) {
-        return json({ error: "This token may only reach the desk's own keys." }, 403, head);
+      if (who.role === "desk" && !who.keys.has(key)) {
+        return json({ error: "This token may only reach its own desk's keys." }, 403, head);
       }
 
       if (request.method === "GET") {

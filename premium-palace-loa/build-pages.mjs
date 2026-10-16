@@ -1,0 +1,124 @@
+/**
+ * Builds the Cloudflare Pages copy of the LOA Producer Desk.
+ *
+ *   node build-desk.mjs <relay-url> <desk-token>
+ *
+ * The desk normally saves by republishing its own page, which locks its
+ * record inside a claude.ai artifact where nothing else can read it. This
+ * build injects a storage layer that reads and writes the relay instead,
+ * and publishes a scrubbed copy for the owner console on every save.
+ *
+ * The desk token is scoped by the relay to two keys — it cannot read
+ * orders, accounts, or the fulfillment board — which matters because this
+ * page is opened by every producer.
+ *
+ * Output: premium-palace-loa/dist-pages/index.html
+ */
+
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const here = dirname(fileURLToPath(import.meta.url));
+
+/* Rebuilding is the common case — a fix to the page, not a change of
+   relay — so when the arguments are left off, take them from the last
+   build. It saves hunting down the token, and a token retyped from
+   memory is a token typed wrong. */
+function fromLastBuild(name) {
+  const built = join(here, "dist-pages", "index.html");
+  if (!existsSync(built)) return "";
+  const m = readFileSync(built, "utf8").match(new RegExp(`window\\.${name} = ("(?:[^"\\\\]|\\\\.)*")`));
+  try { return m ? JSON.parse(m[1]) : ""; } catch { return ""; }
+}
+
+const relay = (process.argv[2] || fromLastBuild("PP_RELAY")).replace(/\/+$/, "");
+const token = process.argv[3] || fromLastBuild("PP_DESK_TOKEN");
+
+if (!relay || !token) {
+  console.error(`Usage: node build-desk.mjs [relay-url] [desk-token]
+
+  relay-url    https://stripe-sync.<subdomain>.workers.dev
+  desk-token   the value you set with: wrangler secret put PP_DESK_TOKEN
+
+Both are optional once you have built here before — they are read back
+from dist/index.html. There is no previous build to read them from.`);
+  process.exit(1);
+}
+if (!/^https:\/\//.test(relay)) {
+  console.error("The relay URL must start with https://");
+  process.exit(1);
+}
+
+/* desk-app.html ships in git with an empty state — the live record comes
+   from the relay, so nothing about a real book of business needs to be in
+   a public repository. _desk-content.html, if present, is a local copy
+   that still has its baked-in state and wins. */
+let contentPath = join(here, "_desk-content.html");
+if (!existsSync(contentPath)) contentPath = join(here, "desk-app.html");
+if (!existsSync(contentPath)) {
+  console.error(`Missing both _desk-content.html and desk-app.html in ${here}.`);
+  process.exit(1);
+}
+
+const content = readFileSync(contentPath, "utf8");
+const storage = readFileSync(join(here, "relay-storage.js"), "utf8");
+
+/* The desk's stylesheet. It lived in the artifact's <head>, so lifting the
+   body out on its own left the page unstyled — and the desk's own
+   republish path reads this element by id, so it has to keep that id. */
+const style = readFileSync(join(here, "desk-style.css"), "utf8");
+/* The Thrive mark, cropped out of the same logo the sign-in page uses so
+   the tab icon is the real one rather than a redrawn approximation. */
+const favicon = existsSync(join(here, "logo.png"))
+  ? "data:image/png;base64," + readFileSync(join(here, "logo.png")).toString("base64")
+  : "";
+
+
+/* Bumped in loa-desk/VERSION whenever the desk changes, and shown under
+   the sign-in card. It is there so that "it still looks wrong" can be
+   answered with "which version are you on" instead of a guess. */
+const version = existsSync(join(here, "VERSION"))
+  ? "v" + readFileSync(join(here, "VERSION"), "utf8").trim()
+  : "";
+
+/* The storage layer must be defined before the desk's own code runs, and
+   the desk reads its state from a script block that has to survive. */
+const html = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Premium Palace LOA</title>
+${favicon ? `<link rel="icon" type="image/png" href="${favicon}">` : ""}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style id="tc-style">${style}</style>
+<script>
+window.PP_RELAY = ${JSON.stringify(relay)};
+window.PP_DESK_TOKEN = ${JSON.stringify(token)};
+window.PP_VERSION = ${JSON.stringify(version)};
+</script>
+<script>
+${storage}
+</script>
+</head>
+<body>
+${content}
+</body>
+</html>
+`;
+
+mkdirSync(join(here, "dist-pages"), { recursive: true });
+writeFileSync(join(here, "dist-pages", "index.html"), html);
+
+console.log(`Wrote premium-palace-loa/dist-pages/index.html  (${(html.length / 1024).toFixed(0)} KB)
+Relay: ${relay}
+Version: ${version || "(no VERSION file)"}
+
+Next:
+  npx wrangler pages deploy ./dist --project-name premium-palace-loa --branch main
+
+The desk then reads and writes pp.loa.state on the relay, and publishes
+snapshots.pp-loa on every save.`);

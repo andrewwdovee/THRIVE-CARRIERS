@@ -21,18 +21,31 @@ the records cannot touch:
 Nothing here reads or writes either of those keys, and nothing here is
 wired to the relay at all.
 
-## If this desk ever needs a Cloudflare home
+## The Cloudflare home
 
-`thrive-loa.pages.dev` works because `loa-desk/relay-storage.js` writes
-`loa.state` and `snapshots.loa`, and the relay's `DESK_KEYS` allow-list
-lets a desk token reach exactly those two.
+Live at `premium-palace-loa.pages.dev`, reading and writing its own two
+relay keys:
 
-That allow-list is **flat, and `readDeskToken` does not distinguish one
-token from another**. So adding Premium Palace's keys to `DESK_KEYS` as it
-stands would let the Thrive desk token read and write Premium Palace's
-record, and the other way round — precisely the mixing this copy exists to
-avoid. A relay home for this desk needs per-token key scoping first; it is
-not a matter of adding two strings.
+| | Thrive | Premium Palace |
+|---|---|---|
+| record | `loa.state` | `pp.loa.state` |
+| console copy | `snapshots.loa` | `snapshots.pp-loa` |
+| secret | `DESK_TOKEN` | `PP_DESK_TOKEN` |
+
+The relay used to hold a single flat `DESK_KEYS` allow-list, and
+`readDeskToken` did not distinguish one token from another — every desk
+token reached every desk key. That was fine with one desk and wrong with
+two, so `deploy/worker.js` now carries a `DESKS` table that scopes each
+token to its own keys. Thrive's token reaches exactly the two keys it
+always did; it is refused on Premium Palace's, and vice versa.
+
+**The two secrets must never be set to the same value.** The scoping is by
+token, so one shared value hands each agency the other's book.
+
+Note that a desk token is baked into the deployed page and is therefore
+readable by anyone who opens the site. That is how this desk has always
+worked. What the scoping buys is that the blast radius of a leaked token
+stops at that one agency's keys.
 
 ## Build
 

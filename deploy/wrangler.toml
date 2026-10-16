@@ -16,7 +16,7 @@ id = "cc65589c8dfe4579b355f3804db2fb65"
 # An entry may start with "https://*." to match subdomains of one domain —
 # Pages gives every deployment its own hostname, and they are all yours.
 # It still never matches another domain, and never plain http.
-ALLOWED_ORIGINS = "https://thrive-command.pages.dev,https://*.thrive-command.pages.dev,https://thrive-leadtech.pages.dev,https://*.thrive-leadtech.pages.dev,https://thrive-onboarding.pages.dev,https://*.thrive-onboarding.pages.dev,https://thrive-loa.pages.dev,https://*.thrive-loa.pages.dev,https://thrive-knockout.pages.dev,https://*.thrive-knockout.pages.dev"
+ALLOWED_ORIGINS = "https://thrive-command.pages.dev,https://*.thrive-command.pages.dev,https://thrive-leadtech.pages.dev,https://*.thrive-leadtech.pages.dev,https://thrive-onboarding.pages.dev,https://*.thrive-onboarding.pages.dev,https://thrive-loa.pages.dev,https://*.thrive-loa.pages.dev,https://thrive-knockout.pages.dev,https://*.thrive-knockout.pages.dev,https://premium-palace-loa.pages.dev,https://*.premium-palace-loa.pages.dev"
 
 OWNER_EMAIL = "andrew.davidson.zenith@gmail.com"
 # 100000 is the ceiling Cloudflare Workers allow for PBKDF2.
@@ -29,6 +29,12 @@ OWNER_PASSWORD_ITER = "100000"
 #
 # LOA Producer Desk (loa-desk/build-desk.mjs bakes the same value into the page):
 #   wrangler secret put DESK_TOKEN              # any long random string
+#
+# Premium Palace LOA desk (premium-palace-loa/build-pages.mjs bakes it in).
+# A DIFFERENT value from DESK_TOKEN: the relay scopes each desk token to
+# its own keys, and sharing one value would hand both agencies the other's
+# book. See DESKS in worker.js.
+#   wrangler secret put PP_DESK_TOKEN
 #
 # Stripe orders (see DEPLOY.md, "Stripe orders"):
 #   wrangler secret put STRIPE_WEBHOOK_SECRET   # whsec_... from the webhook
