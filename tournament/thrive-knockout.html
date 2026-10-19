@@ -19,7 +19,7 @@
   /* Draw-sheet measurements. The grid template is written inline because the
      column count follows the field size, so these have to be tokens for a
      media query to be able to shrink them. */
-  --colw:164px; --gutw:20px; --cupw:132px; --rowh:30px;
+  --colw:164px; --gutw:20px; --cupw:132px; --slot:90px;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -112,7 +112,12 @@ section{padding-block:24px}
 .sec-head h2{font:600 13px/1 var(--font-body); letter-spacing:.14em; text-transform:uppercase; color:var(--faint)}
 .sec-head .when{font-size:13px; color:var(--dim)}
 .scroll{overflow-x:auto; padding-bottom:8px}
-.bracket{display:grid; gap:0; min-width:min-content}
+/* Two rows: the round headings, then the cards. The headings line up by
+   grid; the cards are placed on their own centre lines inside each column,
+   because the rounds are no longer powers of two and a card sits midway
+   between the two it feeds from. */
+.bracket{display:grid; grid-template-rows:auto auto; gap:0; min-width:min-content}
+.col{position:relative; min-width:0; height:calc(var(--slot) * var(--rows))}
 .rhead{padding:0 0 12px; min-width:0; overflow-wrap:anywhere}
 .rhead .t{font:600 12px/1.2 var(--font-body); letter-spacing:.1em; text-transform:uppercase; color:var(--ink)}
 .rhead .s{font:500 11px/1.4 var(--font-mono); color:var(--faint); margin-top:3px}
@@ -121,7 +126,7 @@ section{padding-block:24px}
 .rhead.now .t{color:var(--live)}
 
 .match{
-  align-self:center; position:relative;
+  position:absolute; left:0; right:0; transform:translateY(-50%);
   background:var(--surface); border:1px solid var(--line); border-radius:var(--r);
   overflow:hidden; box-shadow:var(--shadow); min-width:0;
 }
@@ -147,16 +152,16 @@ section{padding-block:24px}
 .side.lost .nm,.side.lost .sd,.side.lost .sc{color:var(--out)}
 
 i.conn{
-  display:block; border:0 solid var(--line);
+  position:absolute; left:0; right:0; border:0 solid var(--line);
   border-top-width:1px; border-bottom-width:1px; border-right-width:1px;
   border-top-right-radius:7px; border-bottom-right-radius:7px;
   margin-left:-1px;
 }
 
 .cup{
-  align-self:center; border:1px solid var(--brass-line); border-radius:var(--r);
+  position:absolute; left:14px; right:0; transform:translateY(-50%);
+  border:1px solid var(--brass-line); border-radius:var(--r);
   background:var(--brass-wash); padding:15px 14px; text-align:center; min-width:0;
-  margin-left:14px;
 }
 .cup .lab{font:600 10.5px/1 var(--font-body); letter-spacing:.14em; text-transform:uppercase; color:var(--brass)}
 .cup .who{font:700 22px/1.1 var(--font-display); text-transform:uppercase; margin-top:7px; color:var(--ink); overflow-wrap:anywhere}
@@ -195,7 +200,6 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
   font:600 11px/1 var(--font-mono); color:var(--faint); width:24px; flex:none; text-align:right;
   font-variant-numeric:tabular-nums;
 }
-.seedrow.bye .n{color:var(--brass)}
 .x{
   appearance:none; border:1px solid var(--line); background:var(--bg); color:var(--faint);
   border-radius:6px; width:30px; height:34px; flex:none; font-size:15px; line-height:1;
@@ -249,7 +253,7 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
   /* A phone shows one column of a bracket at a time, so everything comes
      down a step: more of the draw fits on screen and less of it is scrolled
      past sideways. */
-  :root{--colw:132px; --gutw:13px; --cupw:104px; --rowh:23px}
+  :root{--colw:132px; --gutw:13px; --cupw:104px; --slot:70px}
   .nm .lg{display:none}
   .nm .sm{display:inline}
   .rhead .s{font-size:9px; line-height:1.35}
@@ -363,21 +367,52 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
 
   /* ---------------------------------------------------------- bracket maths */
 
-  function bracketSize(count) { var n = 2; while (n < count) n *= 2; return n; }
+  /* How the field thins out. Everyone still in plays, in pairs, and only an
+     odd one out sits a round: 12 agents go 12 -> 6 -> 3 -> 2 -> 1, so the one
+     bye in the whole tournament falls at three.
+
+     This replaces rounding the field up to the next power of two, which
+     padded 12 agents into a 16-slot draw and sat four of them out of the
+     opening week. That shape comes from seeded tournaments with a reason to
+     protect top seeds; this has none, and it made week one look half played
+     before anybody had played. */
+  var planCache = {};
+  function plan(count) {
+    if (planCache[count]) return planCache[count];
+    var P = [count];
+    while (P[P.length - 1] > 1) P.push(Math.ceil(P[P.length - 1] / 2));
+    planCache[count] = { P: P, rounds: P.length - 1 };
+    return planCache[count];
+  }
+  function roundsOf(count) { return plan(count).rounds; }
+  function playersIn(count, r) { return plan(count).P[r]; }
+  function cardsIn(count, r) { return plan(count).P[r + 1]; }
+  /* A card's centre line, in units of one first-round card. A card sits
+     midway between the two it feeds from, which is what keeps the joins
+     straight when the rounds are not powers of two. */
+  function centreOf(count, r, j) {
+    if (r === 0) return j + 0.5;
+    var here = playersIn(count, r), a = centreOf(count, r - 1, 2 * j);
+    return 2 * j + 1 < here ? (a + centreOf(count, r - 1, 2 * j + 1)) / 2 : a;
+  }
   function agentCount(t) { return t.seeds.length; }
-  function byeCount(t) { return bracketSize(agentCount(t)) - agentCount(t); }
-  function roundCount(size) { return Math.round(Math.log(size) / Math.log(2)); }
-  function matchesIn(size, r) { return size / Math.pow(2, r + 1); }
+  /* One per round that starts with an odd number left, and no more. */
+  function byeCount(t) {
+    var P = plan(agentCount(t)).P, n = 0;
+    for (var r = 0; r < P.length - 1; r++) if (P[r] % 2) n++;
+    return n;
+  }
+
+
 
   /* Named for who is actually left. Round one of an uneven field is an
      opening round, not a "round of 64" that only 40 agents turn up to. */
+  /* Named for how many are left going into it. */
   function defaultRoundName(count, r) {
-    var size = bracketSize(count);
-    if (r === 0 && size !== count) return "Opening round";
-    var left = r === 0 ? count : size / Math.pow(2, r);
-    if (left === 2) return "Championship";
-    if (left === 4) return "Semifinals";
-    if (left === 8) return "Quarterfinals";
+    var left = playersIn(count, r);
+    if (left <= 2) return "Championship";
+    if (left <= 4) return "Semifinals";
+    if (left <= 8) return "Quarterfinals";
     return "Round of " + left;
   }
   /* A label the page wrote is the page's to rewrite when the draw changes
@@ -389,7 +424,7 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
       s === "Semifinals" || s === "Quarterfinals" || /^Round of \d+$/.test(s);
   }
   function roundsFor(count, keep) {
-    var out = [], n = roundCount(bracketSize(count));
+    var out = [], n = roundsOf(count);
     for (var r = 0; r < n; r++) {
       var old = keep && keep[r];
       var name = defaultRoundName(count, r);
@@ -410,6 +445,9 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
   /* Shared data is written by other people and survives republishes, so
      never trust its shape -- coerce it into something the renderer can walk
      without checking at every step. */
+  /* Shared data is written by other people and survives republishes, so
+     never trust its shape -- coerce it into something the renderer can walk
+     without checking at every step. */
   function normalize(raw) {
     var d = raw && typeof raw === "object" ? raw : {};
     var src = Array.isArray(d.seeds) ? d.seeds : [];
@@ -420,19 +458,17 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
       out.seeds[i] = typeof src[i] === "string" ? src[i].slice(0, 60) : "";
     }
     out.rounds = roundsFor(count, Array.isArray(d.rounds) ? d.rounds : null);
-    /* Results are kept by position. A key for a match the draw no longer has
+    /* Results are kept by position. A key for a card the draw no longer has
        is dropped here rather than lingering invisibly. */
     if (d.results && typeof d.results === "object") {
-      var size = bracketSize(count);
-      for (var r = 0; r < roundCount(size); r++) {
-        for (var m = 0; m < matchesIn(size, r); m++) {
-          var k = r + "-" + m, v = d.results[k];
+      for (var r = 0; r < roundsOf(count); r++) {
+        for (var j = 0; j < cardsIn(count, r); j++) {
+          var k = r + "-" + j, v = d.results[k];
           if (!v || typeof v !== "object") continue;
           /* Rounds are filled in order, so the winners this reads are already
-             settled. A match against a bye was never played, so it carries no
-             score -- but it does carry whether the organizer advanced that
-             agent, and that has to survive. */
-          if (isAuto(out, r, m)) {
+             settled. A card with nobody opposite carries no score -- but it
+             does carry whether the organizer advanced that agent. */
+          if (isAuto(out, r, j)) {
             if (v.w === "a" || v.w === "b") out.results[k] = { sa: null, sb: null, w: v.w };
             continue;
           }
@@ -451,14 +487,14 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
      When the field is not a power of two the shortfall comes off the top --
      the leading seeds sit out round one -- so every agent who does play has
      a real opponent and no match is left empty. */
-  function competitors(t, r, i) {
-    if (r === 0) {
-      var count = agentCount(t), byes = bracketSize(count) - count;
-      if (i < byes) return [i, BYE];
-      var first = byes + (i - byes) * 2;
-      return [first, first + 1 < count ? first + 1 : BYE];
-    }
-    return [winnerOf(t, r - 1, 2 * i), winnerOf(t, r - 1, 2 * i + 1)];
+  /* Round one pairs the list straight down: 1 plays 2, 3 plays 4. Every
+     round after pairs the winners the same way. When an odd number are left
+     the last one through has nobody to play and sits that round out. */
+  function competitors(t, r, j) {
+    var count = agentCount(t), here = playersIn(count, r);
+    if (r === 0) return [2 * j, 2 * j + 1 < count ? 2 * j + 1 : BYE];
+    return [winnerOf(t, r - 1, 2 * j),
+            2 * j + 1 < here ? winnerOf(t, r - 1, 2 * j + 1) : BYE];
   }
   /* Nobody moves up until the organizer says so -- a bye included. A bye
      still means no opponent this round, but it used to also mean the agent
@@ -477,30 +513,36 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
     var c = competitors(t, r, i);
     return c[0] === BYE || c[1] === BYE;
   }
-  function champion(t) { return winnerOf(t, roundCount(bracketSize(agentCount(t))) - 1, 0); }
+  function champion(t) {
+    return winnerOf(t, roundsOf(agentCount(t)) - 1, 0);
+  }
 
   function liveRound(t) {
-    var size = bracketSize(agentCount(t));
-    for (var r = 0; r < roundCount(size); r++) {
-      for (var i = 0; i < matchesIn(size, r); i++) {
-        if (winnerOf(t, r, i) === TBD) return r;
+    var count = agentCount(t);
+    for (var r = 0; r < roundsOf(count); r++) {
+      for (var j = 0; j < cardsIn(count, r); j++) {
+        if (winnerOf(t, r, j) === TBD) return r;
       }
     }
     return -1;
   }
   /* Which seeds sit out round one: the top of the list, as many as the draw
      is short. */
-  function byeSeeds(t) {
-    var out = [], b = byeCount(t);
-    for (var i = 0; i < b; i++) out.push(i);
+  /* Which rounds sit somebody out. Not "the top seeds" any more -- a bye is
+     now just what happens to the last one through an odd round. */
+  function byeRounds(t) {
+    var P = plan(agentCount(t)).P, out = [];
+    for (var r = 0; r < P.length - 1; r++) if (P[r] % 2) out.push(r);
     return out;
   }
   /* Naming two dozen people is a wall of text; a range says the same thing. */
-  function byeNames(t) {
-    var b = byeSeeds(t);
-    if (!b.length) return "";
-    if (b.length > 6) return "seeds 1–" + b.length;
-    return b.map(function (s) { return seedName(t, s) || "seed " + (s + 1); }).join(", ");
+  function byeBlurb(t) {
+    var rs = byeRounds(t);
+    if (!rs.length) return "";
+    return rs.map(function (r) {
+      return (t.rounds[r] && t.rounds[r].name) || "round " + (r + 1);
+    }).join(" and ") + (rs.length === 1 ? " has" : " have") +
+      " an odd number left, so one agent sits out";
   }
 
   function seedName(t, idx) {
@@ -810,8 +852,9 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
   }
 
   function bracketHTML() {
-    var t = served, count = agentCount(t), size = bracketSize(count);
-    var rounds = roundCount(size), live = liveRound(t), ch = champion(t);
+    var t = served, count = agentCount(t);
+    var rounds = roundsOf(count), live = liveRound(t), ch = champion(t);
+    var slots = cardsIn(count, 0);   /* first-round cards: the vertical unit */
     var out = "";
 
     if (dbDown && loadErr) {
@@ -823,7 +866,7 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
     if (!anyNames(t)) {
       out += '<section><div class="note' + (canEdit ? "" : " warm") + '"><div>' +
         (canEdit
-          ? "<b>No agents entered yet.</b> Open the control room and type the names in — however many you have. Round one pairs them straight down the list, 1 against 2, 3 against 4, and the draw rounds up with byes at the top when the count is uneven."
+          ? "<b>No agents entered yet.</b> Open the control room and type the names in \u2014 however many you have. Everyone plays in round one, paired straight down the list, and only an odd one out sits a round."
           : "<b>The draw has not been posted yet.</b> Names appear here as soon as the organizer enters them.") +
         "</div></div></section>";
     }
@@ -834,55 +877,66 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
 
     var cells = "";
     for (var r2 = 0; r2 < rounds; r2++) {
-      var rd = t.rounds[r2], span = Math.pow(2, r2 + 1);
+      var rd = t.rounds[r2];
       cells += '<div class="rhead' + (r2 === live ? " now" : "") + '" style="grid-column:' +
         (2 * r2 + 1) + ';grid-row:1"><div class="t">' + esc(rd.name) + "</div>" +
         '<div class="s">' +
           (rd.week || rd.dates
             ? (rd.week ? "<span>" + esc(rd.week) + "</span>" : "") +
-              (rd.week && rd.dates ? " · " : "") +
+              (rd.week && rd.dates ? " \u00b7 " : "") +
               (rd.dates ? "<span>" + esc(rd.dates) + "</span>" : "")
-            : "—") +
+            : "\u2014") +
         "</div></div>";
 
-      for (var i = 0; i < matchesIn(size, r2); i++) {
-        var c = competitors(t, r2, i), res = t.results[r2 + "-" + i] || {};
-        var auto = isAuto(t, r2, i);
+      var cards = "";
+      for (var j = 0; j < cardsIn(count, r2); j++) {
+        var c = competitors(t, r2, j), res = t.results[r2 + "-" + j] || {};
+        var auto = isAuto(t, r2, j);
         /* The empty half of a bye is never marked, won or lost. The real
            half is marked only once it has actually been advanced. */
         var sA = c[0] === BYE ? "" : (res.w === "a" ? "won" : (res.w ? "lost" : ""));
         var sB = c[1] === BYE ? "" : (res.w === "b" ? "won" : (res.w ? "lost" : ""));
-        cells += '<div class="match' + (r2 === live && !auto ? " now" : "") + (auto ? " auto" : "") +
-          '" style="grid-column:' + (2 * r2 + 1) + ";grid-row:" + (i * span + 2) + " / span " + span + '">' +
+        cards += '<div class="match' + (r2 === live && !auto ? " now" : "") +
+          (auto ? " auto" : "") + '" style="top:calc(var(--slot) * ' +
+          centreOf(count, r2, j) + ')">' +
           sideHTML(t, c[0], auto ? null : res.sa, sA) +
           sideHTML(t, c[1], auto ? null : res.sb, sB) +
         "</div>";
       }
+      cells += '<div class="col" style="grid-column:' + (2 * r2 + 1) + ';grid-row:2">' +
+        cards + "</div>";
+
       if (r2 < rounds - 1) {
-        /* The joiner runs between the two feeding cards' centre lines, which
-           land on whole grid lines because the grid counts half-rows. */
-        for (var j = 0; j < matchesIn(size, r2) / 2; j++) {
-          var top = 2 * j * span + span / 2 + 2;
-          var bot = (2 * j + 1) * span + span / 2 + 2;
-          cells += '<i class="conn" style="grid-column:' + (2 * r2 + 2) +
-            ";grid-row:" + top + " / " + bot + '"></i>';
+        /* One join per card in the next round that draws from two here. A
+           card fed by only one (the odd one out) needs no bracket drawn. */
+        var joins = "";
+        for (var k = 0; k < cardsIn(count, r2 + 1); k++) {
+          if (2 * k + 1 >= cardsIn(count, r2)) continue;
+          var top = centreOf(count, r2, 2 * k);
+          var bot = centreOf(count, r2, 2 * k + 1);
+          joins += '<i class="conn" style="top:calc(var(--slot) * ' + top +
+            ');height:calc(var(--slot) * ' + (bot - top) + ')"></i>';
         }
+        cells += '<div class="col" style="grid-column:' + (2 * r2 + 2) + ';grid-row:2">' +
+          joins + "</div>";
       }
     }
-    var chName = ch != null && ch !== BYE ? seedName(t, ch) : "";
-    cells += '<div class="cup" style="grid-column:' + (2 * rounds + 1) + ';grid-row:2 / -1">' +
-      '<div class="lab">Champion</div><div class="who' + (chName ? "" : " tbd") + '">' +
-      esc(chName || (ch != null && ch !== BYE ? "Seed " + (ch + 1) : "To be decided")) + "</div></div>";
 
+    var chName = ch != null && ch !== BYE ? seedName(t, ch) : "";
+    cells += '<div class="col" style="grid-column:' + (2 * rounds + 1) + ';grid-row:2">' +
+      '<div class="cup" style="top:calc(var(--slot) * ' + centreOf(count, rounds - 1, 0) + ')">' +
+      '<div class="lab">Champion</div><div class="who' + (chName ? "" : " tbd") + '">' +
+      esc(chName || (ch != null && ch !== BYE ? "Seed " + (ch + 1) : "To be decided")) +
+      "</div></div></div>";
+
+    var byes = byeCount(t);
     out += "<section>" +
       '<div class="sec-head"><h2>Draw sheet</h2><span class="when">' +
-        esc(count + " agents in a " + size + "-slot draw" +
-            (byeCount(t) ? ", " + byeCount(t) + " bye" + (byeCount(t) === 1 ? "" : "s") +
-              " at the top of the list" : "")) +
+        esc(count + " agents \u00b7 " + rounds + " round" + (rounds === 1 ? "" : "s") +
+            (byes ? " \u00b7 " + byeBlurb(t) : " \u00b7 everyone paired every round")) +
       "</span></div>" +
-      '<div class="scroll"><div class="bracket" style="grid-template-columns:' + cols.join(" ") +
-      ";grid-template-rows:auto repeat(" + size + ", minmax(var(--rowh), 1fr))\">" + cells +
-      "</div></div></section>";
+      '<div class="scroll"><div class="bracket" style="grid-template-columns:' +
+      cols.join(" ") + ";--rows:" + slots + '">' + cells + "</div></div></section>";
 
     return out;
   }
@@ -890,8 +944,8 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
   /* ----------------------------------------------------------- control room */
 
   function adminHTML() {
-    var t = draft, count = agentCount(t), size = bracketSize(count);
-    var rounds = roundCount(size), byes = byeCount(t), byeIdx = byeSeeds(t);
+    var t = draft, count = agentCount(t);
+    var rounds = roundsOf(count), byes = byeCount(t);
     var out = "";
 
     if (dbDown) {
@@ -908,9 +962,8 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
     /* Agents */
     var rows = "";
     for (var i = 0; i < count; i++) {
-      var hasBye = byeIdx.indexOf(i) >= 0;
-      rows += '<div class="seedrow' + (hasBye ? " bye" : "") + '">' +
-        '<span class="n" title="' + (hasBye ? "Sits out round one" : "Seed " + (i + 1)) + '">' + (i + 1) + "</span>" +
+      rows += '<div class="seedrow">' +
+        '<span class="n" title="Seed ' + (i + 1) + '">' + (i + 1) + "</span>" +
         '<input type="text" data-seed="' + i + '" value="' + esc(t.seeds[i]) +
           '" placeholder="Agent name" aria-label="Seed ' + (i + 1) + '">' +
         (confirming === "drop-" + i
@@ -923,18 +976,17 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
     }
     out += '<div class="panel"><h3>The draw</h3>' +
       '<p class="hint">Enter as many agents as you have, in the order you want them to meet. ' +
-      "Round one runs straight down the list — 1 plays 2, 3 plays 4, 5 plays 6 — and each " +
-      "winner moves across to face the winner beside them. If the count is not a power of two, " +
-      "the draw rounds up and the agents at the top of the list sit out round one until the " +
-      "numbers line up.</p>" +
+      "Round one runs straight down the list — 1 plays 2, 3 plays 4, 5 plays 6 — and every " +
+      "round after pairs the winners the same way. Everybody still in plays; only when an odd " +
+      "number are left does the last one through sit a round out.</p>" +
       '<div class="draw-sum">' +
         "<span>Agents <b>" + count + "</b></span>" +
-        "<span>Draw <b>" + size + "</b> slots</span>" +
-        "<span>Byes <b>" + byes + "</b></span>" +
         "<span>Rounds <b>" + rounds + "</b></span>" +
+        "<span>Round one <b>" + cardsIn(count, 0) + "</b> matches</span>" +
+        "<span>Byes <b>" + byes + "</b></span>" +
         (byes
-          ? "<span>Sitting out round one: <b>" + esc(byeNames(t)) + "</b></span>"
-          : "<span>No byes — every agent plays in round one.</span>") +
+          ? "<span>" + esc(byeBlurb(t)) + "</span>"
+          : "<span>Everyone is paired in every round.</span>") +
       "</div>" +
       (hasResults(t)
         ? '<div class="note warm" style="margin-bottom:14px"><div><b>Scores are already recorded.</b> ' +
@@ -973,7 +1025,7 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
     /* Results */
     for (var r2 = 0; r2 < rounds; r2++) {
       var rd = t.rounds[r2], body = "";
-      for (var m = 0; m < matchesIn(size, r2); m++) {
+      for (var m = 0; m < cardsIn(count, r2); m++) {
         var c = competitors(t, r2, m), res = t.results[r2 + "-" + m] || {};
         var auto = isAuto(t, r2, m);
         body += '<div class="mrow"><div class="mstack">' +
@@ -1230,10 +1282,10 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
   /* Retyping a name changes it everywhere it is shown. Patch those spots in
      place rather than re-rendering, so the field keeps focus. */
   function syncNames() {
-    var t = draft, size = bracketSize(agentCount(t));
+    var t = draft, count = agentCount(t);
     var sides = view.querySelectorAll(".mside"), i = 0;
-    for (var r = 0; r < roundCount(size); r++) {
-      for (var m = 0; m < matchesIn(size, r); m++) {
+    for (var r = 0; r < roundsOf(count); r++) {
+      for (var m = 0; m < cardsIn(count, r); m++) {
         var c = competitors(t, r, m);
         for (var s = 0; s < 2; s++) {
           var el = sides[i++];
