@@ -51,14 +51,37 @@ const source = readFileSync(join(here, "..", "tournament", "thrive-knockout.html
   .replace(/^<title>[^<]*<\/title>\n/, "")
   .replace(/^<meta name="claude:[^>]*>\n/m, "");
 
-/* Mirrors the head the artifact runtime supplies, so the page renders the
-   same in both places. */
-const html = `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Thrive Knockout</title>
+const favicon = existsSync(join(here, "favicon.png"))
+  ? "data:image/png;base64," + readFileSync(join(here, "favicon.png")).toString("base64")
+  : "";
+
+/* Two sites off one source. The draw sheet is the copy that gets handed
+   around; the control room is the one that posts results, and it is a
+   separate address so the editing screen is not one tab away from every
+   agent who opens the bracket. They read and write the same tournament
+   record on the relay, so there is still one tournament. */
+const BUILDS = [
+  {
+    role: "bracket",
+    dir: "dist-knockout",
+    project: "thrive-knockout",
+    title: "Thrive Knockout",
+    site: "https://thrive-knockout.pages.dev",
+    preview: true,
+  },
+  {
+    role: "control",
+    dir: "dist-knockout-control",
+    project: "thrive-knockout-control",
+    title: "Thrive Knockout Control Room",
+    site: "https://thrive-knockout-control.pages.dev",
+    preview: false,
+  },
+];
+
+for (const b of BUILDS) {
+  const head = b.preview
+    ? `<title>${b.title}</title>
 <meta name="description" content="${DESC}">
 <meta name="theme-color" content="#0c1118">
 <link rel="icon" type="image/png" href="/icon.png">
@@ -67,18 +90,32 @@ const html = `<!doctype html>
      absolute URLs: a relative one resolves against the sender's app. -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Thrive Companies">
-<meta property="og:title" content="Thrive Knockout">
+<meta property="og:title" content="${b.title}">
 <meta property="og:description" content="${DESC}">
-<meta property="og:url" content="${site}/">
-<meta property="og:image" content="${site}/og.png">
+<meta property="og:url" content="${b.site}/">
+<meta property="og:image" content="${b.site}/og.png">
 <meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Thrive Knockout — agent tournament bracket">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Thrive Knockout">
+<meta name="twitter:title" content="${b.title}">
 <meta name="twitter:description" content="${DESC}">
-<meta name="twitter:image" content="${site}/og.png">
+<meta name="twitter:image" content="${b.site}/og.png">`
+    /* No link preview on the control room, and keep it out of search:
+       it is not a page to hand around. */
+    : `<title>${b.title}</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0c1118">
+<link rel="icon" type="image/png" href="/icon.png">
+<link rel="apple-touch-icon" href="/icon.png">`;
+
+  const html = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+${head}
 <style>
   :root { color-scheme: light dark; }
   html, body { margin: 0; padding: 0; }
@@ -86,7 +123,10 @@ const html = `<!doctype html>
   img { max-width: 100%; }
   [hidden] { display: none !important; }
 </style>
-<script>window.THRIVE_RELAY = ${JSON.stringify(relay)};</script>
+<script>
+window.THRIVE_RELAY = ${JSON.stringify(relay)};
+window.THRIVE_ROLE = ${JSON.stringify(b.role)};
+</script>
 </head>
 <body>
 ${source}
@@ -94,21 +134,22 @@ ${source}
 </html>
 `;
 
-const out = join(here, "dist-knockout");
-mkdirSync(out, { recursive: true });
-writeFileSync(join(out, "index.html"), html);
+  const out = join(here, b.dir);
+  mkdirSync(out, { recursive: true });
+  writeFileSync(join(out, "index.html"), html);
+  copyFileSync(join(here, "favicon.png"), join(out, "icon.png"));
+  if (b.preview) copyFileSync(join(here, "..", "tournament", "og-card.png"), join(out, "og.png"));
 
-/* Served as real files rather than data: URIs -- a link preview fetches
-   og:image over the network and cannot read one embedded in the page. */
-copyFileSync(join(here, "favicon.png"), join(out, "icon.png"));
-copyFileSync(join(here, "..", "tournament", "og-card.png"), join(out, "og.png"));
+  console.log(`${b.role.padEnd(8)} -> deploy/${b.dir}/index.html  (${(html.length / 1024).toFixed(0)} KB)`);
+}
 
-console.log(`Wrote deploy/dist-knockout/  index.html (${(html.length / 1024).toFixed(0)} KB), icon.png, og.png
+console.log(`
 Relay: ${relay}
-Link previews point at: ${site}
 
-Next:
-  wrangler pages deploy ./dist-knockout --project-name thrive-knockout --branch main
+Deploy both:
+  npx wrangler pages deploy ./dist-knockout         --project-name thrive-knockout         --branch main
+  npx wrangler pages deploy ./dist-knockout-control --project-name thrive-knockout-control --branch main
 
-The relay needs the Pages origin in ALLOWED_ORIGINS and the /tournament
-route, so run "wrangler deploy" too if you have not since.`);
+The draw sheet is thrive-knockout.pages.dev; the control room is its own
+address and carries no link preview. Both read and write the same record,
+so there is one tournament behind the two pages.`);

@@ -337,6 +337,16 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
      ==================================================================== */
   var RELAY = String(window.THRIVE_RELAY || "").replace(/\/+$/, "");
   var MODE = RELAY ? "relay" : "artifact";
+  /* Which half of the board this build carries. "bracket" is the copy
+     agents get: the control room is not merely hidden on it, the tab does
+     not exist and adminHTML is never reached. The relay refuses their
+     writes regardless -- this keeps the editing screen off a page that is
+     handed around, rather than being the thing that protects the results.
+     Unset means both halves, which is what the artifact copy needs: there
+     is one store per artifact, so a separate control-room artifact would
+     be editing a different tournament. */
+  var ROLE = String(window.THRIVE_ROLE || "full");
+  var HAS_CONTROL = ROLE !== "bracket";
   var BOARD_PATH = "/kv/tournament_board";     /* relay: the write route */
   var PUBLIC_PATH = "/tournament";             /* relay: the read route, no token */
   var TOKEN_KEY = "thrive_knockout_token";
@@ -344,7 +354,7 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
 
   var DOC = "tournament/current";
   var GATE = "data/control/auth/gate";   /* rules keep this admin-only */
-  var MIN_AGENTS = 2, MAX_AGENTS = 64;
+  var MIN_AGENTS = 2, MAX_AGENTS = 250;
   var ITER = 120000;
 
   /* A slot holds an agent index, or one of these two. */
@@ -741,15 +751,17 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
     document.getElementById("tname").textContent = served.name || "Thrive Knockout";
     renderStatus();
     renderTabs();
-    if (tab !== "admin") view.innerHTML = bracketHTML();
+    if (tab !== "admin" || !HAS_CONTROL) view.innerHTML = bracketHTML();
     else if (MODE === "relay") view.innerHTML = unlocked ? adminHTML() : lockHTML("relay");
     else if (!gateKnown) view.innerHTML = '<section><div class="note"><div>Checking the control room lock…</div></div></section>';
     else if (!gate) view.innerHTML = lockHTML("set");
     else if (!unlocked) view.innerHTML = lockHTML("in");
     else view.innerHTML = adminHTML();
-    footEl.textContent = unlocked
-      ? "You are signed in as the organizer. What you save here appears for everyone the moment it lands."
-      : "Results are kept by the tournament organizer. This board updates on its own when they post a score.";
+    footEl.textContent = HAS_CONTROL
+      ? (unlocked
+          ? "You are signed in as the organizer. What you save here appears for everyone the moment it lands."
+          : "Results are kept by the tournament organizer. This board updates on its own when they post a score.")
+      : "Results are posted by the tournament organizer. This board updates on its own \u2014 leave it open and it refreshes itself.";
   }
 
   function renderStatus() {
@@ -771,8 +783,9 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
   function renderTabs() {
     var tabs = [["bracket", "Bracket"]];
     /* On the relay the tab is the way in, so it always shows; the sign-in
-       behind it is what keeps agents out. */
-    if (canEdit || MODE === "relay") tabs.push(["admin", "Control room"]);
+       behind it is what keeps agents out. The bracket-only build has no
+       control room at all. */
+    if (HAS_CONTROL && (canEdit || MODE === "relay")) tabs.push(["admin", "Control room"]);
     tabsEl.innerHTML = tabs.map(function (x) {
       return '<button class="tab" role="tab" data-tab="' + x[0] + '" aria-selected="' +
         (tab === x[0]) + '">' + x[1] + "</button>";
@@ -1079,6 +1092,7 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
     var b = e.target.closest("[data-tab]");
     if (!b) return;
     tab = b.getAttribute("data-tab");
+    if (tab === "admin" && !HAS_CONTROL) tab = "bracket";
     gateMsg = "";
     render();
   });
