@@ -560,15 +560,14 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
 
   /* -------------------------------------------------------- the control lock */
 
-  function remember(on) {
-    try {
-      if (on) sessionStorage.setItem("tk_unlocked", "1");
-      else sessionStorage.removeItem("tk_unlocked");
-    } catch (e) { /* private window, blocked storage: just re-ask */ }
-  }
-  function rememberedUnlock() {
-    try { return sessionStorage.getItem("tk_unlocked") === "1"; } catch (e) { return false; }
-  }
+  /* Nothing about an unlock is written down. The control room is asked for
+     on every page load -- a reload, a new tab, a link opened by someone
+     else -- so there is no state anywhere that could let a second person
+     walk into an editing screen the first person opened.
+
+     Clearing any key an older build of this page left behind, so a browser
+     that still holds one is not trusted by it. */
+  try { sessionStorage.removeItem("tk_unlocked"); } catch (e) {}
   function hex(bytes) {
     return Array.prototype.map.call(bytes, function (b) {
       return ("0" + b.toString(16)).slice(-2);
@@ -595,12 +594,16 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
 
   /* ------------------------------------------------------------ the relay */
 
-  function relayToken() {
-    try { return localStorage.getItem(TOKEN_KEY) || ""; } catch (e) { return ""; }
-  }
+  /* The sign-in lasts for this page load and no longer. It was kept in
+     localStorage, which survives a reload and a new tab -- convenient for
+     one organizer, and wrong on a page that also carries the draw sheet
+     everybody opens. Reloading asks again. */
+  var liveToken = "";
+  function relayToken() { return liveToken; }
   function setRelayToken(t) {
-    try { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); }
-    catch (e) { /* blocked storage: the sign-in just will not be remembered */ }
+    liveToken = t || "";
+    /* Drop anything an older build of this page left in storage. */
+    try { localStorage.removeItem(TOKEN_KEY); } catch (e) {}
   }
   /* Agents read the board without an account -- it is a scoreboard. Only the
      write route asks for a token. */
@@ -676,7 +679,7 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
     derive(p, salt, ITER).then(function (h) {
       return gateRef.set({ user: u, salt: salt, iter: ITER, hash: h, setAt: new Date().toISOString() });
     }).then(function () {
-      gateBusy = false; unlocked = true; remember(true); gateMsg = ""; confirming = ""; render();
+      gateBusy = false; unlocked = true; gateMsg = ""; confirming = ""; render();
     }).catch(function (err) {
       gateBusy = false;
       gateMsg = err && err.code === "invalid_argument"
@@ -690,7 +693,7 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
     gateBusy = true; gateMsg = ""; render();
     derive(p, gate.salt, gate.iter || ITER).then(function (h) {
       gateBusy = false;
-      if (u === gate.user && h === gate.hash) { unlocked = true; remember(true); gateMsg = ""; }
+      if (u === gate.user && h === gate.hash) { unlocked = true; gateMsg = ""; }
       else gateMsg = "That username and password do not match the control room.";
       render();
     }).catch(function () {
@@ -702,8 +705,9 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
     var setting = mode === "set";
     if (mode === "relay") {
       return '<section><div class="panel narrow"><h3>Organizer sign-in</h3>' +
-        '<p class="hint">The control room is held by your Thrive relay account. ' +
-        "Agents read the draw sheet without signing in.</p>" +
+        '<p class="hint">The control room is held by your Thrive relay account, ' +
+        "and it is asked for every time this page is opened. Agents read the " +
+        "draw sheet without signing in.</p>" +
         '<div class="fields one">' +
           '<label class="f"><span>Email</span><input type="text" id="g-user" autocomplete="username" inputmode="email"></label>' +
           '<label class="f"><span>Password</span><input type="password" id="g-pw" autocomplete="current-password"></label>' +
@@ -725,7 +729,7 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
         (setting ? "Set the control room lock" : "Control room") + "</h3>" +
         '<p class="hint">' + (setting
           ? "Pick a username and password. Anyone opening the control room is asked for them from now on, including you."
-          : "Enter the username and password for this board.") + "</p>" +
+          : "Enter the username and password for this board. They are asked for every time the page is opened \u2014 nothing is remembered between visits.") + "</p>" +
         '<div class="fields one">' +
           '<label class="f"><span>Username</span><input type="text" id="g-user" autocomplete="username"></label>' +
           '<label class="f"><span>Password</span><input type="password" id="g-pw" autocomplete="' +
@@ -1182,7 +1186,7 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
     if (act === "gate-relay") { relaySignIn(); return; }
     if (act === "gate-in") { gateIn(); return; }
     if (act === "gate-change") { confirming = "gate"; gateMsg = ""; render(); return; }
-    if (act === "gate-lock") { unlocked = false; remember(false); render(); return; }
+    if (act === "gate-lock") { unlocked = false; render(); return; }
     if (act === "relay-out") {
       setRelayToken(""); unlocked = false; canEdit = false;
       draft = clone(served); dirty = false; render(); return;
@@ -1245,14 +1249,9 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
   (async function boot() {
     if (MODE === "relay") {
       await relayLoad();
-      if (relayToken()) {
-        /* A stored token is worth nothing until the relay agrees. */
-        try {
-          var me = await fetch(RELAY + "/auth/me", { headers: { Authorization: "Bearer " + relayToken() } });
-          if (me.ok) { unlocked = true; canEdit = true; }
-          else setRelayToken("");
-        } catch (e) { /* offline: stay signed out rather than pretend */ }
-      }
+      /* No token is carried across a page load, so a fresh view always
+         starts signed out and the control room always asks. */
+      try { localStorage.removeItem(TOKEN_KEY); } catch (e) {}
       setInterval(function () { relayLoad(); }, POLL_MS);
       render();
       return;
@@ -1302,7 +1301,6 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
         gate = (d && typeof d.user === "string" && typeof d.hash === "string" &&
                 typeof d.salt === "string") ? d : null;
         if (!gate) unlocked = false;
-        else if (!unlocked && rememberedUnlock()) unlocked = true;
         gateKnown = true;
         render();
       }, function () { gateKnown = true; render(); });
