@@ -429,10 +429,13 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
           var k = r + "-" + m, v = d.results[k];
           if (!v || typeof v !== "object") continue;
           /* Rounds are filled in order, so the winners this reads are already
-             settled. A match against a bye was never played: dropping its
-             score here stops an old one resurfacing if the field grows and
-             the slot becomes a real fixture again. */
-          if (isAuto(out, r, m)) continue;
+             settled. A match against a bye was never played, so it carries no
+             score -- but it does carry whether the organizer advanced that
+             agent, and that has to survive. */
+          if (isAuto(out, r, m)) {
+            if (v.w === "a" || v.w === "b") out.results[k] = { sa: null, sb: null, w: v.w };
+            continue;
+          }
           out.results[k] = {
             sa: Number.isFinite(v.sa) ? v.sa : null,
             sb: Number.isFinite(v.sb) ? v.sb : null,
@@ -457,16 +460,18 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
     }
     return [winnerOf(t, r - 1, 2 * i), winnerOf(t, r - 1, 2 * i + 1)];
   }
-  /* A match against a bye needs no result: the real agent is simply through.
-     Everything downstream reads this, so the bracket fills itself in. */
+  /* Nobody moves up until the organizer says so -- a bye included. A bye
+     still means no opponent this round, but it used to also mean the agent
+     was already in the next one, which made an untouched opening round look
+     played. The control room advances them explicitly now. */
   function winnerOf(t, r, i) {
     var c = competitors(t, r, i);
     if (c[0] === BYE && c[1] === BYE) return BYE;
-    if (c[0] === BYE) return c[1];
-    if (c[1] === BYE) return c[0];
     var res = t.results[r + "-" + i];
     if (!res || !res.w) return TBD;
-    return res.w === "a" ? c[0] : c[1];
+    var pick = res.w === "a" ? c[0] : c[1];
+    /* A result naming the empty side is not a winner. */
+    return pick === BYE ? TBD : pick;
   }
   function isAuto(t, r, i) {
     var c = competitors(t, r, i);
@@ -843,10 +848,10 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
       for (var i = 0; i < matchesIn(size, r2); i++) {
         var c = competitors(t, r2, i), res = t.results[r2 + "-" + i] || {};
         var auto = isAuto(t, r2, i);
-        /* Nobody beat anybody in a bye, so it gets none of the winner's
-           colour -- the dashed card and the word Bye carry it instead. */
-        var sA = auto ? "" : (res.w === "a" ? "won" : (res.w ? "lost" : ""));
-        var sB = auto ? "" : (res.w === "b" ? "won" : (res.w ? "lost" : ""));
+        /* The empty half of a bye is never marked, won or lost. The real
+           half is marked only once it has actually been advanced. */
+        var sA = c[0] === BYE ? "" : (res.w === "a" ? "won" : (res.w ? "lost" : ""));
+        var sB = c[1] === BYE ? "" : (res.w === "b" ? "won" : (res.w ? "lost" : ""));
         cells += '<div class="match' + (r2 === live && !auto ? " now" : "") + (auto ? " auto" : "") +
           '" style="grid-column:' + (2 * r2 + 1) + ";grid-row:" + (i * span + 2) + " / span " + span + '">' +
           sideHTML(t, c[0], auto ? null : res.sa, sA) +
@@ -976,7 +981,16 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
           adminSide(t, r2, m, "b", c[1], res.sb, res.w, auto) +
         "</div>" +
         (auto
-          ? '<span class="autotag">Bye · straight through</span>'
+          ? (function () {
+              /* One real agent and no opponent: the only choice is whether
+                 they are through yet. */
+              var side = c[0] === BYE ? "b" : "a";
+              return '<div class="pick" role="group" aria-label="Advance match ' + (m + 1) + '">' +
+                '<button data-win="' + r2 + "-" + m + '" data-side="' + side + '" aria-pressed="' +
+                  (res.w === side) + '">Advance</button>' +
+                '<button data-win="' + r2 + "-" + m + '" data-side="" aria-pressed="' +
+                  (!res.w) + '">Clear</button></div>';
+            })()
           : '<div class="pick" role="group" aria-label="Winner of match ' + (m + 1) + '">' +
             '<button data-win="' + r2 + "-" + m + '" data-side="a" aria-pressed="' + (res.w === "a") + '">A wins</button>' +
             '<button data-win="' + r2 + "-" + m + '" data-side="b" aria-pressed="' + (res.w === "b") + '">B wins</button>' +
@@ -986,7 +1000,8 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
       }
       out += '<div class="panel"><h3>' + esc(rd.name) + " · results</h3>" +
         '<p class="hint">Put in the week’s score for each agent and mark who went through. ' +
-        "The next round fills in by itself.</p>" + body + "</div>";
+        "Nobody moves up until you do — a bye sits out the round and still needs " +
+        "<b>Advance</b> before they count as in the next one.</p>" + body + "</div>";
     }
 
     /* The lock. On the relay the account is the lock, so there is nothing
@@ -1019,6 +1034,16 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
     }
     out += "</div>";
 
+    if (confirming === "reset-all") {
+      out += '<div class="note warm"><div><b>Start the tournament over?</b> ' +
+        "Every score, every winner and every advance is removed, and the week names " +
+        "and dates go back to their defaults. The agents, and the order you put them " +
+        "in, are kept." +
+        '<div style="margin-top:10px;display:flex;gap:9px;flex-wrap:wrap">' +
+        '<button class="btn danger" data-act="reset-all-yes">Reset to week one</button>' +
+        '<button class="btn" data-act="cancel">Keep everything</button></div></div></div>';
+    }
+
     if (confirming === "reset") {
       out += '<div class="note warm"><div><b>Clear every score?</b> ' +
         "The names and the weeks stay; all results and winners are removed." +
@@ -1040,6 +1065,7 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
         (saving ? "Saving…" : "Save changes") + "</button>" +
       '<button class="btn" data-act="revert"' + (dirty && !saving ? "" : " disabled") + ">Discard</button>" +
       '<button class="btn danger" data-act="reset">Clear results</button>' +
+      '<button class="btn danger" data-act="reset-all">Reset to week one</button>' +
       '<span class="state' + (dirty ? " dirty" : "") + '">' +
         esc(flash || (dirty ? "Unsaved changes" : "Everything is saved")) + "</span>" +
     "</div></section>";
@@ -1178,6 +1204,14 @@ input[type=number]{font-family:var(--font-mono); font-variant-numeric:tabular-nu
     if (act === "cancel") { confirming = ""; gateMsg = ""; render(); return; }
     if (act === "reset") { confirming = "reset"; render(); return; }
     if (act === "reset-yes") { draft.results = {}; confirming = ""; markDirty(); render(); return; }
+    if (act === "reset-all") { confirming = "reset-all"; render(); return; }
+    if (act === "reset-all-yes") {
+      /* Scores, winners and advances go; the roster and its order stay.
+         roundsFor with nothing to keep regenerates the week labels too. */
+      draft.results = {};
+      draft.rounds = roundsFor(agentCount(draft));
+      confirming = ""; markDirty(); render(); return;
+    }
     if (act === "revert" || act === "take-remote") {
       draft = clone(served); dirty = false; confirming = ""; remoteChanged = false; render(); return;
     }
