@@ -1,4 +1,4 @@
-import { makeStore } from "../supabase-store.js";
+import { makeStore, pickStore } from "../supabase-store.js";
 
 const env = { SUPABASE_URL: "http://127.0.0.1:54321", SUPABASE_SERVICE_KEY: "test-service-key" };
 const s = makeStore(env);
@@ -82,6 +82,34 @@ await s.saveSubmission(
   { signature: "data:image/png;base64,AAA", thriveSignature: "data:image/png;base64,BBB", photo: null },
 );
 ok("a submission and its images land in their tables", true);
+
+/* ---- the Cloudflare KV fallback ----
+   Removing the Supabase secrets is the rollback, so the binding has to
+   offer the same entries() the relay now calls. KV has no bulk read, so
+   it loops -- which is safe there and only there, because a KV read
+   goes through a binding rather than the network. */
+console.log("\nthe KV fallback:");
+const fake = {
+  rows: new Map([["inbox:1", "a"], ["inbox:2", "b"], ["other:1", "c"]]),
+  async get(k) { return this.rows.has(k) ? this.rows.get(k) : null; },
+  async put(k, v) { this.rows.set(k, v); },
+  async delete(k) { this.rows.delete(k); },
+  async list({ prefix = "" } = {}) {
+    const keys = [...this.rows.keys()].filter((k) => k.startsWith(prefix)).sort();
+    return { keys: keys.map((name) => ({ name })), list_complete: true, cursor: null };
+  },
+};
+const kvStore = pickStore({ THRIVE_KV: fake });
+ok("pickStore falls back to the binding", !!kvStore && typeof kvStore.entries === "function");
+const kvPage = await kvStore.entries({ prefix: "inbox:" });
+ok("entries returns the prefix with values",
+   kvPage.rows.length === 2 && kvPage.rows[0].value === "a" && kvPage.rows[1].value === "b",
+   kvPage.rows);
+ok("and says it is done", kvPage.list_complete === true && kvPage.cursor === null);
+ok("get and put still reach the binding",
+   (await kvStore.get("other:1")) === "c");
+ok("Supabase is preferred when it is configured",
+   typeof pickStore({ THRIVE_KV: fake, SUPABASE_URL: "http://127.0.0.1:54321", SUPABASE_SERVICE_KEY: "k" }).saveOrder === "function");
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

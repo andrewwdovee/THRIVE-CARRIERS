@@ -99,6 +99,11 @@ const slip = (first, day) => ({
   ],
 });
 
+/* The table outlives a run, so the counts here are against a baseline
+   rather than against zero. */
+const before = await (await call("/refund-requests", { headers: auth })).json();
+const baseline = Array.isArray(before) ? before.length : 0;
+
 for (const [name, day] of [["Ada", "2026-10-19"], ["Grace", "2026-10-21"], ["Alan", "2026-10-23"]]) {
   const r = await call("/refund-request", {
     method: "POST", headers: { "Content-Type": "application/json" },
@@ -119,13 +124,45 @@ ok("the sheet needs a token", sheetNoAuth.status === 401, sheetNoAuth.status);
 const sheetRes = await call("/refund-requests", { headers: auth });
 const sheet = await sheetRes.json();
 ok("the sheet answers 200", sheetRes.status === 200, sheetRes.status);
-ok("the sheet lists every slip that was written", Array.isArray(sheet) && sheet.length === 3,
-   Array.isArray(sheet) ? sheet.length : sheet);
+ok("the sheet lists every slip that was written",
+   Array.isArray(sheet) && sheet.length === baseline + 3,
+   Array.isArray(sheet) ? `${sheet.length}, expected ${baseline + 3}` : sheet);
 ok("newest first", Array.isArray(sheet) && sheet[0] && sheet[0].first === "Alan",
    Array.isArray(sheet) ? sheet.map((s) => s.first) : sheet);
 ok("a slip keeps its calls", Array.isArray(sheet) && sheet[0] && sheet[0].calls.length === 2);
 ok("and the rate counters stay out of the sheet",
    Array.isArray(sheet) && sheet.every((s) => s && s.first));
+
+/* ---- the sheet must not cost one request per slip ----
+   Reading each slip on its own is free through a KV binding and is a
+   network call through Supabase. A Worker gets a limited number of
+   those per invocation, so past about fifty slips the sheet stopped
+   answering at all -- a 500 that reached the portal as an empty table.
+   The count here is what keeps that from coming back: it must not grow
+   with the number of slips. */
+const EXTRA = 60;
+for (let i = 0; i < EXTRA; i++) {
+  /* The POST is rate limited per address, so these arrive from their own. */
+  await call("/refund-request", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "CF-Connecting-IP": `203.0.113.${i}` },
+    body: JSON.stringify(slip(`Bulk${i}`, "2026-10-24")),
+  });
+}
+
+const realFetch = globalThis.fetch;
+let calls = 0;
+globalThis.fetch = (...a) => { calls++; return realFetch(...a); };
+const bigRes = await call("/refund-requests", { headers: auth });
+const big = await bigRes.json();
+globalThis.fetch = realFetch;
+
+ok(`${baseline + 3 + EXTRA} slips still answer 200`, bigRes.status === 200, bigRes.status);
+ok("and every one of them comes back",
+   Array.isArray(big) && big.length === baseline + 3 + EXTRA,
+   Array.isArray(big) ? big.length : big);
+ok(`reading ${big.length} slips took ${calls} request(s), not one each`,
+   calls <= 5, calls);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

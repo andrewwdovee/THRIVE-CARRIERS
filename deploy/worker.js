@@ -169,12 +169,14 @@ async function inboxSince(env, since) {
   const out = [];
   let cursor;
   do {
-    const page = await store(env).list({ prefix: "inbox:", cursor });
-    for (const k of page.keys) {
-      const at = Number(k.name.split(":")[1]);
+    /* Values come back with the page. Fetching them one key at a time is
+       a round trip each, which the store cannot afford when it is over
+       the network -- see entries() in supabase-store.js. */
+    const page = await store(env).entries({ prefix: "inbox:", cursor });
+    for (const row of page.rows) {
+      const at = Number(row.name.split(":")[1]);
       if (Number.isFinite(at) && at < since - INBOX_OVERLAP) continue;
-      const raw = await store(env).get(k.name);
-      if (raw) { try { out.push(JSON.parse(raw)); } catch { /* skip a bad row */ } }
+      try { out.push(JSON.parse(row.value)); } catch { /* skip a bad row */ }
     }
     cursor = page.list_complete ? null : page.cursor;
   } while (cursor);
@@ -838,10 +840,13 @@ async function handle(request, env) {
       const out = [];
       let cursor;
       do {
-        const page = await store(env).list({ prefix: RR_PREFIX, cursor });
-        for (const k of page.keys) {
-          const v = await store(env).get(k.name);
-          if (v) { try { out.push(JSON.parse(v)); } catch { /* skip a bad row */ } }
+        /* One request per page, values included. Reading each slip on its
+           own was a round trip each, and past about fifty slips a Worker
+           runs out of subrequests and the whole sheet 500s -- which read
+           as an empty refund sheet with nothing to say why. */
+        const page = await store(env).entries({ prefix: RR_PREFIX, cursor });
+        for (const row of page.rows) {
+          try { out.push(JSON.parse(row.value)); } catch { /* skip a bad row */ }
         }
         cursor = page.list_complete ? null : page.cursor;
       } while (cursor);

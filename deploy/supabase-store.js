@@ -153,6 +153,29 @@ export function makeStore(env) {
       };
     },
 
+    /* Listing keys and then fetching each one is a round trip per row.
+       Through a Cloudflare KV binding those reads cost nothing; here
+       every one is an HTTP call, and a Worker may make only so many per
+       invocation. Fifty-odd refund slips were enough to pass that limit,
+       and the whole sheet failed rather than part of it. So a caller
+       that wants the values asks for them once, with the page. */
+    async entries(opts = {}) {
+      const offset = Number(opts.cursor) || 0;
+      const limit = Number(opts.limit) || PAGE;
+      const where = opts.prefix
+        ? `key=like.${encodeURIComponent(likePrefix(opts.prefix))}&`
+        : "";
+      const got = await rows(
+        `/kv?${where}${live()}&select=key,value&order=key.asc&limit=${limit}&offset=${offset}`
+      );
+      const complete = got.length < limit;
+      return {
+        rows: got.map((r) => ({ name: r.key, value: r.value })),
+        list_complete: complete,
+        cursor: complete ? null : String(offset + got.length),
+      };
+    },
+
     /* ---- the typed rows, written alongside the blobs ----
        These are for reading in SQL -- revenue by month, who signed and
        when -- not for the portals, which keep reading what they always
@@ -227,6 +250,33 @@ export function makeStore(env) {
    secrets are set, Cloudflare KV otherwise -- so a deploy that has not
    been given the secrets yet keeps serving from KV rather than falling
    over, and switching back is removing a secret. */
+/* The KV binding has no bulk read, so entries() is the same loop the
+   relay used to write out by hand. That is fine here and only here: a
+   KV read goes through a binding rather than the network, so it is not
+   a subrequest and the per-invocation limit does not apply. */
+function withEntries(kv) {
+  if (!kv) return null;
+  return {
+    get: (...a) => kv.get(...a),
+    put: (...a) => kv.put(...a),
+    delete: (...a) => kv.delete(...a),
+    list: (...a) => kv.list(...a),
+    async entries(opts = {}) {
+      const page = await kv.list(opts);
+      const out = [];
+      for (const k of page.keys) {
+        const value = await kv.get(k.name);
+        if (value !== null && value !== undefined) out.push({ name: k.name, value });
+      }
+      return {
+        rows: out,
+        list_complete: page.list_complete,
+        cursor: page.list_complete ? null : page.cursor,
+      };
+    },
+  };
+}
+
 export function pickStore(env) {
-  return makeStore(env) || env.THRIVE_KV || null;
+  return makeStore(env) || withEntries(env.THRIVE_KV);
 }
