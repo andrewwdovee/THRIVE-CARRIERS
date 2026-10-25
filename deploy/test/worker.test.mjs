@@ -84,5 +84,48 @@ const roster = await (await call("/onboarding/roster")).json();
 ok("the signer shows on the public roster", JSON.stringify(roster).includes("Dana"), roster);
 ok("the roster does NOT leak the email", !JSON.stringify(roster).includes("dana@example.com"));
 
+
+/* ---- the refund sheet ----
+   Slips are written without a token and read back with one, and the read
+   is one of only two places in the relay that lists a key prefix. That
+   listing had no test, which is how a refund sheet can come back empty
+   while every other screen in the portal is fine. */
+const slip = (first, day) => ({
+  first, last: "Tester", email: `${first.toLowerCase()}@example.com`, day,
+  kind: "pair",
+  calls: [
+    { phone: "555-010-1234", reason: "dead_air" },
+    { phone: "555-010-5678", reason: "non_consumer" },
+  ],
+});
+
+for (const [name, day] of [["Ada", "2026-10-19"], ["Grace", "2026-10-21"], ["Alan", "2026-10-23"]]) {
+  const r = await call("/refund-request", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(slip(name, day)),
+  });
+  ok(`a slip for ${name} is accepted`, r.status === 200, await r.text());
+}
+
+const badSlip = await call("/refund-request", {
+  method: "POST", headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ first: "No", last: "Calls", email: "n@e.com", day: "2026-10-19", kind: "pair", calls: [] }),
+});
+ok("a slip with one call is refused", badSlip.status === 400);
+
+const sheetNoAuth = await call("/refund-requests");
+ok("the sheet needs a token", sheetNoAuth.status === 401, sheetNoAuth.status);
+
+const sheetRes = await call("/refund-requests", { headers: auth });
+const sheet = await sheetRes.json();
+ok("the sheet answers 200", sheetRes.status === 200, sheetRes.status);
+ok("the sheet lists every slip that was written", Array.isArray(sheet) && sheet.length === 3,
+   Array.isArray(sheet) ? sheet.length : sheet);
+ok("newest first", Array.isArray(sheet) && sheet[0] && sheet[0].first === "Alan",
+   Array.isArray(sheet) ? sheet.map((s) => s.first) : sheet);
+ok("a slip keeps its calls", Array.isArray(sheet) && sheet[0] && sheet[0].calls.length === 2);
+ok("and the rate counters stay out of the sheet",
+   Array.isArray(sheet) && sheet.every((s) => s && s.first));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
