@@ -45,12 +45,23 @@ console.log(`Relay: ${relay}\nSigning in as: ${email}\n`);
    the wrong store is empty for a reason no amount of staring finds. */
 try {
   const h = await (await fetch(`${relay}/health`)).json();
-  console.log(`Backend: ${h.backend}   KV configured: ${h.kv}`);
+  const c = h.config || {};
+  console.log(`Backend: ${c.backend}   KV namespace bound: ${c.kv}`);
+  if (Array.isArray(h.missing) && h.missing.length) {
+    console.log(`Missing configuration: ${h.missing.join(", ")}`);
+  }
 } catch (e) {
   console.log(`Could not read /health: ${e.message}`);
 }
+console.log("");
 
-const password = await askHidden("\nPassword: ");
+/* THRIVE_PASSWORD skips the prompt, for a shell where the hidden prompt
+   misbehaves. It lands in shell history, so the prompt stays the default. */
+let password = process.env.THRIVE_PASSWORD || "";
+while (!password) {
+  password = (await askHidden("Password: ")).trim();
+  if (!password) console.log("Nothing was entered -- type the password, then press Return.");
+}
 const login = await fetch(`${relay}/auth/login`, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
