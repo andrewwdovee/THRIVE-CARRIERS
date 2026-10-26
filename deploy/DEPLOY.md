@@ -441,3 +441,33 @@ Lead Tech board on its own, about fifteen seconds after it is paid.
    This is what names a Payment Link order ("Transfers Starter") instead
    of leaving it in Needs triage.
 4. `npx wrangler deploy`, then open `/health`: `"webhook": true`.
+
+## Checking the Lead Tech archive is still keeping up
+
+Every record on the board is also written to `board_rows`, so a list
+emptied on the board is still readable in Supabase. That write is
+deliberately best effort -- a store that cannot answer must never cost
+the portal the save it was asked to make -- which means it could stop
+working without the portal showing anything.
+
+This is the check. `archived` should never be lower than `on_board`:
+
+```sql
+with board as (
+  select value::jsonb as b from public.kv where key = 'kv:fulfillment_board_v3'
+)
+select k as list,
+       jsonb_array_length(b->k) as on_board,
+       (select count(*) from public.board_rows r where r.list = k) as archived
+from board, lateral jsonb_object_keys(b) k
+where jsonb_typeof(b->k) = 'array'
+order by k;
+```
+
+`archived` is usually higher, because the archive keeps records the
+board no longer has -- that is the point of it. `archived` *lower* than
+`on_board` means records on the board never reached Supabase, and wants
+looking at.
+
+`node verify-archive.mjs` proves the whole path end to end instead: it
+adds a record, deletes it again, and leaves the board as it found it.
