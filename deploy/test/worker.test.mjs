@@ -1,5 +1,22 @@
 /* The real relay, against the real schema, over the shim. */
 import worker from "../worker.js";
+import pg from "pg";
+
+/* ---- a clean database for every run ----
+   The tables outlived a run, so each run started on the last one's
+   leftovers: slips piled up past the rate limit, counts were asserted
+   against a baseline that moved, and once the relay began refusing
+   saves that lose records, a board left behind by the previous run
+   made the first save of the next one illegal. None of that was ever
+   a fault in the relay, which is exactly why it was worth removing --
+   a suite that cries wolf is not read carefully when it should be. */
+{
+  const db = new pg.Client({ host: "/var/run/postgresql", user: "postgres", database: "thrive" });
+  await db.connect();
+  await db.query("truncate public.kv, public.orders, public.board_rows, "
+    + "public.onboarding_documents, public.onboarding_submissions");
+  await db.end();
+}
 
 const SALT = "00112233445566778899aabbccddeeff";
 const ITER = 100000;
