@@ -28,6 +28,11 @@
 
 const PAGE = 1000;
 
+/* The board's lists, as the record names them. "wipes" is the wallet
+   ledger -- the board's own word for it, kept so the stored rows match
+   what the portal writes rather than what a reader would call it. */
+const BOARD_LISTS = ["orders", "products", "calls", "refunds", "wipes", "customers", "blocks", "refundTypes"];
+
 /* Values travel percent-encoded and NOT quoted. An earlier version wrapped
    every key in double quotes, reasoning that a comma or parenthesis in a value
    would otherwise read as syntax. PostgREST does not strip those quotes --
@@ -181,6 +186,63 @@ export function makeStore(env) {
        when -- not for the portals, which keep reading what they always
        read. A projection that fails must never cost the relay the write
        that matters, so both are best effort and say so in the log. */
+
+    /* ---- the board's lists, one database row each ----
+       The board keeps orders, products, calls, refunds, wipes and
+       customers as lists inside a single kv row, which is how one bad
+       write reset four screens at once and left nothing to query
+       afterwards. Each record is written out here as well.
+
+       An archive, not a mirror: a record that leaves the board stays,
+       because having it after something removes it is the entire
+       point. Nothing is deleted from here by a save.
+
+       One request per list, not per row. Reading a board of fifty
+       slips one at a time is what exhausted a Worker's subrequests
+       before; writing three hundred rows that way would be worse. */
+    async saveBoardRows(record) {
+      if (!record || typeof record !== "object") return { written: 0, lists: {} };
+      const AT = ["at", "recordedAt", "receivedAt", "createdAt", "created", "date", "day"];
+      const stamp = (r) => {
+        for (const f of AT) {
+          const v = r[f];
+          if (v == null || v === "") continue;
+          const d = new Date(typeof v === "number" || /^\d{10,}$/.test(String(v)) ? Number(v) : String(v));
+          if (!isNaN(d) && d.getUTCFullYear() > 2000) return d.toISOString();
+        }
+        return null;
+      };
+
+      const now = new Date().toISOString();
+      const report = {};
+      let written = 0;
+
+      for (const list of BOARD_LISTS) {
+        const rows = Array.isArray(record[list]) ? record[list] : null;
+        if (!rows || !rows.length) continue;
+        const payload = [];
+        const seen = new Set();
+        for (const r of rows) {
+          if (!r || typeof r !== "object") continue;
+          const id = r.id != null && r.id !== "" ? String(r.id)
+            : r.paymentId ? String(r.paymentId) : null;
+          /* A record with no id cannot be addressed later, and two rows
+             sharing one id would make the upsert argue with itself. */
+          if (!id || seen.has(id)) continue;
+          seen.add(id);
+          payload.push({ list, id, at: stamp(r), data: r, updated_at: now });
+        }
+        if (!payload.length) continue;
+        await call("/board_rows?on_conflict=list,id", {
+          method: "POST",
+          headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+          body: JSON.stringify(payload),
+        });
+        report[list] = payload.length;
+        written += payload.length;
+      }
+      return { written, lists: report };
+    },
 
     async saveOrder(order) {
       const at = Number(order.created) || Date.now();

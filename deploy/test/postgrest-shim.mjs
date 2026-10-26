@@ -4,7 +4,7 @@ import http from "node:http";
 import pg from "pg";
 
 const db = new pg.Pool({ host: "/var/run/postgresql", user: "postgres", database: "thrive" });
-const TABLES = new Set(["kv", "orders", "onboarding_submissions", "onboarding_documents"]);
+const TABLES = new Set(["kv", "orders", "onboarding_submissions", "onboarding_documents", "board_rows"]);
 
 /* Faithful to PostgREST: the value is taken as it arrives. An earlier
    version stripped surrounding double quotes, which real PostgREST does

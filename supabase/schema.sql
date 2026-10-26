@@ -110,9 +110,84 @@ create table if not exists public.onboarding_documents (
   created_at       timestamptz not null default now()
 );
 
+-- ---------------------------------------------------------- board_rows
+-- The Lead Tech board keeps its whole state in one kv row: orders,
+-- products, calls, refunds, wipes (the wallet ledger) and customers,
+-- all as lists inside one blob. That is how a single bad write reset
+-- four screens of the portal at once, and why there was nothing to
+-- query when it happened -- the rows existed only as text.
+--
+-- Every list is also written out here, one database row per record.
+-- The point is retrieval: each list can be read in SQL, checked, and
+-- put back on its own, instead of the board being all-or-nothing.
+--
+-- This is an ARCHIVE, not a mirror. A record removed from the board
+-- stays here, because the whole purpose is to still have it after
+-- something removes it by accident. Reading it back is therefore
+-- "what did this list look like", not "what is on the board now".
+--
+-- jsonb rather than a column per field: these lists grow fields as the
+-- board does, and a fixed column list would quietly drop whatever it
+-- did not know about -- which is the failure this table exists to
+-- prevent. The views below give the common fields names.
+create table if not exists public.board_rows (
+  list       text        not null,
+  id         text        not null,
+  at         timestamptz,
+  data       jsonb       not null,
+  first_seen timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (list, id)
+);
+
+create index if not exists board_rows_list_idx on public.board_rows (list, at desc nulls last);
+create index if not exists board_rows_seen_idx on public.board_rows (updated_at desc);
+
+-- Readable names over the jsonb, so the common questions are ordinary
+-- SQL. They cost nothing and cannot drift out of step with the table.
+create or replace view public.board_calls as
+  select id, at,
+         data->>'day'                      as day,
+         (data->>'billable')::numeric      as billable,
+         (data->>'googleCalls')::numeric   as google_calls,
+         (data->>'googleRate')::numeric    as google_rate,
+         (data->>'sold35')::numeric        as sold35,
+         (data->>'sold40')::numeric        as sold40,
+         data, updated_at
+  from public.board_rows where list = 'calls';
+
+create or replace view public.board_wallet as
+  select id, at,
+         data->>'userId'              as user_id,
+         data->>'name'                as name,
+         (data->>'amount')::numeric   as amount,
+         data, updated_at
+  from public.board_rows where list = 'wipes';
+
+create or replace view public.board_refunds as
+  select id, at,
+         data->>'typeId'              as type_id,
+         data->>'customer'            as customer,
+         data->>'note'                as note,
+         data->>'source'              as source,
+         (data->>'amount')::numeric   as amount,
+         data, updated_at
+  from public.board_rows where list = 'refunds';
+
+create or replace view public.board_orders as
+  select id, at,
+         data->>'paymentId'           as payment_id,
+         data->>'chargeId'            as charge_id,
+         data->>'email'               as email,
+         (data->>'amount')::numeric   as amount,
+         data->>'status'              as status,
+         data, updated_at
+  from public.board_rows where list = 'orders';
+
 -- --------------------------------------------------------------- locking
 -- Nothing but the Worker's service role key gets in.
 alter table public.kv                     enable row level security;
 alter table public.orders                 enable row level security;
 alter table public.onboarding_submissions enable row level security;
 alter table public.onboarding_documents   enable row level security;
+alter table public.board_rows             enable row level security;
