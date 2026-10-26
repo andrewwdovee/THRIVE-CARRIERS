@@ -209,7 +209,9 @@ const backup = join(here, `board-before-restore-${stamp}.json`);
 writeFileSync(backup, JSON.stringify(copies[0].rec ?? null, null, 2));
 console.log(`\nSaved the record being replaced to:\n  ${backup}`);
 
-const put = await fetch(`${relay}/kv/${encodeURIComponent(LIVE_KEY)}`, {
+/* A restore is a deliberate replace, and the copy being written has
+   already been shown to lose nothing. */
+const put = await fetch(`${relay}/kv/${encodeURIComponent(LIVE_KEY)}?allowShrink=1`, {
   method: "PUT",
   headers: { ...bearer, "Content-Type": "application/json" },
   body: JSON.stringify({ value: JSON.stringify(best.rec) }),

@@ -236,5 +236,52 @@ const listed = await (await call("/history/fulfillment_board_v3", { headers: aut
 ok("the version filed is the one before the emptying",
    listed.kept >= 1, listed.kept);
 
+/* ---- the relay refuses a save that deletes records ----
+   The portal writes its whole in-memory board every fifteen seconds,
+   so a tab holding a stale or half-loaded record overwrites months of
+   work within fifteen seconds. The relay used to accept that. */
+const full = { orders: Array.from({ length: 40 }, (_, i) => ({ id: "o" + i })),
+               calls: Array.from({ length: 20 }, (_, i) => ({ id: "c" + i })),
+               wipes: Array.from({ length: 30 }, (_, i) => ({ id: "w" + i })),
+               products: [], refunds: [] };
+const save = (v, q = "") => call(`/kv/fulfillment_board_v3${q}`, {
+  method: "PUT", headers: auth, body: JSON.stringify({ value: JSON.stringify(v) }) });
+
+await save({ ...full, updatedAt: "s0" }, "?allowShrink=1");
+
+/* the accident, exactly as it happened */
+const stale = { ...full, calls: [], wipes: [], updatedAt: "s1" };
+const refused = await save(stale);
+const refusedBody = await refused.json();
+ok("a save that empties two lists is refused", refused.status === 409, refused.status);
+ok("and names both of them",
+   Array.isArray(refusedBody.shrank) && refusedBody.shrank.length === 2, refusedBody.shrank);
+const still = JSON.parse((await (await call("/kv/fulfillment_board_v3", { headers: auth })).json()).value);
+ok("and the board is untouched", still.calls.length === 20 && still.wipes.length === 30,
+   `${still.calls.length}/${still.wipes.length}`);
+
+/* ordinary editing must still work */
+const oneLess = { ...full, calls: full.calls.slice(0, 19), updatedAt: "s2" };
+ok("deleting a single row is allowed", (await save(oneLess)).status === 200);
+const twoLess = { ...full, calls: full.calls.slice(0, 17), updatedAt: "s3" };
+ok("deleting a few is allowed", (await save(twoLess)).status === 200);
+
+/* half the list at once is not editing */
+const halved = { ...full, orders: full.orders.slice(0, 20), updatedAt: "s4" };
+const h = await save(halved);
+ok("losing half a list is refused", h.status === 409, h.status);
+
+/* and a tool that means it says so */
+ok("allowShrink lets a deliberate replace through",
+   (await save({ ...full, orders: full.orders.slice(0, 20), updatedAt: "s5" }, "?allowShrink=1")).status === 200);
+
+/* growth is never refused */
+ok("adding rows is always fine",
+   (await save({ ...full, orders: [...full.orders, { id: "new" }], updatedAt: "s6" }, "?allowShrink=1")).status === 200);
+
+/* the archive catches what the board holds */
+const arch = await (await save({ ...full, updatedAt: "s7" }, "?allowShrink=1")).json();
+ok("every record is written out as its own row", arch.archived >= 90, arch.archived);
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

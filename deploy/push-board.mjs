@@ -105,7 +105,10 @@ if (!login.ok || !auth.token) {
   process.exit(1);
 }
 
-const put = await fetch(`${relay}/kv/${encodeURIComponent(BOARD_KEY)}`, {
+/* Replacing the board outright is this tool's whole purpose, so it
+   says so: the relay refuses a save that deletes records unless the
+   caller means it. */
+const put = await fetch(`${relay}/kv/${encodeURIComponent(BOARD_KEY)}?allowShrink=1`, {
   method: "PUT",
   headers: { "Content-Type": "application/json", Authorization: `Bearer ${auth.token}` },
   body: JSON.stringify({ value: raw }),

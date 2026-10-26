@@ -122,6 +122,28 @@ function sameRecord(a, b) {
   return JSON.stringify(x) === JSON.stringify(y);
 }
 
+/* ---- refusing a save that loses records ----
+   A list emptied is almost never meant. The portal writes its whole
+   in-memory board every fifteen seconds, so a tab opened holding a
+   stale or half-loaded record overwrites months of work inside
+   fifteen seconds, and the relay used to accept that without a
+   murmur. It now refuses, and says what it refused.
+
+   Deleting a row by hand has to keep working, so the line is drawn
+   where a save stops looking like an edit: a list wiped out, or a
+   quarter of it gone at once. Losing one or two rows passes.
+
+   A caller that means it says so with ?allowShrink=1 -- the restore
+   and merge tools do, since replacing the board is their whole job. */
+const SHRINK_MIN_ROWS = 3;
+const SHRINK_FRACTION = 0.25;
+
+function refusableShrink(shrank) {
+  return shrank.filter((s) =>
+    (s.now === 0 && s.was >= SHRINK_MIN_ROWS) ||
+    (s.was - s.now > SHRINK_MIN_ROWS && s.now < s.was * (1 - SHRINK_FRACTION)));
+}
+
 /* Which lists this save would make smaller, and by how much. */
 function shrinkage(prev, next) {
   let x, y;
@@ -990,29 +1012,62 @@ async function handle(request, env) {
            effort on purpose: a history that cannot be written must not
            cost the portal the save it was asked to make. */
         let filed = false, shrank = [];
+
+        /* Reading the record this save would replace is best effort:
+           a store that cannot answer must not cost the portal its
+           save. Refusing one, below, is not -- that decision is only
+           made when the previous record was actually read. */
+        let prev = null;
         if (HISTORY_KEYS.has(key)) {
+          try { prev = await store(env).get(`kv:${key}`); } catch { prev = null; }
+        }
+
+        if (prev && !sameRecord(prev, value)) {
+          shrank = shrinkage(prev, value);
+          const refuse = refusableShrink(shrank);
+          if (refuse.length && url.searchParams.get("allowShrink") !== "1") {
+            return json({
+              error: "This save would delete records, so it was refused.",
+              detail: refuse.map((x) => `${x.list}: ${x.was} rows -> ${x.now}`).join(", "),
+              shrank: refuse,
+              hint: "Nothing was written and the record is unchanged. This is "
+                + "usually a browser holding a stale or half-loaded board: reload "
+                + "the portal and let it read the saved record first. A tool that "
+                + "means to replace the board sends ?allowShrink=1.",
+            }, 409, head);
+          }
+
+          const now = Date.now();
           try {
-            const prev = await store(env).get(`kv:${key}`);
-            if (prev && !sameRecord(prev, value)) {
-              shrank = shrinkage(prev, value);
-              const now = Date.now();
-              const last = Number(await store(env).get(`${HISTORY_META}${key}`)) || 0;
-              /* A shrinking save is never throttled: it is the one a
-                 person comes looking for. */
-              if (shrank.length || now - last >= HISTORY_MIN_GAP) {
-                const stamp = String(now).padStart(14, "0");
-                await store(env).put(`${HISTORY_PREFIX}${key}:${stamp}`, prev, {
-                  expirationTtl: shrank.length ? HISTORY_SHRINK_TTL : HISTORY_TTL,
-                });
-                await store(env).put(`${HISTORY_META}${key}`, String(now), { expirationTtl: HISTORY_SHRINK_TTL });
-                filed = true;
-              }
+            const last = Number(await store(env).get(`${HISTORY_META}${key}`)) || 0;
+            /* A shrinking save is never throttled: it is the one a
+               person comes looking for. */
+            if (shrank.length || now - last >= HISTORY_MIN_GAP) {
+              const stamp = String(now).padStart(14, "0");
+              await store(env).put(`${HISTORY_PREFIX}${key}:${stamp}`, prev, {
+                expirationTtl: shrank.length ? HISTORY_SHRINK_TTL : HISTORY_TTL,
+              });
+              await store(env).put(`${HISTORY_META}${key}`, String(now), { expirationTtl: HISTORY_SHRINK_TTL });
+              filed = true;
             }
           } catch { /* the save below matters more */ }
         }
 
         await store(env).put(`kv:${key}`, value);
-        return json({ ok: true, key, bytes: value.length, filed, shrank }, 200, head);
+
+        /* Every record in the board written out as its own row, so a
+           list can be read and restored on its own rather than only
+           as part of the blob. An archive: nothing here is deleted by
+           a save. Best effort -- it must never cost the save. */
+        let archived = null;
+        if (HISTORY_KEYS.has(key) && typeof store(env).saveBoardRows === "function") {
+          try {
+            const rec = JSON.parse(value);
+            archived = (await store(env).saveBoardRows(rec)).written;
+          } catch { /* the save above is what matters */ }
+        }
+
+        return json({ ok: true, key, bytes: value.length, filed, shrank, archived }, 200, head);
       }
     }
 

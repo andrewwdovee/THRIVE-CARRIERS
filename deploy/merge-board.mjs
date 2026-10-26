@@ -160,7 +160,10 @@ const backup = join(here, `board-backup-${new Date().toISOString().replace(/[:.]
 writeFileSync(backup, curRaw);
 console.log(`\nSaved the relay's board as it was to ${backup}`);
 
-const put = await fetch(`${relay}/kv/${encodeURIComponent(BOARD_KEY)}`, {
+/* A merge only adds, but it writes the whole record back, and the
+   relay judges a save by what it replaces. Said plainly rather than
+   left to chance. */
+const put = await fetch(`${relay}/kv/${encodeURIComponent(BOARD_KEY)}?allowShrink=1`, {
   method: "PUT", headers: H, body: JSON.stringify({ value: JSON.stringify(out) }),
 });
 if (!put.ok) { console.error(`Write failed (${put.status}). Nothing changed.`); process.exit(1); }
