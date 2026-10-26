@@ -164,5 +164,46 @@ ok("and every one of them comes back",
 ok(`reading ${big.length} slips took ${calls} request(s), not one each`,
    calls <= 5, calls);
 
+/* ---- the trail ----
+   One record sits behind four screens of the portal, so an overwrite
+   of it resets all four and brings completed orders back. The store
+   keeps one value per key, so there was no way back. Now the value
+   being replaced is filed under a timestamp first. */
+const v1 = JSON.stringify({ orders: [{ id: "a" }], wipes: [{ id: "a" }], calls: [], products: [], refunds: [] });
+const v2 = JSON.stringify({ orders: [{ id: "a" }, { id: "b" }], wipes: [{ id: "a" }], calls: [], products: [], refunds: [] });
+const wiped = JSON.stringify({ orders: [], wipes: [], calls: [], products: [], refunds: [] });
+
+await call("/kv/fulfillment_board_v3", { method: "PUT", headers: auth, body: JSON.stringify({ value: v1 }) });
+const second = await call("/kv/fulfillment_board_v3", { method: "PUT", headers: auth, body: JSON.stringify({ value: v2 }) });
+ok("a second save files the one it replaced", (await second.json()).filed === true);
+
+/* the accident: a save that drops everything */
+await call("/kv/fulfillment_board_v3", { method: "PUT", headers: auth, body: JSON.stringify({ value: wiped }) });
+const nowEmpty = await (await call("/kv/fulfillment_board_v3", { headers: auth })).json();
+ok("and the board really is empty afterwards", JSON.parse(nowEmpty.value).orders.length === 0);
+
+const histRes = await call("/history/fulfillment_board_v3", { headers: auth });
+const hist = await histRes.json();
+ok("the trail lists what was replaced", histRes.status === 200 && hist.kept >= 3, hist.kept);
+ok("newest first", hist.versions[0].at >= hist.versions[1].at);
+
+const back = await (await call(`/history/fulfillment_board_v3/${String(hist.versions[0].at).padStart(14, "0")}`, { headers: auth })).json();
+ok("and hands back the record as it stood", JSON.parse(back.value).orders.length === 2,
+   JSON.parse(back.value).orders.length);
+
+const restore = await call("/kv/fulfillment_board_v3", { method: "PUT", headers: auth, body: JSON.stringify({ value: back.value }) });
+ok("putting it back is an ordinary save", restore.status === 200);
+const after = await (await call("/kv/fulfillment_board_v3", { headers: auth })).json();
+ok("the board is whole again", JSON.parse(after.value).orders.length === 2);
+
+ok("the trail is owner-only", (await call("/history/fulfillment_board_v3")).status === 401);
+ok("and is not kept for just any key",
+   (await call("/history/some-other-key", { headers: auth })).status === 404);
+
+/* a key nobody keeps history for must not grow one */
+await call("/kv/scratch-key", { method: "PUT", headers: auth, body: JSON.stringify({ value: "1" }) });
+const plain = await call("/kv/scratch-key", { method: "PUT", headers: auth, body: JSON.stringify({ value: "2" }) });
+ok("an ordinary key files nothing", (await plain.json()).filed === false);
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

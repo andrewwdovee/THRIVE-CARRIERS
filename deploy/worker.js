@@ -74,6 +74,27 @@ const STARTTIMES_KEY = "kv:starttimes/state";
    the wrong trade. Writing it still goes through PUT /kv with a token, so
    only the owner can post a result. */
 const TOURNAMENT_KEY = "kv:tournament_board";
+
+/* ---- keeping a trail ----
+   Four screens of the Lead Tech portal -- calls, wallets, refunds,
+   completed -- are four lists inside one record. An overwrite of it
+   resets all four at once, and orders marked complete come back,
+   because the list that remembered completing them went too. There was
+   no way back from that: the store keeps one value per key.
+
+   So a write to one of these keys also files the value it replaced
+   under a timestamp. Reverting becomes picking a time, and a bad save
+   costs minutes instead of a month of records. Only these keys, because
+   each one sits behind several screens and is written rarely. */
+const HISTORY_KEYS = new Set([
+  "fulfillment_board_v3",
+  "snapshots.leadtech",
+  "tournament_board",
+  "loa.state",
+  "pp.loa.state",
+]);
+const HISTORY_PREFIX = "hist:";
+const HISTORY_TTL = 21 * 24 * 3600;
 const BUSY_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const BUSY_PARTS = ["AM", "PM", "All day"];
 /* The only start times the desk runs. The signing page and the settings
@@ -860,6 +881,46 @@ async function handle(request, env) {
       return json(body, 200, { ...head, "Cache-Control": "no-store" });
     }
 
+    /* ---- the trail ----
+       GET /history/<key>            what times exist, newest first
+       GET /history/<key>/<stamp>    the record as it stood then
+       Reading is owner-only; putting one back is an ordinary PUT of the
+       value this hands over, so a restore leaves its own trail too. */
+    if (path.startsWith("/history/") && request.method === "GET") {
+      const who = await readToken(env, request);
+      if (!who) return json({ error: "Signed out" }, 401, head);
+
+      const rest = decodeURIComponent(path.slice(9));
+      const cut = rest.lastIndexOf("/");
+      const asked = cut > 0 ? rest.slice(cut + 1) : "";
+      const wantsOne = /^\d{14}$/.test(asked);
+      const key = wantsOne ? rest.slice(0, cut) : rest;
+      if (!HISTORY_KEYS.has(key)) {
+        return json({ error: "No history is kept for that key.", keys: [...HISTORY_KEYS] }, 404, head);
+      }
+
+      if (wantsOne) {
+        const value = await store(env).get(`${HISTORY_PREFIX}${key}:${asked}`);
+        if (value === null) return json({ error: "Not found" }, 404, head);
+        return json({ key, at: Number(asked), value }, 200, { ...head, "Cache-Control": "no-store" });
+      }
+
+      /* Names only. The values are whole board records and listing them
+         would hand back megabytes nobody asked for. */
+      const out = [];
+      let cursor;
+      do {
+        const page = await store(env).list({ prefix: `${HISTORY_PREFIX}${key}:`, cursor });
+        for (const k of page.keys) {
+          const at = Number(k.name.slice(k.name.lastIndexOf(":") + 1));
+          if (Number.isFinite(at)) out.push({ at, when: new Date(at).toISOString() });
+        }
+        cursor = page.list_complete ? null : page.cursor;
+      } while (cursor);
+      out.sort((a, b) => b.at - a.at);
+      return json({ key, kept: out.length, versions: out }, 200, { ...head, "Cache-Control": "no-store" });
+    }
+
     /* ---- key/value ---- */
     if (path.startsWith("/kv/")) {
       const who = (await readToken(env, request)) || readDeskToken(env, request);
@@ -884,8 +945,24 @@ async function handle(request, env) {
            Anything else is stringified so the store stays uniform. */
         const value = typeof body.value === "string" ? body.value : JSON.stringify(body.value);
         if (value.length > 20 * 1024 * 1024) return json({ error: "Too large" }, 413, head);
+
+        /* File what is about to be replaced, before replacing it. Best
+           effort on purpose: a history that cannot be written must not
+           cost the portal the save it was asked to make. */
+        let filed = false;
+        if (HISTORY_KEYS.has(key)) {
+          try {
+            const prev = await store(env).get(`kv:${key}`);
+            if (prev && prev !== value) {
+              const stamp = String(Date.now()).padStart(14, "0");
+              await store(env).put(`${HISTORY_PREFIX}${key}:${stamp}`, prev, { expirationTtl: HISTORY_TTL });
+              filed = true;
+            }
+          } catch { /* the save below matters more */ }
+        }
+
         await store(env).put(`kv:${key}`, value);
-        return json({ ok: true, key, bytes: value.length }, 200, head);
+        return json({ ok: true, key, bytes: value.length, filed }, 200, head);
       }
     }
 
