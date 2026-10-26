@@ -28,10 +28,21 @@
 
 const PAGE = 1000;
 
-/* The board's lists, as the record names them. "wipes" is the wallet
-   ledger -- the board's own word for it, kept so the stored rows match
-   what the portal writes rather than what a reader would call it. */
-const BOARD_LISTS = ["orders", "products", "calls", "refunds", "wipes", "customers", "blocks", "refundTypes"];
+/* Which lists are archived is read off the record rather than named
+   here. A fixed list only protects what someone remembered to add to
+   it, so the next list the board grows would go unarchived with
+   nothing to say so. Anything that is an array of objects carrying
+   ids is a list of records; everything else in the record is settings
+   and is kept by the version history instead. */
+function boardLists(record) {
+  const out = [];
+  for (const [k, v] of Object.entries(record)) {
+    if (!Array.isArray(v) || !v.length) continue;
+    const objects = v.filter((x) => x && typeof x === "object" && !Array.isArray(x));
+    if (objects.length === v.length && objects.some((x) => x.id != null || x.paymentId != null)) out.push(k);
+  }
+  return out;
+}
 
 /* Values travel percent-encoded and NOT quoted. An earlier version wrapped
    every key in double quotes, reasoning that a comma or parenthesis in a value
@@ -217,7 +228,7 @@ export function makeStore(env) {
       const report = {};
       let written = 0;
 
-      for (const list of BOARD_LISTS) {
+      for (const list of boardLists(record)) {
         const rows = Array.isArray(record[list]) ? record[list] : null;
         if (!rows || !rows.length) continue;
         const payload = [];

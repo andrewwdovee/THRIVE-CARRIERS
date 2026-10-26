@@ -300,5 +300,37 @@ ok("adding rows is always fine",
 const arch = await (await save({ ...full, updatedAt: "s7" }, "?allowShrink=1")).json();
 ok("every record is written out as its own row", arch.archived >= 90, arch.archived);
 
+/* ---- coverage is read off the record, not from a list of names ----
+   A naming table only protects what someone remembered to add to it,
+   so a list the board grows later would be unguarded and unarchived
+   with nothing to say so. */
+const novel = {
+  orders: [{ id: "n1" }, { id: "n2" }, { id: "n3" }, { id: "n4" }],
+  somethingNew: [{ id: "z1" }, { id: "z2" }, { id: "z3" }, { id: "z4" }, { id: "z5" }],
+  settings: { costPerCall: 35 },
+  updatedAt: "n0",
+};
+const saveN = (v, q = "") => call(`/kv/fulfillment_board_v3${q}`, {
+  method: "PUT", headers: auth, body: JSON.stringify({ value: JSON.stringify(v) }) });
+
+const first = await (await saveN(novel, "?allowShrink=1")).json();
+ok("a list nobody named is archived too", first.archived >= 9, first.archived);
+
+const wipedNew = { ...novel, somethingNew: [], updatedAt: "n1" };
+const refusedNew = await saveN(wipedNew);
+ok("and emptying it is refused", refusedNew.status === 409, refusedNew.status);
+ok("by name", ((await refusedNew.json()).shrank || []).some((x) => x.list === "somethingNew"));
+
+/* settings are not a list of records; the version history keeps them */
+ok("settings do not become rows", first.archived < 20, first.archived);
+
+/* start times is one record behind a screen, like the board */
+const st = JSON.stringify({ off: ["a", "b", "c", "d"], log: [{ id: "L1" }, { id: "L2" }, { id: "L3" }, { id: "L4" }] });
+await call("/kv/starttimes/state", { method: "PUT", headers: auth, body: JSON.stringify({ value: st }) });
+const stWiped = await call("/kv/starttimes/state", {
+  method: "PUT", headers: auth,
+  body: JSON.stringify({ value: JSON.stringify({ off: [], log: [] }) }) });
+ok("start times is guarded as well", stWiped.status === 409, stWiped.status);
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

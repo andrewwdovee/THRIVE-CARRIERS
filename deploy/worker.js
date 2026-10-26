@@ -92,6 +92,11 @@ const HISTORY_KEYS = new Set([
   "tournament_board",
   "loa.state",
   "pp.loa.state",
+  /* Also one record behind a screen, and so also losable whole. Start
+     times had neither a history nor a guard while the board had both,
+     which is an odd place to draw the line. */
+  "starttimes/state",
+  "onboarding/submissions",
 ]);
 const HISTORY_PREFIX = "hist:";
 const HISTORY_META = "histmeta:";
@@ -109,8 +114,10 @@ const HISTORY_SHRINK_TTL = 30 * 24 * 3600;
 const HISTORY_MIN_GAP = 30 * 60 * 1000;
 /* Written on every save and carrying no information of its own. */
 const VOLATILE = ["updatedAt", "savedAt", "syncedAt", "lastSaved", "at"];
-/* The lists whose shrinking is worth a version of its own. */
-const GUARDED_LISTS = ["orders", "products", "calls", "refunds", "wipes", "customers", "blocks", "refundTypes"];
+/* Every list in the record is guarded, rather than a list of names
+   kept in step by hand. A naming table only protects what someone
+   remembered to add to it, and the next list the board grows would
+   have been unprotected without anyone noticing. */
 
 /* Equal once the fields that change on every save are taken out. */
 function sameRecord(a, b) {
@@ -150,8 +157,9 @@ function shrinkage(prev, next) {
   try { x = JSON.parse(prev); y = JSON.parse(next); } catch { return []; }
   if (!x || !y || typeof x !== "object" || typeof y !== "object") return [];
   const out = [];
-  for (const k of GUARDED_LISTS) {
-    const was = Array.isArray(x[k]) ? x[k].length : 0;
+  for (const k of Object.keys(x)) {
+    if (!Array.isArray(x[k])) continue;
+    const was = x[k].length;
     const now = Array.isArray(y[k]) ? y[k].length : 0;
     if (now < was) out.push({ list: k, was, now });
   }
