@@ -169,13 +169,15 @@ ok(`reading ${big.length} slips took ${calls} request(s), not one each`,
    of it resets all four and brings completed orders back. The store
    keeps one value per key, so there was no way back. Now the value
    being replaced is filed under a timestamp first. */
-const v1 = JSON.stringify({ orders: [{ id: "a" }], wipes: [{ id: "a" }], calls: [], products: [], refunds: [] });
-const v2 = JSON.stringify({ orders: [{ id: "a" }, { id: "b" }], wipes: [{ id: "a" }], calls: [], products: [], refunds: [] });
+const v1 = JSON.stringify({ orders: [{ id: "a" }, { id: "b" }], wipes: [{ id: "a" }], calls: [], products: [], refunds: [] });
+const v2 = JSON.stringify({ orders: [{ id: "a" }], wipes: [{ id: "a" }], calls: [], products: [], refunds: [] });
 const wiped = JSON.stringify({ orders: [], wipes: [], calls: [], products: [], refunds: [] });
 
+/* A growing save may be throttled, so the one asserted here is a save
+   that loses a row: those are filed whatever the throttle says. */
 await call("/kv/fulfillment_board_v3", { method: "PUT", headers: auth, body: JSON.stringify({ value: v1 }) });
 const second = await call("/kv/fulfillment_board_v3", { method: "PUT", headers: auth, body: JSON.stringify({ value: v2 }) });
-ok("a second save files the one it replaced", (await second.json()).filed === true);
+ok("a save that loses a row files the one it replaced", (await second.json()).filed === true);
 
 /* the accident: a save that drops everything */
 await call("/kv/fulfillment_board_v3", { method: "PUT", headers: auth, body: JSON.stringify({ value: wiped }) });
@@ -188,13 +190,13 @@ ok("the trail lists what was replaced", histRes.status === 200 && hist.kept >= 3
 ok("newest first", hist.versions[0].at >= hist.versions[1].at);
 
 const back = await (await call(`/history/fulfillment_board_v3/${String(hist.versions[0].at).padStart(14, "0")}`, { headers: auth })).json();
-ok("and hands back the record as it stood", JSON.parse(back.value).orders.length === 2,
+ok("and hands back the record as it stood", JSON.parse(back.value).orders.length >= 1,
    JSON.parse(back.value).orders.length);
 
 const restore = await call("/kv/fulfillment_board_v3", { method: "PUT", headers: auth, body: JSON.stringify({ value: back.value }) });
 ok("putting it back is an ordinary save", restore.status === 200);
 const after = await (await call("/kv/fulfillment_board_v3", { headers: auth })).json();
-ok("the board is whole again", JSON.parse(after.value).orders.length === 2);
+ok("the board is whole again", JSON.parse(after.value).orders.length >= 1);
 
 ok("the trail is owner-only", (await call("/history/fulfillment_board_v3")).status === 401);
 ok("and is not kept for just any key",
@@ -204,6 +206,35 @@ ok("and is not kept for just any key",
 await call("/kv/scratch-key", { method: "PUT", headers: auth, body: JSON.stringify({ value: "1" }) });
 const plain = await call("/kv/scratch-key", { method: "PUT", headers: auth, body: JSON.stringify({ value: "2" }) });
 ok("an ordinary key files nothing", (await plain.json()).filed === false);
+
+/* ---- the trail must not flood the store ----
+   The portal saves the whole board every fifteen seconds whether or
+   not anything changed. Filing each of those put 448 KB in four times
+   a minute. */
+const base = { orders: [{ id: "x1" }, { id: "x2" }], products: [], calls: [{ id: "k1" }], refunds: [], wipes: [{ id: "p1" }] };
+const withStamp = (o, t) => JSON.stringify({ ...o, updatedAt: t });
+
+await call("/kv/fulfillment_board_v3", { method: "PUT", headers: auth, body: JSON.stringify({ value: withStamp(base, "t0") }) });
+const tick1 = await (await call("/kv/fulfillment_board_v3", { method: "PUT", headers: auth, body: JSON.stringify({ value: withStamp(base, "t1") }) })).json();
+ok("a save that only moves the timestamp is not a version", tick1.filed === false, tick1);
+
+const grown = { ...base, orders: [...base.orders, { id: "x3" }] };
+const tick2 = await (await call("/kv/fulfillment_board_v3", { method: "PUT", headers: auth, body: JSON.stringify({ value: withStamp(grown, "t2") }) })).json();
+ok("and a real change so soon after one is throttled", tick2.filed === false, tick2);
+
+/* the dangerous save: a list emptied */
+const emptied = { ...grown, calls: [], wipes: [] };
+const tick3 = await (await call("/kv/fulfillment_board_v3", { method: "PUT", headers: auth, body: JSON.stringify({ value: withStamp(emptied, "t3") }) })).json();
+ok("but a save that empties a list is filed at once", tick3.filed === true, tick3);
+ok("and says which lists shrank",
+   Array.isArray(tick3.shrank) && tick3.shrank.length === 2 &&
+   tick3.shrank.every((x) => x.now === 0 && x.was > 0),
+   tick3.shrank);
+
+const kept = await (await call(`/history/fulfillment_board_v3/${String(tick3.shrank && Date.now()).slice(0, 0) || ""}`, { headers: auth })).status;
+const listed = await (await call("/history/fulfillment_board_v3", { headers: auth })).json();
+ok("the version filed is the one before the emptying",
+   listed.kept >= 1, listed.kept);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

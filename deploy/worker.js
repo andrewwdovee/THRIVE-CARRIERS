@@ -94,7 +94,47 @@ const HISTORY_KEYS = new Set([
   "pp.loa.state",
 ]);
 const HISTORY_PREFIX = "hist:";
-const HISTORY_TTL = 21 * 24 * 3600;
+const HISTORY_META = "histmeta:";
+/* The portal saves the whole board every fifteen seconds whether or not
+   anything changed. Filing each of those put 448 KB into the store four
+   times a minute -- 2.5 GB a day -- so a trail meant to make losses
+   recoverable would have filled the database inside a week.
+   Three rules keep it small and keep it useful:
+     a save that changes nothing but a timestamp is not a version;
+     otherwise at most one version per half hour;
+     but a save that SHRINKS a list is always filed, immediately,
+     because that is the one this exists to undo. */
+const HISTORY_TTL = 7 * 24 * 3600;
+const HISTORY_SHRINK_TTL = 30 * 24 * 3600;
+const HISTORY_MIN_GAP = 30 * 60 * 1000;
+/* Written on every save and carrying no information of its own. */
+const VOLATILE = ["updatedAt", "savedAt", "syncedAt", "lastSaved", "at"];
+/* The lists whose shrinking is worth a version of its own. */
+const GUARDED_LISTS = ["orders", "products", "calls", "refunds", "wipes", "customers", "blocks", "refundTypes"];
+
+/* Equal once the fields that change on every save are taken out. */
+function sameRecord(a, b) {
+  if (a === b) return true;
+  let x, y;
+  try { x = JSON.parse(a); y = JSON.parse(b); } catch { return false; }
+  if (!x || !y || typeof x !== "object" || typeof y !== "object") return false;
+  for (const f of VOLATILE) { delete x[f]; delete y[f]; }
+  return JSON.stringify(x) === JSON.stringify(y);
+}
+
+/* Which lists this save would make smaller, and by how much. */
+function shrinkage(prev, next) {
+  let x, y;
+  try { x = JSON.parse(prev); y = JSON.parse(next); } catch { return []; }
+  if (!x || !y || typeof x !== "object" || typeof y !== "object") return [];
+  const out = [];
+  for (const k of GUARDED_LISTS) {
+    const was = Array.isArray(x[k]) ? x[k].length : 0;
+    const now = Array.isArray(y[k]) ? y[k].length : 0;
+    if (now < was) out.push({ list: k, was, now });
+  }
+  return out;
+}
 const BUSY_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const BUSY_PARTS = ["AM", "PM", "All day"];
 /* The only start times the desk runs. The signing page and the settings
@@ -949,20 +989,30 @@ async function handle(request, env) {
         /* File what is about to be replaced, before replacing it. Best
            effort on purpose: a history that cannot be written must not
            cost the portal the save it was asked to make. */
-        let filed = false;
+        let filed = false, shrank = [];
         if (HISTORY_KEYS.has(key)) {
           try {
             const prev = await store(env).get(`kv:${key}`);
-            if (prev && prev !== value) {
-              const stamp = String(Date.now()).padStart(14, "0");
-              await store(env).put(`${HISTORY_PREFIX}${key}:${stamp}`, prev, { expirationTtl: HISTORY_TTL });
-              filed = true;
+            if (prev && !sameRecord(prev, value)) {
+              shrank = shrinkage(prev, value);
+              const now = Date.now();
+              const last = Number(await store(env).get(`${HISTORY_META}${key}`)) || 0;
+              /* A shrinking save is never throttled: it is the one a
+                 person comes looking for. */
+              if (shrank.length || now - last >= HISTORY_MIN_GAP) {
+                const stamp = String(now).padStart(14, "0");
+                await store(env).put(`${HISTORY_PREFIX}${key}:${stamp}`, prev, {
+                  expirationTtl: shrank.length ? HISTORY_SHRINK_TTL : HISTORY_TTL,
+                });
+                await store(env).put(`${HISTORY_META}${key}`, String(now), { expirationTtl: HISTORY_SHRINK_TTL });
+                filed = true;
+              }
             }
           } catch { /* the save below matters more */ }
         }
 
         await store(env).put(`kv:${key}`, value);
-        return json({ ok: true, key, bytes: value.length, filed }, 200, head);
+        return json({ ok: true, key, bytes: value.length, filed, shrank }, 200, head);
       }
     }
 
