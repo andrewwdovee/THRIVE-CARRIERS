@@ -184,6 +184,28 @@ create or replace view public.board_orders as
          data, updated_at
   from public.board_rows where list = 'orders';
 
+-- -------------------------------------------------------- refund slips
+-- What an agent submitted through the public refund form. They are
+-- stored one per key rather than in a list, so no single bad write can
+-- take them all, but they were only readable by fetching each key. This
+-- gives them names and makes them ordinary SQL alongside everything
+-- else.
+create or replace view public.refund_slips as
+  select
+    value::jsonb->>'id'                                        as id,
+    to_timestamp(((value::jsonb->>'at')::bigint) / 1000)       as submitted,
+    value::jsonb->>'first'                                     as first_name,
+    value::jsonb->>'last'                                      as last_name,
+    value::jsonb->>'email'                                     as email,
+    value::jsonb->>'day'                                       as call_day,
+    value::jsonb->>'kind'                                      as kind,
+    jsonb_array_length((value::jsonb)->'calls')                as calls,
+    value::jsonb->>'note'                                      as note,
+    (value::jsonb)->'calls'                                    as call_detail,
+    updated_at
+  from public.kv
+  where key like 'rr:%';
+
 -- --------------------------------------------------------------- locking
 -- Nothing but the Worker's service role key gets in.
 alter table public.kv                     enable row level security;

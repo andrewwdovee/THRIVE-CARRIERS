@@ -332,5 +332,22 @@ const stWiped = await call("/kv/starttimes/state", {
   body: JSON.stringify({ value: JSON.stringify({ off: [], log: [] }) }) });
 ok("start times is guarded as well", stWiped.status === 409, stWiped.status);
 
+/* ---- a refund slip is a record, not a cache entry ----
+   Slips used to carry a 120-day expiry, so they deleted themselves
+   four months after being submitted with nothing to say so. */
+const slipRes = await call("/refund-request", {
+  method: "POST", headers: { "Content-Type": "application/json", "CF-Connecting-IP": "198.51.100.7" },
+  body: JSON.stringify(slip("Keeper", "2026-10-26")),
+});
+ok("a slip is accepted", slipRes.status === 200);
+{
+  const db = new pg.Client({ host: "/var/run/postgresql", user: "postgres", database: "thrive" });
+  await db.connect();
+  const r = await db.query("select key, expires_at from public.kv where key like 'rr:%' order by key desc limit 1");
+  await db.end();
+  ok("and is stored with no expiry", r.rows.length === 1 && r.rows[0].expires_at === null,
+     r.rows[0] && r.rows[0].expires_at);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

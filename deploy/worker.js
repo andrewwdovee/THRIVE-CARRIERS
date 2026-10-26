@@ -175,7 +175,14 @@ const ONBOARD_SLOTS = ["10:00 AM EST", "11:00 AM EST"];
    Two kinds: two bad calls earn one refund, and a duplicate call is one
    call that is a refund on its own. */
 const RR_PREFIX = "rr:";
-const RR_TTL = 120 * 24 * 3600;          /* long enough to settle a dispute */
+/* Refund slips used to expire after 120 days, on the reasoning that
+   it was long enough to settle a dispute. It is not long enough to be
+   a record: slips are what an agent submitted and what was paid out
+   on it, and they were quietly deleting themselves four months later
+   with nothing to say so. They are kept now. A few hundred a year is
+   nothing to store, and a book of business should not have an expiry
+   date on it. */
+const RR_TTL = 0;                        /* 0 means keep */
 const RR_MAX_BODY = 8 * 1024;
 const RR_MAX_CALLS = 12;
 const RR_PER_HOUR = 20;
@@ -919,7 +926,7 @@ async function handle(request, env) {
       await store(env).put(
         `${RR_PREFIX}${String(Math.floor(at / 1000)).padStart(12, "0")}:${id}`,
         JSON.stringify({ ...value, id, at }),
-        { expirationTtl: RR_TTL },
+        RR_TTL ? { expirationTtl: RR_TTL } : {},
       );
       await store(env).put(bucket, String(seen + 1), { expirationTtl: 7200 });
       return json({ ok: true }, 200, head);
