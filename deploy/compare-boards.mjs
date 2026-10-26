@@ -146,13 +146,11 @@ if (sa && sb) {
   const overlap = sa.from <= sb.to && sb.from <= sa.to;
   const days = overlap ? Math.round((Math.min(sa.to, sb.to) - Math.max(sa.from, sb.from)) / 86400000) : 0;
   console.log(overlap
-    ? `
-  THE RANGES OVERLAP by about ${days} day(s). Two copies covering the same
-  days are very likely the same orders under different ids. Merging
-  would duplicate them. Check the day-by-day counts below.`
-    : `
-  THE RANGES DO NOT OVERLAP. These are two halves of one history, not two
-  copies of the same orders. Merging restores what is missing.`);
+    ? `  The ranges overlap by about ${days} day(s). On its own that proves
+  nothing -- a busy fortnight has many orders on the same days. The
+  verdict is below, from the ids and the amounts.`
+    : `  The ranges do not overlap at all, so these are two halves of one
+  history rather than two copies of the same orders.`);
 }
 
 /* Same money, same day, same customer is the same order whatever its id. */
@@ -173,13 +171,35 @@ console.log(`
 /* No comparable orders is not a clean bill of health. Saying "safe"
    when nothing could be compared is the same mistake as ranking two
    copies by a single total: a verdict the evidence does not carry. */
-console.log(!ka.size || !kb.size
-  ? `  Neither copy carries a date and an amount together, so this check
-  could not run. It is not a verdict: decide from the id fields and the
-  reference scan, and if those are inconclusive, merge nothing.`
-  : same > 10
-    ? "  That many matches means the copies DO overlap: do not merge orders."
-    : "  Few matches, so the two copies really are different orders: merging is safe.");
+/* ---- the verdict, from every signal at once ----
+   An earlier version reached one conclusion from the calendar and the
+   opposite from the ids, printed both, and left the reader to pick.
+   Overlapping dates are the weakest signal here: a busy fortnight puts
+   many different orders on the same days. A Stripe payment id is the
+   strongest, because Stripe issues it and both copies carry one for
+   every order. So the ids decide, the amounts confirm, and the
+   calendar only colours in. */
+const strongest = Math.max(bestShared, same);
+const comparable = ka.size && kb.size;
+if (!comparable && !bestShared) {
+  console.log(`
+=== verdict: cannot tell ===
+  No id field matches and no copy carries a date with an amount, so
+  nothing here can separate "the same orders twice" from "two halves of
+  one history". Merge nothing until something can.`);
+} else if (strongest > Math.min(oa.length, ob.length) * 0.2) {
+  console.log(`
+=== verdict: the same orders twice ===
+  ${strongest} of ${Math.min(oa.length, ob.length)} line up. Merging the orders would duplicate
+  them. Merge the other lists if you need them, and leave orders alone.`);
+} else {
+  console.log(`
+=== verdict: two halves of one history ===
+  Only ${strongest} of ${Math.min(oa.length, ob.length)} line up, on ids Stripe issues and on amounts,
+  so these are different orders however their dates read. Merging
+  restores what the live board is missing; expect about ${oa.length + ob.length - strongest} orders
+  afterwards.`);
+}
 
 /* ---- how the other lists name an order ----
    Nested as well as top level, because a plain-field scan found nothing
