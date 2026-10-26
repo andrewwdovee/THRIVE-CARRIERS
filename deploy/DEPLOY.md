@@ -471,3 +471,44 @@ looking at.
 
 `node verify-archive.mjs` proves the whole path end to end instead: it
 adds a record, deletes it again, and leaves the board as it found it.
+
+## How much this will hold, and for how long
+
+Nothing in Supabase expires except the version history and the Stripe
+inbox, both of which are working copies rather than records:
+
+| what                      | kept        |
+|---------------------------|-------------|
+| `board_rows` (every record) | forever   |
+| refund slips (`rr:`)        | forever   |
+| onboarding tables           | forever   |
+| the board itself (`kv:`)    | forever   |
+| version history, routine    | 3 days    |
+| version history, a save that lost rows | 30 days |
+| Stripe inbox (`inbox:`)     | 7 days    |
+
+At the rate of late 2026 -- about 5,300 records a year -- `board_rows`
+reaches roughly 8 MB after a year and 28 MB after four. That is not a
+problem on any Supabase plan.
+
+The one number worth watching is the board record itself. It is a
+single row holding every list, so it grows with the business: 438 KB
+at 458 records, around 5 MB after a year, and it meets the relay's
+20 MB ceiling at roughly 22,000 records -- four years at the current
+rate. Nothing breaks quietly when that happens; saves start being
+refused with "Too large".
+
+The fix when it comes is to stop carrying finished years in the live
+record: orders older than a year or two come out of the board and
+stay in `board_rows`, where they are still queryable. Worth doing in
+year two or three rather than year four.
+
+Watch it with:
+
+```sql
+select pg_size_pretty(sum(length(value))) as board_blob
+from public.kv where key = 'kv:fulfillment_board_v3';
+
+select pg_size_pretty(pg_total_relation_size('public.board_rows')) as archive,
+       pg_size_pretty(pg_database_size(current_database()))        as whole_database;
+```

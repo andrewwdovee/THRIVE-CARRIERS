@@ -109,9 +109,23 @@ const HISTORY_META = "histmeta:";
      otherwise at most one version per half hour;
      but a save that SHRINKS a list is always filed, immediately,
      because that is the one this exists to undo. */
-const HISTORY_TTL = 7 * 24 * 3600;
+/* Every version is a whole copy of the board, and the board grows
+   with the business: 438 KB today, around 5 MB in a year. At one
+   version every half hour kept for a week that is 1.8 GB in the first
+   year and 5 GB by the third -- a trail that fills the database it is
+   meant to protect.
+
+   Routine versions are also largely redundant now, because every
+   record is in board_rows whatever the board does. What a routine
+   version adds is "put the whole board back to this morning", which
+   is worth a few a day and not forty-eight.
+
+   A save that LOSES rows is the one worth keeping, so it is still
+   filed the moment it happens and kept ten times longer. Those are
+   rare, and they are what someone comes looking for. */
+const HISTORY_TTL = 3 * 24 * 3600;
 const HISTORY_SHRINK_TTL = 30 * 24 * 3600;
-const HISTORY_MIN_GAP = 30 * 60 * 1000;
+const HISTORY_MIN_GAP = 6 * 60 * 60 * 1000;
 /* Written on every save and carrying no information of its own. */
 const VOLATILE = ["updatedAt", "savedAt", "syncedAt", "lastSaved", "at"];
 /* Every list in the record is guarded, rather than a list of names
