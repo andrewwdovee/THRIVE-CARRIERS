@@ -349,5 +349,24 @@ ok("a slip is accepted", slipRes.status === 200);
      r.rows[0] && r.rows[0].expires_at);
 }
 
+/* ---- a save with nothing new in it does nothing ----
+   The portal writes the whole board every fifteen seconds whether or
+   not anything changed. Archiving each of those rewrote every row
+   four times a minute and stamped them all as freshly updated, so no
+   row could be told from any other by when it last moved. */
+const steady = { orders: [{ id: "s1" }, { id: "s2" }], calls: [{ id: "k9" }], wipes: [], products: [], refunds: [] };
+/* The baseline is smaller than what the tests above leave behind, so
+   it is a deliberate replace and says so -- otherwise the guard
+   refuses it and the assertions below read a refusal, not an archive. */
+await call("/kv/fulfillment_board_v3?allowShrink=1", { method: "PUT", headers: auth,
+  body: JSON.stringify({ value: JSON.stringify({ ...steady, updatedAt: "a" }) }) });
+const noop = await (await call("/kv/fulfillment_board_v3", { method: "PUT", headers: auth,
+  body: JSON.stringify({ value: JSON.stringify({ ...steady, updatedAt: "b" }) }) })).json();
+ok("a save that changes nothing archives nothing", noop.archived === null, noop.archived);
+
+const real = await (await call("/kv/fulfillment_board_v3", { method: "PUT", headers: auth,
+  body: JSON.stringify({ value: JSON.stringify({ ...steady, calls: [{ id: "k9" }, { id: "k10" }], updatedAt: "c" }) }) })).json();
+ok("and a save that adds one does archive", real.archived >= 4, real.archived);
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -1051,6 +1051,12 @@ async function handle(request, env) {
           try { prev = await store(env).get(`kv:${key}`); } catch { prev = null; }
         }
 
+        /* Whether this save carries anything new. The portal writes the
+           whole board every fifteen seconds regardless, so most saves
+           differ only in a timestamp and have nothing to file or
+           archive. */
+        const changed = !prev || !sameRecord(prev, value);
+
         if (prev && !sameRecord(prev, value)) {
           shrank = shrinkage(prev, value);
           const refuse = refusableShrink(shrank);
@@ -1088,8 +1094,13 @@ async function handle(request, env) {
            list can be read and restored on its own rather than only
            as part of the blob. An archive: nothing here is deleted by
            a save. Best effort -- it must never cost the save. */
+        /* Only when something actually changed. Rewriting all 458 rows
+           every fifteen seconds was around 1.8 million row-writes a
+           day to store what was already there, and it stamped every
+           row as freshly updated so nothing could be told apart by
+           when it last moved. */
         let archived = null;
-        if (HISTORY_KEYS.has(key) && typeof store(env).saveBoardRows === "function") {
+        if (changed && HISTORY_KEYS.has(key) && typeof store(env).saveBoardRows === "function") {
           try {
             const rec = JSON.parse(value);
             archived = (await store(env).saveBoardRows(rec)).written;
