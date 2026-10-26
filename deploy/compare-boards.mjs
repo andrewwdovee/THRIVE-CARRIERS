@@ -109,6 +109,106 @@ pointers("A calls", arr(A, "calls"), allA, allB);
 pointers("B calls", arr(B, "calls"), allA, allB);
 
 console.log(`
-Read it this way: a list whose rows "find a B order" but not an A one
-only works on top of B's orders. Carrying it onto A's orders leaves it
-pointing at nothing, and completed orders come back as new.`);
+A list whose rows find neither file's orders does not point at an order
+through a plain field. That is not proof the rows are orphaned -- see
+the reference scan below.`);
+
+/* ---- when, not just which ----
+   Two copies sharing no ids has two opposite meanings. Either they hold
+   the same payments under different ids, and merging duplicates every
+   one; or they hold different payments, and merging restores what the
+   live board lost. Ids cannot tell those apart. Dates can: copies that
+   overlap in time are the same orders twice, and copies that sit either
+   side of a date are two halves of one history. */
+const DATE_FIELDS = ["receivedAt", "createdAt", "created", "date", "at", "paidAt", "timestamp"];
+function dateOf(o) {
+  for (const f of DATE_FIELDS) {
+    const v = o && o[f];
+    if (v == null || v === "") continue;
+    const d = new Date(typeof v === "number" || /^\d{10,}$/.test(String(v)) ? Number(v) : String(v));
+    if (!isNaN(d) && d.getUTCFullYear() > 2000) return d;
+  }
+  return null;
+}
+function span(rows) {
+  const ds = rows.map(dateOf).filter(Boolean).sort((a, b) => a - b);
+  return ds.length ? { n: ds.length, from: ds[0], to: ds[ds.length - 1] } : null;
+}
+
+console.log("\n=== when the orders are from ===");
+const sa = span(oa), sb = span(ob);
+const fmt = (d) => d.toISOString().slice(0, 10);
+for (const [label, sp, rows] of [["A", sa, oa], ["B", sb, ob]]) {
+  if (!sp) { console.log(`  ${label}: no readable date on any order`); continue; }
+  console.log(`  ${label}: ${sp.n} of ${rows.length} dated, ${fmt(sp.from)} to ${fmt(sp.to)}`);
+}
+if (sa && sb) {
+  const overlap = sa.from <= sb.to && sb.from <= sa.to;
+  const days = overlap ? Math.round((Math.min(sa.to, sb.to) - Math.max(sa.from, sb.from)) / 86400000) : 0;
+  console.log(overlap
+    ? `
+  THE RANGES OVERLAP by about ${days} day(s). Two copies covering the same
+  days are very likely the same orders under different ids. Merging
+  would duplicate them. Check the day-by-day counts below.`
+    : `
+  THE RANGES DO NOT OVERLAP. These are two halves of one history, not two
+  copies of the same orders. Merging restores what is missing.`);
+}
+
+/* Same money, same day, same customer is the same order whatever its id. */
+function moneyKey(o) {
+  const d = dateOf(o);
+  const who = String(o.email || o.customerEmail || o.customerId || "").toLowerCase();
+  const amt = o.amount ?? o.total ?? o.amountPaid;
+  if (!d || amt == null) return null;
+  return `${fmt(d)}|${amt}|${who}`;
+}
+const ka = new Set(oa.map(moneyKey).filter(Boolean));
+const kb = new Set(ob.map(moneyKey).filter(Boolean));
+let same = 0;
+for (const k of ka) if (kb.has(k)) same++;
+console.log(`
+=== same day, same amount, same customer ===
+  A has ${ka.size} such orders, B has ${kb.size}, ${same} look like the same order.`);
+/* No comparable orders is not a clean bill of health. Saying "safe"
+   when nothing could be compared is the same mistake as ranking two
+   copies by a single total: a verdict the evidence does not carry. */
+console.log(!ka.size || !kb.size
+  ? `  Neither copy carries a date and an amount together, so this check
+  could not run. It is not a verdict: decide from the id fields and the
+  reference scan, and if those are inconclusive, merge nothing.`
+  : same > 10
+    ? "  That many matches means the copies DO overlap: do not merge orders."
+    : "  Few matches, so the two copies really are different orders: merging is safe.");
+
+/* ---- how the other lists name an order ----
+   Nested as well as top level, because a plain-field scan found nothing
+   and that on its own says more about the scan than about the rows. */
+function deepStrings(v, out = [], depth = 0) {
+  if (depth > 4 || v == null) return out;
+  if (typeof v === "string") out.push(v);
+  else if (Array.isArray(v)) for (const x of v) deepStrings(x, out, depth + 1);
+  else if (typeof v === "object") for (const x of Object.values(v)) deepStrings(x, out, depth + 1);
+  return out;
+}
+function scan(label, rows, idsA, idsB) {
+  if (!rows.length) return;
+  let hitA = 0, hitB = 0;
+  const fields = new Map();
+  for (const r of rows) {
+    const ss = deepStrings(r);
+    if (ss.some((v) => idsA.has(v))) hitA++;
+    if (ss.some((v) => idsB.has(v))) hitB++;
+    for (const [k, v] of Object.entries(r)) {
+      if (typeof v === "string" && (idsA.has(v) || idsB.has(v))) fields.set(k, (fields.get(k) || 0) + 1);
+    }
+  }
+  const via = [...fields.entries()].map(([k, n]) => `${k} (${n})`).join(", ");
+  console.log(`  ${label.padEnd(12)} ${String(rows.length).padStart(4)} rows -> ${hitA} reach an A order, ${hitB} reach a B order${via ? `   via ${via}` : "   no field names an order"}`);
+  if (!hitA && !hitB && rows[0]) console.log(`  ${"".padEnd(12)} its fields: ${Object.keys(rows[0]).join(", ")}`);
+}
+
+console.log("\n=== how the other lists reach an order (nested too) ===");
+scan("B wipes", arr(B, "wipes"), allA, allB);
+scan("B refunds", arr(B, "refunds"), allA, allB);
+scan("B calls", arr(B, "calls"), allA, allB);
