@@ -124,7 +124,13 @@ function merge(cur, add) {
 /* -------------------------------------------------------------- run it */
 
 console.log(`Relay:  ${relay}\nSigning in as: ${email}\n`);
-const password = await askHidden("Password: ");
+/* THRIVE_PASSWORD skips the prompt, for a shell where the hidden prompt
+   misbehaves. It lands in shell history, so the prompt stays the default. */
+let password = process.env.THRIVE_PASSWORD || "";
+while (!password) {
+  password = (await askHidden("Password: ")).trim();
+  if (!password) console.log("Nothing was entered -- type the password, then press Return.");
+}
 const login = await fetch(`${relay}/auth/login`, {
   method: "POST", headers: { "Content-Type": "application/json" },
   body: JSON.stringify({ email, password }),

@@ -55,11 +55,14 @@ function askHidden(q) {
   });
 }
 
-/* ---- what a copy is worth ----
-   Rows across the five lists, which is what the four broken pages are.
-   A copy with more rows is not automatically newer, so the timestamp is
-   printed beside it and a copy that is older AND thinner is the one to
-   be suspicious of. */
+/* ---- what a copy holds ----
+   Per list, never as one total. Two copies of this board turned out to
+   be two different halves -- one had the current orders and no calls,
+   refunds or completions, the other had all of those and orders a
+   fortnight stale. Summing the lists made the stale one look "richer",
+   and restoring it traded fresh orders for old ones. A total cannot see
+   that. Each list is compared on its own, and a copy is only safe to
+   write over the live board when it is at least as full in every one. */
 function weigh(rec) {
   if (!rec || typeof rec !== "object") return null;
   const counts = {};
@@ -68,7 +71,22 @@ function weigh(rec) {
     const n = Array.isArray(rec[k]) ? rec[k].length : 0;
     counts[k] = n; total += n;
   }
-  return { counts, total, updatedAt: rec.updatedAt || null };
+  return { counts, total, updatedAt: when(rec.updatedAt) };
+}
+
+/* updatedAt is epoch milliseconds on some copies and an ISO string on
+   others. Printed raw it came out as "1793030009348", which tells
+   nobody which copy is older -- the one thing the reader needs. */
+function when(v) {
+  if (v == null || v === "") return null;
+  const d = new Date(typeof v === "number" || /^\d+$/.test(String(v)) ? Number(v) : String(v));
+  return isNaN(d) ? String(v) : d.toISOString().slice(0, 16).replace("T", " ") + " UTC";
+}
+
+/* a is safe to put over b only if it loses nothing in any list */
+function dominates(a, b) {
+  if (!b) return true;
+  return LISTS.every((k) => a.counts[k] >= b.counts[k]);
 }
 
 function show(label, c) {
@@ -134,21 +152,48 @@ if (snap) {
   the portal shows, however much the live board holds.`);
 }
 
-const best = copies
-  .filter((c) => c.weight && c.weight.total > 0)
+const others = copies.slice(1).filter((c) => c.weight && c.weight.total > 0);
+if (!others.length) {
+  console.log("\nNo other copy holds any rows. Nothing here to restore from.");
+  process.exit(0);
+}
+
+/* Only a copy that loses nothing may be written over the live board.
+   Anything else is a trade, and a trade is a merge, not a restore. */
+const best = others
+  .filter((c) => dominates(c.weight, live))
   .sort((a, b) => b.weight.total - a.weight.total)[0];
 
 if (!best) {
-  console.log("\nNo copy holds any rows. Nothing here to restore from.");
-  process.exit(0);
+  console.log(`
+=== these copies are different halves, not better and worse ===
+
+No other copy is at least as full as the live board in every list, so
+none of them can be written over it without losing something. A restore
+here would trade one gap for another.`);
+  for (const c of others) {
+    const loses = LISTS.filter((k) => c.weight.counts[k] < live.counts[k]);
+    const gains = LISTS.filter((k) => c.weight.counts[k] > live.counts[k]);
+    const fmt = (ks) => ks.map((k) => `${k} ${live.counts[k]} -> ${c.weight.counts[k]}`).join(", ");
+    console.log(`
+  ${c.label}
+    would restore: ${gains.length ? fmt(gains) : "nothing"}
+    would lose:    ${loses.length ? fmt(loses) : "nothing"}`);
+  }
+  console.log(`
+Merge instead -- it keeps every row the live board already has and adds
+only what is missing, matching orders by id and by Stripe payment.
+Write the copy you want to draw from to a file whose name starts with
+"board" (anything else is not gitignored, and this repository is
+public), then look before writing:
+
+  node merge-board.mjs deploy/board-<name>.json
+  node merge-board.mjs deploy/board-<name>.json --write`);
+  process.exit(2);
 }
 
-console.log(`\nRichest copy: ${best.label} -- ${best.weight.total} rows, ${best.weight.updatedAt || "no timestamp"}`);
-if (live && best.weight.total <= live.total) {
-  console.log("The live board is already the richest copy. Nothing to restore.");
-  process.exit(0);
-}
-console.log(`The live board holds ${live ? live.total : 0}. That is ${best.weight.total - (live ? live.total : 0)} rows fewer.`);
+console.log(`\nSafe to restore: ${best.label} -- ${best.weight.total} rows, ${best.weight.updatedAt || "no timestamp"}`);
+console.log(`It is at least as full as the live board (${live ? live.total : 0} rows) in every list, so nothing is traded away.`);
 
 if (!RESTORE) {
   console.log(`
