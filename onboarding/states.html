@@ -183,7 +183,7 @@ footer{color:var(--muted); font-size:11.5px; padding:30px 0 0; text-align:center
     /* code  name              per call   NIPR */
     ["AL", "Alabama",              86,    null],
     ["AR", "Arkansas",             76,    null],
-    ["CA", "California",         null,    null],
+    ["CA", "California",         null,     188],
     ["FL", "Florida",              61,    null],
     ["GA", "Georgia",             126,    null],
     ["IN", "Indiana",              96,    null],
@@ -195,8 +195,8 @@ footer{color:var(--muted); font-size:11.5px; padding:30px 0 0; text-align:center
     ["SC", "South Carolina",       31,    null],
     ["TN", "Tennessee",            66,    null],
     ["TX", "Texas",                56,    null],
-    ["VA", "Virginia",           null,    null],
-    ["WA", "Washington",         null,    null]
+    ["VA", "Virginia",           null,      15],
+    ["WA", "Washington",         null,      55]
   ];
 
   /* The small north-east states have no room for a label on a map this
@@ -295,7 +295,7 @@ footer{color:var(--muted); font-size:11.5px; padding:30px 0 0; text-align:center
   }
   $("#foot").textContent = (gaps.length ? gaps.join(" ") + " " : "") +
     "Estimated costs. Tap a state on the map or in the list to highlight it." +
-    (niprTotal ? " Licences for the states priced so far come to " + money(niprTotal) + "." : "");
+    (niprTotal ? " Licence fees entered so far total " + money(niprTotal) + "." : "");
 
   /* ---------------------------------------------------- highlighting */
   var hot = "";
