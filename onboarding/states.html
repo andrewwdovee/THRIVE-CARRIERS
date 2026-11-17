@@ -68,6 +68,16 @@ h1{
 .listhead h2{font-size:19px; font-weight:700; margin:0}
 .listhead span{font-family:ui-monospace,Menlo,monospace; font-size:13px; color:var(--muted)}
 table{width:100%; border-collapse:collapse}
+thead th{
+  font:600 11px/1 inherit; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--muted); text-align:right; padding:0 0 8px; font-weight:600;
+}
+td.fee{
+  text-align:right; white-space:nowrap; padding-left:14px;
+  font-variant-numeric:tabular-nums; color:var(--fg);
+}
+/* A dash is not a number: it should not read as one. */
+td.ct.none, td.fee.none{color:var(--muted)}
 td{padding:7px 0; vertical-align:middle}
 tr.row{cursor:pointer}
 tr.row:hover td, tr.row.hot td{background:rgba(90,147,242,.10)}
@@ -76,12 +86,24 @@ td.ab{
   color:var(--on); width:3.4em; padding-left:8px; border-radius:7px 0 0 7px;
 }
 td.nm{font-size:15px; color:var(--fg)}
-td.br{width:38%; padding-left:14px}
+td.br{width:26%; padding-left:14px}
 td.br span{display:block; height:7px; border-radius:999px; background:var(--cell)}
 td.br span i{display:block; height:7px; border-radius:999px; background:var(--on)}
 td.ct{
   text-align:right; font-size:15px; font-weight:700; white-space:nowrap;
   padding-right:8px; border-radius:0 7px 7px 0; font-variant-numeric:tabular-nums;
+}
+/* The fee column costs width the narrow screens have not got. The bar
+   is the one thing here that carries no figure of its own -- it only
+   draws the per-call number again -- so on a phone it goes and the two
+   columns of money get the room. */
+@media (max-width:560px){
+  td.br, th.br-h{display:none}
+  td.ab{width:auto; padding-right:9px}
+  td.nm{font-size:14px}
+  td.ct{font-size:14.5px; padding-right:0}
+  td.fee{padding-left:12px; padding-right:8px}
+  thead th{font-size:10px; letter-spacing:.06em}
 }
 .total{display:flex; align-items:baseline; justify-content:space-between; gap:12px;
   border-top:1px solid var(--line-2); margin-top:14px; padding-top:16px}
@@ -121,9 +143,17 @@ footer{color:var(--muted); font-size:11.5px; padding:30px 0 0; text-align:center
         <h2>Cost by state</h2>
         <span id="count"></span>
       </div>
-      <table><tbody id="rows"></tbody></table>
+      <table>
+        <thead><tr>
+          <th colspan="2"></th>
+          <th class="br-h"></th>
+          <th class="ct">Per call</th>
+          <th class="fee">Licence</th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
       <div class="total"><b>Total for all states</b><strong id="total"></strong></div>
-      <p class="foot">Estimated costs. Tap a state on the map or in the list to highlight it.</p>
+      <p class="foot" id="foot"></p>
     </section>
   </div>
 
@@ -139,22 +169,34 @@ footer{color:var(--muted); font-size:11.5px; padding:30px 0 0; text-align:center
   var US = null;            /* {viewBox, states, labels} — injected by the build */
 
   /* ---------------------------------------------------- what we target
-     Code, name, and what a call costs there. The count and the total
-     are worked out from this, so editing one line keeps both honest. */
+     Code, name, what a call costs there, and what the non-resident
+     producer licence costs on NIPR. The count and the totals are
+     worked out from this, so editing one line keeps them honest.
+
+     null means NOT YET KNOWN, and is drawn as a dash and left out of
+     the totals. It is deliberately not zero: a nought would quietly
+     read as "free" and would be added up as one, and a licensing
+     budget built on that would be wrong in the direction that costs
+     money. A figure goes in here only once it has been read off the
+     state's own fee schedule. */
   var TARGET = [
-    ["AL", "Alabama", 86],
-    ["AR", "Arkansas", 76],
-    ["FL", "Florida", 61],
-    ["GA", "Georgia", 126],
-    ["IN", "Indiana", 96],
-    ["KY", "Kentucky", 106],
-    ["MI", "Michigan", 16],
-    ["NC", "North Carolina", 76],
-    ["OH", "Ohio", 16],
-    ["PA", "Pennsylvania", 116],
-    ["SC", "South Carolina", 31],
-    ["TN", "Tennessee", 66],
-    ["TX", "Texas", 56]
+    /* code  name              per call   NIPR */
+    ["AL", "Alabama",              86,    null],
+    ["AR", "Arkansas",             76,    null],
+    ["CA", "California",         null,    null],
+    ["FL", "Florida",              61,    null],
+    ["GA", "Georgia",             126,    null],
+    ["IN", "Indiana",              96,    null],
+    ["KY", "Kentucky",            106,    null],
+    ["MI", "Michigan",             16,    null],
+    ["NC", "North Carolina",       76,    null],
+    ["OH", "Ohio",                 16,    null],
+    ["PA", "Pennsylvania",        116,    null],
+    ["SC", "South Carolina",       31,    null],
+    ["TN", "Tennessee",            66,    null],
+    ["TX", "Texas",                56,    null],
+    ["VA", "Virginia",           null,    null],
+    ["WA", "Washington",         null,    null]
   ];
 
   /* The small north-east states have no room for a label on a map this
@@ -171,16 +213,34 @@ footer{color:var(--muted); font-size:11.5px; padding:30px 0 0; text-align:center
   });
 
   var byCode = {};
-  TARGET.forEach(function (t) { byCode[t[0]] = { code: t[0], name: t[1], cost: t[2] }; });
-  var max = TARGET.reduce(function (m, t) { return Math.max(m, t[2]); }, 0);
-  var total = TARGET.reduce(function (s, t) { return s + t[2]; }, 0);
+  TARGET.forEach(function (t) {
+    byCode[t[0]] = { code: t[0], name: t[1], cost: t[2], nipr: t[3] };
+  });
+  var known = function (v) { return typeof v === "number" && isFinite(v); };
+  var priced = TARGET.filter(function (t) { return known(t[2]); });
+  var licensed = TARGET.filter(function (t) { return known(t[3]); });
+  var max = priced.reduce(function (m, t) { return Math.max(m, t[2]); }, 0);
+  var total = priced.reduce(function (s, t) { return s + t[2]; }, 0);
+  var niprTotal = licensed.reduce(function (s, t) { return s + t[3]; }, 0);
 
   function esc(v) {
     return String(v == null ? "" : v)
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
-  function money(n) { return "$" + Math.round(n).toLocaleString("en-US"); }
+  function money(n) {
+    if (!known(n)) return "\u2014";
+    return "$" + Math.round(n).toLocaleString("en-US");
+  }
+
+  /* What a state says when pointed at. A state we target but have not
+     priced says so, rather than reporting a dash as its call cost. */
+  function tip(st) {
+    var bits = [st.name];
+    bits.push(known(st.cost) ? money(st.cost) + " a call" : "call cost not set");
+    if (known(st.nipr)) bits.push(money(st.nipr) + " licence");
+    return bits.join(" \u00b7 ");
+  }
 
   /* ------------------------------------------------------------- map */
   if (US && US.states) {
@@ -189,7 +249,7 @@ footer{color:var(--muted); font-size:11.5px; padding:30px 0 0; text-align:center
     codes.forEach(function (c) {
       var on = !!byCode[c];
       svg += '<path class="st' + (on ? " on" : "") + '" data-c="' + c + '" d="' + US.states[c] + '">' +
-        "<title>" + esc(on ? byCode[c].name + " · " + money(byCode[c].cost) + " a call" : c) + "</title></path>";
+        "<title>" + esc(on ? tip(byCode[c]) : c) + "</title></path>";
     });
     codes.forEach(function (c) {
       if (NO_LABEL.indexOf(c) >= 0) return;
@@ -207,13 +267,35 @@ footer{color:var(--muted); font-size:11.5px; padding:30px 0 0; text-align:center
   $("#count").textContent = TARGET.length + " of 50";
   $("#total").textContent = money(total);
   $("#rows").innerHTML = TARGET.map(function (t) {
+    /* A state with no price has no bar. Drawing an empty one would
+       read as "cheapest", which is the opposite of "not known yet". */
+    var bar = known(t[2]) && max
+      ? '<span><i style="width:' + (t[2] / max * 100).toFixed(1) + '%"></i></span>'
+      : "";
     return '<tr class="row" data-c="' + t[0] + '">' +
       '<td class="ab">' + t[0] + "</td>" +
       '<td class="nm">' + esc(t[1]) + "</td>" +
-      '<td class="br"><span><i style="width:' + (t[2] / max * 100).toFixed(1) + '%"></i></span></td>' +
-      '<td class="ct">' + money(t[2]) + "</td>" +
+      '<td class="br">' + bar + "</td>" +
+      '<td class="ct' + (known(t[2]) ? "" : " none") + '">' + money(t[2]) + "</td>" +
+      '<td class="fee' + (known(t[3]) ? "" : " none") + '">' + money(t[3]) + "</td>" +
       "</tr>";
   }).join("");
+
+  /* What the totals do and do not cover, said rather than left to be
+     worked out from a dash. */
+  var gaps = [];
+  if (priced.length < TARGET.length) {
+    gaps.push("Per-call cost is set for " + priced.length + " of " + TARGET.length +
+      " states; the total covers those only.");
+  }
+  if (licensed.length < TARGET.length) {
+    gaps.push(licensed.length
+      ? "Licence fees are in for " + licensed.length + " of " + TARGET.length + " states."
+      : "Licence fees have not been filled in yet \u2014 a dash means not known, not free.");
+  }
+  $("#foot").textContent = (gaps.length ? gaps.join(" ") + " " : "") +
+    "Estimated costs. Tap a state on the map or in the list to highlight it." +
+    (niprTotal ? " Licences for the states priced so far come to " + money(niprTotal) + "." : "");
 
   /* ---------------------------------------------------- highlighting */
   var hot = "";
