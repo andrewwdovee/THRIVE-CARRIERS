@@ -86,10 +86,21 @@ footer{text-align:center;color:var(--dim);font-size:12.5px;padding:0 20px 40px}
 <script>
 /* ============================== CONFIG ============================== */
 const CALENDLY_URL = "";   // e.g. "https://calendly.com/thrive-companies/initial-interview"
+const CONFIRMED_URL = "confirmed.html";   // page people go to after they book a time
 /* ==================================================================== */
 
 (function(){
   document.getElementById('yr').textContent = new Date().getFullYear();
+
+  // When someone books in the embedded Calendly, send them to the confirm-your-interview page.
+  window.addEventListener('message', function(e){
+    if(!/(^|\.)calendly\.com$/.test(new URL(e.origin||'https://x.invalid').hostname)) return;
+    if(!e.data || e.data.event !== 'calendly.event_scheduled' || !CONFIRMED_URL) return;
+    const src = new URLSearchParams(location.search), out = new URLSearchParams();
+    ['first_name','utm_source','utm_medium','utm_campaign','utm_content','utm_term'].forEach(k=>{ if(src.get(k)) out.set(k, src.get(k)); });
+    location.href = CONFIRMED_URL + (out.toString() ? '?' + out.toString() : '');
+  });
+
   const url = CALENDLY_URL.trim();
   if(!url) return;
 
