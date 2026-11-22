@@ -235,8 +235,10 @@ console.log(`Wrote onboarding/dist/${name}  (${(out.length / 1024).toFixed(0)} K
     "\nThose steps still read; they just have no button. Pass the flags once the URLs exist."
   : ""}
 
-Deploy it:
-  npx wrangler pages deploy ./dist --project-name thrive-onboarding --commit-dirty=true
+Deploy it (--branch main is not optional: without it wrangler takes the
+branch from git, and a deploy from a feature branch goes up as a preview
+and leaves the live page exactly as it was):
+  npx wrangler pages deploy ./dist --project-name thrive-onboarding --branch main --commit-dirty=true
 
 Then, on the relay, add the URL Pages gives you to ALLOWED_ORIGINS, or the
 browser will refuse the POST:
