@@ -198,6 +198,7 @@ footer a:hover{color:var(--gold-text)}
 /* ============================== CONFIG ============================== */
 const VSL_URL = "";            // e.g. "https://www.youtube.com/watch?v=XXXXXXXXXXX"
 const FORM_ENDPOINT = "";      // e.g. "https://hooks.zapier.com/hooks/catch/..."
+const THANK_YOU_URL = "thank-you.html";  // page applicants go to after submitting ("" = show inline message instead)
 const COMPANY = "Thrive Companies";
 
 /* Testimonial cards. Replace the placeholders with your real agents.
@@ -339,14 +340,22 @@ const QUESTIONS = [
   $('#next').addEventListener('click',next);
 
   const params=new URLSearchParams(location.search);
+  function finish(){
+    if(!THANK_YOU_URL){ show(total); return; }
+    const q=new URLSearchParams();
+    ['first_name','last_name','email','phone'].forEach(k=>{ if(data[k]) q.set(k,data[k]); });
+    ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'].forEach(k=>{ if(params.get(k)) q.set(k,params.get(k)); });
+    bar.style.width='100%';
+    location.href = THANK_YOU_URL + (THANK_YOU_URL.includes('?')?'&':'?') + q.toString();
+  }
   function submit(){
     const payload=Object.assign({}, data, { source:`${COMPANY} sales-position page`, submitted_at:new Date().toISOString(), page:location.href });
     ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','pipeline','el','fbclid','gclid'].forEach(k=>{ if(params.get(k)) payload[k]=params.get(k); });
     const btn=steps[cur].querySelector('.ok');
-    if(!FORM_ENDPOINT){ show(total); return; }
+    if(!FORM_ENDPOINT){ finish(); return; }
     btn.disabled=true; btn.textContent='Sending…';
     fetch(FORM_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
-      .then(r=>{ if(!r.ok) throw 0; show(total); })
+      .then(r=>{ if(!r.ok) throw 0; finish(); })
       .catch(()=>{ btn.disabled=false; btn.textContent='Submit'; steps[cur].querySelector('.err').textContent='Something went wrong. Please try again.'; });
   }
   show(0,false);
