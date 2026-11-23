@@ -436,9 +436,15 @@ const QUESTIONS = [
   if(CALENDLY_URL) loadCalendly();
   // Send data to the backend (Google Sheet). text/plain + no-cors works with Google Apps Script;
   // keepalive lets the request finish even if the page navigates away.
-  function sendLead(payload){
+  function sendLead(payload, leavingPage){
     if(!FORM_ENDPOINT) return;
-    try{ fetch(FORM_ENDPOINT,{method:'POST',mode:'no-cors',keepalive:true,headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)}).catch(()=>{}); }catch(_){}
+    const body=JSON.stringify(payload);
+    // When the page is about to navigate away (booking), use sendBeacon: built to survive page changes.
+    if(leavingPage && navigator.sendBeacon){
+      try{ if(navigator.sendBeacon(FORM_ENDPOINT, new Blob([body],{type:'text/plain;charset=utf-8'}))) return; }catch(_){}
+    }
+    // Otherwise a plain request (works in every browser, including iPhone Safari).
+    try{ fetch(FORM_ENDPOINT,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body}).catch(()=>{}); }catch(_){}
   }
   // After they book, go to the confirm-your-interview page
   window.addEventListener('message',function(e){
@@ -455,7 +461,7 @@ const QUESTIONS = [
     ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'].forEach(k=>{ if(params.get(k)) q.set(k,params.get(k)); });
     // Mark this lead as "Booked" in the sheet
     const p=e.data.payload||{};
-    sendLead({ action:'booked', email:data.email||'', booked_at:new Date().toISOString(), event_uri:(p.event&&p.event.uri)||'', invitee_uri:(p.invitee&&p.invitee.uri)||'' });
+    sendLead({ action:'booked', email:data.email||'', booked_at:new Date().toISOString(), event_uri:(p.event&&p.event.uri)||'', invitee_uri:(p.invitee&&p.invitee.uri)||'' }, true);
     location.href=CONFIRMED_URL+(q.toString()?'?'+q.toString():'');
   });
   function finish(){
