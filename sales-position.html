@@ -289,7 +289,6 @@ const QUESTIONS = [
     else if(e.t==='v') bg=`<video class="vsl-bg" src="${e.src}" autoplay muted loop playsinline aria-hidden="true"></video>`;
     v.innerHTML=`${bg}<button type="button" class="vsl-poster" aria-label="Play video">
         <span class="bigplay"><svg viewBox="0 0 34 38"><path d="M33 19 1 37V1z" fill="#1A1408"/></svg></span>
-        <span class="vsl-cta">Click To Watch</span>
       </button>`;
     v.querySelector('.vsl-poster').addEventListener('click',()=>{ v.innerHTML=''; v.appendChild(player(u,true)); });
   }
