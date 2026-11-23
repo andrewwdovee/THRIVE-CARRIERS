@@ -56,6 +56,11 @@ h1{font-weight:300;font-size:clamp(30px,4.6vw,52px);line-height:1.12;letter-spac
 .vsl-ph .note{font-size:13px;color:var(--dim);letter-spacing:.06em}
 .chip{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:6px;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#1A1408;
   background:linear-gradient(180deg,var(--gold-hi),var(--gold));box-shadow:0 6px 20px -6px rgba(201,162,69,.6)}
+.chip.sound{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;border:0;cursor:pointer;font:600 14px var(--font);letter-spacing:.14em;padding:14px 22px;gap:10px;white-space:nowrap;
+  box-shadow:0 10px 30px -6px rgba(0,0,0,.7), 0 0 0 0 rgba(226,195,110,.6);animation:soundpulse 2s ease-out infinite}
+.chip.sound:hover{filter:brightness(1.06)}
+@keyframes soundpulse{70%{box-shadow:0 10px 30px -6px rgba(0,0,0,.7), 0 0 0 14px rgba(226,195,110,0)}100%{box-shadow:0 10px 30px -6px rgba(0,0,0,.7), 0 0 0 0 rgba(226,195,110,0)}}
+.vsl video{background:#000}
 .caption{margin:20px auto 30px;max-width:520px;text-align:center;color:var(--gold-text);font-size:16px;font-weight:400;line-height:1.45}
 
 /* Application (typeform-style) */
@@ -210,7 +215,7 @@ footer a:hover{color:var(--gold-text)}
 
 <script>
 /* ============================== CONFIG ============================== */
-const VSL_URL = "https://www.loom.com/embed/54d16c077eb0475b8c2cc5967a5a07f3";            // e.g. "https://www.youtube.com/watch?v=XXXXXXXXXXX"
+const VSL_URL = "https://pub-c7fb7e5bc510482e827f13986bc30648.r2.dev/VSL%20%282%29.mp4";            // e.g. "https://www.youtube.com/watch?v=XXXXXXXXXXX"
 const FORM_ENDPOINT = "";      // e.g. "https://hooks.zapier.com/hooks/catch/..."
 const THANK_YOU_URL = "thank-you.html";  // page applicants go to after submitting ("" = show inline message instead)
 const COMPANY = "Thrive Companies";
@@ -265,7 +270,23 @@ const QUESTIONS = [
   }
 
   /* ---------- VSL ---------- */
-  if(VSL_URL.trim()){ const v=$('#vsl'); v.innerHTML=''; v.appendChild(player(VSL_URL.trim(), false)); }
+  if(VSL_URL.trim()){
+    const v=$('#vsl'), u=VSL_URL.trim(), e=embed(u);
+    v.innerHTML='';
+    if(e.t!=='v'){ v.appendChild(player(u,false)); }
+    else {
+      // Plays instantly on mute; tapping restarts from the top with sound.
+      const vid=document.createElement('video');
+      vid.src=e.src; vid.muted=true; vid.defaultMuted=true; vid.autoplay=true; vid.loop=true; vid.playsInline=true; vid.preload='auto';
+      vid.setAttribute('muted',''); vid.setAttribute('playsinline',''); vid.setAttribute('webkit-playsinline','');
+      const btn=document.createElement('button'); btn.type='button'; btn.className='chip sound';
+      btn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4z"/></svg>Tap for sound';
+      const unmute=()=>{ vid.loop=false; vid.currentTime=0; vid.muted=false; vid.controls=true; vid.play().catch(()=>{}); btn.remove(); vid.removeEventListener('click',unmute); vid.style.cursor=''; };
+      btn.addEventListener('click',unmute); vid.addEventListener('click',unmute); vid.style.cursor='pointer';
+      v.append(vid,btn);
+      vid.play().catch(()=>{});
+    }
+  }
 
   /* ---------- Testimonials ---------- */
   const esc = s => String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
