@@ -229,7 +229,7 @@ footer a:hover{color:var(--gold-text)}
 /* ============================== CONFIG ============================== */
 const VSL_POSTER = "";   // optional still image shown while the video loads (e.g. a screenshot from the VSL)
 const VSL_URL = "https://pub-c7fb7e5bc510482e827f13986bc30648.r2.dev/VSL%20%282%29.mp4";            // e.g. "https://www.youtube.com/watch?v=XXXXXXXXXXX"
-const FORM_ENDPOINT = "";      // e.g. "https://hooks.zapier.com/hooks/catch/..."
+const FORM_ENDPOINT = "";      // Google Apps Script web app URL (".../exec"), or any webhook that accepts a POST
 const CALENDLY_URL = "https://calendly.com/andrew-davidson-zenith/initial-interview-for-sales-position?hide_event_type_details=1&hide_gdpr_banner=1"; // calendar shown in the application box after they finish
 const CONFIRMED_URL = "confirmed.html";   // page people go to after booking a time
 const THANK_YOU_URL = "";   // no middle page: booking happens in the application box
@@ -434,6 +434,12 @@ const QUESTIONS = [
     box.scrollIntoView({behavior:'smooth',block:'start'});
   }
   if(CALENDLY_URL) loadCalendly();
+  // Send data to the backend (Google Sheet). text/plain + no-cors works with Google Apps Script;
+  // keepalive lets the request finish even if the page navigates away.
+  function sendLead(payload){
+    if(!FORM_ENDPOINT) return;
+    try{ fetch(FORM_ENDPOINT,{method:'POST',mode:'no-cors',keepalive:true,headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)}).catch(()=>{}); }catch(_){}
+  }
   // After they book, go to the confirm-your-interview page
   window.addEventListener('message',function(e){
     let host=''; try{ host=new URL(e.origin).hostname; }catch(_){}
@@ -447,6 +453,9 @@ const QUESTIONS = [
     if(e.data.event!=='calendly.event_scheduled' || !CONFIRMED_URL) return;
     const q=new URLSearchParams(); if(data.first_name) q.set('first_name',data.first_name);
     ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'].forEach(k=>{ if(params.get(k)) q.set(k,params.get(k)); });
+    // Mark this lead as "Booked" in the sheet
+    const p=e.data.payload||{};
+    sendLead({ action:'booked', email:data.email||'', booked_at:new Date().toISOString(), event_uri:(p.event&&p.event.uri)||'', invitee_uri:(p.invitee&&p.invitee.uri)||'' });
     location.href=CONFIRMED_URL+(q.toString()?'?'+q.toString():'');
   });
   function finish(){
@@ -461,12 +470,8 @@ const QUESTIONS = [
   function submit(){
     const payload=Object.assign({}, data, { source:`${COMPANY} sales-position page`, submitted_at:new Date().toISOString(), page:location.href });
     ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','pipeline','el','fbclid','gclid'].forEach(k=>{ if(params.get(k)) payload[k]=params.get(k); });
-    const btn=steps[cur].querySelector('.ok');
-    if(!FORM_ENDPOINT){ finish(); return; }
-    btn.disabled=true; btn.textContent='Sending…';
-    fetch(FORM_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
-      .then(r=>{ if(!r.ok) throw 0; finish(); })
-      .catch(()=>{ btn.disabled=false; btn.textContent='Submit'; steps[cur].querySelector('.err').textContent='Something went wrong. Please try again.'; });
+    sendLead(payload);   // sent in the background so the calendar still appears instantly
+    finish();
   }
   show(0,false);
 })();
