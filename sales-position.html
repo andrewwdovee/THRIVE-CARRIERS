@@ -71,7 +71,7 @@ h1{font-weight:300;font-size:clamp(30px,4.6vw,52px);line-height:1.12;letter-spac
 .cal-kicker{font-size:11.5px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold-text);font-weight:600}
 .cal-head h3{font-weight:300;font-size:clamp(24px,3vw,32px);line-height:1.2;margin:10px 0 8px;color:var(--text)}
 .cal-head p{color:var(--muted);font-size:15.5px;max-width:520px;margin:0 auto}
-.cal-wrap .calendly-inline-widget{min-width:320px;width:100%;height:700px;background:#fff}
+.cal-wrap .calendly-inline-widget{min-width:320px;width:100%;height:680px;background:#fff;transition:height .25s ease}
 .progress{position:absolute;top:0;left:0;right:0;height:3px;background:#1E1B15}
 .progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold-lo),var(--gold-hi));transition:width .35s ease}
 .q{display:none;padding:70px 48px 48px;min-height:440px;flex-direction:column;justify-content:center;align-items:center}
@@ -171,7 +171,7 @@ footer a:hover{color:var(--gold-text)}
   .cta{padding:20px 26px;font-size:16px;letter-spacing:.1em;width:100%;justify-content:center}
   .hint{display:none}
   .cal-wrap{padding-top:34px}
-  .cal-wrap .calendly-inline-widget{height:900px}
+  .cal-wrap .calendly-inline-widget{height:600px}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 </style>
@@ -401,16 +401,23 @@ const QUESTIONS = [
     u.searchParams.set('hide_gdpr_banner','1');
     const wrap=document.createElement('div'); wrap.className='cal-wrap';
     wrap.innerHTML=`<div class="cal-head"><div class="cal-kicker">Application received</div><h3>Now pick your interview time${data.first_name?', '+data.first_name.replace(/[<>&"]/g,''):''}.</h3><p>30 minutes. We go through the role, how you would be paid, and what your first months actually look like.</p></div>`;
-    const w=document.createElement('div'); w.className='calendly-inline-widget'; w.setAttribute('data-url',u.toString());
+    const w=document.createElement('div'); w.className='calendly-inline-widget'; w.setAttribute('data-url',u.toString()); w.setAttribute('data-resize','true');
     wrap.appendChild(w); box.appendChild(wrap);
-    if(window.Calendly && Calendly.initInlineWidget){ Calendly.initInlineWidget({url:u.toString(),parentElement:w}); }
+    if(window.Calendly && Calendly.initInlineWidget){ Calendly.initInlineWidget({url:u.toString(),parentElement:w,resize:true}); }
     else { const sc=document.createElement('script'); sc.src='https://assets.calendly.com/assets/external/widget.js'; sc.async=true; document.body.appendChild(sc); }
     box.scrollIntoView({behavior:'smooth',block:'start'});
   }
   // After they book, go to the confirm-your-interview page
   window.addEventListener('message',function(e){
     let host=''; try{ host=new URL(e.origin).hostname; }catch(_){}
-    if(!/(^|\.)calendly\.com$/.test(host) || !e.data || e.data.event!=='calendly.event_scheduled' || !CONFIRMED_URL) return;
+    if(!/(^|\.)calendly\.com$/.test(host) || !e.data) return;
+    // Shrink/grow the calendar box to exactly fit what Calendly is showing
+    if(e.data.event==='calendly.page_height' && e.data.payload){
+      const h=parseInt(e.data.payload.height,10), w=document.querySelector('.cal-wrap .calendly-inline-widget');
+      if(w && h>200) w.style.height=h+'px';
+      return;
+    }
+    if(e.data.event!=='calendly.event_scheduled' || !CONFIRMED_URL) return;
     const q=new URLSearchParams(); if(data.first_name) q.set('first_name',data.first_name);
     ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'].forEach(k=>{ if(params.get(k)) q.set(k,params.get(k)); });
     location.href=CONFIRMED_URL+(q.toString()?'?'+q.toString():'');
