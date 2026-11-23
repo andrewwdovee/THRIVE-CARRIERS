@@ -215,6 +215,7 @@ footer a:hover{color:var(--gold-text)}
 
 <script>
 /* ============================== CONFIG ============================== */
+const VSL_POSTER = "";   // optional still image shown while the video loads (e.g. a screenshot from the VSL)
 const VSL_URL = "https://pub-c7fb7e5bc510482e827f13986bc30648.r2.dev/VSL%20%282%29.mp4";            // e.g. "https://www.youtube.com/watch?v=XXXXXXXXXXX"
 const FORM_ENDPOINT = "";      // e.g. "https://hooks.zapier.com/hooks/catch/..."
 const THANK_YOU_URL = "thank-you.html";  // page applicants go to after submitting ("" = show inline message instead)
@@ -277,8 +278,8 @@ const QUESTIONS = [
     else {
       // Plays instantly on mute; tapping restarts from the top with sound.
       const vid=document.createElement('video');
-      vid.src=e.src; vid.muted=true; vid.defaultMuted=true; vid.autoplay=true; vid.loop=true; vid.playsInline=true; vid.preload='auto';
-      vid.setAttribute('muted',''); vid.setAttribute('playsinline',''); vid.setAttribute('webkit-playsinline','');
+      vid.src=e.src+(e.src.includes('#')?'':'#t=0.1'); vid.muted=true; vid.defaultMuted=true; vid.autoplay=true; vid.loop=true; vid.playsInline=true; vid.preload='auto';
+      if(VSL_POSTER) vid.poster=VSL_POSTER; vid.setAttribute('muted',''); vid.setAttribute('playsinline',''); vid.setAttribute('webkit-playsinline','');
       const btn=document.createElement('button'); btn.type='button'; btn.className='chip sound';
       btn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4z"/></svg>Tap for sound';
       const unmute=()=>{ vid.loop=false; vid.currentTime=0; vid.muted=false; vid.controls=true; vid.play().catch(()=>{}); btn.remove(); vid.removeEventListener('click',unmute); vid.style.cursor=''; };
