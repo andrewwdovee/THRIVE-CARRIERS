@@ -1,0 +1,2156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<style>*,*::before,*::after{box-sizing:border-box}html{-webkit-text-size-adjust:100%}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.5 system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Thrive Inbound Call Dashboard</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@400;500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+/* Layout: one working column for an ops lead. Data intake on top, headline numbers, then carrier / campaign / timing detail.
+   Look: a single dark navy theme with light and deep blue accents, the same for every viewer. */
+:root {
+  color-scheme: dark;
+  --color-bg: #0b1220;
+  --color-panel: #111b2e;
+  --color-fg: #e4ecf7;
+  --color-fg-muted: #93a3bd;
+  --color-border-line: #22314b;
+  --color-accent: #5cb2ff;
+  --color-accent-soft: #14294a;
+  --color-ok: #4fd1a5;
+  --color-warn: #f2b45a;
+  --color-bad: #ff7b7b;
+  --s1: #5cb2ff; --s2: #2f6bff; --s3: #a8d6ff; --s4: #7a86ff; --s5: #35c2e0;
+  --font-anthropic-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-anthropic-serif: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+  --cds-font-size-caption: 0.8125rem;
+  --cds-font-size-body: 0.9375rem;
+  --cds-font-size-heading: 1.125rem;
+  --cds-font-size-title: 1.75rem;
+  --cds-font-weight-medium: 600;
+  --cds-gap-xs: 4px; --cds-gap-sm: 8px; --cds-gap-md: 12px; --cds-gap-lg: 16px; --cds-gap-xl: 32px;
+  --cds-pad-sm: 8px; --cds-pad-md: 12px; --cds-pad-lg: 16px;
+  --cds-radius: 8px;
+  --cds-chart-grid: #1a2740;
+  --cds-chart-axis: #2c3e5e;
+  --cds-chart-reference: #6f82a3;
+  --cds-chart-muted: #8a9bb8;
+  --cds-surface-popover: #16233b;
+  --cds-border: #2c3e5e;
+  --cds-shadow-popover: 0 8px 24px rgba(0, 0, 0, .5);
+  --cds-text-secondary: #93a3bd;
+}
+body {
+  background: var(--color-bg); color: var(--color-fg); font-family: var(--font-anthropic-sans); font-size: var(--cds-font-size-body);
+  padding-block: 24px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.tc { max-width: 1180px; margin: 0 auto; }
+.dash-select {
+  font: inherit; font-size: var(--cds-font-size-caption); color: var(--color-fg); background-color: var(--color-panel);
+  border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: 6px 30px 6px 10px; appearance: none; cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--color-fg-muted) 50%), linear-gradient(135deg, var(--color-fg-muted) 50%, transparent 50%);
+  background-position: calc(100% - 15px) 52%, calc(100% - 10px) 52%; background-size: 5px 5px; background-repeat: no-repeat;
+}
+.dash-select:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+
+
+/* Marketing analyst */
+.tc-analyst { display: grid; gap: var(--cds-gap-md); background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); }
+.tc-analyst h2 { margin: 0; }
+.tc-btn.tc-btn-primary { background-color: var(--color-accent); border-color: var(--color-accent); color: var(--color-bg); font-weight: var(--cds-font-weight-medium); }
+.tc-btn.tc-btn-primary:hover { filter: brightness(1.08); border-color: var(--color-accent); }
+.tc-btn:disabled { opacity: .55; cursor: default; }
+.tc-ai-controls { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm) var(--cds-gap-md); align-items: center; }
+.tc-ai-stale { font-size: var(--cds-font-size-caption); padding: 2px 10px; border-radius: 999px; background: var(--color-accent-soft); color: var(--color-accent); }
+.tc-ai-error { margin: 0; color: var(--color-bad); font-size: var(--cds-font-size-caption); }
+.tc-ai-error:empty { display: none; }
+.tc-ai-card { background: var(--color-bg); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); min-width: 0; }
+.tc-ai-output, .tc-ai-msg { line-height: 1.6; max-width: 78ch; overflow-wrap: anywhere; }
+.tc-ai-h { margin: 14px 0 4px; font-size: var(--cds-font-size-body); font-weight: var(--cds-font-weight-medium); color: var(--color-accent); }
+.tc-ai-output > .tc-ai-h:first-child, .tc-ai-msg .tc-ai-h:first-child { margin-top: 0; }
+.tc-ai-p { margin: 4px 0; }
+.tc-ai-list { margin: 4px 0; padding-left: 22px; display: grid; gap: 4px; }
+.tc-ai-output strong, .tc-ai-msg strong { font-weight: var(--cds-font-weight-medium); color: var(--color-fg); }
+.tc-ai-chat { display: grid; gap: var(--cds-gap-sm); }
+.tc-ai-log { display: grid; gap: var(--cds-gap-sm); }
+.tc-ai-msg { padding: 10px 12px; border-radius: var(--cds-radius); font-size: var(--cds-font-size-body); min-width: 0; }
+.tc-ai-me { justify-self: end; background: var(--color-accent-soft); border: 1px solid var(--cds-border); max-width: 85%; white-space: pre-wrap; }
+.tc-ai-bot { background: var(--color-bg); border: 1px solid var(--color-border-line); }
+.tc-ai-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.tc-ai-chip { font: inherit; font-size: var(--cds-font-size-caption); padding: 5px 10px; border-radius: 999px; border: 1px solid var(--cds-border); background: var(--color-bg); color: var(--color-fg-muted); cursor: pointer; text-align: left; }
+.tc-ai-chip:hover { color: var(--color-fg); border-color: var(--color-accent); }
+.tc-ai-chip:focus-visible, .tc-ai-form textarea:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+.tc-ai-form { display: flex; gap: var(--cds-gap-sm); align-items: flex-end; }
+.tc-ai-form textarea { flex: 1; min-width: 0; resize: vertical; font: inherit; font-size: var(--cds-font-size-body); color: var(--color-fg); background: var(--color-bg); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); padding: 8px 10px; }
+.tc-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Data intake */
+.tc-intake { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); display: grid; gap: var(--cds-gap-md); }
+.tc-intake-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: var(--cds-gap-sm); }
+.tc-intake-head h2 { margin: 0; }
+.tc-drops { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: var(--cds-gap-md); }
+.tc-drop { position: relative; display: grid; gap: 4px; align-content: center; min-height: 96px; padding: var(--cds-pad-lg); border: 1.5px dashed var(--cds-chart-axis); border-radius: var(--cds-radius); background: var(--color-bg); cursor: pointer; transition: border-color .15s, background-color .15s; }
+.tc-drop:hover, .tc-drop.is-over { border-color: var(--color-accent); background: var(--color-accent-soft); }
+.tc-drop:focus-within { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.tc-drop b { font-size: var(--cds-font-size-body); font-weight: var(--cds-font-weight-medium); }
+.tc-drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.tc-drop-hint { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.tc-drop-status { font-size: var(--cds-font-size-caption); min-height: 1.2em; }
+.tc-drop-status.is-ok { color: var(--color-ok); }
+.tc-drop-status.is-err { color: var(--color-bad); }
+.tc-uploads { display: grid; gap: 4px; font-size: var(--cds-font-size-caption); }
+.tc-upload-row { display: grid; grid-template-columns: auto 1fr auto; gap: var(--cds-gap-sm); align-items: center; padding: 6px 0; border-top: 1px solid var(--color-border-line); }
+.tc-upload-kind { font-weight: var(--cds-font-weight-medium); padding: 1px 8px; border-radius: 999px; background: var(--color-accent-soft); color: var(--color-accent); white-space: nowrap; }
+.tc-upload-meta { color: var(--color-fg-muted); min-width: 0; overflow-wrap: anywhere; }
+.tc-upload-meta strong { color: var(--color-fg); font-weight: 500; }
+.tc-link-btn { font: inherit; background: none; border: 0; padding: 2px 4px; color: var(--color-fg-muted); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.tc-link-btn:hover { color: var(--color-bad); }
+.tc-link-btn.is-armed { color: var(--color-bad); font-weight: var(--cds-font-weight-medium); }
+.tc-banner { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+@media (prefers-reduced-motion: reduce) { .tc-drop { transition: none; } }
+</style>
+<style>
+
+.tc { display: grid; gap: var(--cds-gap-xl); font-family: var(--font-anthropic-sans); color: var(--color-fg); }
+.tc h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; text-wrap: balance; }
+.tc h2 { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0; text-wrap: balance; }
+.tc p { margin: 0; }
+.tc-muted { color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+.tc-head { display: grid; gap: var(--cds-gap-sm); }
+.tc-lede { font-size: var(--cds-font-size-body); line-height: 1.55; max-width: 70ch; }
+.tc-lede b { font-weight: var(--cds-font-weight-medium); font-variant-numeric: tabular-nums; }
+.tc-filters { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); align-items: end; }
+.tc-filters label { display: grid; gap: 4px; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); min-width: 0; }
+.tc-filters .dash-select { min-width: 160px; max-width: 100%; }
+.tc-btn { font: inherit; font-size: var(--cds-font-size-caption); padding: 6px 12px; border-radius: var(--cds-radius); border: 1px solid var(--color-border-line); background-color: var(--color-panel); color: var(--color-fg); cursor: pointer; }
+.tc-btn:hover { border-color: var(--color-fg-muted); }
+.tc-btn:focus-visible, .tc-th-sort:focus-visible { outline: 2px solid var(--color-fg); outline-offset: 2px; }
+.tc-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--cds-gap-sm); }
+.tc-kpi { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-md) var(--cds-pad-lg); display: grid; gap: 2px; align-content: start; min-width: 0; }
+.tc-kpi-label { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); letter-spacing: .02em; }
+.tc-kpi-val { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: 1.9rem; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.tc-kpi-sub { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); font-variant-numeric: tabular-nums; }
+.tc-sec { display: grid; gap: var(--cds-gap-md); min-width: 0; }
+.tc-sec-head { display: grid; gap: 4px; }
+.tc-grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: var(--cds-gap-lg); }
+.tc-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); display: grid; gap: var(--cds-gap-sm); align-content: start; min-width: 0; }
+.tc-card h3 { margin: 0; font-size: var(--cds-font-size-body); font-weight: var(--cds-font-weight-medium); }
+.tc-chart { position: relative; min-height: 120px; min-width: 0; }
+.tc-bars { display: grid; gap: 6px; }
+.tc-bar { display: grid; grid-template-columns: minmax(90px, 34%) 1fr auto; gap: var(--cds-gap-sm); align-items: center; font-size: var(--cds-font-size-caption); }
+.tc-bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.tc-bar-track { position: relative; height: 16px; background: var(--cds-chart-grid); border-radius: 3px; overflow: hidden; }
+.tc-bar-fill, .tc-bar-fill2 { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; }
+.tc-bar-fill { opacity: .45; }
+.tc-bar-fill2 { opacity: 1; }
+.tc-bar-val { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; min-width: 4.5em; }
+@media (max-width: 520px) { .tc-bar-val small { display: block; margin-left: 0; } }
+.tc-bar-val small { color: var(--color-fg-muted); font-size: inherit; margin-left: 4px; }
+.tc-legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.tc-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.tc-tip { position: absolute; z-index: 5; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); box-shadow: var(--cds-shadow-popover); border-radius: var(--cds-radius); padding: 8px 10px; font-size: var(--cds-font-size-caption); line-height: 1.45; max-width: 260px; font-variant-numeric: tabular-nums; }
+.tc-tip strong { display: block; font-weight: var(--cds-font-weight-medium); margin-bottom: 2px; }
+.tc-tip span { color: var(--cds-text-secondary); }
+.tc-svg text { fill: var(--cds-text-secondary); font-size: var(--cds-font-size-caption); font-family: var(--font-anthropic-sans); }
+.tc-svg .tc-vlabel { fill: var(--color-fg); }
+.tc-svg .domain, .tc-svg .tick line { stroke: var(--cds-chart-axis); }
+.tc-svg .tc-gridline { stroke: var(--cds-chart-grid); }
+.tc-table-wrap { overflow-x: auto; min-width: 0; }
+.tc-table { width: 100%; border-collapse: collapse; font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
+.tc-table th, .tc-table td { padding: 7px 10px; border-bottom: 1px solid var(--color-border-line); text-align: right; white-space: nowrap; }
+.tc-table th:first-child, .tc-table td:first-child { text-align: left; }
+.tc-table td.tc-left, .tc-table th.tc-left { text-align: left; }
+.tc-table th { color: var(--color-fg-muted); font-weight: var(--cds-font-weight-medium); }
+.tc-table td.tc-wrap { white-space: normal; min-width: 200px; text-align: left; }
+.tc-drop-list { margin: 0; padding-left: 18px; display: grid; gap: 4px; max-width: 75ch; line-height: 1.5; }
+#data-drop h2 { margin: 0; }
+.tc-chart-tall { min-height: 280px; }
+.tc-svg .tc-line { fill: none; stroke-width: 2.25; stroke-linejoin: round; stroke-linecap: round; }
+.tc-svg .tc-line-all { stroke-dasharray: 5 4; stroke-width: 1.75; }
+.tc-svg .tc-endlabel { font-variant-numeric: tabular-nums; }
+.tc-svg .tc-hoverline { stroke: var(--cds-chart-reference); stroke-width: 1; }
+.tc-legend .tc-dash { display: inline-block; width: 16px; height: 0; border-top: 2px dashed var(--cds-chart-muted); margin-right: 6px; vertical-align: 3px; }
+.tc-kpis-3 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); align-items: start; }
+.tc-good-val { color: var(--color-accent); }
+.tc-warn-val { color: var(--color-warn); }
+.tc-state-chips { margin-top: 6px; gap: 6px; }
+.tc-state-foot { display: flex; flex-wrap: wrap; gap: 4px var(--cds-gap-lg); padding-top: var(--cds-gap-sm); border-top: 1px solid var(--color-border-line); font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
+.tc-state-foot b { font-size: var(--cds-font-size-body); font-weight: var(--cds-font-weight-medium); }
+.tc-state-chips .tc-chip { padding: 3px 8px; }
+.tc-pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: var(--cds-font-size-caption); border: 1px solid currentColor; }
+.tc-good { color: var(--color-ok); }
+.tc-warn { color: var(--color-warn); }
+.tc-bad { color: var(--color-bad); }
+.tc-chips { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); }
+.tc-chip { background: var(--color-bg); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: 6px 10px; font-size: var(--cds-font-size-caption); display: grid; gap: 2px; }
+.tc-chip b { font-size: var(--cds-font-size-body); font-weight: var(--cds-font-weight-medium); font-variant-numeric: tabular-nums; }
+.tc #definitions { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.tc #definitions summary { cursor: pointer; color: var(--color-fg); }
+.tc #definitions ul { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 4px; max-width: 75ch; }
+.tc-th-sort { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; white-space: nowrap; }
+.tc-th-sort:hover { color: var(--color-fg); }
+.tc-th-sort::after { content: "↕"; margin-left: 4px; opacity: .35; }
+.tc-th-sort.tc-sorted-desc::after { content: "↓"; opacity: 1; }
+.tc-th-sort.tc-sorted-asc::after { content: "↑"; opacity: 1; }
+.tc-th-sort.tc-sorted-desc, .tc-th-sort.tc-sorted-asc { color: var(--color-fg); }
+.tc-compact { padding: var(--cds-pad-md) var(--cds-pad-lg); }
+.tc-compact > summary { cursor: pointer; list-style-position: outside; display: list-item; }
+.tc-compact .tc-sum-title { font-size: var(--cds-font-size-body); font-weight: var(--cds-font-weight-medium); }
+.tc-compact .tc-agents-note { margin-top: var(--cds-gap-sm); }
+.tc-compact #agent-controls { margin-top: var(--cds-gap-sm); }
+.tc-compact .tc-table-wrap { max-height: 420px; overflow: auto; margin-top: var(--cds-gap-sm); }
+.tc-compact .tc-table { font-size: 0.78rem; }
+.tc-compact .tc-table th, .tc-compact .tc-table td { padding: 4px 8px; }
+.tc-compact .tc-table thead th { position: sticky; top: 0; background: var(--color-panel); }
+
+
+.tc-sw0 { background: var(--tc-c0); }
+.tc-light { opacity: .45; }
+
+</style>
+
+<div class="tc">
+  <header class="tc-head" id="overview">
+    <h1>Thrive Inbound Call Dashboard</h1>
+    <p class="tc-muted">Calls from <span data-draw="kpi" data-source="kpis" data-field="firstDay" data-row="0" data-fmt="day">—</span> to <span data-draw="kpi" data-source="kpis" data-field="lastDay" data-row="0" data-fmt="day">—</span> (Eastern time). Premiums are monthly.</p>
+    <p class="tc-lede"><b data-draw="kpi" data-source="kpis" data-field="sales" data-row="0" data-fmt="int">—</b> sales from <b data-draw="kpi" data-source="kpis" data-field="billable" data-row="0" data-fmt="int">—</b> billable calls, a <b data-draw="kpi" data-source="kpis" data-field="closeRate" data-row="0" data-fmt="pct">—</b> close rate, writing <b data-draw="kpi" data-source="kpis" data-field="totalPremium" data-row="0" data-fmt="money0">—</b> in monthly premium. <b data-draw="kpi" data-source="byCarrier" data-field="carrier" data-row="0" data-fmt="text">—</b> wrote the most policies, at an average of <b data-draw="kpi" data-source="byCarrier" data-field="avgPremium" data-row="0" data-fmt="money2">—</b> a month.</p>
+  </header>
+
+  <section class="tc-intake" id="add-data">
+    <div class="tc-intake-head">
+      <h2>Add this week's data</h2>
+      <span class="tc-muted" id="upload-count"></span>
+    </div>
+    <p class="tc-muted">Drop each export into its box, or click a box to choose the file. New calls are added to what's already here; a call that appears again is updated, not counted twice. Caller numbers, emails, policy numbers, insured names and recording links are removed before anything is saved.</p>
+    <p class="tc-banner" id="intake-off" hidden></p>
+    <div class="tc-drops" id="drops">
+      <label class="tc-drop" data-kind="policies" for="drop-policies">
+        <b>Policy report</b>
+        <span class="tc-drop-hint">policy_report_…csv · Google carrier, reason, premiums, policies</span>
+        <span class="tc-drop-status" data-status="policies"></span>
+        <input type="file" id="drop-policies" accept=".csv,text/csv" multiple aria-label="Add policy report CSV">
+      </label>
+      <label class="tc-drop" data-kind="calls" for="drop-calls">
+        <b>Call export</b>
+        <span class="tc-drop-hint">calls_export_…csv · billable flag, call state, duration</span>
+        <span class="tc-drop-status" data-status="calls"></span>
+        <input type="file" id="drop-calls" accept=".csv,text/csv" multiple aria-label="Add call export CSV">
+      </label>
+    </div>
+    <details id="files-loaded">
+      <summary class="tc-muted">Files loaded</summary>
+      <div class="tc-uploads" id="upload-list"></div>
+    </details>
+  </section>
+
+  <p class="tc-banner" id="no-data" hidden>No data yet. Drop a policy report and a call export above to fill the dashboard.</p>
+
+  <div class="tc-filters" id="filters">
+    <label for="f-target" id="f-target-wrap">Google carrier
+      <select id="f-target" class="dash-select" data-draw="filter" data-param="target" data-all="All carriers" data-source="facets"></select>
+    </label>
+    <label for="f-campaign">Campaign / lead source
+      <select id="f-campaign" class="dash-select" data-draw="filter" data-param="campaign" data-all="All campaigns" data-source="facets"></select>
+    </label>
+    <label for="f-agent">Agent
+      <select id="f-agent" class="dash-select" data-draw="filter" data-param="agent" data-all="All agents" data-source="facets"></select>
+    </label>
+    <label for="f-state">State
+      <select id="f-state" class="dash-select" data-draw="filter" data-param="state" data-all="All states" data-source="facets"></select>
+    </label>
+    <button type="button" class="tc-btn" id="f-reset">Clear filters</button>
+  </div>
+
+  <section class="tc-kpis" id="kpis" aria-label="Headline numbers">
+    <div class="tc-kpi" id="kpi-calls"><span class="tc-kpi-label">Total calls</span><span class="tc-kpi-val" data-draw="kpi" data-source="kpis" data-field="calls" data-row="0" data-fmt="int">—</span><span class="tc-kpi-sub"><span data-draw="kpi" data-source="kpis" data-field="billable" data-row="0" data-fmt="int">—</span> billable</span></div>
+    <div class="tc-kpi" id="kpi-sales"><span class="tc-kpi-label">Total sales</span><span class="tc-kpi-val" data-draw="kpi" data-source="kpis" data-field="sales" data-row="0" data-fmt="int">—</span><span class="tc-kpi-sub">policies sold</span></div>
+    <div class="tc-kpi" id="kpi-close"><span class="tc-kpi-label">Close rate</span><span class="tc-kpi-val" data-draw="kpi" data-source="kpis" data-field="closeRate" data-row="0" data-fmt="pct">—</span><span class="tc-kpi-sub">sales ÷ billable calls</span></div>
+    <div class="tc-kpi" id="kpi-avg"><span class="tc-kpi-label">Avg monthly premium per deal</span><span class="tc-kpi-val" data-draw="kpi" data-source="kpis" data-field="avgPremium" data-row="0" data-fmt="money2">—</span><span class="tc-kpi-sub">median <span data-draw="kpi" data-source="kpis" data-field="medianPremium" data-row="0" data-fmt="money2">—</span></span></div>
+    <div class="tc-kpi" id="kpi-cpa"><span class="tc-kpi-label">Cost per sale</span><span class="tc-kpi-val" data-draw="kpi" data-source="kpis" data-field="costPerSale" data-row="0" data-fmt="money0">—</span><span class="tc-kpi-sub">billable calls × tier price ÷ sales</span></div>
+  </section>
+
+  <section class="tc-sec" id="called-carriers">
+    <div class="tc-sec-head">
+      <h2>Google carrier: who people call in with, ranked by close rate</h2>
+      <p class="tc-muted"><span data-draw="kpi" data-source="kpis" data-field="targetKnown" data-row="0" data-fmt="int">—</span> calls have a Google carrier recorded. Spellings of the same carrier are grouped (Americo and americo count as one). Best close rate first. Close rate = calls closed ÷ calls taken. Carriers with fewer than 5 calls, and calls naming several carriers, are listed last without a rank. Close rate is green or red when it's well above or below the overall rate.</p>
+    </div>
+    <div class="tc-card" id="called-empty" hidden>
+      <h3>Add the carrier each caller asked about</h3>
+      <p class="tc-lede">This upload says which carrier the policy was <em>sold</em> with, but not which carrier the caller asked about. To fill this section, add a column named <b>Carrier Called In</b> to the export, with that carrier on each row. If each carrier ad has its own tracking number, you can instead tell Claude which number goes with which carrier.</p>
+    </div>
+    <div class="tc-grid2" id="called-body">
+      <div class="tc-card" id="called-chart-card">
+        <h3>Close rate by Google carrier</h3>
+        <p class="tc-muted">Out of the calls from people who have each carrier, the share we closed. 7 closed out of 15 calls is 46.7%, the same as about 47 out of every 100. Carriers with fewer than 5 calls are left off because a call or two can't show a real rate.</p>
+        <div class="tc-chart" data-draw="targetBars" data-source="byTarget"></div>
+      </div>
+      <div class="tc-card" id="called-mix-card">
+        <h3>Which carriers people call in with (top 15)</h3>
+        <p class="tc-muted">Share of the calls where a Google carrier was recorded.</p>
+        <div class="tc-chart" data-draw="targetShareBars" data-source="byTarget"></div>
+      </div>
+    </div>
+    <div class="tc-card" id="called-table-card">
+      <div class="tc-table-wrap">
+        <table class="tc-table" data-source="byTarget" data-row-key="target">
+          <thead><tr><th data-field="rank">#</th><th data-field="target" class="tc-left">Google carrier</th><th data-field="calls">Calls</th><th data-field="billable">Billable</th><th data-field="sales">Sales</th><th data-field="closeRate">Close rate</th><th data-field="avgCurrentPremium">Avg current premium</th><th data-field="avgPremium">Avg premium sold</th><th data-field="totalPremium">Total sold / mo</th><th data-field="avgDur">Avg talk time</th><th data-field="drop10">&lt; 10 sec</th><th data-field="costPerSale">Cost / sale</th><th data-field="premiumPerDollar">Annual prem. per $1</th><th data-field="topSold" class="tc-left">Most often sold</th></tr></thead>
+          <tbody data-draw="targetRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="tc-sec" id="carriers">
+    <div class="tc-sec-head">
+      <h2>Carrier sold: who the policies went to</h2>
+      <p class="tc-muted">Policies written per carrier, with the average monthly premium on each.</p>
+    </div>
+    <div class="tc-grid2">
+      <div class="tc-card" id="carrier-chart-card">
+        <h3>Sales by carrier</h3>
+        <div class="tc-legend"><span><i class="tc-sw0"></i>Sales</span><span>Right: avg monthly premium</span></div>
+        <div class="tc-chart" data-draw="carrierBars" data-source="byCarrier"></div>
+      </div>
+      <div class="tc-card" id="carrier-table-card">
+        <h3>Carrier detail</h3>
+        <div class="tc-table-wrap">
+          <table class="tc-table" data-source="byCarrier" data-row-key="carrier">
+            <thead><tr><th data-field="carrier">Carrier</th><th data-field="sales">Sales</th><th data-field="share">Share</th><th data-field="avgPremium">Avg premium</th><th data-field="minPremium">Low</th><th data-field="maxPremium">High</th><th data-field="totalPremium">Total / mo</th></tr></thead>
+            <tbody data-draw="carrierRows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="tc-sec" id="campaigns">
+    <div class="tc-sec-head">
+      <h2>Campaigns: which traffic converts</h2>
+      <p class="tc-muted">Grouped by the campaign or lead-source column in your upload. Cost per sale uses the price in the tier name ($35, $40) for each billable call.</p>
+    </div>
+    <div class="tc-card" id="campaign-table-card">
+      <div class="tc-table-wrap">
+        <table class="tc-table" data-source="byCampaign" data-row-key="campaign">
+          <thead><tr><th data-field="campaign">Campaign / lead source</th><th data-field="calls">Calls</th><th data-field="billable">Billable</th><th data-field="sales">Sales</th><th data-field="closeRate">Close rate</th><th data-field="costPerSale">Cost / sale</th><th data-field="avgPremium">Avg premium</th><th data-field="premiumPerDollar">Annual prem. per $1</th></tr></thead>
+          <tbody data-draw="campaignRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="tc-sec" id="cpa-trend">
+    <div class="tc-sec-head">
+      <h2>Cost per acquisition trend</h2>
+      <p class="tc-muted">Call cost ÷ sales for each campaign. The $35 and $40 tiers of a campaign are combined. A gap means that campaign had spend but no sales in that period. Lower is better.</p>
+    </div>
+    <div class="tc-filters" id="cpa-controls">
+      <label for="cpa-grain">Group by
+        <select id="cpa-grain" class="dash-select">
+          <option value="day">Day</option>
+          <option value="week">Week</option>
+          <option value="month">Month</option>
+          <option value="year">Year</option>
+        </select>
+      </label>
+    </div>
+    <div class="tc-card" id="cpa-trend-card">
+      <div class="tc-legend" data-draw="cpaLegend" data-source="cpaTrend"></div>
+      <div class="tc-chart tc-chart-tall" data-draw="cpaLines" data-source="cpaTrend"></div>
+    </div>
+  </section>
+
+  <section class="tc-sec" id="premium-trend">
+    <div class="tc-sec-head">
+      <h2>Monthly premium trend</h2>
+      <p class="tc-muted">What closed clients end up paying each month, for each campaign. The $35 and $40 tiers of a campaign are combined. A gap means that campaign had no sales in that period. Higher is better.</p>
+    </div>
+    <div class="tc-filters" id="prem-controls">
+      <label for="prem-metric">Show
+        <select id="prem-metric" class="dash-select">
+          <option value="avgPremium">Average monthly premium per deal</option>
+          <option value="totalPremium">Total monthly premium written</option>
+        </select>
+      </label>
+      <label for="prem-grain">Group by
+        <select id="prem-grain" class="dash-select">
+          <option value="day">Day</option>
+          <option value="week">Week</option>
+          <option value="month">Month</option>
+          <option value="year">Year</option>
+        </select>
+      </label>
+    </div>
+    <div class="tc-card" id="prem-trend-card">
+      <div class="tc-legend" data-draw="premLegend" data-source="cpaTrend"></div>
+      <div class="tc-chart tc-chart-tall" data-draw="premLines" data-source="cpaTrend"></div>
+    </div>
+  </section>
+
+  <section class="tc-sec" id="reasons">
+    <div class="tc-sec-head">
+      <h2>Why people called, and how calls ended</h2>
+      <p class="tc-muted">Reason is what the caller wanted. Outcome is the tag the agent chose. The brighter part of each bar is calls that closed.</p>
+    </div>
+    <div class="tc-grid2">
+      <div class="tc-card" id="reason-card">
+        <h3>Reason for call</h3>
+        <div class="tc-legend"><span><i class="tc-sw0 tc-light"></i>Calls</span><span><i class="tc-sw0"></i>Sold</span></div>
+        <div class="tc-chart" data-draw="reasonBars" data-source="byReason"></div>
+      </div>
+      <div class="tc-card" id="disposition-card">
+        <h3>Disposition</h3>
+        <div class="tc-chips" data-draw="dispChips" data-source="byDisposition"></div>
+        <h3 id="premium-bands-title">Premium sold, by band</h3>
+        <div class="tc-chart" data-draw="bandBars" data-source="premiumBands"></div>
+      </div>
+    </div>
+    <div class="tc-card" id="tags-card" hidden>
+      <h3>Outcome tag</h3>
+      <div class="tc-legend"><span><i class="tc-sw0 tc-light"></i>Calls</span><span><i class="tc-sw0"></i>Sold</span></div>
+      <div class="tc-chart" data-draw="tagBars" data-source="byTag"></div>
+    </div>
+    <div class="tc-card" id="codes" hidden>
+      <h3>Reason for call code</h3>
+      <div class="tc-chart" data-draw="codeBars" data-source="byCode"></div>
+    </div>
+  </section>
+
+  <section class="tc-sec" id="call-length">
+    <div class="tc-sec-head">
+      <h2>Call length and early drop-off</h2>
+      <p class="tc-muted">Over the <span data-draw="kpi" data-source="kpis" data-field="connected" data-row="0" data-fmt="int">—</span> calls with a recorded duration. A short call that ends in seconds usually means a bad click, a hang-up at the IVR, or a wrong number.</p>
+    </div>
+    <div class="tc-kpis" id="drop-kpis">
+      <div class="tc-kpi" id="kpi-drop2"><span class="tc-kpi-label">Under 2 sec</span><span class="tc-kpi-val" data-draw="kpi" data-source="kpis" data-field="drop2" data-row="0" data-fmt="pct">—</span></div>
+      <div class="tc-kpi" id="kpi-drop5"><span class="tc-kpi-label">Under 5 sec</span><span class="tc-kpi-val" data-draw="kpi" data-source="kpis" data-field="drop5" data-row="0" data-fmt="pct">—</span></div>
+      <div class="tc-kpi" id="kpi-drop10"><span class="tc-kpi-label">Under 10 sec</span><span class="tc-kpi-val" data-draw="kpi" data-source="kpis" data-field="drop10" data-row="0" data-fmt="pct">—</span></div>
+      <div class="tc-kpi" id="kpi-drop60"><span class="tc-kpi-label">Under 1 min</span><span class="tc-kpi-val" data-draw="kpi" data-source="kpis" data-field="drop60" data-row="0" data-fmt="pct">—</span></div>
+      <div class="tc-kpi" id="kpi-avgdur"><span class="tc-kpi-label">Avg call length</span><span class="tc-kpi-val" data-draw="kpi" data-source="kpis" data-field="avgDur" data-row="0" data-fmt="dur">—</span><span class="tc-kpi-sub">median <span data-draw="kpi" data-source="kpis" data-field="medianDur" data-row="0" data-fmt="dur">—</span></span></div>
+      <div class="tc-kpi" id="kpi-solddur"><span class="tc-kpi-label">Avg length, sold calls</span><span class="tc-kpi-val" data-draw="kpi" data-source="kpis" data-field="soldAvgDur" data-row="0" data-fmt="dur">—</span><span class="tc-kpi-sub"><span data-draw="kpi" data-source="kpis" data-field="lostAvgDur" data-row="0" data-fmt="dur">—</span> on calls that didn't close</span></div>
+    </div>
+    <div class="tc-grid2">
+      <div class="tc-card" id="dur-day-card">
+        <h3>Average call length by day</h3>
+        <div class="tc-chart" data-draw="durDayBars" data-source="byDay"></div>
+      </div>
+      <div class="tc-card" id="dur-bucket-card">
+        <h3>Share of calls by length</h3>
+        <div class="tc-legend"><span><i class="tc-sw0"></i>% of connected calls</span><span>Right: close rate</span></div>
+        <div class="tc-chart" data-draw="durBucketBars" data-source="durBuckets"></div>
+        <div class="tc-table-wrap">
+          <table class="tc-table" data-source="durBuckets" data-row-key="bucket">
+            <thead><tr><th data-field="bucket">Call length</th><th data-field="calls">Calls</th><th data-field="share">% of calls</th><th data-field="cumShare">Running %</th><th data-field="sales">Sales</th><th data-field="closeRate">Close rate</th></tr></thead>
+            <tbody data-draw="durBucketRows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="tc-card" id="drop-day-card">
+      <h3>Day by day</h3>
+      <div class="tc-table-wrap">
+        <table class="tc-table" data-source="byDay" data-row-key="day">
+          <thead><tr><th data-field="day">Day</th><th data-field="calls">Calls</th><th data-field="connected">With duration</th><th data-field="avgDur">Avg length</th><th data-field="medianDur">Median</th><th data-field="drop2">< 2 sec</th><th data-field="drop5">< 5 sec</th><th data-field="drop10">< 10 sec</th><th data-field="drop60">< 1 min</th><th data-field="closeRate">Close rate</th></tr></thead>
+          <tbody data-draw="dropDayRows"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="tc-card" id="drop-campaign-card">
+      <h3>Drop-off by campaign</h3>
+      <p class="tc-muted">A campaign with a high 10-second rate is sending low-intent clicks.</p>
+      <div class="tc-table-wrap">
+        <table class="tc-table" data-source="byCampaign" data-row-key="campaign">
+          <thead><tr><th data-field="campaign">Campaign / lead source</th><th data-field="connected">With duration</th><th data-field="avgDur">Avg length</th><th data-field="drop2">< 2 sec</th><th data-field="drop5">< 5 sec</th><th data-field="drop10">< 10 sec</th><th data-field="drop60">< 1 min</th></tr></thead>
+          <tbody data-draw="dropCampaignRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="tc-sec" id="timing">
+    <div class="tc-sec-head">
+      <h2>When deals close</h2>
+      <p class="tc-lede">The best hour to close so far is <b data-draw="kpi" data-source="bestHour" data-field="bestHour" data-row="0" data-fmt="text">—</b> Eastern, at a <b data-draw="kpi" data-source="bestHour" data-field="bestRate" data-row="0" data-fmt="pct">—</b> close rate on <b data-draw="kpi" data-source="bestHour" data-field="bestBillable" data-row="0" data-fmt="int">—</b> billable calls. The most sales came in at <b data-draw="kpi" data-source="bestHour" data-field="mostSalesHour" data-row="0" data-fmt="text">—</b> (<b data-draw="kpi" data-source="bestHour" data-field="mostSales" data-row="0" data-fmt="int">—</b>). The weakest busy hour is <b data-draw="kpi" data-source="bestHour" data-field="worstHour" data-row="0" data-fmt="text">—</b> at <b data-draw="kpi" data-source="bestHour" data-field="worstRate" data-row="0" data-fmt="pct">—</b>.</p>
+      <p class="tc-muted">Hours count only when they have at least 20 billable calls. Times are when the call came in.</p>
+    </div>
+    <div class="tc-grid2">
+      <div class="tc-card" id="hour-card">
+        <h3>Calls and sales by hour (Eastern)</h3>
+        <div class="tc-legend"><span><i class="tc-sw0 tc-light"></i>Calls</span><span><i class="tc-sw0"></i>Sold</span></div>
+        <div class="tc-chart" data-draw="hourBars" data-source="byHour"></div>
+      </div>
+      <div class="tc-card" id="hour-rate-card">
+        <h3>Close rate by hour (Eastern)</h3>
+        <div class="tc-chart" data-draw="hourRateBars" data-source="byHour"></div>
+      </div>
+    </div>
+    <div class="tc-card" id="hour-table-card">
+      <h3>Hour by hour</h3>
+      <div class="tc-table-wrap">
+        <table class="tc-table" data-source="byHour" data-row-key="hour">
+          <thead><tr><th data-field="hour">Hour (ET)</th><th data-field="calls">Calls</th><th data-field="billable">Billable</th><th data-field="sales">Sales</th><th data-field="salesShare">Share of sales</th><th data-field="closeRate">Close rate</th><th data-field="avgPremium">Avg premium</th><th data-field="costPerSale">Cost / sale</th><th data-field="drop10">< 10 sec</th><th data-field="avgDur">Avg length</th></tr></thead>
+          <tbody data-draw="hourRows"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="tc-card" id="weekday-card">
+      <h3>Day of week</h3>
+      <p class="tc-muted">Fills in as you upload more days.</p>
+      <div class="tc-table-wrap">
+        <table class="tc-table" data-source="byWeekday" data-row-key="weekday">
+          <thead><tr><th data-field="weekday">Day</th><th data-field="days">Dates</th><th data-field="calls">Calls</th><th data-field="sales">Sales</th><th data-field="closeRate">Close rate</th><th data-field="avgPremium">Avg premium</th><th data-field="totalPremium">Total / mo</th><th data-field="costPerSale">Cost / sale</th></tr></thead>
+          <tbody data-draw="weekdayRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="tc-sec" id="geo-time">
+    <div class="tc-sec-head">
+      <h2>Where calls come from, and daily volume</h2>
+      <p class="tc-muted">Targeted states: AL, AR, CA, FL, GA, IN, KY, MI, NC, OH, PA, SC, TN, TX, VA, WA. Shares are out of the <span data-draw="kpi" data-source="stateTargeting" data-field="known" data-row="0" data-fmt="int">—</span> calls with a state recorded; <span data-draw="kpi" data-source="kpis" data-field="unknownStateShare" data-row="0" data-fmt="pct0">—</span> of calls have no state and aren't counted either way.</p>
+    </div>
+    <div class="tc-kpis tc-kpis-3" id="state-targeting">
+      <div class="tc-kpi" id="kpi-targeted"><span class="tc-kpi-label">Calls from states we target</span><span class="tc-kpi-val tc-good-val" data-draw="kpi" data-source="stateTargeting" data-field="targetedShare" data-row="0" data-fmt="pct">—</span><span class="tc-kpi-sub"><span data-draw="kpi" data-source="stateTargeting" data-field="targeted" data-row="0" data-fmt="int">—</span> calls · <span data-draw="kpi" data-source="stateTargeting" data-field="targetedSales" data-row="0" data-fmt="int">—</span> sales</span></div>
+      <div class="tc-kpi" id="kpi-untargeted"><span class="tc-kpi-label">Calls from states we don't target</span><span class="tc-kpi-val tc-warn-val" data-draw="kpi" data-source="stateTargeting" data-field="untargetedShare" data-row="0" data-fmt="pct">—</span><span class="tc-kpi-sub"><span data-draw="kpi" data-source="stateTargeting" data-field="untargeted" data-row="0" data-fmt="int">—</span> calls · <span data-draw="kpi" data-source="stateTargeting" data-field="untargetedSales" data-row="0" data-fmt="int">—</span> sales · <span data-draw="kpi" data-source="stateTargeting" data-field="untargetedCost" data-row="0" data-fmt="money0">—</span> call cost</span></div>
+      <div class="tc-kpi" id="kpi-untargeted-list"><span class="tc-kpi-label">Where the off-target calls came from</span><div class="tc-chips tc-state-chips" data-draw="untargetedStates" data-source="stateTargeting"></div></div>
+    </div>
+    <div class="tc-grid2">
+      <div class="tc-card" id="state-card">
+        <h3>Calls and sales by state</h3>
+        <div class="tc-chart" data-draw="stateBars" data-source="byState"></div>
+        <div class="tc-state-foot" id="state-foot">
+          <span><b class="tc-good-val" data-draw="kpi" data-source="stateTargeting" data-field="targetedShare" data-row="0" data-fmt="pct">—</b> from states we target (<span data-draw="kpi" data-source="stateTargeting" data-field="targeted" data-row="0" data-fmt="int">—</span> calls)</span>
+          <span><b class="tc-warn-val" data-draw="kpi" data-source="stateTargeting" data-field="untargetedShare" data-row="0" data-fmt="pct">—</b> from states we don't target (<span data-draw="kpi" data-source="stateTargeting" data-field="untargeted" data-row="0" data-fmt="int">—</span> calls)</span>
+          <span class="tc-muted">Out of <span data-draw="kpi" data-source="stateTargeting" data-field="known" data-row="0" data-fmt="int">—</span> calls with a state recorded.</span>
+        </div>
+      </div>
+      <div class="tc-card" id="day-card">
+        <h3>Calls and sales by day</h3>
+        <div class="tc-chart" data-draw="dayBars" data-source="byDay"></div>
+      </div>
+    </div>
+  </section>
+
+  <details class="tc-card tc-compact" id="agents">
+    <summary><span class="tc-sum-title">Agents</span> <span class="tc-muted"><span data-draw="kpi" data-source="kpis" data-field="agents" data-row="0" data-fmt="int">—</span> agents. Click to expand.</span></summary>
+    <p class="tc-muted tc-agents-note">Close rate is sales over billable calls taken. Click a column heading to sort; click again to flip the order.</p>
+    <div class="tc-filters" id="agent-controls">
+      <label for="agent-sort">Sort by
+        <select id="agent-sort" class="dash-select">
+          <option value="sales">Sales</option>
+          <option value="calls">Calls taken</option>
+          <option value="closeRate">Close rate</option>
+          <option value="avgPremium">Avg premium</option>
+          <option value="totalPremium">Total monthly premium</option>
+          <option value="avgDur">Avg call length</option>
+        </select>
+      </label>
+      <label for="agent-dir">Order
+        <select id="agent-dir" class="dash-select">
+          <option value="desc">Highest first</option>
+          <option value="asc">Lowest first</option>
+        </select>
+      </label>
+      <label for="agent-min">Minimum billable calls
+        <select id="agent-min" class="dash-select">
+          <option value="1">Any</option>
+          <option value="3">3+</option>
+          <option value="5">5+</option>
+          <option value="10">10+</option>
+        </select>
+      </label>
+    </div>
+    <div class="tc-table-wrap" id="agent-table-card">
+      <table class="tc-table" data-source="byAgent" data-row-key="agent" id="agent-table">
+        <thead><tr>
+          <th data-field="agent">Agent</th>
+          <th data-field="calls"><button type="button" class="tc-th-sort" data-sort="calls">Calls</button></th>
+          <th data-field="billable">Billable</th>
+          <th data-field="sales"><button type="button" class="tc-th-sort" data-sort="sales">Sales</button></th>
+          <th data-field="closeRate"><button type="button" class="tc-th-sort" data-sort="closeRate">Close rate</button></th>
+          <th data-field="avgPremium"><button type="button" class="tc-th-sort" data-sort="avgPremium">Avg premium</button></th>
+          <th data-field="totalPremium"><button type="button" class="tc-th-sort" data-sort="totalPremium">Total / mo</button></th>
+          <th data-field="avgDur"><button type="button" class="tc-th-sort" data-sort="avgDur">Avg length</button></th>
+        </tr></thead>
+        <tbody data-draw="agentRows"></tbody>
+      </table>
+    </div>
+  </details>
+
+  <details class="tc-card tc-compact" id="sold-log">
+    <summary><span class="tc-sum-title">Every sale</span> <span class="tc-muted"><span data-draw="kpi" data-source="kpis" data-field="sales" data-row="0" data-fmt="int">—</span> sales, newest first. Click to expand.</span></summary>
+    <div class="tc-table-wrap">
+      <table class="tc-table" data-source="soldCalls" data-row-key="id">
+        <thead><tr><th data-field="when">When (ET)</th><th data-field="agent" class="tc-left">Agent</th><th data-field="called" class="tc-left">Called in with</th><th data-field="carrier" class="tc-left">Carrier sold</th><th data-field="product" class="tc-left">Product</th><th data-field="currentPremium">Was paying</th><th data-field="premium">New premium</th><th data-field="state" class="tc-left">State</th><th data-field="campaign" class="tc-left">Campaign</th><th data-field="notes" class="tc-left">Notes</th></tr></thead>
+        <tbody data-draw="soldRows"></tbody>
+      </table>
+    </div>
+  </details>
+  <section class="tc-analyst" id="analyst">
+    <div class="tc-sec-head">
+      <h2>Marketing analyst</h2>
+      <p class="tc-muted">Claude reads every number on this dashboard and tells you how to lower cost per sale, raise the premium per deal, and which trends to watch. It runs again on its own after new files are added, and you can ask it follow-up questions. It uses your Claude account's usage, and it follows the filters set at the top.</p>
+    </div>
+    <p class="tc-banner" id="ai-off" hidden></p>
+    <div class="tc-ai-controls" id="ai-controls">
+      <button type="button" class="tc-btn tc-btn-primary" id="ai-run">Analyze the data</button>
+      <button type="button" class="tc-btn" id="ai-stop" hidden>Stop</button>
+      <span class="tc-muted" id="ai-meta"></span>
+      <span class="tc-ai-stale" id="ai-stale" hidden>New data since this analysis</span>
+      <span class="tc-muted" id="ai-status" role="status"></span>
+    </div>
+    <p class="tc-ai-error" id="ai-error" role="alert"></p>
+    <div class="tc-ai-card">
+      <p class="tc-muted" id="ai-empty">Press <b>Analyze the data</b> for a full read: what's working, what's costing you, trends, and experiments to try this week.</p>
+      <div class="tc-ai-output" id="ai-output" aria-live="polite"></div>
+    </div>
+    <div class="tc-ai-chat" id="ai-chat">
+      <div class="tc-ai-log" id="ai-log"></div>
+      <div class="tc-ai-chips">
+        <button type="button" class="tc-ai-chip">Which Google carriers should we target harder?</button>
+        <button type="button" class="tc-ai-chip">Which days and hours have the worst cost per sale?</button>
+        <button type="button" class="tc-ai-chip">How can we raise the average monthly premium?</button>
+        <button type="button" class="tc-ai-chip">Is Backup worth keeping vs Limitless?</button>
+      </div>
+      <form class="tc-ai-form" id="ai-form">
+        <label class="tc-visually-hidden" for="ai-q">Ask the analyst</label>
+        <textarea id="ai-q" rows="2" placeholder="Ask about the data, e.g. Which agents close Americo callers best?"></textarea>
+        <button type="submit" class="tc-btn tc-btn-primary" id="ai-send">Send</button>
+      </form>
+    </div>
+  </section>
+
+  <details id="definitions">
+    <summary>How the numbers are worked out, and which columns are read</summary>
+    <ul>
+      <li>A call counts as a sale when Disposition is SOLD, or a Closed / Call Closed column says yes.</li>
+      <li>Close rate = sales ÷ billable calls. If the upload has no Billable column, every call counts.</li>
+      <li>Cost per sale = billable calls × the dollar price in the pricing tier name (or a Cost column if one exists) ÷ sales.</li>
+      <li>Annual premium per $1 = monthly premium sold × 12 ÷ call cost.</li>
+      <li>CPA trend: est. spend ÷ sales in each period. Weeks start Monday. Campaigns are grouped by name (Backup, Limitless, OG), combining their $35 and $40 tiers.</li>
+      <li>Carrier called in uses a Carrier Called In or Target Carrier column. Carrier sold uses the Carrier column.</li>
+      <li>Google carrier uses the Google Carrier column, with spellings of one carrier grouped (AmAm, AMAM and American Amicable count as one; AIG and American General count as Corebridge; entries naming several carriers count as Multiple carriers).</li>
+      <li>Without a Billable column, a call counts as billable when its Call Status is COMPLETED.</li>
+      <li>Columns are matched by name. Campaign uses Campaign, then Pricing Tier, then Lead Source. Reason uses Reason for Call, then Tags. A Reason for Call Code column adds its own chart, and a Notes column shows in the sales table.</li>
+      <li>Times are converted to US Eastern.</li>
+      <li>Call length comes from the Duration column. Drop-off rates (under 2, 5, 10 and 60 sec) are shares of calls that have a duration; calls that never connected have none and are left out.</li>
+      <li>Best hour = highest close rate among hours with at least 20 billable calls, so one lucky call can't win it.</li>
+    </ul>
+  </details>
+</div>
+
+<script>
+// Outside Claude (for example on Cloudflare), uploads are kept in this browser's own storage (IndexedDB).
+// Same calls as Claude's shared storage, so the rest of the page works unchanged. Nothing leaves the browser.
+window.TC_local = (() => {
+  if (window.claude && window.claude.use) return null;
+  if (!('indexedDB' in window)) return null;
+  const opened = new Promise((resolve, reject) => {
+    const req = indexedDB.open('thrive-call-dashboard', 1);
+    req.onupgradeneeded = () => { req.result.createObjectStore('uploads', { keyPath: 'docId' }); req.result.createObjectStore('files'); };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  const run = async (store, mode, fn) => {
+    const idb = await opened;
+    return new Promise((resolve, reject) => {
+      const t = idb.transaction(store, mode);
+      const req = fn(t.objectStore(store));
+      t.oncomplete = () => resolve(req ? req.result : undefined);
+      t.onerror = () => reject(t.error);
+      t.onabort = () => reject(t.error);
+    });
+  };
+  const subs = [];
+  const notify = async () => {
+    const all = await run('uploads', 'readonly', (s) => s.getAll());
+    const snap = { docs: all.map((u) => ({ id: u.docId, exists: true, data: () => u })), size: all.length, empty: !all.length };
+    subs.forEach((f) => { try { f(snap); } catch (e) { console.error(e); } });
+  };
+  const newId = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const db = {
+    collection: () => ({
+      onSnapshot: (f) => { subs.push(f); notify().catch(console.error); return () => {}; },
+      add: async (data) => { const docId = newId('u'); await run('uploads', 'readwrite', (s) => s.put({ ...data, docId })); await notify(); return { id: docId }; }
+    }),
+    doc: (path) => ({
+      delete: async () => { await run('uploads', 'readwrite', (s) => s.delete(path.split('/').pop())); await notify(); }
+    })
+  };
+  const assets = {
+    upload: async (blob) => { const id = newId('f'); const text = await blob.text(); await run('files', 'readwrite', (s) => s.put(text, id)); return { id, url: '' }; },
+    delete: async (id) => { await run('files', 'readwrite', (s) => s.delete(id)); return { deleted: true }; }
+  };
+  const loadText = async (id) => {
+    const text = await run('files', 'readonly', (s) => s.get(id));
+    if (typeof text !== 'string') throw new Error('missing file');
+    return text;
+  };
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+  return { db, assets, loadText };
+})();
+</script>
+<script>
+// A small engine that runs the dashboard's calculations and drawings: datasets, derived figures, filters, redraws.
+window.dash = (() => {
+  const raw = { policies: { status: 'loading', data: [] }, calls: { status: 'loading', data: [] } };
+  const calcs = {}; const draws = {}; const onDatas = [];
+  let cache = {};
+  const defaults = { campaign: '', agent: '', state: '', target: '' };
+  let params = { ...defaults };
+  let ready = false;
+  const data = (id) => {
+    if (raw[id]) return raw[id];
+    const c = calcs[id];
+    if (!c) return { status: 'missing', data: null };
+    if (cache[id]) return cache[id];
+    const ins = c.inputs.map((i) => data(i));
+    if (ins.some((x) => x.status === 'loading')) return { status: 'loading', data: null };
+    if (ins.some((x) => x.status === 'error')) return (cache[id] = { status: 'error', data: null });
+    try { return (cache[id] = { status: 'ok', data: c.fn(...ins.map((x) => x.data)) }); }
+    catch (e) { console.error('calc ' + id, e); return (cache[id] = { status: 'error', data: null, message: String(e) }); }
+  };
+  const runDraw = (name) => {
+    const fn = draws[name];
+    if (!fn) return;
+    document.querySelectorAll(`[data-draw="${name}"]`).forEach((el) => {
+      if (el.closest('[hidden]')) return;
+      try { fn(el); } catch (e) { console.error('draw ' + name, e); }
+    });
+  };
+  const redraw = () => {
+    if (!ready) return;
+    onDatas.forEach((f) => { try { f(); } catch (e) { console.error(e); } });
+    Object.keys(draws).forEach(runDraw);
+  };
+  const rerun = () => { cache = {}; redraw(); };
+  let rt = null;
+  window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(redraw, 150); });
+  return {
+    colors: ['var(--s1)', 'var(--s2)', 'var(--s3)', 'var(--s4)', 'var(--s5)'],
+    data, calc: (id, o) => { calcs[id] = o; },
+    draw: (name, fn) => { if (fn) draws[name] = fn; else runDraw(name); },
+    onData: (fn) => { onDatas.push(fn); },
+    params: () => ({ ...params }),
+    setParams: (p) => { params = { ...params, ...p }; rerun(); },
+    resetParams: () => { params = { ...defaults }; rerun(); },
+    setLink: () => {},
+    setRaw: (id, v) => { raw[id] = v; rerun(); },
+    start: () => { ready = true; rerun(); }
+  };
+})();
+</script>
+<script>
+window.TC = (() => {
+  const pick = (cols, names) => {
+    const low = cols.map((c) => String(c).toLowerCase().trim());
+    for (const n of names) { const i = low.indexOf(n); if (i >= 0) return cols[i]; }
+    return null;
+  };
+  const fieldsFor = (cols) => ({
+    date: pick(cols, ['call date/time (utc)', 'created at', 'date', 'call date', 'timestamp', 'created', 'date/time']),
+    id: pick(cols, ['call id', 'id']),
+    campaign: pick(cols, ['campaign', 'pricing tier (by did)', 'pricing tier', 'lead source', 'source']),
+    status: pick(cols, ['call status']),
+    currentPremium: pick(cols, ['google current premium (monthly, as entered)', 'current premium (monthly)', 'current premium', 'current monthly premium']),
+    tags: pick(cols, ['tags', 'tag', 'outcome']),
+    product: pick(cols, ['policy 1 product', 'product']),
+    commission: pick(cols, ['commission amount (sum of policies)', 'commission amount', 'commission']),
+    tier: pick(cols, ['pricing tier (by did)', 'pricing tier']),
+    state: pick(cols, ['google state called from', 'state called from', 'call state', 'state', 'caller state']),
+    state2: pick(cols, ['call state', 'caller state']),
+    agent: pick(cols, ['agent name', 'agent']),
+    disp: pick(cols, ['disposition', 'call status']),
+    closed: pick(cols, ['closed', 'call closed', 'closed?', 'call closed?', 'sold', 'sold?']),
+    premium: pick(cols, ['total premium (monthly)', 'premium amount', 'monthly premium', 'premium sold', 'premium', 'policy 1 premium (monthly)']),
+    carrier: pick(cols, ['carrier', 'carrier sold', 'sold carrier', 'policy 1 carrier']),
+    reason: pick(cols, ['google reason for call', 'reason for call', 'reason', 'call reason', 'tags', 'tag']),
+    code: pick(cols, ['reason for call code', 'reason code', 'call reason code']),
+    notes: pick(cols, ['notes', 'note', 'call notes']),
+    billable: pick(cols, ['billable']),
+    cost: pick(cols, ['cost', 'cost per call', 'lead cost', 'call cost']),
+    target: pick(cols, ['google carrier', 'carrier called in', 'carrier called', 'called carrier', 'inbound carrier', 'target carrier', 'carrier targeted', 'targeted carrier', 'campaign carrier', 'carrier called about', 'carrier asked about', 'ad carrier']),
+    did: pick(cols, ['did number', 'did', 'tracking number', 'dialed number', 'number called']),
+    duration: pick(cols, ['duration (mm:ss)', 'duration', 'call duration', 'call length', 'talk time', 'duration (seconds)'])
+  });
+  // Tracking number -> carrier advertised on it. Used only when the upload has no carrier-called-in column.
+  // Format: '+18775550100': 'Ethos'. Empty until the tracking numbers are matched to carriers.
+  const DID_CARRIER = {};
+  // Carrier names are typed by hand, so spellings of the same carrier are grouped here.
+  const CARRIER_ALIAS = {
+    americo: 'Americo', amam: 'American Amicable', americanamicable: 'American Amicable',
+    lincolnheritage: 'Lincoln Heritage', lincolnheritagelife: 'Lincoln Heritage', lincolnherritage: 'Lincoln Heritage',
+    colonialpenn: 'Colonial Penn', colpenn: 'Colonial Penn', primerica: 'Primerica', primeamerica: 'Primerica', primemerica: 'Primerica', primerico: 'Primerica',
+    corebridge: 'Corebridge', aig: 'Corebridge', americangeneral: 'Corebridge', globelife: 'Globe Life', globelifewhy: 'Globe Life',
+    libertybankers: 'Liberty Bankers', libertybankerslife: 'Liberty Bankers', mutualofomaha: 'Mutual of Omaha', newyorklife: 'New York Life', nylife: 'New York Life',
+    trustage: 'TruStage', uhl: 'United Home Life', unitedhomelife: 'United Home Life', transamerica: 'Transamerica', trans: 'Transamerica', ethos: 'Ethos', aetna: 'Aetna',
+    combined: 'Combined', gerber: 'Gerber', nationalgeneral: 'National General', baltimorelife: 'Baltimore Life',
+    forgottoask: 'Not asked', idk: 'Not asked', na: 'Not asked', none: 'Not asked', unknown: 'Not asked'
+  };
+  const normCarrier = (v) => {
+    const t = String(v ?? '').trim();
+    if (!t) return '';
+    const k = t.toLowerCase().replace(/[^a-z]/g, '');
+    if (CARRIER_ALIAS[k]) return CARRIER_ALIAS[k];
+    if (/\band\b|\/|&|\s-\s|carriers/i.test(t)) return 'Multiple carriers';
+    if (t !== t.toLowerCase() && t !== t.toUpperCase()) return t;
+    return t.replace(/\w\S*/g, (w) => (w === w.toUpperCase() && w.length <= 4 ? w : w[0].toUpperCase() + w.slice(1).toLowerCase()));
+  };
+  const STATES = { alabama: 'AL', alaska: 'AK', arizona: 'AZ', arkansas: 'AR', california: 'CA', cali: 'CA', colorado: 'CO', connecticut: 'CT', delaware: 'DE', florida: 'FL', georgia: 'GA', hawaii: 'HI', idaho: 'ID', illinois: 'IL', indiana: 'IN', iowa: 'IA', kansas: 'KS', kentucky: 'KY', louisiana: 'LA', maine: 'ME', maryland: 'MD', massachusetts: 'MA', michigan: 'MI', minnesota: 'MN', mississippi: 'MS', missouri: 'MO', montana: 'MT', nebraska: 'NE', nevada: 'NV', newhampshire: 'NH', newjersey: 'NJ', newmexico: 'NM', newyork: 'NY', northcarolina: 'NC', northdakota: 'ND', ohio: 'OH', oklahoma: 'OK', oregon: 'OR', pennsylvania: 'PA', rhodeisland: 'RI', southcarolina: 'SC', southdakota: 'SD', tennessee: 'TN', texas: 'TX', utah: 'UT', vermont: 'VT', virginia: 'VA', washington: 'WA', washingtondc: 'DC', westvirginia: 'WV', wisconsin: 'WI', wyoming: 'WY' };
+  const STATE_CODES = new Set([...Object.values(STATES), 'DC']);
+  const normState = (v) => {
+    const t = String(v ?? '').trim();
+    if (/^[A-Za-z]{2}$/.test(t)) { const c = t.toUpperCase(); return STATE_CODES.has(c) ? c : ''; }
+    return STATES[t.toLowerCase().replace(/[^a-z]/g, '')] || '';
+  };
+  // Campaign family: the $35 and $40 tiers of one campaign count together.
+  const TC_family = (t) => (/backup/i.test(t) ? 'Backup' : /limitless/i.test(t) ? 'Limitless' : /\bog\b/i.test(t) ? 'OG' : (t || 'Not recorded').replace(/\s*\(\$[\d.]+\)\s*$/, ''));
+  const etWeekday = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short' });
+  const secs = (v) => {
+    const s = String(v ?? '').trim();
+    if (!s) return null;
+    if (s.includes(':')) {
+      const parts = s.split(':').map(Number);
+      if (parts.some((n) => !Number.isFinite(n))) return null;
+      return parts.reduce((acc, n) => acc * 60 + n, 0);
+    }
+    const n = Number(s);
+    return Number.isFinite(n) ? n : null;
+  };
+  const etHour = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', hourCycle: 'h23' });
+  const etDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
+  const etWhen = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  const num = (v) => {
+    if (v == null) return null;
+    const s = String(v).replace(/[$,\s]/g, '');
+    if (s === '') return null;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : null;
+  };
+  const yes = (v) => /^(y|yes|true|1|closed|sold|x)$/i.test(String(v ?? '').trim());
+  const clean = (v) => String(v ?? '').trim();
+  const norm = (rows) => {
+    if (!Array.isArray(rows) || !rows.length) return [];
+    const f = fieldsFor(Object.keys(rows[0]));
+    return rows.map((r, i) => {
+      let raw = f.date ? clean(r[f.date]) : '';
+      if (/utc/i.test(f.date || '') && /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?$/.test(raw)) raw = raw.replace(' ', 'T') + 'Z';
+      const hasTime = /\d{1,2}:\d{2}/.test(raw);
+      const dt = raw ? new Date(raw) : null;
+      const ok = dt && !isNaN(dt);
+      const disp = f.disp ? clean(r[f.disp]).toUpperCase() : '';
+      let reason = f.reason ? clean(r[f.reason]) : '';
+      if (/^other\b/i.test(reason)) reason = 'Other';
+      const status = f.status ? clean(r[f.status]).toUpperCase() : '';
+      const sold = f.closed ? yes(r[f.closed]) : f.disp ? disp === 'SOLD' : /^sale$/i.test(f.tags ? clean(r[f.tags]) : reason);
+      const tier = f.tier ? clean(r[f.tier]) : '';
+      const m = tier.match(/\$\s*([\d.]+)/);
+      const price = f.cost ? num(r[f.cost]) : (m ? Number(m[1]) : null);
+      return {
+        id: f.id ? clean(r[f.id]) || 'row-' + i : 'row-' + i,
+        ts: ok ? dt.getTime() : null,
+        day: ok ? etDay.format(dt) : null,
+        hour: ok && hasTime ? Number(etHour.format(dt)) % 24 : null,
+        when: ok ? (hasTime ? etWhen.format(dt) : etDay.format(dt)) : '',
+        campaign: (f.campaign ? clean(r[f.campaign]) : '') || 'Not recorded',
+        family: TC_family(tier || (f.campaign ? clean(r[f.campaign]) : '')),
+        state: (f.state ? normState(r[f.state]) : '') || (f.state2 ? normState(r[f.state2]) : ''),
+        agent: (f.agent ? clean(r[f.agent]) : '') || 'Not recorded',
+        disp: disp || (f.closed ? (sold ? 'SOLD' : 'NOT SOLD') : 'NO DISPOSITION'),
+        sold,
+        premium: f.premium ? num(r[f.premium]) : null,
+        carrier: (f.carrier ? normCarrier(r[f.carrier]) : '') || 'Not recorded',
+        reason: reason || 'Not recorded',
+        code: f.code ? clean(r[f.code]) || 'Not recorded' : null,
+        notes: f.notes ? clean(r[f.notes]) : '',
+        billable: f.billable && clean(r[f.billable]) !== '' ? yes(r[f.billable]) : f.status ? status === 'COMPLETED' : true,
+        tag: f.tags ? clean(r[f.tags]) || 'Not recorded' : null,
+        product: f.product ? clean(r[f.product]) : '',
+        currentPremium: f.currentPremium ? num(r[f.currentPremium]) : null,
+        commission: f.commission ? num(r[f.commission]) : null,
+        price,
+        dur: f.duration ? secs(r[f.duration]) : null,
+        target: f.target ? normCarrier(r[f.target]) || 'Not recorded'
+          : (f.did && Object.keys(DID_CARRIER).length ? DID_CARRIER[clean(r[f.did])] || 'Other number' : null),
+        weekday: ok ? etWeekday.format(dt) : null
+      };
+    });
+  };
+  const apply = (rows, p) => rows.filter((r) =>
+    (!p.campaign || r.campaign === p.campaign) && (!p.target || r.target === p.target) && (!p.agent || r.agent === p.agent) && (!p.state || (p.state === '(none)' ? !r.state : r.state === p.state)));
+  const summarize = (rows) => {
+    const billable = rows.filter((r) => r.billable).length;
+    const soldRows = rows.filter((r) => r.sold);
+    const prem = soldRows.map((r) => r.premium).filter((v) => v != null);
+    const priced = rows.filter((r) => r.billable && r.price != null);
+    const spend = priced.length ? d3.sum(priced, (r) => r.price) : null;
+    const total = d3.sum(prem);
+    return {
+      calls: rows.length, billable, sales: soldRows.length,
+      closeRate: billable ? soldRows.length / billable : null,
+      totalPremium: total, avgPremium: prem.length ? total / prem.length : null,
+      medianPremium: prem.length ? d3.median(prem) : null,
+      annualPremium: total * 12, spend,
+      costPerSale: spend != null && soldRows.length ? spend / soldRows.length : null,
+      premiumPerDollar: spend ? (total * 12) / spend : null,
+      avgCurrentPremium: (() => { const c = rows.map((r) => r.currentPremium).filter((v) => v != null && v > 0); return c.length ? d3.mean(c) : null; })(),
+      commission: rows.some((r) => r.commission != null) ? d3.sum(rows, (r) => r.commission || 0) : null,
+      ...talk(rows)
+    };
+  };
+  // Talk time and early drop-off, over calls that have a recorded duration.
+  const talk = (rows) => {
+    const d = rows.map((r) => r.dur).filter((v) => v != null);
+    const share = (t) => (d.length ? d.filter((v) => v < t).length / d.length : null);
+    const soldD = rows.filter((r) => r.sold && r.dur != null).map((r) => r.dur);
+    const lostD = rows.filter((r) => !r.sold && r.dur != null).map((r) => r.dur);
+    return {
+      connected: d.length, avgDur: d.length ? d3.mean(d) : null, medianDur: d.length ? d3.median(d) : null,
+      drop2: share(2), drop5: share(5), drop10: share(10), drop60: share(60),
+      soldAvgDur: soldD.length ? d3.mean(soldD) : null, lostAvgDur: lostD.length ? d3.mean(lostD) : null
+    };
+  };
+  const groupBy = (rows, key) => d3.groups(rows, (r) => r[key]).map(([k, rs]) => ({ key: k, rows: rs }));
+
+  const fmt = {
+    int: d3.format(','), pct: (v) => d3.format('.1%')(v), pct0: (v) => d3.format('.0%')(v),
+    money0: d3.format('$,.0f'), money2: d3.format('$,.2f'), ratio: (v) => d3.format('$,.2f')(v),
+    text: (v) => String(v), day: (v) => d3.utcFormat('%b %-d, %Y')(new Date(v + 'T00:00:00Z')),
+    dur: (v) => { v = Math.round(v); const h = Math.floor(v / 3600), m = Math.floor((v % 3600) / 60), s = v % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0'); },
+    hour: (h) => { h = Number(h); return (h % 12 || 12) + (h < 12 ? 'a' : 'p'); }
+  };
+  const show = (v, kind) => (v == null || (typeof v === 'number' && !isFinite(v)) ? 'n/a' : (fmt[kind] || fmt.text)(v));
+  const enc = (s) => String(s).replace(/%/g, '%25').replace(/&/g, '%26').replace(/=/g, '%3D');
+  const where = (col, val) => enc(col) + '=' + enc(val);
+  const mark = (el, source, field, col, val) => {
+    el.setAttribute('data-source', source); el.setAttribute('data-field', field);
+    if (col != null) el.setAttribute('data-where', where(col, val));
+  };
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const notReady = (box, d) => {
+    if (d.status === 'ok' && d.data) return false;
+    box.replaceChildren();
+    box.textContent = d.status === 'error' ? 'Failed to load' : '—';
+    return true;
+  };
+  const tooltip = (box) => {
+    const tip = el('div', 'tc-tip'); tip.hidden = true; box.appendChild(tip);
+    return {
+      show(ev, title, lines) {
+        tip.replaceChildren(el('strong', null, title), ...lines.map((l) => { const s = el('span', null, l); const w = el('div'); w.appendChild(s); return w; }));
+        tip.hidden = false;
+        const b = box.getBoundingClientRect();
+        let x = ev.clientX - b.left + 12, y = ev.clientY - b.top + 12;
+        const tw = tip.offsetWidth, th = tip.offsetHeight;
+        if (x + tw > b.width) x = Math.max(0, ev.clientX - b.left - tw - 12);
+        if (y + th > b.height + 40) y = Math.max(0, ev.clientY - b.top - th - 12);
+        tip.style.left = x + 'px'; tip.style.top = y + 'px';
+      },
+      hide() { tip.hidden = true; }
+    };
+  };
+  // Horizontal bars: value bar, optional darker overlay (value2), printed value and a side figure.
+  const hbars = (box, rows, o) => {
+    box.replaceChildren();
+    if (!rows.length) { box.textContent = 'No calls match these filters.'; return; }
+    const list = el('div', 'tc-bars');
+    box.appendChild(list);
+    const tip = tooltip(box);
+    const max = d3.max(rows, (d) => d[o.value]) || 1;
+    for (const d of rows) {
+      const row = el('div', 'tc-bar');
+      const lab = el('span', 'tc-bar-label', d[o.key]);
+      const track = el('div', 'tc-bar-track');
+      const f1 = el('div', o.value2 ? 'tc-bar-fill' : 'tc-bar-fill2');
+      f1.style.width = (d[o.value] / max) * 100 + '%'; f1.style.background = o.color;
+      track.appendChild(f1);
+      if (o.value2) { const f2 = el('div', 'tc-bar-fill2'); f2.style.width = ((d[o.value2] || 0) / max) * 100 + '%'; f2.style.background = o.color; track.appendChild(f2); }
+      const val = el('span', 'tc-bar-val');
+      const v1 = el('span', null, show(d[o.value], o.fmt)); mark(v1, o.source, o.value, o.key, d[o.key]); val.appendChild(v1);
+      if (o.side) {
+        const sm = el('small'); const sv = el('span', null, show(d[o.side], o.sideFmt));
+        mark(sv, o.source, o.side, o.key, d[o.key]);
+        if (o.sidePrefix) sm.append(o.sidePrefix); sm.appendChild(sv); if (o.sideSuffix) sm.append(o.sideSuffix);
+        if (o.side2) { const s2 = el('span', null, show(d[o.side2], o.side2Fmt)); mark(s2, o.source, o.side2, o.key, d[o.key]); if (o.side2Prefix) sm.append(o.side2Prefix); sm.appendChild(s2); if (o.side2Suffix) sm.append(o.side2Suffix); }
+        val.appendChild(sm);
+      }
+      row.append(lab, track, val);
+      row.addEventListener('pointermove', (ev) => tip.show(ev, d[o.key], o.tip(d)));
+      row.addEventListener('pointerleave', () => tip.hide());
+      list.appendChild(row);
+    }
+  };
+  // Vertical bars with an optional overlay series, drawn in SVG sized from the box width.
+  const vbars = (box, rows, o) => {
+    box.replaceChildren();
+    if (!rows.length) { box.textContent = 'No calls match these filters.'; return; }
+    const W = Math.max(260, box.clientWidth || 600), H = o.height || 200;
+    const m = { t: 18, r: 8, b: 26, l: 34 };
+    const svg = d3.select(box).append('svg').attr('class', 'tc-svg').attr('width', '100%').attr('height', H)
+      .attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', o.aria);
+    const x = d3.scaleBand().domain(rows.map((d) => d[o.key])).range([m.l, W - m.r]).padding(0.18);
+    const max = d3.max(rows, (d) => d[o.value]) || 1;
+    const y = d3.scaleLinear().domain([0, max]).nice(4).range([H - m.b, m.t]);
+    svg.append('g').selectAll('line').data(y.ticks(4)).join('line').attr('class', 'tc-gridline')
+      .attr('x1', m.l).attr('x2', W - m.r).attr('y1', (t) => y(t)).attr('y2', (t) => y(t));
+    svg.append('g').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(4).tickSize(0).tickFormat(o.yTick || d3.format(o.yFmt || '~s'))).call((g) => g.select('.domain').remove());
+    const labelEvery = Math.max(1, Math.ceil(rows.length / Math.floor((W - m.l) / 46)));
+    svg.append('g').attr('transform', `translate(0,${H - m.b})`)
+      .call(d3.axisBottom(x).tickSize(0).tickPadding(8).tickFormat((k, i) => (i % labelEvery ? '' : (o.label ? o.label(k) : k))));
+    const tip = tooltip(box);
+    const g = svg.append('g').selectAll('g').data(rows).join('g');
+    g.append('rect').attr('x', (d) => x(d[o.key])).attr('width', x.bandwidth()).attr('y', (d) => y(d[o.value])).attr('height', (d) => y(0) - y(d[o.value]))
+      .attr('rx', 2).style('fill', o.color).style('opacity', o.value2 ? 0.45 : 1);
+    if (o.value2) g.append('rect').attr('x', (d) => x(d[o.key])).attr('width', x.bandwidth()).attr('y', (d) => y(d[o.value2] || 0)).attr('height', (d) => y(0) - y(d[o.value2] || 0)).attr('rx', 2).style('fill', o.color);
+    if (x.bandwidth() >= 18) g.append('text').attr('class', 'tc-vlabel').attr('text-anchor', 'middle').attr('x', (d) => x(d[o.key]) + x.bandwidth() / 2).attr('y', (d) => y(d[o.value]) - 4)
+      .text((d) => (d[o.value] ? show(d[o.value], o.fmt) : ''));
+    g.append('rect').attr('x', (d) => x(d[o.key])).attr('width', x.step()).attr('y', m.t).attr('height', H - m.t - m.b).style('fill', 'transparent')
+      .on('pointermove', (ev, d) => tip.show(ev, o.label ? o.label(d[o.key]) : d[o.key], o.tip(d))).on('pointerleave', () => tip.hide());
+  };
+  const cell = (tr, text, cls) => { const td = el('td', cls || null, text); tr.appendChild(td); return td; };
+  const rateClass = (r, overall) => (r == null || overall == null ? '' : r >= overall * 1.15 ? 'tc-good' : r <= overall * 0.85 ? 'tc-bad' : '');
+  const UNKNOWN = new Set(['Not recorded', 'Not asked']);
+  // Joins the policy report and the call export on Call ID. The policy report's value wins where both have a column;
+  // the call export fills in what the policy report lacks (Billable, call state). Rows found in only one file are kept.
+  const idOf = (r) => String(r['Call ID'] ?? r['call id'] ?? r['ID'] ?? '').trim();
+  const merge = (a, b) => {
+    a = Array.isArray(a) ? a : []; b = Array.isArray(b) ? b : [];
+    if (!a.length) return b;
+    if (!b.length) return a;
+    const byId = new Map(b.map((r) => [idOf(r), r]));
+    const out = a.map((r) => { const m = byId.get(idOf(r)); if (m) byId.delete(idOf(r)); if (!m) return r;
+      const row = { ...m };
+      for (const [k, v] of Object.entries(r)) if ((v !== '' && v != null) || !(k in row)) row[k] = v;
+      return row; });
+    for (const r of byId.values()) out.push(r);
+    return out;
+  };
+  return { UNKNOWN, merge, norm, apply, summarize, groupBy, show, where, mark, el, notReady, hbars, vbars, cell, rateClass, fmt };
+})();
+</script>
+<script>
+// Every figure on the page is worked out here from the uploaded call export.
+dash.calc('facets', {
+  inputs: ['policies', 'calls'], title: 'Filter choices', description: 'Campaigns, agents and states found in the upload, with call counts.',
+  fn: (policies, calls) => {
+    const rows = TC.norm(TC.merge(policies, calls));
+    const out = [];
+    for (const [kind, key] of [['target', 'target'], ['campaign', 'campaign'], ['agent', 'agent'], ['state', 'state']]) {
+      for (const [value, rs] of d3.groups(rows.filter((r) => kind !== 'target' || r.target != null), (r) => r[key])) out.push({ kind, value: value || '(none)', calls: rs.length });
+    }
+    return out.sort((a, b) => b.calls - a.calls);
+  }
+});
+dash.calc('kpis', {
+  inputs: ['policies', 'calls'], title: 'Headline numbers', description: 'Totals for the calls matching the filters: sales, close rate, premium and estimated spend.',
+  fn: (policies, calls) => {
+    const rows = TC.apply(TC.norm(TC.merge(policies, calls)), dash.params());
+    const s = TC.summarize(rows);
+    const days = rows.map((r) => r.day).filter(Boolean).sort();
+    return [{ ...s, firstDay: days[0] || null, lastDay: days[days.length - 1] || null,
+      unknownStateShare: rows.length ? rows.filter((r) => !r.state).length / rows.length : null,
+      agents: new Set(rows.map((r) => r.agent)).size,
+      targetKnown: rows.filter((r) => r.target != null && !TC.UNKNOWN.has(r.target)).length }];
+  }
+});
+dash.calc('byCarrier', {
+  inputs: ['policies', 'calls'], title: 'Sales by carrier', description: 'Sold calls grouped by the carrier the policy was written with.',
+  fn: (policies, calls) => {
+    const sold = TC.apply(TC.norm(TC.merge(policies, calls)), dash.params()).filter((r) => r.sold);
+    return TC.groupBy(sold, 'carrier').map(({ key, rows }) => {
+      const p = rows.map((r) => r.premium).filter((v) => v != null);
+      return { carrier: key, sales: rows.length, share: rows.length / sold.length,
+        avgPremium: p.length ? d3.mean(p) : null, minPremium: d3.min(p) ?? null, maxPremium: d3.max(p) ?? null, totalPremium: d3.sum(p) };
+    }).sort((a, b) => b.sales - a.sales || b.totalPremium - a.totalPremium);
+  }
+});
+dash.calc('byTarget', {
+  inputs: ['policies', 'calls'], title: 'Results by carrier called in', description: 'Calls grouped by the carrier the caller asked about, ranked by close rate. Carriers with fewer than 5 billable calls rank last.',
+  fn: (policies, calls) => {
+    const rows = TC.apply(TC.norm(TC.merge(policies, calls)), dash.params()).filter((r) => r.target != null);
+    const minBillable = 5;
+    const known = rows.filter((r) => !TC.UNKNOWN.has(r.target)).length;
+    const out = TC.groupBy(rows, 'target').map(({ key, rows: rs }) => {
+      const sold = rs.filter((r) => r.sold);
+      const top = d3.groups(sold, (r) => r.carrier).sort((a, b) => b[1].length - a[1].length)[0];
+      return { target: key, ...TC.summarize(rs), callShare: TC.UNKNOWN.has(key) || !known ? null : rs.length / known,
+        topSold: top ? top[0] : null, topSoldShare: top ? top[1].length / sold.length : null, ranked: !TC.UNKNOWN.has(key) && key !== 'Multiple carriers' && rs.filter((r) => r.billable).length >= minBillable };
+    }).sort((a, b) => (b.ranked - a.ranked) || ((b.closeRate ?? -1) - (a.closeRate ?? -1)) || b.sales - a.sales || b.calls - a.calls);
+    return out.map((r, i) => ({ rank: r.ranked ? i + 1 : null, ...r }));
+  }
+});
+dash.calc('byCampaign', {
+  inputs: ['policies', 'calls'], title: 'Results by campaign', description: 'Calls, sales, close rate, estimated spend and premium for each campaign or lead source.',
+  fn: (policies, calls) => {
+    const rows = TC.apply(TC.norm(TC.merge(policies, calls)), dash.params());
+    return TC.groupBy(rows, 'campaign').map(({ key, rows }) => ({ campaign: key, ...TC.summarize(rows) }))
+      .sort((a, b) => b.calls - a.calls);
+  }
+});
+dash.calc('byReason', {
+  inputs: ['policies', 'calls'], title: 'Calls by reason', description: 'Calls grouped by the reason or tag recorded on each call, with how many closed.',
+  fn: (policies, calls) => {
+    const rows = TC.apply(TC.norm(TC.merge(policies, calls)), dash.params());
+    return TC.groupBy(rows, 'reason').map(({ key, rows: rs }) => ({ reason: key, calls: rs.length, share: rs.length / rows.length, sales: rs.filter((r) => r.sold).length }))
+      .sort((a, b) => b.calls - a.calls);
+  }
+});
+dash.calc('byTag', {
+  inputs: ['policies', 'calls'], title: 'Calls by outcome tag', description: 'Calls grouped by the outcome tag the agent chose, with how many closed.',
+  fn: (policies, calls) => {
+    const rows = TC.apply(TC.norm(TC.merge(policies, calls)), dash.params()).filter((r) => r.tag != null);
+    return TC.groupBy(rows, 'tag').map(({ key, rows: rs }) => ({ tag: key, calls: rs.length, share: rs.length / rows.length, sales: rs.filter((r) => r.sold).length }))
+      .sort((a, b) => b.calls - a.calls);
+  }
+});
+dash.calc('byCode', {
+  inputs: ['policies', 'calls'], title: 'Calls by reason code', description: 'Calls grouped by the reason-for-call code, when the upload has that column.',
+  fn: (policies, calls) => {
+    const rows = TC.apply(TC.norm(TC.merge(policies, calls)), dash.params()).filter((r) => r.code != null);
+    return TC.groupBy(rows, 'code').map(({ key, rows: rs }) => ({ code: key, calls: rs.length, share: rs.length / rows.length, sales: rs.filter((r) => r.sold).length }))
+      .sort((a, b) => b.calls - a.calls);
+  }
+});
+dash.calc('byDisposition', {
+  inputs: ['policies', 'calls'], title: 'Calls by disposition', description: 'How each call was dispositioned.',
+  fn: (policies, calls) => {
+    const rows = TC.apply(TC.norm(TC.merge(policies, calls)), dash.params());
+    return TC.groupBy(rows, 'disp').map(({ key, rows: rs }) => ({ disposition: key, calls: rs.length, share: rs.length / rows.length }))
+      .sort((a, b) => b.calls - a.calls);
+  }
+});
+dash.calc('premiumBands', {
+  inputs: ['policies', 'calls'], title: 'Premium sold by band', description: 'Sold calls counted by monthly premium band.',
+  fn: (policies, calls) => {
+    const sold = TC.apply(TC.norm(TC.merge(policies, calls)), dash.params()).filter((r) => r.sold && r.premium != null);
+    const bands = [['Under $50', 0, 50], ['$50–75', 50, 75], ['$75–100', 75, 100], ['$100–150', 100, 150], ['$150–200', 150, 200], ['$200+', 200, Infinity]];
+    return bands.map(([band, lo, hi]) => { const rs = sold.filter((r) => r.premium >= lo && r.premium < hi); return { band, sales: rs.length, totalPremium: d3.sum(rs, (r) => r.premium) }; });
+  }
+});
+// The states Thrive buys calls in. A call from any other state is off-target traffic.
+window.TC_TARGET_STATES = ['AL', 'AR', 'CA', 'FL', 'GA', 'IN', 'KY', 'MI', 'NC', 'OH', 'PA', 'SC', 'TN', 'TX', 'VA', 'WA'];
+dash.calc('stateTargeting', {
+  inputs: ['policies', 'calls'], title: 'Targeted vs not targeted states', description: 'Of the calls with a state recorded, how many came from the 16 targeted states and how many from elsewhere.',
+  fn: (policies, calls) => {
+    const rows = TC.apply(TC.norm(TC.merge(policies, calls)), dash.params()).filter((r) => r.state);
+    const T = new Set(window.TC_TARGET_STATES);
+    const inT = rows.filter((r) => T.has(r.state)), outT = rows.filter((r) => !T.has(r.state));
+    const cost = (rs) => d3.sum(rs.filter((r) => r.billable && r.price != null), (r) => r.price);
+    return [{
+      known: rows.length, targeted: inT.length, untargeted: outT.length,
+      targetedShare: rows.length ? inT.length / rows.length : null, untargetedShare: rows.length ? outT.length / rows.length : null,
+      targetedSales: inT.filter((r) => r.sold).length, untargetedSales: outT.filter((r) => r.sold).length, untargetedCost: cost(outT),
+      untargetedStates: d3.groups(outT, (r) => r.state).map(([state, rs]) => ({ state, calls: rs.length, sales: rs.filter((r) => r.sold).length })).sort((a, b) => b.calls - a.calls)
+    }];
+  }
+});
+dash.calc('byState', {
+  inputs: ['policies', 'calls'], title: 'Calls by state', description: 'Calls with a state recorded, grouped by state, with sales and close rate.',
+  fn: (policies, calls) => {
+    const rows = TC.apply(TC.norm(TC.merge(policies, calls)), dash.params()).filter((r) => r.state);
+    return TC.groupBy(rows, 'state').map(({ key, rows }) => ({ state: key, ...TC.summarize(rows) }))
+      .sort((a, b) => b.calls - a.calls || b.sales - a.sales);
+  }
+});
+dash.calc('byHour', {
+  inputs: ['policies', 'calls'], title: 'Calls by hour', description: 'Calls and sales by hour of the day, US Eastern time.',
+  fn: (policies, calls) => {
+    const rows = TC.apply(TC.norm(TC.merge(policies, calls)), dash.params()).filter((r) => r.hour != null);
+    if (!rows.length) return [];
+    const lo = d3.min(rows, (r) => r.hour), hi = d3.max(rows, (r) => r.hour);
+    const allSales = rows.filter((r) => r.sold).length;
+    return d3.range(lo, hi + 1).map((h) => {
+      const rs = rows.filter((r) => r.hour === h);
+      const s = TC.summarize(rs);
+      return { hour: TC.fmt.hour(h), ...s, salesShare: allSales ? s.sales / allSales : null };
+    });
+  }
+});
+dash.calc('cpaTrend', {
+  inputs: ['policies', 'calls'], title: 'Cost per acquisition and premium over time', description: 'Estimated spend divided by sales, and the monthly premium of closed deals, for each campaign (Backup, Limitless, OG, with their $35 and $40 tiers combined) and for all campaigns, by day, week (Monday start), month and year, Eastern time.',
+  fn: (policies, calls) => {
+    const rows = TC.apply(TC.norm(TC.merge(policies, calls)), dash.params()).filter((r) => r.day);
+    const monday = (day) => { const d = new Date(day + 'T00:00:00Z'); const back = (d.getUTCDay() + 6) % 7; d.setUTCDate(d.getUTCDate() - back); return d.toISOString().slice(0, 10); };
+    const keyFor = { day: (r) => r.day, week: (r) => monday(r.day), month: (r) => r.day.slice(0, 7), year: (r) => r.day.slice(0, 4) };
+    const out = [];
+    for (const grain of Object.keys(keyFor)) {
+      for (const [period, rs] of d3.groups(rows, keyFor[grain])) {
+        for (const [campaign, cs] of [...d3.groups(rs, (r) => r.family), ['All campaigns', rs]]) {
+          const priced = cs.filter((r) => r.billable && r.price != null);
+          const spend = priced.length ? d3.sum(priced, (r) => r.price) : null;
+          const sales = cs.filter((r) => r.sold).length;
+          out.push({ key: `${grain}|${period}|${campaign}`, grain, period, campaign, calls: cs.length, billable: cs.filter((r) => r.billable).length,
+            sales, spend, cpa: spend != null && sales ? spend / sales : null, closeRate: cs.length ? sales / cs.filter((r) => r.billable).length || 0 : null,
+            ...(() => { const pr = cs.filter((r) => r.sold && r.premium != null).map((r) => r.premium); return { avgPremium: pr.length ? d3.mean(pr) : null, totalPremium: pr.length ? d3.sum(pr) : null, premiumSales: pr.length }; })() });
+        }
+      }
+    }
+    return out.sort((a, b) => d3.ascending(a.grain, b.grain) || d3.ascending(a.period, b.period) || d3.ascending(a.campaign, b.campaign));
+  }
+});
+dash.calc('bestHour', {
+  inputs: ['policies', 'calls'], title: 'Best hour to close', description: 'The Eastern-time hour with the highest close rate among hours with at least 20 billable calls, and the hour with the most sales.',
+  fn: (policies, calls) => {
+    const rows = TC.apply(TC.norm(TC.merge(policies, calls)), dash.params()).filter((r) => r.hour != null);
+    const hours = TC.groupBy(rows, 'hour').map(({ key, rows }) => ({ h: key, ...TC.summarize(rows) }));
+    const minCalls = 20;
+    const eligible = hours.filter((h) => h.billable >= minCalls && h.closeRate != null).sort((a, b) => b.closeRate - a.closeRate);
+    const most = hours.slice().sort((a, b) => b.sales - a.sales || (b.closeRate ?? 0) - (a.closeRate ?? 0))[0];
+    const best = eligible[0];
+    return [{
+      bestHour: best ? TC.fmt.hour(best.h) : null, bestRate: best ? best.closeRate : null, bestBillable: best ? best.billable : null,
+      worstHour: eligible.length > 1 ? TC.fmt.hour(eligible[eligible.length - 1].h) : null, worstRate: eligible.length > 1 ? eligible[eligible.length - 1].closeRate : null,
+      mostSalesHour: most ? TC.fmt.hour(most.h) : null, mostSales: most ? most.sales : null, minCalls
+    }];
+  }
+});
+dash.calc('byWeekday', {
+  inputs: ['policies', 'calls'], title: 'Results by weekday', description: 'Calls, sales, close rate and premium by day of the week, Eastern time.',
+  fn: (policies, calls) => {
+    const rows = TC.apply(TC.norm(TC.merge(policies, calls)), dash.params()).filter((r) => r.weekday);
+    const order = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return order.map((w) => ({ weekday: w, rs: rows.filter((r) => r.weekday === w) })).filter((g) => g.rs.length)
+      .map(({ weekday, rs }) => ({ weekday, days: new Set(rs.map((r) => r.day)).size, ...TC.summarize(rs) }));
+  }
+});
+dash.calc('durBuckets', {
+  inputs: ['policies', 'calls'], title: 'Calls by length', description: 'Connected calls grouped by how long they lasted: share of all connected calls, running total, and how many closed.',
+  fn: (policies, calls) => {
+    const rows = TC.apply(TC.norm(TC.merge(policies, calls)), dash.params()).filter((r) => r.dur != null);
+    const b = [['Under 2 sec', 0, 2], ['2–5 sec', 2, 5], ['5–10 sec', 5, 10], ['10 sec – 1 min', 10, 60], ['1–5 min', 60, 300], ['5–10 min', 300, 600],
+      ['10–20 min', 600, 1200], ['20–30 min', 1200, 1800], ['30–45 min', 1800, 2700], ['45 min+', 2700, Infinity]];
+    let running = 0;
+    return b.map(([bucket, lo, hi]) => {
+      const rs = rows.filter((r) => r.dur >= lo && r.dur < hi);
+      const sales = rs.filter((r) => r.sold).length;
+      running += rs.length;
+      return { bucket, calls: rs.length, share: rows.length ? rs.length / rows.length : null,
+        cumShare: rows.length ? running / rows.length : null, sales, closeRate: rs.length ? sales / rs.length : null };
+    });
+  }
+});
+dash.calc('byDay', {
+  inputs: ['policies', 'calls'], title: 'Calls by day', description: 'Calls, sales and premium by day, US Eastern time.',
+  fn: (policies, calls) => {
+    const rows = TC.apply(TC.norm(TC.merge(policies, calls)), dash.params()).filter((r) => r.day);
+    return TC.groupBy(rows, 'day').map(({ key, rows }) => ({ day: key, ...TC.summarize(rows) })).sort((a, b) => d3.ascending(a.day, b.day));
+  }
+});
+dash.calc('byAgent', {
+  inputs: ['policies', 'calls'], title: 'Results by agent', description: 'Calls, sales, close rate and premium for each agent.',
+  fn: (policies, calls) => {
+    const rows = TC.apply(TC.norm(TC.merge(policies, calls)), dash.params());
+    return TC.groupBy(rows, 'agent').map(({ key, rows }) => ({ agent: key, ...TC.summarize(rows) }))
+      .sort((a, b) => b.sales - a.sales || (b.closeRate ?? 0) - (a.closeRate ?? 0) || b.calls - a.calls);
+  }
+});
+dash.calc('soldCalls', {
+  inputs: ['policies', 'calls'], title: 'Sold calls', description: 'Every call marked as a sale, newest first.',
+  fn: (policies, calls) => TC.apply(TC.norm(TC.merge(policies, calls)), dash.params()).filter((r) => r.sold).sort((a, b) => (b.ts ?? 0) - (a.ts ?? 0))
+    .map((r) => ({ id: r.id, when: r.when, agent: r.agent, carrier: r.carrier, product: r.product || '—', premium: r.premium, currentPremium: r.currentPremium, called: r.target ?? '—', state: r.state || '—', campaign: r.campaign, notes: r.notes }))
+});
+</script>
+<script>
+const C = () => dash.colors[0];
+document.querySelectorAll('.tc').forEach((root) => root.style.setProperty('--tc-c0', dash.colors[0]));
+
+dash.draw('kpi', (el) => {
+  const d = dash.data(el.dataset.source);
+  if (d.status !== 'ok' || !d.data) { el.textContent = '—'; return; }
+  const row = d.data[Number(el.dataset.row || 0)];
+  el.textContent = row ? TC.show(row[el.dataset.field], el.dataset.fmt) : 'n/a';
+});
+
+dash.draw('filter', (sel) => {
+  const d = dash.data('facets');
+  const kind = sel.dataset.param;
+  const opts = d.status === 'ok' ? d.data.filter((r) => r.kind === kind) : [];
+  sel.replaceChildren(new Option(sel.dataset.all, ''), ...opts.map((r) => new Option(`${r.value} (${r.calls})`, r.value)));
+  sel.value = dash.params()[kind] || '';
+  sel.onchange = () => dash.setParams({ [kind]: sel.value || '' });
+});
+document.querySelectorAll('#f-reset').forEach((b) => b.addEventListener('click', () => dash.resetParams()));
+
+dash.onData(() => {
+  const d = dash.data('byCode');
+  document.querySelectorAll('#codes').forEach((s) => { s.hidden = !(d.status === 'ok' && d.data && d.data.length); });
+  const tg = dash.data('byTag');
+  const sameAsReason = tg.status === 'ok' && dash.data('byReason').status === 'ok' && tg.data && dash.data('byReason').data.length === tg.data.length && tg.data.every((r, i) => r.tag === dash.data('byReason').data[i].reason);
+  document.querySelectorAll('#tags-card').forEach((s) => { s.hidden = !(tg.status === 'ok' && tg.data && tg.data.length) || sameAsReason; });
+});
+
+dash.onData(() => {
+  const t = dash.data('byTarget');
+  const f = dash.data('facets');
+  const has = t.status === 'ok' && Array.isArray(t.data) && t.data.length > 0;
+  const known = t.status === 'ok';
+  document.querySelectorAll('#called-empty').forEach((el) => { el.hidden = !known || has; });
+  document.querySelectorAll('#called-body, #called-table-card').forEach((el) => { el.hidden = known && !has; });
+  const hasTargetOpts = f.status === 'ok' && f.data.some((r) => r.kind === 'target');
+  document.querySelectorAll('#f-target-wrap').forEach((el) => { el.hidden = !hasTargetOpts && !dash.params().target; });
+});
+
+dash.draw('targetBars', (box) => {
+  const d = dash.data('byTarget');
+  if (TC.notReady(box, d)) return;
+  TC.hbars(box, d.data.filter((r) => r.ranked).map((r) => ({ ...r, closeRate: r.closeRate ?? 0 })), { source: 'byTarget', key: 'target', value: 'closeRate', fmt: 'pct', side: 'sales', sideFmt: 'int', sidePrefix: ' · ', side2: 'billable', side2Fmt: 'int', side2Prefix: ' of ', side2Suffix: ' calls closed', color: C(),
+    tip: (r) => [`${r.sales} closed out of ${r.billable} calls = ${TC.show(r.closeRate, 'pct')}`, `About ${Math.round((r.closeRate || 0) * 100)} sales per 100 calls`, `Pays now ${TC.show(r.avgCurrentPremium, 'money2')}, sold at ${TC.show(r.avgPremium, 'money2')}`, `Avg talk time ${TC.show(r.avgDur, 'dur')}`, `Cost per sale ${TC.show(r.costPerSale, 'money0')}`, r.ranked ? `Rank #${r.rank}` : 'Fewer than 5 billable calls, unranked'] });
+});
+
+dash.draw('targetShareBars', (box) => {
+  const d = dash.data('byTarget');
+  if (TC.notReady(box, d)) return;
+  const rows = d.data.filter((r) => !TC.UNKNOWN.has(r.target)).sort((a, b) => b.calls - a.calls).slice(0, 15);
+  TC.hbars(box, rows, { source: 'byTarget', key: 'target', value: 'callShare', fmt: 'pct0', side: 'calls', sideFmt: 'int', sideSuffix: ' calls', color: C(),
+    tip: (r) => [`${r.calls} calls, ${TC.show(r.callShare, 'pct')} of calls with a carrier recorded`] });
+});
+
+dash.draw('targetRows', (tb) => {
+  const d = dash.data('byTarget'); const k = dash.data('kpis');
+  tb.replaceChildren();
+  if (d.status !== 'ok' || !d.data) return;
+  const overall = k.status === 'ok' && k.data ? k.data[0].closeRate : null;
+  for (const r of d.data) {
+    const tr = TC.el('tr'); tr.dataset.key = r.target;
+    TC.cell(tr, r.rank == null ? '–' : String(r.rank)); TC.cell(tr, r.target, 'tc-left');
+    TC.cell(tr, TC.show(r.calls, 'int')); TC.cell(tr, TC.show(r.billable, 'int')); TC.cell(tr, TC.show(r.sales, 'int'));
+    TC.cell(tr, TC.show(r.closeRate, 'pct'), r.ranked ? TC.rateClass(r.closeRate, overall) : '');
+    TC.cell(tr, TC.show(r.avgCurrentPremium, 'money2')); TC.cell(tr, TC.show(r.avgPremium, 'money2')); TC.cell(tr, TC.show(r.totalPremium, 'money0')); TC.cell(tr, TC.show(r.avgDur, 'dur'));
+    TC.cell(tr, TC.show(r.drop10, 'pct0')); TC.cell(tr, TC.show(r.costPerSale, 'money0'));
+    TC.cell(tr, TC.show(r.premiumPerDollar, 'ratio'));
+    TC.cell(tr, r.topSold ? `${r.topSold} (${TC.show(r.topSoldShare, 'pct0')})` : '—', 'tc-left');
+    tb.appendChild(tr);
+  }
+});
+
+window.TC_cpaGrain = window.TC_cpaGrain || 'day';
+document.querySelectorAll('#cpa-grain').forEach((el) => {
+  el.value = window.TC_cpaGrain;
+  el.addEventListener('change', () => { window.TC_cpaGrain = el.value; dash.draw('cpaLines'); dash.draw('cpaLegend'); });
+});
+const cpaSeries = (data) => {
+  const fams = [...new Set(data.filter((r) => r.campaign !== 'All campaigns').map((r) => r.campaign))].sort((a, b) => {
+    const order = ['Limitless', 'Backup', 'OG']; const ia = order.indexOf(a), ib = order.indexOf(b);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || d3.ascending(a, b);
+  });
+  return [...fams.map((name, i) => ({ name, color: dash.colors[i % dash.colors.length], all: false })), { name: 'All campaigns', color: 'var(--cds-chart-muted)', all: true }];
+};
+dash.draw('cpaLegend', (el) => {
+  const d = dash.data('cpaTrend');
+  el.replaceChildren();
+  if (d.status !== 'ok' || !d.data) { el.textContent = '—'; return; }
+  for (const s of cpaSeries(d.data)) {
+    const sp = TC.el('span');
+    const sw = TC.el('i', s.all ? 'tc-dash' : null);
+    if (!s.all) sw.style.background = s.color;
+    sp.append(sw, s.name); el.appendChild(sp);
+  }
+});
+function trendLines(box, o) {
+  const d = dash.data('cpaTrend');
+  if (TC.notReady(box, d)) return;
+  const grain = o.grain;
+  const rows = d.data.filter((r) => r.grain === grain);
+  box.replaceChildren();
+  if (!rows.length) { box.textContent = 'No calls match these filters.'; return; }
+  const series = cpaSeries(d.data);
+  const periods = [...new Set(rows.map((r) => r.period))].sort();
+  const fmtP = { day: (p) => d3.utcFormat('%b %-d')(new Date(p + 'T00:00:00Z')), week: (p) => 'Wk of ' + d3.utcFormat('%b %-d')(new Date(p + 'T00:00:00Z')),
+    month: (p) => d3.utcFormat('%b %Y')(new Date(p + '-01T00:00:00Z')), year: (p) => p }[grain];
+  const W = Math.max(280, box.clientWidth || 600), H = 280;
+  const svg = d3.select(box).append('svg').attr('class', 'tc-svg').attr('width', '100%').attr('height', H).attr('viewBox', `0 0 ${W} ${H}`)
+    .attr('role', 'img').attr('aria-label', o.aria(grain));
+  // End labels decide the right margin: measure them as drawn.
+  const last = series.map((s) => { const rs = rows.filter((r) => r.campaign === s.name && o.val(r) != null); return { s, r: rs[rs.length - 1] }; }).filter((x) => x.r);
+  const probe = svg.append('text').attr('class', 'tc-endlabel');
+  let lw = 0; for (const x of last) { probe.text(`${x.s.name} ${TC.show(o.val(x.r), 'money0')}`); lw = Math.max(lw, probe.node().getComputedTextLength() || 0); }
+  probe.remove();
+  const showEnd = W - lw > 260;
+  const m = { t: 14, r: showEnd ? lw + 14 : 12, b: 28, l: 48 };
+  const x = d3.scalePoint().domain(periods).range([m.l, W - m.r]).padding(periods.length === 1 ? 0.5 : 0.1);
+  const maxY = d3.max(rows, (r) => o.val(r)) || 100;
+  const y = d3.scaleLinear().domain([0, maxY]).nice(5).range([H - m.b, m.t]);
+  svg.append('g').selectAll('line').data(y.ticks(5)).join('line').attr('class', 'tc-gridline').attr('x1', m.l).attr('x2', W - m.r).attr('y1', (t) => y(t)).attr('y2', (t) => y(t));
+  svg.append('g').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(5).tickSize(0).tickPadding(6).tickFormat(d3.format('$,.0f'))).call((g) => g.select('.domain').remove());
+  const every = Math.max(1, Math.ceil(periods.length / Math.max(1, Math.floor((W - m.l - m.r) / 70))));
+  svg.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).tickSize(0).tickPadding(8).tickFormat((p, i) => (i % every ? '' : fmtP(p)))).call((g) => g.select('.domain').remove());
+  for (const s of series) {
+    const pts = periods.map((p) => rows.find((r) => r.period === p && r.campaign === s.name) || { period: p, __empty: true });
+    const line = d3.line().defined((r) => !r.__empty && o.val(r) != null).x((r) => x(r.period)).y((r) => y(o.val(r)));
+    svg.append('path').datum(pts).attr('class', 'tc-line' + (s.all ? ' tc-line-all' : '')).style('stroke', s.color).attr('d', line);
+    svg.append('g').selectAll('circle').data(pts.filter((r) => !r.__empty && o.val(r) != null)).join('circle')
+      .attr('cx', (r) => x(r.period)).attr('cy', (r) => y(o.val(r))).attr('r', s.all ? 2.5 : 3.5).style('fill', s.color);
+  }
+  if (showEnd) {
+    const labs = last.map((xr) => ({ ...xr, y: y(o.val(xr.r)) })).sort((a, b) => a.y - b.y);
+    for (let i = 1; i < labs.length; i++) if (labs[i].y - labs[i - 1].y < 14) labs[i].y = labs[i - 1].y + 14;
+    svg.append('g').selectAll('text').data(labs).join('text').attr('class', 'tc-endlabel tc-vlabel').attr('x', W - m.r + 8).attr('y', (l) => l.y + 4)
+      .text((l) => `${l.s.name} ${TC.show(o.val(l.r), 'money0')}`);
+  }
+  const tip = (() => { const t = TC.el('div', 'tc-tip'); t.hidden = true; box.appendChild(t); return t; })();
+  const hover = svg.append('line').attr('class', 'tc-hoverline').attr('y1', m.t).attr('y2', H - m.b).style('opacity', 0);
+  svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', Math.max(0, W - m.l - m.r)).attr('height', H - m.t - m.b).style('fill', 'transparent')
+    .on('pointermove', (ev) => {
+      const [mx] = d3.pointer(ev);
+      const p = periods.reduce((best, q) => (Math.abs(x(q) - mx) < Math.abs(x(best) - mx) ? q : best), periods[0]);
+      hover.attr('x1', x(p)).attr('x2', x(p)).style('opacity', 1);
+      tip.replaceChildren(TC.el('strong', null, fmtP(p)), ...series.map((s) => {
+        const r = rows.find((q) => q.period === p && q.campaign === s.name);
+        const line = TC.el('div'); const sp = TC.el('span', null, `${s.name}: ` + o.tip(r));
+        line.appendChild(sp); return line;
+      }));
+      tip.hidden = false;
+      const b = box.getBoundingClientRect();
+      let lx = ev.clientX - b.left + 14; if (lx + tip.offsetWidth > b.width) lx = Math.max(0, ev.clientX - b.left - tip.offsetWidth - 14);
+      tip.style.left = lx + 'px'; tip.style.top = Math.max(0, ev.clientY - b.top - tip.offsetHeight / 2) + 'px';
+    })
+    .on('pointerleave', () => { tip.hidden = true; hover.style('opacity', 0); });
+}
+
+dash.draw('cpaLines', (box) => trendLines(box, {
+  grain: window.TC_cpaGrain || 'day', val: (r) => r.cpa,
+  aria: (grain) => `Cost per acquisition by ${grain} for each campaign`,
+  tip: (r) => (!r ? 'no calls' : r.cpa != null ? `${TC.show(r.cpa, 'money0')} CPA · ${r.sales} sales · ${TC.show(r.spend, 'money0')} spend` : `no sales · ${TC.show(r.spend, 'money0')} spend`)
+}));
+
+window.TC_premGrain = window.TC_premGrain || 'day';
+window.TC_premMetric = window.TC_premMetric || 'avgPremium';
+document.querySelectorAll('#prem-grain').forEach((el) => {
+  el.value = window.TC_premGrain;
+  el.addEventListener('change', () => { window.TC_premGrain = el.value; dash.draw('premLines'); });
+});
+document.querySelectorAll('#prem-metric').forEach((el) => {
+  el.value = window.TC_premMetric;
+  el.addEventListener('change', () => { window.TC_premMetric = el.value; dash.draw('premLines'); });
+});
+dash.draw('premLines', (box) => {
+  const metric = window.TC_premMetric === 'totalPremium' ? 'totalPremium' : 'avgPremium';
+  trendLines(box, {
+    grain: window.TC_premGrain || 'day', val: (r) => r[metric],
+    aria: (grain) => `${metric === 'avgPremium' ? 'Average monthly premium per deal' : 'Total monthly premium written'} by ${grain} for each campaign`,
+    tip: (r) => (!r ? 'no calls' : r[metric] != null
+      ? `${TC.show(r.avgPremium, 'money2')} avg/deal · ${r.premiumSales} sales · ${TC.show(r.totalPremium, 'money0')}/mo written`
+      : 'no sales')
+  });
+});
+dash.draw('premLegend', (el) => {
+  const d = dash.data('cpaTrend');
+  el.replaceChildren();
+  if (d.status !== 'ok' || !d.data) { el.textContent = '—'; return; }
+  for (const s of cpaSeries(d.data)) {
+    const sp = TC.el('span');
+    const sw = TC.el('i', s.all ? 'tc-dash' : null);
+    if (!s.all) sw.style.background = s.color;
+    sp.append(sw, s.name); el.appendChild(sp);
+  }
+});
+
+dash.draw('untargetedStates', (el) => {
+  const d = dash.data('stateTargeting');
+  el.replaceChildren();
+  if (d.status !== 'ok' || !d.data) { el.textContent = '—'; return; }
+  const list = d.data[0].untargetedStates;
+  if (!list.length) { el.appendChild(TC.el('span', 'tc-muted', 'None. Every call with a state came from a targeted state.')); return; }
+  for (const r of list) {
+    const c = TC.el('span', 'tc-chip');
+    c.append(TC.el('b', null, r.state), ` ${r.calls} call${r.calls === 1 ? '' : 's'}${r.sales ? ` · ${r.sales} sold` : ''}`);
+    el.appendChild(c);
+  }
+});
+
+dash.draw('carrierBars', (box) => {
+  const d = dash.data('byCarrier');
+  if (TC.notReady(box, d)) return;
+  TC.hbars(box, d.data, { source: 'byCarrier', key: 'carrier', value: 'sales', fmt: 'int', side: 'avgPremium', sideFmt: 'money0', sideSuffix: '/mo', color: C(),
+    tip: (r) => [`${r.sales} sales (${TC.show(r.share, 'pct0')} of all)`, `Avg ${TC.show(r.avgPremium, 'money2')} / mo`, `Range ${TC.show(r.minPremium, 'money0')}–${TC.show(r.maxPremium, 'money0')}`, `Total ${TC.show(r.totalPremium, 'money0')} / mo`] });
+});
+
+dash.draw('carrierRows', (tb) => {
+  const d = dash.data('byCarrier');
+  tb.replaceChildren();
+  if (d.status !== 'ok' || !d.data) return;
+  for (const r of d.data) {
+    const tr = TC.el('tr'); tr.dataset.key = r.carrier;
+    TC.cell(tr, r.carrier); TC.cell(tr, TC.show(r.sales, 'int')); TC.cell(tr, TC.show(r.share, 'pct0'));
+    TC.cell(tr, TC.show(r.avgPremium, 'money2')); TC.cell(tr, TC.show(r.minPremium, 'money2')); TC.cell(tr, TC.show(r.maxPremium, 'money2')); TC.cell(tr, TC.show(r.totalPremium, 'money0'));
+    tb.appendChild(tr);
+  }
+});
+
+dash.draw('campaignRows', (tb) => {
+  const d = dash.data('byCampaign'); const k = dash.data('kpis');
+  tb.replaceChildren();
+  if (d.status !== 'ok' || !d.data) return;
+  const overall = k.status === 'ok' && k.data ? k.data[0].closeRate : null;
+  for (const r of d.data) {
+    const tr = TC.el('tr'); tr.dataset.key = r.campaign;
+    TC.cell(tr, r.campaign); TC.cell(tr, TC.show(r.calls, 'int')); TC.cell(tr, TC.show(r.billable, 'int')); TC.cell(tr, TC.show(r.sales, 'int'));
+    TC.cell(tr, TC.show(r.closeRate, 'pct'), TC.rateClass(r.closeRate, overall));
+    TC.cell(tr, TC.show(r.costPerSale, 'money0')); TC.cell(tr, TC.show(r.avgPremium, 'money2')); TC.cell(tr, TC.show(r.premiumPerDollar, 'ratio'));
+    tb.appendChild(tr);
+  }
+});
+
+dash.draw('reasonBars', (box) => {
+  const d = dash.data('byReason');
+  if (TC.notReady(box, d)) return;
+  TC.hbars(box, d.data, { source: 'byReason', key: 'reason', value: 'calls', value2: 'sales', fmt: 'int', side: 'share', sideFmt: 'pct0', color: C(),
+    tip: (r) => [`${r.calls} calls (${TC.show(r.share, 'pct')})`, `${r.sales} sold`] });
+});
+
+dash.draw('tagBars', (box) => {
+  const d = dash.data('byTag');
+  if (TC.notReady(box, d)) return;
+  TC.hbars(box, d.data, { source: 'byTag', key: 'tag', value: 'calls', value2: 'sales', fmt: 'int', side: 'share', sideFmt: 'pct0', color: C(),
+    tip: (r) => [`${r.calls} calls (${TC.show(r.share, 'pct')})`, `${r.sales} sold`] });
+});
+
+dash.draw('codeBars', (box) => {
+  const d = dash.data('byCode');
+  if (TC.notReady(box, d)) return;
+  TC.hbars(box, d.data, { source: 'byCode', key: 'code', value: 'calls', value2: 'sales', fmt: 'int', side: 'share', sideFmt: 'pct0', color: C(),
+    tip: (r) => [`${r.calls} calls (${TC.show(r.share, 'pct')})`, `${r.sales} sold`] });
+});
+
+dash.draw('dispChips', (box) => {
+  const d = dash.data('byDisposition');
+  if (TC.notReady(box, d)) return;
+  box.replaceChildren(...d.data.map((r) => {
+    const c = TC.el('div', 'tc-chip');
+    const n = TC.el('b', null, TC.show(r.calls, 'int')); TC.mark(n, 'byDisposition', 'calls', 'disposition', r.disposition);
+    const lab = TC.el('span', 'tc-muted');
+    const sh = TC.el('span', null, TC.show(r.share, 'pct0')); TC.mark(sh, 'byDisposition', 'share', 'disposition', r.disposition);
+    lab.append(r.disposition.replace(/_/g, ' ').toLowerCase() + ' · ', sh);
+    c.append(n, lab); return c;
+  }));
+});
+
+dash.draw('bandBars', (box) => {
+  const d = dash.data('premiumBands');
+  if (TC.notReady(box, d)) return;
+  TC.vbars(box, d.data, { key: 'band', value: 'sales', fmt: 'int', color: C(), height: 170, yFmt: 'd', aria: 'Number of sales in each monthly premium band',
+    tip: (r) => [`${r.sales} sales`, `${TC.show(r.totalPremium, 'money0')} / mo total`] });
+});
+
+dash.draw('stateBars', (box) => {
+  const d = dash.data('byState');
+  if (TC.notReady(box, d)) return;
+  if (!d.data.length) { box.textContent = 'No state recorded on these calls.'; return; }
+  const T = new Set(window.TC_TARGET_STATES);
+  TC.hbars(box, d.data.map((r) => ({ ...r, state: T.has(r.state) ? r.state : `${r.state} (not targeted)` })), { source: 'byState', key: 'state', value: 'calls', value2: 'sales', fmt: 'int', side: 'sales', sideFmt: 'int', sideSuffix: ' sold', color: C(),
+    tip: (r) => [`${r.calls} calls, ${r.sales} sold`, `Close rate ${TC.show(r.closeRate, 'pct')}`, `Avg premium ${TC.show(r.avgPremium, 'money2')}`] });
+});
+
+dash.draw('hourBars', (box) => {
+  const d = dash.data('byHour');
+  if (TC.notReady(box, d)) return;
+  TC.vbars(box, d.data, { key: 'hour', value: 'calls', value2: 'sales', fmt: 'int', color: C(), yFmt: 'd', aria: 'Calls and sales by hour of day, Eastern time',
+    tip: (r) => [`${r.calls} calls, ${r.sales} sold`, `Close rate ${TC.show(r.closeRate, 'pct')}`, `${TC.show(r.salesShare, 'pct0')} of all sales`] });
+});
+
+dash.draw('hourRateBars', (box) => {
+  const d = dash.data('byHour');
+  if (TC.notReady(box, d)) return;
+  TC.vbars(box, d.data.map((r) => ({ ...r, closeRate: r.closeRate ?? 0 })), { key: 'hour', value: 'closeRate', fmt: 'pct0', color: C(), yTick: d3.format('.0%'), aria: 'Close rate by hour of day, Eastern time',
+    tip: (r) => [`Close rate ${TC.show(r.closeRate, 'pct')}`, `${r.sales} sales from ${r.billable} billable calls`, `Avg premium ${TC.show(r.avgPremium, 'money2')}`] });
+});
+
+dash.draw('dayBars', (box) => {
+  const d = dash.data('byDay');
+  if (TC.notReady(box, d)) return;
+  const dayLab = (k) => d3.utcFormat('%b %-d')(new Date(k + 'T00:00:00Z'));
+  TC.vbars(box, d.data, { key: 'day', value: 'calls', value2: 'sales', fmt: 'int', color: C(), label: dayLab, yFmt: 'd', height: 180, aria: 'Calls and sales by day',
+    tip: (r) => [`${r.calls} calls, ${r.sales} sold`, `Close rate ${TC.show(r.closeRate, 'pct')}`, `${TC.show(r.totalPremium, 'money0')} / mo premium`] });
+});
+
+window.TC_agentSort = window.TC_agentSort || { key: 'sales', dir: 'desc', min: 1 };
+const syncAgentControls = () => {
+  const st = window.TC_agentSort;
+  document.querySelectorAll('#agent-sort').forEach((el) => { el.value = st.key; });
+  document.querySelectorAll('#agent-dir').forEach((el) => { el.value = st.dir; });
+  document.querySelectorAll('#agent-min').forEach((el) => { el.value = String(st.min); });
+  document.querySelectorAll('#agent-table .tc-th-sort').forEach((btn) => {
+    const on = btn.dataset.sort === st.key;
+    btn.classList.toggle('tc-sorted-desc', on && st.dir === 'desc');
+    btn.classList.toggle('tc-sorted-asc', on && st.dir === 'asc');
+    const th = btn.closest('th');
+    if (th) th.setAttribute('aria-sort', on ? (st.dir === 'desc' ? 'descending' : 'ascending') : 'none');
+  });
+};
+const setAgentSort = (patch) => { Object.assign(window.TC_agentSort, patch); syncAgentControls(); dash.draw('agentRows'); };
+document.querySelectorAll('#agent-sort').forEach((el) => el.addEventListener('change', () => setAgentSort({ key: el.value, dir: 'desc' })));
+document.querySelectorAll('#agent-dir').forEach((el) => el.addEventListener('change', () => setAgentSort({ dir: el.value })));
+document.querySelectorAll('#agent-min').forEach((el) => el.addEventListener('change', () => setAgentSort({ min: Number(el.value) || 1 })));
+document.querySelectorAll('#agent-table .tc-th-sort').forEach((btn) => btn.addEventListener('click', () => {
+  const st = window.TC_agentSort;
+  setAgentSort(st.key === btn.dataset.sort ? { dir: st.dir === 'desc' ? 'asc' : 'desc' } : { key: btn.dataset.sort, dir: 'desc' });
+}));
+syncAgentControls();
+
+dash.draw('agentRows', (tb) => {
+  const d = dash.data('byAgent'); const k = dash.data('kpis');
+  tb.replaceChildren();
+  if (d.status !== 'ok' || !d.data) return;
+  const st = window.TC_agentSort;
+  const overall = k.status === 'ok' && k.data ? k.data[0].closeRate : null;
+  const rows = d.data.filter((r) => r.billable >= st.min).slice().sort((a, b) => {
+    const av = a[st.key], bv = b[st.key];
+    if (av == null && bv == null) return b.sales - a.sales;
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    return (st.dir === 'desc' ? bv - av : av - bv) || b.sales - a.sales || b.calls - a.calls;
+  });
+  if (!rows.length) { const tr = TC.el('tr'); const td = TC.cell(tr, 'No agents meet the minimum.', 'tc-left'); td.colSpan = 8; tb.appendChild(tr); return; }
+  for (const r of rows) {
+    const tr = TC.el('tr'); tr.dataset.key = r.agent;
+    TC.cell(tr, r.agent); TC.cell(tr, TC.show(r.calls, 'int')); TC.cell(tr, TC.show(r.billable, 'int')); TC.cell(tr, TC.show(r.sales, 'int'));
+    TC.cell(tr, TC.show(r.closeRate, 'pct'), r.billable >= 5 ? TC.rateClass(r.closeRate, overall) : '');
+    TC.cell(tr, TC.show(r.avgPremium, 'money2')); TC.cell(tr, TC.show(r.totalPremium, 'money0')); TC.cell(tr, TC.show(r.avgDur, 'dur'));
+    tb.appendChild(tr);
+  }
+});
+
+dash.draw('durDayBars', (box) => {
+  const d = dash.data('byDay');
+  if (TC.notReady(box, d)) return;
+  const dayLab = (k) => d3.utcFormat('%b %-d')(new Date(k + 'T00:00:00Z'));
+  TC.vbars(box, d.data.map((r) => ({ ...r, avgDur: r.avgDur ?? 0 })), { key: 'day', value: 'avgDur', fmt: 'dur', color: C(), label: dayLab, height: 180, yTick: (v) => Math.round(v / 60) + 'm', aria: 'Average call length by day',
+    tip: (r) => [`Avg ${TC.show(r.avgDur, 'dur')}, median ${TC.show(r.medianDur, 'dur')}`, `${r.connected} calls with a duration`, `${TC.show(r.drop10, 'pct0')} under 10 sec`] });
+});
+
+dash.draw('durBucketBars', (box) => {
+  const d = dash.data('durBuckets');
+  if (TC.notReady(box, d)) return;
+  TC.hbars(box, d.data.map((r) => ({ ...r, share: r.share ?? 0 })), { source: 'durBuckets', key: 'bucket', value: 'share', fmt: 'pct', side: 'closeRate', sideFmt: 'pct0', sidePrefix: 'close ', color: C(),
+    tip: (r) => [`${TC.show(r.share, 'pct')} of connected calls (${r.calls})`, `${TC.show(r.cumShare, 'pct')} of calls are this short or shorter`, `${r.sales} sold, close rate ${TC.show(r.closeRate, 'pct')}`] });
+});
+
+dash.draw('durBucketRows', (tb) => {
+  const d = dash.data('durBuckets');
+  tb.replaceChildren();
+  if (d.status !== 'ok' || !d.data) return;
+  for (const r of d.data) {
+    const tr = TC.el('tr'); tr.dataset.key = r.bucket;
+    TC.cell(tr, r.bucket); TC.cell(tr, TC.show(r.calls, 'int')); TC.cell(tr, TC.show(r.share, 'pct')); TC.cell(tr, TC.show(r.cumShare, 'pct'));
+    TC.cell(tr, TC.show(r.sales, 'int')); TC.cell(tr, TC.show(r.closeRate, 'pct'));
+    tb.appendChild(tr);
+  }
+});
+
+const dropCells = (tr, r) => {
+  for (const f of ['drop2', 'drop5', 'drop10', 'drop60']) TC.cell(tr, TC.show(r[f], 'pct'));
+};
+dash.draw('dropDayRows', (tb) => {
+  const d = dash.data('byDay');
+  tb.replaceChildren();
+  if (d.status !== 'ok' || !d.data) return;
+  for (const r of d.data.slice().reverse()) {
+    const tr = TC.el('tr'); tr.dataset.key = r.day;
+    TC.cell(tr, TC.show(r.day, 'day')); TC.cell(tr, TC.show(r.calls, 'int')); TC.cell(tr, TC.show(r.connected, 'int'));
+    TC.cell(tr, TC.show(r.avgDur, 'dur')); TC.cell(tr, TC.show(r.medianDur, 'dur'));
+    dropCells(tr, r); TC.cell(tr, TC.show(r.closeRate, 'pct'));
+    tb.appendChild(tr);
+  }
+});
+dash.draw('dropCampaignRows', (tb) => {
+  const d = dash.data('byCampaign'); const k = dash.data('kpis');
+  tb.replaceChildren();
+  if (d.status !== 'ok' || !d.data) return;
+  const overall = k.status === 'ok' && k.data ? k.data[0].drop10 : null;
+  for (const r of d.data) {
+    const tr = TC.el('tr'); tr.dataset.key = r.campaign;
+    TC.cell(tr, r.campaign); TC.cell(tr, TC.show(r.connected, 'int')); TC.cell(tr, TC.show(r.avgDur, 'dur'));
+    for (const f of ['drop2', 'drop5', 'drop10', 'drop60']) {
+      // For drop-off, higher is worse, so the colors are flipped.
+      const cls = f === 'drop10' && r.connected >= 10 && overall ? (r[f] >= overall * 1.25 ? 'tc-bad' : r[f] <= overall * 0.75 ? 'tc-good' : '') : '';
+      TC.cell(tr, TC.show(r[f], 'pct'), cls);
+    }
+    tb.appendChild(tr);
+  }
+});
+
+dash.draw('hourRows', (tb) => {
+  const d = dash.data('byHour'); const k = dash.data('kpis');
+  tb.replaceChildren();
+  if (d.status !== 'ok' || !d.data) return;
+  const overall = k.status === 'ok' && k.data ? k.data[0].closeRate : null;
+  for (const r of d.data) {
+    const tr = TC.el('tr'); tr.dataset.key = r.hour;
+    TC.cell(tr, r.hour); TC.cell(tr, TC.show(r.calls, 'int')); TC.cell(tr, TC.show(r.billable, 'int')); TC.cell(tr, TC.show(r.sales, 'int'));
+    TC.cell(tr, TC.show(r.salesShare, 'pct0'));
+    TC.cell(tr, TC.show(r.closeRate, 'pct'), r.billable >= 20 ? TC.rateClass(r.closeRate, overall) : '');
+    TC.cell(tr, TC.show(r.avgPremium, 'money2')); TC.cell(tr, TC.show(r.costPerSale, 'money0'));
+    TC.cell(tr, TC.show(r.drop10, 'pct0')); TC.cell(tr, TC.show(r.avgDur, 'dur'));
+    tb.appendChild(tr);
+  }
+});
+
+dash.draw('weekdayRows', (tb) => {
+  const d = dash.data('byWeekday'); const k = dash.data('kpis');
+  tb.replaceChildren();
+  if (d.status !== 'ok' || !d.data) return;
+  const overall = k.status === 'ok' && k.data ? k.data[0].closeRate : null;
+  for (const r of d.data) {
+    const tr = TC.el('tr'); tr.dataset.key = r.weekday;
+    TC.cell(tr, r.weekday); TC.cell(tr, TC.show(r.days, 'int')); TC.cell(tr, TC.show(r.calls, 'int')); TC.cell(tr, TC.show(r.sales, 'int'));
+    TC.cell(tr, TC.show(r.closeRate, 'pct'), r.billable >= 20 ? TC.rateClass(r.closeRate, overall) : '');
+    TC.cell(tr, TC.show(r.avgPremium, 'money2')); TC.cell(tr, TC.show(r.totalPremium, 'money0')); TC.cell(tr, TC.show(r.costPerSale, 'money0'));
+    tb.appendChild(tr);
+  }
+});
+
+dash.draw('soldRows', (tb) => {
+  const d = dash.data('soldCalls');
+  tb.replaceChildren();
+  if (d.status !== 'ok' || !d.data) return;
+  for (const r of d.data) {
+    const tr = TC.el('tr'); tr.dataset.key = r.id;
+    TC.cell(tr, r.when); TC.cell(tr, r.agent, 'tc-left'); TC.cell(tr, r.called, 'tc-left'); TC.cell(tr, r.carrier, 'tc-left'); TC.cell(tr, r.product, 'tc-left');
+    TC.cell(tr, r.currentPremium == null ? '—' : TC.show(r.currentPremium, 'money2')); TC.cell(tr, TC.show(r.premium, 'money2'));
+    TC.cell(tr, r.state, 'tc-left'); TC.cell(tr, r.campaign, 'tc-left'); TC.cell(tr, r.notes || '', 'tc-left tc-wrap');
+    tb.appendChild(tr);
+  }
+});
+</script>
+<script>
+dash.start();
+// Data intake: dropped spreadsheets are cleaned in the browser, stored with the dashboard, and every upload is combined.
+(() => {
+  const KINDS = {
+    policies: { label: 'Policy report', test: (h) => h.has('google carrier') || h.has('policy count') || h.has('policy 1 carrier') },
+    calls: { label: 'Call export', test: (h) => h.has('billable') || (h.has('created at') && h.has('call id')) }
+  };
+  // Columns that identify a person are dropped before anything is stored.
+  const PRIVATE = /caller number|agent email|policy number|insured name|recording link|transcript|^email$|phone/i;
+  let uploads = [];
+  const textCache = new Map();
+  const $ = (sel) => document.querySelectorAll(sel);
+  const setStatus = (kind, msg, cls) => $(`[data-status="${kind}"]`).forEach((el) => { el.textContent = msg; el.className = 'tc-drop-status' + (cls ? ' ' + cls : ''); });
+  const fmtDay = (d) => (d ? d3.utcFormat('%b %-d, %Y')(new Date(d + 'T00:00:00Z')) : '?');
+
+  const parseCsv = (text) => {
+    const rows = d3.csvParseRows(text.replace(/^﻿/, ''));
+    if (!rows.length) return { header: [], body: [] };
+    const header = rows[0].map((h) => h.trim());
+    // A repeated header name keeps its last column (the policy report lists its call time twice; the second has the time zone).
+    const keep = header.map((h, i) => header.lastIndexOf(h) === i);
+    return { header, keep, body: rows.slice(1).filter((r) => r.some((c) => String(c).trim() !== '')) };
+  };
+  const detect = (header) => {
+    const h = new Set(header.map((x) => x.toLowerCase()));
+    if (KINDS.policies.test(h)) return 'policies';
+    if (KINDS.calls.test(h)) return 'calls';
+    return null;
+  };
+  const clean = ({ header, keep, body }) => {
+    const idx = header.map((h, i) => i).filter((i) => keep[i] && !PRIVATE.test(header[i]) && body.some((r) => String(r[i] ?? '').trim() !== ''));
+    return { columns: idx.map((i) => header[i]), rows: body.map((r) => idx.map((i) => String(r[i] ?? '').trim())) };
+  };
+  const span = (cols, rows) => {
+    const di = cols.findIndex((c) => /created at|call date\/time|^date$/i.test(c));
+    if (di < 0) return {};
+    const days = rows.map((r) => String(r[di]).slice(0, 10)).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
+    return { from: days[0] || null, to: days[days.length - 1] || null };
+  };
+
+  async function handleFiles(files, zoneKind, db, assets) {
+    for (const file of files) {
+      setStatus(zoneKind, `Reading ${file.name}…`);
+      try {
+        if (!/\.csv$/i.test(file.name)) throw new Error(`${file.name} isn't a .csv file. Export the report as CSV and drop it again.`);
+        const parsed = parseCsv(await file.text());
+        const kind = detect(parsed.header);
+        if (!kind) throw new Error(`${file.name} doesn't look like a policy report or a call export. Check you exported the right report.`);
+        const { columns, rows } = clean(parsed);
+        if (!rows.length) throw new Error(`${file.name} has no rows.`);
+        const csv = d3.csvFormatRows([columns, ...rows]);
+        const blob = new Blob([csv], { type: 'text/csv' });
+        setStatus(zoneKind, `Saving ${rows.length} calls from ${file.name}…`);
+        const up = await assets.upload(blob, { type: 'text/csv' });
+        const { from, to } = span(columns, rows);
+        await db.collection('uploads').add({ kind, assetId: up.id, name: file.name, rows: rows.length, from, to, uploadedAt: new Date().toISOString() });
+        const where = kind !== zoneKind ? ` It was a ${KINDS[kind].label.toLowerCase()}, so it was filed there.` : '';
+        setStatus(zoneKind, `Added ${rows.length} calls (${fmtDay(from)} – ${fmtDay(to)}).${where}`, 'is-ok');
+        window.TC_autoAnalyze = true;
+      } catch (e) {
+        const msg = e && e.code === 'too_large' ? `${file.name} is over 20 MB. Export a shorter date range.`
+          : e && e.code === 'rate_limited' ? 'Too many uploads at once. Wait a moment and drop it again.'
+          : e && e.code ? `Couldn't save ${file.name} (${e.code}). Reload the page and try again.`
+          : (e && e.message) || `Couldn't read ${file.name}.`;
+        setStatus(zoneKind, msg, 'is-err');
+      }
+    }
+  }
+
+  // Every upload of one kind is combined; a call that appears in more than one upload keeps its newest version.
+  async function rebuild() {
+    for (const kind of Object.keys(KINDS)) {
+      const list = uploads.filter((u) => u.kind === kind).sort((a, b) => String(a.uploadedAt).localeCompare(String(b.uploadedAt)));
+      try {
+        const texts = await Promise.all(list.map(async (u) => {
+          if (!textCache.has(u.assetId)) {
+            if (window.TC_localMode) textCache.set(u.assetId, await window.TC_local.loadText(u.assetId));
+            else {
+              const res = await fetch('/_blob/' + u.assetId);
+              if (!res.ok) throw new Error('missing file');
+              textCache.set(u.assetId, await res.text());
+            }
+          }
+          return textCache.get(u.assetId);
+        }));
+        const byId = new Map(); const noId = [];
+        for (const t of texts) for (const r of d3.csvParse(t)) {
+          const id = String(r['Call ID'] ?? '').trim();
+          if (id) { byId.delete(id); byId.set(id, r); } else noId.push(r);
+        }
+        dash.setRaw(kind, { status: 'ok', data: [...byId.values(), ...noId] });
+      } catch (e) {
+        console.error(e);
+        dash.setRaw(kind, { status: 'error', data: [] });
+      }
+    }
+    $('#no-data').forEach((el) => { el.hidden = uploads.length > 0; });
+    window.TC_dataSig = uploads.length + '|' + uploads.map((u) => u.uploadedAt || '').sort().pop();
+    window.dispatchEvent(new Event('tc:data'));
+  }
+
+  function renderList(canEdit, db, assets) {
+    $('#upload-list').forEach((box) => {
+      box.replaceChildren();
+      const sorted = uploads.slice().sort((a, b) => String(b.uploadedAt).localeCompare(String(a.uploadedAt)));
+      for (const u of sorted) {
+        const row = document.createElement('div'); row.className = 'tc-upload-row';
+        const k = document.createElement('span'); k.className = 'tc-upload-kind'; k.textContent = KINDS[u.kind]?.label || u.kind;
+        const meta = document.createElement('span'); meta.className = 'tc-upload-meta';
+        const nm = document.createElement('strong'); nm.textContent = u.name || 'file';
+        meta.append(nm, ` · ${d3.format(',')(u.rows || 0)} calls · ${fmtDay(u.from)} – ${fmtDay(u.to)} · added ${u.uploadedAt ? d3.timeFormat('%b %-d, %-I:%M %p')(new Date(u.uploadedAt)) : ''}`);
+        row.append(k, meta);
+        if (canEdit && db) {
+          const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'tc-link-btn'; btn.textContent = 'Remove';
+          let armed = null;
+          btn.addEventListener('click', async () => {
+            if (!armed) {
+              btn.textContent = 'Click again to remove'; btn.classList.add('is-armed');
+              armed = setTimeout(() => { armed = null; btn.textContent = 'Remove'; btn.classList.remove('is-armed'); }, 4000);
+              return;
+            }
+            clearTimeout(armed); btn.disabled = true; btn.textContent = 'Removing…';
+            try {
+              await db.doc('uploads/' + u.docId).delete();
+              if (assets) await assets.delete(u.assetId).catch(() => {});
+            } catch (e) { btn.disabled = false; btn.textContent = 'Couldn\'t remove. Try again'; }
+          });
+          row.appendChild(btn);
+        } else row.appendChild(document.createElement('span'));
+        box.appendChild(row);
+      }
+      if (!sorted.length) { const p = document.createElement('p'); p.className = 'tc-banner'; p.textContent = 'No files added yet.'; box.appendChild(p); }
+    });
+    $('#upload-count').forEach((el) => { el.textContent = uploads.length ? `${uploads.length} file${uploads.length === 1 ? '' : 's'} loaded` : ''; });
+  }
+
+  async function init() {
+    const claudeApi = window.claude;
+    let db, assets;
+    if (claudeApi && claudeApi.use) {
+      [db, assets] = await Promise.all([claudeApi.use('db'), claudeApi.use('assets')]);
+    } else if (window.TC_local) {
+      window.TC_localMode = true;
+      db = window.TC_local.db; assets = window.TC_local.assets;
+      $('#intake-off').forEach((el) => { el.hidden = false; el.textContent = 'Files you add here are saved in this browser only. Other people and other devices start empty.'; });
+    } else {
+      $('#intake-off').forEach((el) => { el.hidden = false; el.textContent = 'This browser can\'t save files. Open the dashboard in Chrome, Edge, Safari or Firefox.'; });
+      dash.setRaw('policies', { status: 'ok', data: [] }); dash.setRaw('calls', { status: 'ok', data: [] });
+      return;
+    }
+    const canEdit = !!assets;
+    $('#drops').forEach((el) => { el.hidden = !canEdit; });
+    if (!canEdit) $('#intake-off').forEach((el) => { el.hidden = false; el.textContent = 'You can view this dashboard. Only editors can add new files.'; });
+    if (!db) {
+      $('#intake-off').forEach((el) => { el.hidden = false; el.textContent = 'Saved data couldn\'t be reached. Reload the page, or sign in to Claude.'; });
+      dash.setRaw('policies', { status: 'error', data: [] }); dash.setRaw('calls', { status: 'error', data: [] });
+      return;
+    }
+    db.collection('uploads').onSnapshot((snap) => {
+      uploads = snap.docs.map((d) => ({ docId: d.id, ...d.data() })).filter((u) => u.assetId && KINDS[u.kind]);
+      renderList(canEdit, db, assets);
+      rebuild();
+    }, (err) => {
+      $('#intake-off').forEach((el) => { el.hidden = false; el.textContent = 'Lost the connection to saved data. Reload the page.'; });
+      console.error(err);
+    });
+    if (!canEdit) return;
+    $('.tc-drop').forEach((zone) => {
+      const kind = zone.dataset.kind;
+      const input = zone.querySelector('input[type="file"]');
+      input.addEventListener('change', () => { const f = [...input.files]; input.value = ''; handleFiles(f, kind, db, assets); });
+      zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('is-over'); });
+      zone.addEventListener('dragleave', () => zone.classList.remove('is-over'));
+      zone.addEventListener('drop', (e) => { e.preventDefault(); zone.classList.remove('is-over'); handleFiles([...e.dataTransfer.files], kind, db, assets); });
+    });
+  }
+  init();
+})();
+</script>
+<script>
+// Marketing analyst: Claude reads the dashboard's numbers, suggests improvements, and answers follow-up questions.
+(() => {
+  const $ = (sel) => document.querySelector(sel);
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const r1 = (v) => (v == null || !isFinite(v) ? null : Math.round(v * 10) / 10);
+  const r3 = (v) => (v == null || !isFinite(v) ? null : Math.round(v * 1000) / 1000);
+
+  // ---- The numbers Claude reads -------------------------------------------------------
+  const slim = (s) => s && {
+    calls: s.calls, billable: s.billable, sales: s.sales, close_rate: r3(s.closeRate), cost_per_sale: r1(s.costPerSale),
+    avg_premium_sold: r1(s.avgPremium), avg_current_premium: r1(s.avgCurrentPremium), avg_talk_sec: r1(s.avgDur), under_10s: r3(s.drop10)
+  };
+  const take = (id, map, n) => { const d = dash.data(id); return d.status === 'ok' && Array.isArray(d.data) ? d.data.slice(0, n || 999).map(map) : []; };
+  function snapshot() {
+    const k = dash.data('kpis'); const kp = k.status === 'ok' && k.data ? k.data[0] : null;
+    const p = dash.params(); const filters = Object.entries(p).filter(([, v]) => v).map(([a, b]) => `${a} = ${b}`);
+    return {
+      date_range_eastern: kp ? `${kp.firstDay} to ${kp.lastDay}` : null,
+      filters_applied: filters.length ? filters : 'none (all data)',
+      totals: kp && { ...slim(kp), monthly_premium_sold: r1(kp.totalPremium), median_premium: r1(kp.medianPremium), est_spend: r1(kp.spend), calls_with_google_carrier: kp.targetKnown, calls_without_state: r3(kp.unknownStateShare) },
+      by_google_carrier_called_in: take('byTarget', (r) => ({ carrier: r.target, rank: r.rank, ...slim(r), most_often_sold: r.topSold })),
+      by_campaign_tier: take('byCampaign', (r) => ({ tier: r.campaign, ...slim(r) })),
+      cpa_by_day: take('cpaTrend', (r) => r).filter((r) => r.grain === 'day').map((r) => ({ day: r.period, campaign: r.campaign, calls: r.calls, sales: r.sales, spend: r.spend, cpa: r1(r.cpa), avg_premium_sold: r1(r.avgPremium), monthly_premium_written: r1(r.totalPremium) })),
+      cpa_by_week: take('cpaTrend', (r) => r).filter((r) => r.grain === 'week').map((r) => ({ week_of: r.period, campaign: r.campaign, sales: r.sales, cpa: r1(r.cpa), avg_premium_sold: r1(r.avgPremium), monthly_premium_written: r1(r.totalPremium) })),
+      by_weekday: take('byWeekday', (r) => ({ weekday: r.weekday, dates: r.days, ...slim(r) })),
+      by_hour_eastern: take('byHour', (r) => ({ hour: r.hour, ...slim(r) })),
+      by_day: take('byDay', (r) => ({ day: r.day, ...slim(r) })),
+      by_call_length: take('durBuckets', (r) => ({ length: r.bucket, calls: r.calls, share: r3(r.share), sales: r.sales, close_rate: r3(r.closeRate) })),
+      by_reason_for_call: take('byReason', (r) => ({ reason: r.reason, calls: r.calls, sales: r.sales })),
+      by_outcome_tag: take('byTag', (r) => ({ tag: r.tag, calls: r.calls, sales: r.sales })),
+      by_carrier_sold: take('byCarrier', (r) => ({ carrier: r.carrier, sales: r.sales, avg_premium: r1(r.avgPremium) })),
+      premium_bands_sold: take('premiumBands', (r) => ({ band: r.band, sales: r.sales })),
+      targeted_states: window.TC_TARGET_STATES,
+      state_targeting: take('stateTargeting', (r) => ({ calls_with_state: r.known, from_targeted_states: r.targeted, from_untargeted_states: r.untargeted, untargeted_share: r3(r.untargetedShare), untargeted_sales: r.untargetedSales, untargeted_call_cost: r1(r.untargetedCost), untargeted_states: r.untargetedStates }))[0] || null,
+      by_state_top: take('byState', (r) => ({ state: r.state, targeted: window.TC_TARGET_STATES.includes(r.state), ...slim(r) }), 15),
+      by_agent_top: take('byAgent', (r) => ({ agent: r.agent, ...slim(r) }), 25)
+    };
+  }
+
+  // ---- A page function Claude can call for any other slice --------------------------------
+  const monday = (day) => { const d = new Date(day + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7)); return d.toISOString().slice(0, 10); };
+  const lenBucket = (s) => (s == null ? null : s < 10 ? 'under 10s' : s < 60 ? '10-59s' : s < 300 ? '1-5m' : s < 600 ? '5-10m' : s < 1200 ? '10-20m' : s < 1800 ? '20-30m' : '30m+');
+  const DIMS = {
+    weekday: (r) => r.weekday, hour: (r) => (r.hour == null ? null : TC.fmt.hour(r.hour)), day: (r) => r.day, week: (r) => (r.day ? monday(r.day) : null),
+    month: (r) => (r.day ? r.day.slice(0, 7) : null), campaign: (r) => r.family, tier: (r) => r.campaign, google_carrier: (r) => r.target,
+    carrier_sold: (r) => (r.sold ? r.carrier : null), agent: (r) => r.agent, state: (r) => r.state || null, reason: (r) => r.reason,
+    outcome_tag: (r) => r.tag, call_length: (r) => lenBucket(r.dur), product: (r) => (r.sold ? r.product || null : null)
+  };
+  function allRows() {
+    const p = dash.data('policies'), c = dash.data('calls');
+    return TC.apply(TC.norm(TC.merge(p.data, c.data)), dash.params());
+  }
+  const breakdownTool = {
+    name: 'breakdown',
+    description: 'Groups the dashboard\'s calls by one or two dimensions, optionally filtered, and returns calls, billable, sales, close_rate, cost_per_sale, avg_premium_sold, avg_current_premium, avg_talk_sec and under_10s for each group (largest 60 groups). Use it for any slice the summary does not already contain, e.g. CPA by weekday per campaign.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        by: { type: 'string', enum: Object.keys(DIMS), description: 'First grouping.' },
+        then_by: { type: 'string', enum: Object.keys(DIMS), description: 'Optional second grouping.' },
+        filter: { type: 'object', description: 'Optional exact-match filters, e.g. {"campaign":"Backup","weekday":"Thu"}. Keys are dimension names.', additionalProperties: { type: 'string' } }
+      },
+      required: ['by']
+    },
+    execute(input) {
+      const by = String(input.by || ''); const then = input.then_by ? String(input.then_by) : null;
+      if (!DIMS[by] || (then && !DIMS[then])) throw new Error('Unknown dimension. Use one of: ' + Object.keys(DIMS).join(', '));
+      let rows = allRows();
+      for (const [k, v] of Object.entries(input.filter && typeof input.filter === 'object' ? input.filter : {})) {
+        if (!DIMS[k]) throw new Error('Unknown filter dimension ' + k);
+        rows = rows.filter((r) => String(DIMS[k](r) ?? '') === String(v));
+      }
+      const key = (r) => { const a = DIMS[by](r); if (a == null) return null; if (!then) return String(a); const b = DIMS[then](r); return b == null ? null : `${a} | ${b}`; };
+      const out = d3.groups(rows.filter((r) => key(r) != null), key).map(([g, rs]) => ({ group: g, ...slim(TC.summarize(rs)) }))
+        .sort((a, b) => b.calls - a.calls).slice(0, 60);
+      return { grouped_by: then ? `${by} | ${then}` : by, groups: out, total_calls_considered: rows.length };
+    }
+  };
+
+  // ---- Instructions -------------------------------------------------------------------------
+  const RULES = `You are the marketing analyst for Thrive, an insurance agency that buys inbound pay-per-call traffic from Google ads (final expense and life insurance). Callers usually already own a policy with another carrier (the "Google carrier") and call about billing, cancelling, claims or rates; licensed agents try to re-write them into a new policy.
+Campaign tiers: Limitless, Backup and OG, each bought at $35 or $40 per billable call (the price is in the tier name). Cost per sale (CPA) = billable calls x price / sales. Premiums are monthly. Times are US Eastern.
+Your goals, in order: lower cost per sale, raise the monthly premium per deal, and point out trends the owner might miss (for example a weekday or hour with a much higher CPA, a carrier whose callers close far better, a tier that is getting worse week over week, agents who convert a segment unusually well or badly, many very short calls from one source).
+Rules:
+- Use only the numbers provided or returned by the breakdown tool. Never invent figures. Quote the numbers behind each point (e.g. "Thu CPA $260 vs $190 other days, 120 calls").
+- Flag small samples plainly: under 20 calls is a hint, not a finding. Say how much more data would confirm it.
+- Be concrete about actions the owner controls: bid or budget changes by tier/day/hour, ad copy or keywords aimed at specific carriers, routing the best callers to the best agents, call scripts, intake questions, pausing weak hours.
+- Call the breakdown tool when a slice you need is not in the summary (it costs time, so ask for what matters).
+- Write plainly and briefly for a busy owner. No preamble.`;
+  const ANALYSIS_ASK = `Analyze the dashboard data below. Reply in this shape, using "## " headings and "- " bullets:
+## Headline
+One or two sentences: the most important thing right now.
+## What's working
+## What's costing you
+## Trends to watch
+## Try this next
+Numbered experiments (3 to 6). For each: what to change, why (with the numbers), expected effect on CPA or premium, and how to tell in a week whether it worked.`;
+
+  // ---- Rendering a reply (headings, bullets, numbered items, **bold**) ------------------------
+  function renderMd(target, text) {
+    target.replaceChildren();
+    let list = null;
+    const inline = (node, s) => {
+      s.split(/(\*\*[^*]+\*\*)/g).forEach((part) => {
+        if (/^\*\*[^*]+\*\*$/.test(part)) node.appendChild(el('strong', null, part.slice(2, -2)));
+        else if (part) node.appendChild(document.createTextNode(part));
+      });
+    };
+    for (const raw of String(text).split('\n')) {
+      const line = raw.trimEnd();
+      let m;
+      if (!line.trim()) { list = null; continue; }
+      if ((m = line.match(/^#{1,4}\s+(.*)$/))) { list = null; const h = el('h4', 'tc-ai-h'); inline(h, m[1]); target.appendChild(h); continue; }
+      if ((m = line.match(/^\s*[-*•]\s+(.*)$/))) {
+        if (!list || list.tagName !== 'UL') { list = el('ul', 'tc-ai-list'); target.appendChild(list); }
+        const li = el('li'); inline(li, m[1]); list.appendChild(li); continue;
+      }
+      if ((m = line.match(/^\s*(\d+)[.)]\s+(.*)$/))) {
+        if (!list || list.tagName !== 'OL') { list = el('ol', 'tc-ai-list'); target.appendChild(list); }
+        const li = el('li'); inline(li, m[2]); list.appendChild(li); continue;
+      }
+      if (list && /^\s{2,}/.test(raw)) { const last = list.lastElementChild; if (last) { last.appendChild(document.createTextNode(' ')); inline(last, line.trim()); continue; } }
+      list = null; const p = el('p', 'tc-ai-p'); inline(p, line); target.appendChild(p);
+    }
+  }
+
+  const copyFor = (code) => ({
+    not_granted: 'Claude isn\'t allowed on this page for your account. Allow it from the page\'s Permissions menu to use the analyst.',
+    sampling_disabled: 'Claude isn\'t available for this account.',
+    rate_limited: 'You\'ve hit a usage limit for now. Try again in a little while.',
+    session_expired: 'Your Claude session expired. Sign in again, then retry.',
+    prompt_too_large: 'There\'s too much data to send at once. Apply a filter at the top and try again.',
+    refused: 'Claude declined that request. Try rephrasing it.',
+    empty_completion: 'Claude returned nothing. Try again or ask a narrower question.'
+  }[code] || 'Something went wrong reaching Claude. Try again.');
+
+  // ---- State ------------------------------------------------------------------------------
+  let sample = null, db = null, tools = null;
+  let saved = null;           // last saved full analysis {text, at, sig, calls, range}
+  let chat = [];              // follow-up turns [{role, content}]
+  let ctl = null;
+  let busy = false;
+  const sig = () => window.TC_dataSig || '';
+
+  function setBusy(on, label) {
+    busy = on;
+    $('#ai-run').disabled = on; $('#ai-send').disabled = on;
+    $('#ai-stop').hidden = !on;
+    $('#ai-status').textContent = on ? (label || 'Thinking…') : '';
+  }
+  function showSaved() {
+    const meta = $('#ai-meta'); const fresh = $('#ai-stale');
+    if (!saved || !saved.text) { meta.textContent = 'No analysis yet.'; fresh.hidden = true; $('#ai-empty').hidden = false; return; }
+    $('#ai-empty').hidden = true;
+    meta.textContent = `Last analysis ${d3.timeFormat('%b %-d, %-I:%M %p')(new Date(saved.at))} · ${d3.format(',')(saved.calls || 0)} calls${saved.range ? ' · ' + saved.range : ''}`;
+    fresh.hidden = !(sig() && saved.sig && saved.sig !== sig());
+    renderMd($('#ai-output'), saved.text);
+  }
+
+  async function runAnalysis(reason) {
+    if (!sample || busy) return;
+    const snap = snapshot(); const startSig = sig();
+    if (!snap.totals || !snap.totals.calls) { $('#ai-status').textContent = 'Add data above first.'; return; }
+    ctl = new AbortController();
+    setBusy(true, reason === 'auto' ? 'New data added. Analyzing…' : 'Analyzing the data…');
+    const out = $('#ai-output'); out.replaceChildren(el('p', 'tc-ai-p tc-muted', 'Thinking… this usually takes 30–90 seconds.'));
+    $('#ai-empty').hidden = true;
+    const prompt = `${RULES}\n\n${ANALYSIS_ASK}\n\nToday is ${new Date().toISOString().slice(0, 10)}.\n\nDASHBOARD DATA (JSON):\n${JSON.stringify(snap)}`;
+    try {
+      const opts = { signal: ctl.signal, onText: ({ text }) => renderMd(out, text) };
+      if (tools) opts.tools = [breakdownTool];
+      const { text, truncated } = await sample(prompt, opts);
+      saved = { text, at: new Date().toISOString(), sig: startSig, calls: snap.totals.calls, range: snap.date_range_eastern, filters: snap.filters_applied };
+      chat = [];
+      $('#ai-log').replaceChildren();
+      showSaved();
+      if (truncated) $('#ai-status').textContent = 'The analysis was cut short. Ask a follow-up for the rest.';
+      if (db) db.doc('analysis/latest').set(saved).catch(() => {});
+    } catch (e) {
+      if (e && e.text) renderMd(out, e.text); else if (saved) renderMd(out, saved.text); else out.replaceChildren();
+      if (e && e.code !== 'cancelled') $('#ai-error').textContent = copyFor(e.code);
+      if (e && (e.code === 'not_granted' || e.code === 'sampling_disabled')) { window.TC_autoAnalyze = false; hideFeature(copyFor(e.code)); }
+    } finally {
+      setBusy(false);
+      // A file added while this ran gets its own pass now.
+      if (window.TC_autoAnalyze && saved && saved.sig !== sig()) { window.TC_autoAnalyze = false; setTimeout(() => runAnalysis('auto'), 0); }
+    }
+  }
+
+  async function ask(question) {
+    if (!sample || busy || !question.trim()) return;
+    $('#ai-error').textContent = '';
+    const log = $('#ai-log');
+    const q = el('div', 'tc-ai-msg tc-ai-me'); q.textContent = question; log.appendChild(q);
+    const a = el('div', 'tc-ai-msg tc-ai-bot'); const body = el('div'); body.appendChild(el('p', 'tc-ai-p tc-muted', 'Thinking…')); a.appendChild(body); log.appendChild(a);
+    a.scrollIntoView({ block: 'nearest' });
+    const snap = snapshot();
+    const lead = `${RULES}\n\nAnswer the owner's questions about this dashboard. Keep answers short (under 200 words unless asked for more), lead with the answer, back it with numbers, and suggest one concrete action when it fits.\n\nToday is ${new Date().toISOString().slice(0, 10)}.\n\nDASHBOARD DATA (JSON):\n${JSON.stringify(snap)}` +
+      (saved && saved.text ? `\n\nYOUR LATEST WRITTEN ANALYSIS (for context):\n${saved.text}` : '');
+    chat.push({ role: 'user', content: question });
+    if (chat.length > 12) chat = chat.slice(-12);
+    while (chat.length && chat[0].role !== 'user') chat.shift();
+    ctl = new AbortController();
+    setBusy(true, 'Thinking…');
+    try {
+      const opts = { signal: ctl.signal, cache: false, onText: ({ text }) => renderMd(body, text) };
+      if (tools) { delete opts.cache; opts.tools = [breakdownTool]; }
+      const { text } = await sample([{ role: 'user', content: lead }, ...chat], opts);
+      chat.push({ role: 'assistant', content: text });
+    } catch (e) {
+      if (e && e.text) renderMd(body, e.text); else body.replaceChildren(el('p', 'tc-ai-p tc-muted', e && e.code === 'cancelled' ? 'Stopped.' : copyFor(e && e.code)));
+      if (e && e.text) chat.push({ role: 'assistant', content: e.text }); else chat.pop();
+      if (e && (e.code === 'not_granted' || e.code === 'sampling_disabled')) hideFeature(copyFor(e.code));
+    } finally { setBusy(false); }
+  }
+
+  function hideFeature(msg) {
+    $('#ai-controls').hidden = true; $('#ai-chat').hidden = true;
+    $('#ai-off').hidden = false; $('#ai-off').textContent = msg;
+  }
+
+  async function init() {
+    if (!window.claude || !window.claude.use) { hideFeature('The AI analyst runs inside Claude. Open the Claude version of this dashboard to use it.'); return; }
+    const [s, d] = await Promise.all([window.claude.use('sample'), window.claude.use('db')]);
+    sample = s; db = d;
+    if (!sample) { hideFeature('The analyst isn\'t available in this view.'); return; }
+    const lim = await sample.limits().catch(() => null);
+    tools = !!(lim && lim.tools);
+    $('#ai-run').addEventListener('click', () => { $('#ai-error').textContent = ''; runAnalysis('click'); });
+    $('#ai-stop').addEventListener('click', () => ctl && ctl.abort());
+    $('#ai-form').addEventListener('submit', (e) => { e.preventDefault(); const box = $('#ai-q'); const v = box.value; box.value = ''; ask(v); });
+    $('#ai-q').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#ai-form').requestSubmit(); } });
+    document.querySelectorAll('.tc-ai-chip').forEach((b) => b.addEventListener('click', () => ask(b.textContent)));
+    if (db) {
+      db.doc('analysis/latest').onSnapshot((snap) => {
+        if (busy) return;
+        saved = snap.exists ? snap.data() : saved; showSaved();
+      }, () => {});
+    } else showSaved();
+    // Re-analyze automatically after someone adds new data on this page.
+    window.addEventListener('tc:data', () => {
+      showSaved();
+      if (window.TC_autoAnalyze && !busy) { window.TC_autoAnalyze = false; runAnalysis('auto'); }
+    });
+  }
+  init();
+})();
+</script>
+
+</body>
+</html>
