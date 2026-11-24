@@ -187,6 +187,9 @@ body {
 .tc-state-foot { display: flex; flex-wrap: wrap; gap: 4px var(--cds-gap-lg); padding-top: var(--cds-gap-sm); border-top: 1px solid var(--color-border-line); font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
 .tc-state-foot b { font-size: var(--cds-font-size-body); font-weight: var(--cds-font-weight-medium); }
 .tc-state-chips .tc-chip { padding: 3px 8px; }
+.tc-table td.tc-roi { font-weight: var(--cds-font-weight-medium); }
+.tc-roi-note { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); line-height: 1.5; max-width: 90ch; }
+.tc-roi-note b { color: var(--color-fg); font-weight: var(--cds-font-weight-medium); }
 .tc-pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: var(--cds-font-size-caption); border: 1px solid currentColor; }
 .tc-good { color: var(--color-ok); }
 .tc-warn { color: var(--color-warn); }
@@ -301,9 +304,27 @@ body {
       </div>
     </div>
     <div class="tc-card" id="called-table-card">
+      <div class="tc-roi-note" id="roi-note">
+        <b>How ROI is worked out.</b> Each sale pays a 9-month advance at 100% commission, so the advance per deal is the average monthly premium sold × 9. ROI is that advance ÷ the cost per sale. Example: a $100/mo policy pays a $900 advance; at a $100 cost per sale that's 9.0x. Above 1.0x the calls paid for themselves.
+      </div>
+      <div class="tc-filters" id="target-controls">
+        <label for="target-sort">Sort by
+          <select id="target-sort" class="dash-select">
+            <option value="closeRate">Close rate</option>
+            <option value="avgPremium">Avg monthly premium sold</option>
+            <option value="roi">ROI</option>
+          </select>
+        </label>
+        <label for="target-dir">Order
+          <select id="target-dir" class="dash-select">
+            <option value="desc">Highest first</option>
+            <option value="asc">Lowest first</option>
+          </select>
+        </label>
+      </div>
       <div class="tc-table-wrap">
         <table class="tc-table" data-source="byTarget" data-row-key="target">
-          <thead><tr><th data-field="rank">#</th><th data-field="target" class="tc-left">Google carrier</th><th data-field="calls">Calls</th><th data-field="billable">Billable</th><th data-field="sales">Sales</th><th data-field="closeRate">Close rate</th><th data-field="avgCurrentPremium">Avg current premium</th><th data-field="avgPremium">Avg premium sold</th><th data-field="totalPremium">Total sold / mo</th><th data-field="avgDur">Avg talk time</th><th data-field="drop10">&lt; 10 sec</th><th data-field="costPerSale">Cost / sale</th><th data-field="premiumPerDollar">Annual prem. per $1</th><th data-field="topSold" class="tc-left">Most often sold</th></tr></thead>
+          <thead><tr><th data-field="rank">#</th><th data-field="target" class="tc-left">Google carrier</th><th data-field="calls">Calls</th><th data-field="billable">Billable</th><th data-field="sales">Sales</th><th data-field="closeRate"><button type="button" class="tc-th-sort" data-tsort="closeRate">Close rate</button></th><th data-field="avgPremium"><button type="button" class="tc-th-sort" data-tsort="avgPremium">Avg premium sold</button></th><th data-field="costPerSale">Cost / sale</th><th data-field="advancePerDeal">9-mo advance / deal</th><th data-field="roi"><button type="button" class="tc-th-sort" data-tsort="roi">ROI</button></th><th data-field="avgCurrentPremium">Avg current premium</th><th data-field="totalPremium">Total sold / mo</th><th data-field="avgDur">Avg talk time</th><th data-field="drop10">&lt; 10 sec</th><th data-field="topSold" class="tc-left">Most often sold</th></tr></thead>
           <tbody data-draw="targetRows"></tbody>
         </table>
       </div>
@@ -637,6 +658,7 @@ body {
       <li>Close rate = sales ÷ billable calls. If the upload has no Billable column, every call counts.</li>
       <li>Cost per sale = billable calls × the dollar price in the pricing tier name (or a Cost column if one exists) ÷ sales.</li>
       <li>Annual premium per $1 = monthly premium sold × 12 ÷ call cost.</li>
+      <li>ROI = 9-month advance (average monthly premium sold × 9, at 100% commission) ÷ cost per sale. Same as total monthly premium sold × 9 ÷ call cost.</li>
       <li>CPA trend: est. spend ÷ sales in each period. Weeks start Monday. Campaigns are grouped by name (Backup, Limitless, OG), combining their $35 and $40 tiers.</li>
       <li>Carrier called in uses a Carrier Called In or Target Carrier column. Carrier sold uses the Carrier column.</li>
       <li>Google carrier uses the Google Carrier column, with spellings of one carrier grouped (AmAm, AMAM and American Amicable count as one; AIG and American General count as Corebridge; entries naming several carriers count as Multiple carriers).</li>
@@ -903,6 +925,9 @@ window.TC = (() => {
       annualPremium: total * 12, spend,
       costPerSale: spend != null && soldRows.length ? spend / soldRows.length : null,
       premiumPerDollar: spend ? (total * 12) / spend : null,
+      // Commission: a 9-month advance at 100% of the monthly premium. ROI = advance earned ÷ call cost.
+      advancePerDeal: prem.length ? (total / prem.length) * 9 : null,
+      roi: spend ? (total * 9) / spend : null,
       avgCurrentPremium: (() => { const c = rows.map((r) => r.currentPremium).filter((v) => v != null && v > 0); return c.length ? d3.mean(c) : null; })(),
       commission: rows.some((r) => r.commission != null) ? d3.sum(rows, (r) => r.commission || 0) : null,
       ...talk(rows)
@@ -924,7 +949,7 @@ window.TC = (() => {
 
   const fmt = {
     int: d3.format(','), pct: (v) => d3.format('.1%')(v), pct0: (v) => d3.format('.0%')(v),
-    money0: d3.format('$,.0f'), money2: d3.format('$,.2f'), ratio: (v) => d3.format('$,.2f')(v),
+    money0: d3.format('$,.0f'), money2: d3.format('$,.2f'), ratio: (v) => d3.format('$,.2f')(v), x: (v) => d3.format('.1f')(v) + 'x',
     text: (v) => String(v), day: (v) => d3.utcFormat('%b %-d, %Y')(new Date(v + 'T00:00:00Z')),
     dur: (v) => { v = Math.round(v); const h = Math.floor(v / 3600), m = Math.floor((v % 3600) / 60), s = v % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0'); },
     hour: (h) => { h = Number(h); return (h % 12 || 12) + (h < 12 ? 'a' : 'p'); }
@@ -1304,7 +1329,7 @@ dash.draw('targetBars', (box) => {
   const d = dash.data('byTarget');
   if (TC.notReady(box, d)) return;
   TC.hbars(box, d.data.filter((r) => r.ranked).map((r) => ({ ...r, closeRate: r.closeRate ?? 0 })), { source: 'byTarget', key: 'target', value: 'closeRate', fmt: 'pct', side: 'sales', sideFmt: 'int', sidePrefix: ' · ', side2: 'billable', side2Fmt: 'int', side2Prefix: ' of ', side2Suffix: ' calls closed', color: C(),
-    tip: (r) => [`${r.sales} closed out of ${r.billable} calls = ${TC.show(r.closeRate, 'pct')}`, `About ${Math.round((r.closeRate || 0) * 100)} sales per 100 calls`, `Pays now ${TC.show(r.avgCurrentPremium, 'money2')}, sold at ${TC.show(r.avgPremium, 'money2')}`, `Avg talk time ${TC.show(r.avgDur, 'dur')}`, `Cost per sale ${TC.show(r.costPerSale, 'money0')}`, r.ranked ? `Rank #${r.rank}` : 'Fewer than 5 billable calls, unranked'] });
+    tip: (r) => [`${r.sales} closed out of ${r.billable} calls = ${TC.show(r.closeRate, 'pct')}`, `About ${Math.round((r.closeRate || 0) * 100)} sales per 100 calls`, `Pays now ${TC.show(r.avgCurrentPremium, 'money2')}, sold at ${TC.show(r.avgPremium, 'money2')}`, `Avg talk time ${TC.show(r.avgDur, 'dur')}`, `Cost per sale ${TC.show(r.costPerSale, 'money0')}`, `ROI ${r.sales ? TC.show(r.roi, 'x') : '0.0x'} (9-mo advance ${TC.show(r.advancePerDeal, 'money0')} ÷ cost per sale)`, r.ranked ? `Rank #${r.rank}` : 'Fewer than 5 billable calls, unranked'] });
 });
 
 dash.draw('targetShareBars', (box) => {
@@ -1315,22 +1340,56 @@ dash.draw('targetShareBars', (box) => {
     tip: (r) => [`${r.calls} calls, ${TC.show(r.callShare, 'pct')} of calls with a carrier recorded`] });
 });
 
+window.TC_targetSort = window.TC_targetSort || { key: 'closeRate', dir: 'desc' };
+const syncTargetSort = () => {
+  const st = window.TC_targetSort;
+  document.querySelectorAll('#target-sort').forEach((el) => { el.value = st.key; });
+  document.querySelectorAll('#target-dir').forEach((el) => { el.value = st.dir; });
+  document.querySelectorAll('#called-table-card .tc-th-sort').forEach((btn) => {
+    const on = btn.dataset.tsort === st.key;
+    btn.classList.toggle('tc-sorted-desc', on && st.dir === 'desc');
+    btn.classList.toggle('tc-sorted-asc', on && st.dir === 'asc');
+    const th = btn.closest('th'); if (th) th.setAttribute('aria-sort', on ? (st.dir === 'desc' ? 'descending' : 'ascending') : 'none');
+  });
+};
+const setTargetSort = (patch) => { Object.assign(window.TC_targetSort, patch); syncTargetSort(); dash.draw('targetRows'); };
+document.querySelectorAll('#target-sort').forEach((el) => el.addEventListener('change', () => setTargetSort({ key: el.value, dir: 'desc' })));
+document.querySelectorAll('#target-dir').forEach((el) => el.addEventListener('change', () => setTargetSort({ dir: el.value })));
+document.querySelectorAll('#called-table-card .tc-th-sort').forEach((btn) => btn.addEventListener('click', () => {
+  const st = window.TC_targetSort;
+  setTargetSort(st.key === btn.dataset.tsort ? { dir: st.dir === 'desc' ? 'asc' : 'desc' } : { key: btn.dataset.tsort, dir: 'desc' });
+}));
+syncTargetSort();
+
 dash.draw('targetRows', (tb) => {
   const d = dash.data('byTarget'); const k = dash.data('kpis');
   tb.replaceChildren();
   if (d.status !== 'ok' || !d.data) return;
-  const overall = k.status === 'ok' && k.data ? k.data[0].closeRate : null;
-  for (const r of d.data) {
+  const overall = k.status === 'ok' && k.data ? k.data[0] : null;
+  const st = window.TC_targetSort;
+  const cmp = (a, b) => {
+    const av = a[st.key], bv = b[st.key];
+    if (av == null && bv == null) return b.calls - a.calls;
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    return (st.dir === 'desc' ? bv - av : av - bv) || b.calls - a.calls;
+  };
+  // Carriers with enough calls are ranked by the chosen column; the rest follow, unranked.
+  const ranked = d.data.filter((r) => r.ranked).sort(cmp);
+  const rest = d.data.filter((r) => !r.ranked).sort(cmp);
+  const roiClass = (v) => (v == null ? '' : v >= 1 ? (overall && overall.roi != null && v >= overall.roi * 1.15 ? 'tc-good' : '') : 'tc-bad');
+  [...ranked.map((r, i) => ({ ...r, pos: i + 1 })), ...rest.map((r) => ({ ...r, pos: null }))].forEach((r) => {
     const tr = TC.el('tr'); tr.dataset.key = r.target;
-    TC.cell(tr, r.rank == null ? '–' : String(r.rank)); TC.cell(tr, r.target, 'tc-left');
+    TC.cell(tr, r.pos == null ? '–' : String(r.pos)); TC.cell(tr, r.target, 'tc-left');
     TC.cell(tr, TC.show(r.calls, 'int')); TC.cell(tr, TC.show(r.billable, 'int')); TC.cell(tr, TC.show(r.sales, 'int'));
-    TC.cell(tr, TC.show(r.closeRate, 'pct'), r.ranked ? TC.rateClass(r.closeRate, overall) : '');
-    TC.cell(tr, TC.show(r.avgCurrentPremium, 'money2')); TC.cell(tr, TC.show(r.avgPremium, 'money2')); TC.cell(tr, TC.show(r.totalPremium, 'money0')); TC.cell(tr, TC.show(r.avgDur, 'dur'));
-    TC.cell(tr, TC.show(r.drop10, 'pct0')); TC.cell(tr, TC.show(r.costPerSale, 'money0'));
-    TC.cell(tr, TC.show(r.premiumPerDollar, 'ratio'));
+    TC.cell(tr, TC.show(r.closeRate, 'pct'), r.ranked && overall ? TC.rateClass(r.closeRate, overall.closeRate) : '');
+    TC.cell(tr, TC.show(r.avgPremium, 'money2')); TC.cell(tr, TC.show(r.costPerSale, 'money0')); TC.cell(tr, TC.show(r.advancePerDeal, 'money0'));
+    TC.cell(tr, r.sales ? TC.show(r.roi, 'x') : '0.0x', 'tc-roi ' + (r.ranked ? roiClass(r.sales ? r.roi : 0) : ''));
+    TC.cell(tr, TC.show(r.avgCurrentPremium, 'money2')); TC.cell(tr, TC.show(r.totalPremium, 'money0')); TC.cell(tr, TC.show(r.avgDur, 'dur'));
+    TC.cell(tr, TC.show(r.drop10, 'pct0'));
     TC.cell(tr, r.topSold ? `${r.topSold} (${TC.show(r.topSoldShare, 'pct0')})` : '—', 'tc-left');
     tb.appendChild(tr);
-  }
+  });
 });
 
 window.TC_cpaGrain = window.TC_cpaGrain || 'day';
@@ -1913,7 +1972,7 @@ dash.start();
   // ---- The numbers Claude reads -------------------------------------------------------
   const slim = (s) => s && {
     calls: s.calls, billable: s.billable, sales: s.sales, close_rate: r3(s.closeRate), cost_per_sale: r1(s.costPerSale),
-    avg_premium_sold: r1(s.avgPremium), avg_current_premium: r1(s.avgCurrentPremium), avg_talk_sec: r1(s.avgDur), under_10s: r3(s.drop10)
+    avg_premium_sold: r1(s.avgPremium), roi_9mo_advance: r1(s.roi), avg_current_premium: r1(s.avgCurrentPremium), avg_talk_sec: r1(s.avgDur), under_10s: r3(s.drop10)
   };
   const take = (id, map, n) => { const d = dash.data(id); return d.status === 'ok' && Array.isArray(d.data) ? d.data.slice(0, n || 999).map(map) : []; };
   function snapshot() {
@@ -1984,7 +2043,7 @@ dash.start();
 
   // ---- Instructions -------------------------------------------------------------------------
   const RULES = `You are the marketing analyst for Thrive, an insurance agency that buys inbound pay-per-call traffic from Google ads (final expense and life insurance). Callers usually already own a policy with another carrier (the "Google carrier") and call about billing, cancelling, claims or rates; licensed agents try to re-write them into a new policy.
-Campaign tiers: Limitless, Backup and OG, each bought at $35 or $40 per billable call (the price is in the tier name). Cost per sale (CPA) = billable calls x price / sales. Premiums are monthly. Times are US Eastern.
+Campaign tiers: Limitless, Backup and OG, each bought at $35 or $40 per billable call (the price is in the tier name). Cost per sale (CPA) = billable calls x price / sales. Premiums are monthly. Commission is a 9-month advance at 100% of the monthly premium, so ROI = (monthly premium sold x 9) / call cost; 9.0x means $9 of advance per $1 of calls. Times are US Eastern.
 Your goals, in order: lower cost per sale, raise the monthly premium per deal, and point out trends the owner might miss (for example a weekday or hour with a much higher CPA, a carrier whose callers close far better, a tier that is getting worse week over week, agents who convert a segment unusually well or badly, many very short calls from one source).
 Rules:
 - Use only the numbers provided or returned by the breakdown tool. Never invent figures. Quote the numbers behind each point (e.g. "Thu CPA $260 vs $190 other days, 120 calls").
