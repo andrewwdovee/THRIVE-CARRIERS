@@ -188,6 +188,9 @@ body {
 .tc-state-foot b { font-size: var(--cds-font-size-body); font-weight: var(--cds-font-weight-medium); }
 .tc-state-chips .tc-chip { padding: 3px 8px; }
 .tc-table td.tc-roi { font-weight: var(--cds-font-weight-medium); }
+.tc-key { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); align-items: center; font-size: var(--cds-font-size-caption); }
+.tc-key input { font: inherit; font-size: var(--cds-font-size-body); color: var(--color-fg); background: var(--color-bg); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); padding: 6px 10px; min-width: 0; width: 220px; max-width: 100%; }
+.tc-key input:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
 .tc-roi-note { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); line-height: 1.5; max-width: 90ch; }
 .tc-roi-note b { color: var(--color-fg); font-weight: var(--cds-font-weight-medium); }
 .tc-pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: var(--cds-font-size-caption); border: 1px solid currentColor; }
@@ -236,6 +239,12 @@ body {
     </div>
     <p class="tc-muted">Drop each export into its box, or click a box to choose the file. New calls are added to what's already here; a call that appears again is updated, not counted twice. Caller numbers, emails, policy numbers, insured names and recording links are removed before anything is saved.</p>
     <p class="tc-banner" id="intake-off" hidden></p>
+    <form class="tc-key" id="key-form" hidden>
+      <label for="key-input">Dashboard password</label>
+      <input type="password" id="key-input" autocomplete="current-password" required>
+      <button type="submit" class="tc-btn tc-btn-primary" id="key-submit">Unlock</button>
+      <span class="tc-ai-error" id="key-msg" role="alert"></span>
+    </form>
     <div class="tc-drops" id="drops">
       <label class="tc-drop" data-kind="policies" for="drop-policies">
         <b>Policy report</b>
@@ -671,6 +680,60 @@ body {
   </details>
 </div>
 
+<script>
+// On Cloudflare, uploads are saved in the dashboard's own database through /api (see functions/api).
+// Same calls as Claude's storage, so the rest of the page works unchanged.
+window.TC_remote = (() => {
+  if (window.claude && window.claude.use) return null;
+  if (!/^https?:$/.test(location.protocol)) return null;
+  const KEY_NAME = 'thrive-dashboard-key';
+  let key = '';
+  try { key = localStorage.getItem(KEY_NAME) || ''; } catch (e) { /* storage blocked: ask each visit */ }
+  const fail = (code, message) => { const e = new Error(message); e.code = code; return e; };
+  const api = async (path, opts = {}) => {
+    const res = await fetch('/api/' + path, { ...opts, cache: 'no-store', headers: { ...(opts.headers || {}), 'x-dashboard-key': key } });
+    if (res.status === 401) throw fail('needs_key', 'Enter the dashboard password.');
+    if (!res.ok) { let m = ''; try { m = (await res.json()).error; } catch (e) { /* not JSON */ } throw fail('server', m || `The server answered ${res.status}.`); }
+    return res;
+  };
+  const health = async () => {
+    try { const r = await fetch('/api/health', { cache: 'no-store' }); if (!r.ok) return null; const h = await r.json(); return h && h.ok ? h : null; }
+    catch (e) { return null; }
+  };
+  const pending = new Map();
+  const subs = [];
+  const refresh = async () => {
+    const { uploads } = await (await api('uploads')).json();
+    const snap = { docs: uploads.map((u) => ({ id: u.id, exists: true, data: () => ({ ...u, assetId: u.id }) })), size: uploads.length, empty: !uploads.length };
+    subs.forEach(({ next }) => { try { next(snap); } catch (e) { console.error(e); } });
+  };
+  const refreshSafe = () => refresh().catch((e) => subs.forEach(({ error }) => error && error(e)));
+  // Pick up other people's uploads when the tab comes back into view, and every five minutes.
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && subs.length && key) refreshSafe(); });
+  setInterval(() => { if (!document.hidden && subs.length && key) refreshSafe(); }, 5 * 60 * 1000);
+  const db = {
+    collection: () => ({
+      onSnapshot: (next, error) => { subs.push({ next, error }); refreshSafe(); return () => {}; },
+      add: async (data) => {
+        const csv = pending.get(data.assetId); pending.delete(data.assetId);
+        const r = await api('uploads', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...data, csv }) });
+        const { id } = await r.json();
+        await refresh();
+        return { id };
+      }
+    }),
+    doc: (path) => ({ delete: async () => { await api('uploads/' + encodeURIComponent(path.split('/').pop()), { method: 'DELETE' }); await refresh(); } })
+  };
+  const assets = {
+    upload: async (blob) => { const id = 'pending-' + Math.random().toString(36).slice(2); pending.set(id, await blob.text()); return { id, url: '' }; },
+    delete: async () => ({ deleted: false }) // files stay in the database; Remove only hides them
+  };
+  const loadText = async (id) => (await api('uploads/' + encodeURIComponent(id) + '/csv')).text();
+  const setKey = (k) => { key = k; try { localStorage.setItem(KEY_NAME, k); } catch (e) { /* keep for this visit */ } };
+  const forgetKey = () => { key = ''; try { localStorage.removeItem(KEY_NAME); } catch (e) { /* nothing stored */ } };
+  return { health, db, assets, loadText, setKey, forgetKey, hasKey: () => !!key, refresh };
+})();
+</script>
 <script>
 // Outside Claude (for example on Cloudflare), uploads are kept in this browser's own storage (IndexedDB).
 // Same calls as Claude's shared storage, so the rest of the page works unchanged. Nothing leaves the browser.
@@ -1844,6 +1907,7 @@ dash.start();
       } catch (e) {
         const msg = e && e.code === 'too_large' ? `${file.name} is over 20 MB. Export a shorter date range.`
           : e && e.code === 'rate_limited' ? 'Too many uploads at once. Wait a moment and drop it again.'
+          : e && (e.code === 'needs_key' || e.code === 'server') ? `Couldn't save ${file.name}. ${e.message}`
           : e && e.code ? `Couldn't save ${file.name} (${e.code}). Reload the page and try again.`
           : (e && e.message) || `Couldn't read ${file.name}.`;
         setStatus(zoneKind, msg, 'is-err');
@@ -1858,7 +1922,8 @@ dash.start();
       try {
         const texts = await Promise.all(list.map(async (u) => {
           if (!textCache.has(u.assetId)) {
-            if (window.TC_localMode) textCache.set(u.assetId, await window.TC_local.loadText(u.assetId));
+            if (window.TC_remoteMode) textCache.set(u.assetId, await window.TC_remote.loadText(u.assetId));
+            else if (window.TC_localMode) textCache.set(u.assetId, await window.TC_local.loadText(u.assetId));
             else {
               const res = await fetch('/_blob/' + u.assetId);
               if (!res.ok) throw new Error('missing file');
@@ -1918,11 +1983,36 @@ dash.start();
     $('#upload-count').forEach((el) => { el.textContent = uploads.length ? `${uploads.length} file${uploads.length === 1 ? '' : 's'} loaded` : ''; });
   }
 
+  // Shows the password box and resolves once a password is entered.
+  function askForKey(message) {
+    return new Promise((resolve) => {
+      const form = document.querySelector('#key-form'); const input = document.querySelector('#key-input');
+      if (!form || !input) return resolve();
+      document.querySelector('#key-msg').textContent = message || '';
+      form.hidden = false; $('#drops').forEach((el) => { el.hidden = true; });
+      input.focus();
+      form.onsubmit = (e) => {
+        e.preventDefault();
+        const v = input.value.trim(); if (!v) return;
+        window.TC_remote.setKey(v); input.value = '';
+        form.hidden = true; $('#drops').forEach((el) => { el.hidden = false; });
+        resolve();
+      };
+    });
+  }
+
   async function init() {
     const claudeApi = window.claude;
     let db, assets;
     if (claudeApi && claudeApi.use) {
       [db, assets] = await Promise.all([claudeApi.use('db'), claudeApi.use('assets')]);
+    } else if (window.TC_remote && (await window.TC_remote.health())) {
+      window.TC_remoteMode = true;
+      db = window.TC_remote.db; assets = window.TC_remote.assets;
+      $('#intake-off').forEach((el) => { el.hidden = false; el.textContent = 'Every file you add is saved in the dashboard\'s database, for everyone with the password. Remove only hides a file; nothing is erased.'; });
+      if (!window.TC_remote.hasKey()) {
+        await askForKey('');
+      }
     } else if (window.TC_local) {
       window.TC_localMode = true;
       db = window.TC_local.db; assets = window.TC_local.assets;
@@ -1944,8 +2034,14 @@ dash.start();
       uploads = snap.docs.map((d) => ({ docId: d.id, ...d.data() })).filter((u) => u.assetId && KINDS[u.kind]);
       renderList(canEdit, db, assets);
       rebuild();
-    }, (err) => {
-      $('#intake-off').forEach((el) => { el.hidden = false; el.textContent = 'Lost the connection to saved data. Reload the page.'; });
+    }, async (err) => {
+      if (window.TC_remoteMode && err && err.code === 'needs_key') {
+        window.TC_remote.forgetKey();
+        await askForKey('That password didn\'t work. Try again.');
+        window.TC_remote.refresh().catch(() => {});
+        return;
+      }
+      $('#intake-off').forEach((el) => { el.hidden = false; el.textContent = (err && err.code === 'server' ? err.message + ' ' : '') + 'Couldn\'t reach saved data. Reload the page.'; });
       console.error(err);
     });
     if (!canEdit) return;

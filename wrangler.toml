@@ -1,0 +1,9 @@
+# Cloudflare Pages project for the Thrive call dashboard.
+name = "thrive-call-dashboard"
+pages_build_output_dir = "./dashboard"
+compatibility_date = "2025-09-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "thrive-dashboard"
+database_id = "PASTE-YOUR-DATABASE-ID-HERE"
