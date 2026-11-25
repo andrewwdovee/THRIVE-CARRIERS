@@ -2006,11 +2006,11 @@ dash.start();
     let db, assets;
     if (claudeApi && claudeApi.use) {
       [db, assets] = await Promise.all([claudeApi.use('db'), claudeApi.use('assets')]);
-    } else if (window.TC_remote && (await window.TC_remote.health())) {
+    } else if (window.TC_remote && (window.TC_health = await window.TC_remote.health())) {
       window.TC_remoteMode = true;
       db = window.TC_remote.db; assets = window.TC_remote.assets;
-      $('#intake-off').forEach((el) => { el.hidden = false; el.textContent = 'Every file you add is saved in the dashboard\'s database, for everyone with the password. Remove only hides a file; nothing is erased.'; });
-      if (!window.TC_remote.hasKey()) {
+      $('#intake-off').forEach((el) => { el.hidden = false; el.textContent = 'Every file you add is saved in the dashboard\'s database and shared with everyone who opens it. Remove only hides a file; nothing is erased.'; });
+      if (window.TC_health.keyRequired && !window.TC_remote.hasKey()) {
         await askForKey('');
       }
     } else if (window.TC_local) {

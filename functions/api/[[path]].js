@@ -5,7 +5,8 @@
 //   GET    /api/uploads/:id/csv     -> the cleaned CSV text
 //   POST   /api/uploads             -> { id }   body: { kind, name, rows, from, to, csv }
 //   DELETE /api/uploads/:id         -> { removed: true }    (soft delete)
-// Every call except /health needs the header  x-dashboard-key: <DASHBOARD_KEY secret>.
+// Optional password: if a DASHBOARD_KEY secret is set, every call except /health needs the header
+// x-dashboard-key: <DASHBOARD_KEY>. With no secret set, anyone with the link can read and add data.
 
 const CHUNK = 60000;            // D1 statements are capped at 100 KB, so CSV text is stored in pieces.
 const MAX_CSV = 25 * 1024 * 1024;
@@ -26,10 +27,9 @@ export async function onRequest({ request, env, params }) {
   const parts = Array.isArray(params.path) ? params.path : [params.path].filter(Boolean);
   const method = request.method.toUpperCase();
 
-  if (parts[0] === 'health') return json({ ok: true, db: !!env.DB, keyRequired: true, keySet: !!env.DASHBOARD_KEY });
+  if (parts[0] === 'health') return json({ ok: true, db: !!env.DB, keyRequired: !!env.DASHBOARD_KEY });
   if (!env.DB) return json({ error: 'The database is not connected. Add the D1 binding named DB.' }, 503);
-  if (!env.DASHBOARD_KEY) return json({ error: 'No dashboard password is set. Run: npx wrangler pages secret put DASHBOARD_KEY' }, 503);
-  if (!sameKey(request.headers.get('x-dashboard-key'), env.DASHBOARD_KEY)) return json({ error: 'Wrong or missing dashboard password.' }, 401);
+  if (env.DASHBOARD_KEY && !sameKey(request.headers.get('x-dashboard-key'), env.DASHBOARD_KEY)) return json({ error: 'Wrong or missing dashboard password.' }, 401);
   if (parts[0] !== 'uploads') return json({ error: 'Not found.' }, 404);
 
   const id = parts[1] ? decodeURIComponent(parts[1]) : null;
